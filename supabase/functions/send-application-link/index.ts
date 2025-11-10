@@ -47,6 +47,7 @@ Deno.serve(async (req: Request) => {
           },
         ],
         subject: "Postulez chez PARC SYNC - Formulaire de candidature",
+        tags: ["application"],
         htmlContent: `
           <!DOCTYPE html>
           <html>
@@ -76,6 +77,10 @@ Deno.serve(async (req: Request) => {
                   <div style="text-align: center;">
                     <a href="${applicationLink}" class="button">Postuler maintenant</a>
                   </div>
+
+                  <p style="text-align: center; margin: 20px 0; padding: 15px; background: #f3f4f6; border-radius: 6px; font-family: monospace; font-size: 14px; word-break: break-all;">
+                    Ou copiez ce lien : ${applicationLink}
+                  </p>
 
                   <p><strong>Informations à préparer :</strong></p>
                   <ul>
