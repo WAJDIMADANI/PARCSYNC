@@ -1,0 +1,27 @@
+{
+  "type": "signature_request.done",
+  "event_name": "signature_request.done",
+  "data": {
+    "signature_request_id": "sr_test_123456"
+  },
+  "signature_request": {
+    "id": "sr_test_123456",
+    "external_id": "REMPLACEZ_PAR_ID_CONTRAT",
+    "status": "done",
+    "name": "Contrat de travail - Test",
+    "created_at": "2024-11-10T12:00:00Z",
+    "documents": [
+      {
+        "id": "doc_test_789",
+        "filename": "contrat.pdf"
+      }
+    ],
+    "signers": [
+      {
+        "id": "signer_test_123",
+        "status": "signed",
+        "signed_at": "2024-11-10T12:30:00Z"
+      }
+    ]
+  }
+}

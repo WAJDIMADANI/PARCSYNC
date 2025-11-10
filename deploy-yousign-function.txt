@@ -1,0 +1,16 @@
+Pour déployer la fonction create-yousign-signature :
+
+OPTION 1 : Via le dashboard Supabase
+1. Aller sur : https://supabase.com/dashboard/project/jnlvinwekqvkrywxrjgr/functions/create-yousign-signature
+2. Cliquer sur "Edit function" ou les 3 points > "Edit"
+3. Copier le contenu du fichier : supabase/functions/create-yousign-signature/index.ts
+4. Coller dans l'éditeur en ligne
+5. Cliquer sur "Deploy"
+
+OPTION 2 : Via Supabase CLI (si installé)
+1. Ouvrir un terminal
+2. Se connecter : npx supabase login
+3. Lier le projet : npx supabase link --project-ref jnlvinwekqvkrywxrjgr
+4. Déployer : npx supabase functions deploy create-yousign-signature
+
+La fonction mise à jour contient des logs supplémentaires pour debugger le problème.
