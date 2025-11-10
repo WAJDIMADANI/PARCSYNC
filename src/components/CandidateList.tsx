@@ -313,74 +313,23 @@ export function CandidateList() {
 
   const sendRejectionEmail = async (candidate: Candidate) => {
     try {
-      const brevoApiKey = import.meta.env.VITE_BREVO_API_KEY;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-rejection-email`, {
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'api-key': brevoApiKey,
+          'Authorization': `Bearer ${anonKey}`,
         },
         body: JSON.stringify({
-          sender: {
-            name: 'PARC SYNC',
-            email: 'pierre.chopar12@gmail.com',
-          },
-          to: [
-            {
-              email: candidate.email,
-              name: `${candidate.prenom} ${candidate.nom}`,
-            },
-          ],
-          subject: 'Votre candidature chez PARC SYNC',
-          htmlContent: `
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <meta charset="utf-8">
-                <style>
-                  body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                  .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                  .header { background-color: #6b7280; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-                  .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
-                  .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <div class="header">
-                    <h1>Votre candidature chez PARC SYNC</h1>
-                  </div>
-                  <div class="content">
-                    <p>Bonjour ${candidate.prenom} ${candidate.nom},</p>
-
-                    <p>Nous vous remercions de l'intérêt que vous portez à <strong>PARC SYNC</strong> et du temps que vous avez consacré à votre candidature.</p>
-
-                    <p>Après un examen attentif de votre profil, nous avons le regret de vous informer que nous ne pouvons pas donner une suite favorable à votre candidature pour le moment.</p>
-
-                    <p>Cette décision ne remet en aucun cas en cause vos compétences. Nous avons reçu de nombreuses candidatures et avons dû faire des choix difficiles.</p>
-
-                    <p>Nous conservons votre dossier dans nos archives et n'hésiterons pas à vous recontacter si une opportunité correspondant mieux à votre profil se présentait.</p>
-
-                    <p>Nous vous souhaitons beaucoup de succès dans vos recherches.</p>
-
-                    <p>Cordialement,<br>
-                    <strong>L'équipe PARC SYNC</strong></p>
-                  </div>
-                  <div class="footer">
-                    <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
-                  </div>
-                </div>
-              </body>
-            </html>
-          `,
+          candidateEmail: candidate.email,
+          candidateName: `${candidate.prenom} ${candidate.nom}`,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Erreur Brevo: ${errorData}`);
+        throw new Error('Erreur lors de l\'envoi de l\'email');
       }
 
       setSuccessMessage(`Email de refus envoyé avec succès à ${candidate.prenom} ${candidate.nom}`);
