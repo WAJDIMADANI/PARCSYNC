@@ -122,10 +122,13 @@ export default function MedicalCertificateManager({
         }
       );
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Erreur lors de l\'envoi de l\'email');
+        throw new Error(data.error || 'Erreur lors de l\'envoi de l\'email');
       }
 
+      alert('Email envoyé avec succès ! Le salarié va recevoir un lien pour uploader son certificat médical.');
       onSuccess();
     } catch (err) {
       console.error('Erreur envoi email:', err);

@@ -4,6 +4,7 @@ import { Dashboard } from './components/Dashboard';
 import { Apply } from './components/Apply';
 import { OnboardingForm } from './components/OnboardingForm';
 import ContractSignature from './components/ContractSignature';
+import UploadMedicalCertificate from './components/UploadMedicalCertificate';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -19,6 +20,10 @@ function AppContent() {
 
   if (path === '/contract-signature') {
     return <ContractSignature />;
+  }
+
+  if (path === '/upload-medical-certificate') {
+    return <UploadMedicalCertificate />;
   }
 
   if (loading) {
