@@ -109,7 +109,10 @@ export default function UploadMedicalCertificate() {
 
       if (updateError) throw updateError;
 
-      setSuccess(true);
+      console.log('Upload réussi! ID du document:', docData.id);
+
+      // Recharger les données pour afficher le message de succès
+      await loadContractData();
       setFile(null);
     } catch (err) {
       console.error('Erreur upload:', err);
