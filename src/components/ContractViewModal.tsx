@@ -63,8 +63,30 @@ export function ContractViewModal({
     }
   };
 
-  const handleDownload = () => {
-    window.open(contractUrl, '_blank');
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-contract`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({ contractId })
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success && data.fileUrl) {
+        window.open(data.fileUrl, '_blank');
+      } else {
+        alert('Erreur: ' + (data.error || 'Impossible de télécharger le PDF'));
+      }
+    } catch (error: any) {
+      alert('Erreur lors du téléchargement: ' + error.message);
+    }
   };
 
   return (
