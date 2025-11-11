@@ -210,7 +210,7 @@ export function ContractsList() {
           <p className="text-gray-500">Aucun contrat trouvé</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
