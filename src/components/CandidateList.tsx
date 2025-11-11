@@ -254,6 +254,11 @@ export function CandidateList() {
     }
   };
 
+  const cancelStatutChange = () => {
+    setShowStatutConfirmModal(false);
+    setPendingStatutChange(null);
+  };
+
   const sendOnboardingEmail = async (candidate: Candidate) => {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
