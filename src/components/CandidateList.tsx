@@ -267,10 +267,10 @@ export function CandidateList() {
     setPendingStatutChange(null);
   };
 
-  const handleCodeCouleurChange = async (candidatId: string, newColor: string) => {
+  const handleCodeCouleurChange = async (candidatId: string, newColor: string | null) => {
     try {
       const { error } = await supabase
-        .from('profil')
+        .from('candidat')
         .update({ code_couleur_rh: newColor })
         .eq('id', candidatId);
 
