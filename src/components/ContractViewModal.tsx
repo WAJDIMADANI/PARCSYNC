@@ -34,35 +34,47 @@ export default function ContractViewModal({
   const fetchContractData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // 1. Récupère le contrat
+      const { data: contractData, error: contractError } = await supabase
         .from('contrat')
-        .select(`
-          id,
-          statut,
-          variables,
-          date_signature,
-          modele:modele_id(
-            id,
-            nom,
-            contenu_html
-          ),
-          profil:profil_id(
-            nom,
-            prenom,
-            email
-          )
-        `)
+        .select('*')
         .eq('id', contract.id)
         .single();
 
-      if (error) throw error;
+      if (contractError) throw contractError;
 
-      setContractData(data);
+      // 2. Récupère le profil (candidat)
+      const { data: profil, error: profilError } = await supabase
+        .from('profil')
+        .select('nom, prenom, email')
+        .eq('id', contractData.profil_id)
+        .single();
 
-      // Générer le HTML avec les variables
-      if (data.modele && data.modele.contenu_html && data.variables) {
-        let html = data.modele.contenu_html;
-        const variables = JSON.parse(data.variables);
+      if (profilError) throw profilError;
+
+      // 3. Récupère le modèle
+      const { data: modele, error: modeleError } = await supabase
+        .from('modeles_contrats')
+        .select('id, nom, contenu_html')
+        .eq('id', contractData.modele_id)
+        .single();
+
+      if (modeleError) throw modeleError;
+
+      // Fusionne les données
+      const fullData = {
+        ...contractData,
+        profil: [profil],
+        modele: [modele]
+      };
+
+      setContractData(fullData);
+
+      // Génère le HTML avec les variables
+      if (modele && modele.contenu_html && contractData.variables) {
+        let html = modele.contenu_html;
+        const variables = JSON.parse(contractData.variables);
 
         Object.entries(variables).forEach(([key, value]) => {
           const regex = new RegExp(`{{${key}}}`, 'g');
