@@ -267,6 +267,22 @@ export function CandidateList() {
     setPendingStatutChange(null);
   };
 
+  const handleCodeCouleurChange = async (candidatId: string, newColor: string) => {
+    try {
+      const { error } = await supabase
+        .from('profil')
+        .update({ code_couleur_rh: newColor })
+        .eq('id', candidatId);
+
+      if (error) throw error;
+
+      fetchData();
+    } catch (error) {
+      console.error('Erreur mise à jour couleur:', error);
+      alert('Erreur lors de la mise à jour de la couleur');
+    }
+  };
+
   const sendOnboardingEmail = async (candidate: Candidate) => {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
