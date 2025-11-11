@@ -11,7 +11,7 @@ interface SignatureRequest {
 
 // ✅ Fonction pour générer l'HTML du contrat avec les variables
 async function generateContractHTML(contract: any): Promise<string> {
-  let html = contract.modeles_contrats.contenu_html;
+  let html = contract.modele.contenu_html;
   const variables = typeof contract.variables === 'string'
     ? JSON.parse(contract.variables)
     : contract.variables;
@@ -93,7 +93,7 @@ Deno.serve(async (req: Request) => {
     // Récupérer le contrat
     console.log("Fetching contract with ID:", contractId);
     const contractResponse = await fetch(
-      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,modeles_contrats!modele_id(nom,type_contrat,contenu_html),profil!profil_id(prenom,nom,email)`,
+      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,modele:modele_id(nom,type_contrat,contenu_html),profil:profil_id(prenom,nom,email)`,
       {
         headers: {
           "apikey": SUPABASE_SERVICE_ROLE_KEY,
@@ -126,7 +126,7 @@ Deno.serve(async (req: Request) => {
       throw new Error("Email employé invalide ou manquant dans le profil");
     }
 
-    if (!contract.modeles_contrats?.contenu_html) {
+    if (!contract.modele?.contenu_html) {
       throw new Error("Le modèle de contrat n'a pas de contenu HTML associé");
     }
 
