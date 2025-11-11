@@ -9,6 +9,50 @@ interface SignatureRequest {
   contractId: string;
 }
 
+// ✅ Fonction pour générer l'HTML du contrat avec les variables
+async function generateContractHTML(contract: any): Promise<string> {
+  let html = contract.modeles_contrats.contenu_html;
+  const variables = typeof contract.variables === 'string'
+    ? JSON.parse(contract.variables)
+    : contract.variables;
+
+  // Remplacer les variables {{variable}} par les vraies valeurs
+  Object.entries(variables).forEach(([key, value]) => {
+    const regex = new RegExp(`{{${key}}}`, 'g');
+    html = html.replace(regex, String(value || ''));
+  });
+
+  return html;
+}
+
+// ✅ Fonction pour générer le PDF via PDFShift
+async function generatePDF(htmlContent: string): Promise<ArrayBuffer> {
+  const PDFSHIFT_API_KEY = Deno.env.get("PDFSHIFT_API_KEY");
+
+  if (!PDFSHIFT_API_KEY) {
+    throw new Error("PDFSHIFT_API_KEY not configured");
+  }
+
+  const response = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${PDFSHIFT_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      source: htmlContent,
+      sandbox: true
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`PDFShift API error: ${errorText}`);
+  }
+
+  return await response.arrayBuffer();
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -49,11 +93,12 @@ Deno.serve(async (req: Request) => {
     // Récupérer le contrat
     console.log("Fetching contract with ID:", contractId);
     const contractResponse = await fetch(
-      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,modele:modele_id(nom,type_contrat,fichier_url),profil:profil_id(prenom,nom,email)`,
+      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,modeles_contrats!modele_id(nom,type_contrat,contenu_html),profil!profil_id(prenom,nom,email)`,
       {
         headers: {
           "apikey": SUPABASE_SERVICE_ROLE_KEY,
           "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "Accept": "application/json"
         }
       }
     );
@@ -81,11 +126,20 @@ Deno.serve(async (req: Request) => {
       throw new Error("Email employé invalide ou manquant dans le profil");
     }
 
-    if (!contract.modele?.fichier_url) {
-      throw new Error("Le modèle de contrat n'a pas de fichier PDF associé");
+    if (!contract.modeles_contrats?.contenu_html) {
+      throw new Error("Le modèle de contrat n'a pas de contenu HTML associé");
     }
 
-    // Étape 1: Créer une signature request
+    // ✅ ÉTAPE 0 : GÉNÉRER LE PDF EN MÉMOIRE
+    console.log("Step 0: Generating PDF from HTML template...");
+    const htmlContent = await generateContractHTML(contract);
+    console.log("HTML generated, length:", htmlContent.length);
+
+    const pdfArrayBuffer = await generatePDF(htmlContent);
+    const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
+    console.log("PDF generated in memory, size:", pdfBlob.size, "bytes");
+
+    // ✅ ÉTAPE 1 : Créer une signature request
     console.log("Step 1: Creating signature request...");
     const signatureRequestResponse = await fetch("https://api-sandbox.yousign.app/v3/signature_requests", {
       method: "POST",
@@ -111,18 +165,8 @@ Deno.serve(async (req: Request) => {
     const signatureRequestId = signatureRequestData.id;
     console.log("Signature request created with ID:", signatureRequestId);
 
-    // Étape 2: Télécharger le PDF
-    console.log("Step 2: Downloading PDF from storage...");
-    const pdfDownloadResponse = await fetch(contract.modele.fichier_url);
-    if (!pdfDownloadResponse.ok) {
-      throw new Error(`Failed to download PDF from storage: ${pdfDownloadResponse.statusText}`);
-    }
-
-    const pdfBlob = await pdfDownloadResponse.blob();
-    console.log("PDF downloaded, size:", pdfBlob.size, "bytes");
-
-    // Étape 3: Uploader le document vers la signature request
-    console.log("Step 3: Uploading document to signature request...");
+    // ✅ ÉTAPE 2 : Uploader le document vers la signature request
+    console.log("Step 2: Uploading document to signature request...");
     const formData = new FormData();
     formData.append("nature", "signable_document");
     formData.append("parse_anchors", "true");
