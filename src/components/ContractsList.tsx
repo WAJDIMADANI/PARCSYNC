@@ -27,7 +27,7 @@ interface Candidate {
   email: string;
 }
 
-export default function ContractsList() {
+export function ContractsList() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
