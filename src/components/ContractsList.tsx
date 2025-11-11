@@ -10,6 +10,7 @@ interface Contract {
   statut: string;
   date_envoi: string;
   date_signature?: string;
+  date_entretien?: string;
   variables?: string;
   candidat?: {
     nom: string;
@@ -107,6 +108,15 @@ export function ContractsList() {
     return <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color}`}>{statusInfo.label}</span>;
   };
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR');
+    } catch {
+      return 'N/A';
+    }
+  };
+
   const onDeleteContract = async (contractId: string) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce contrat ?')) return;
 
@@ -181,13 +191,15 @@ export function ContractsList() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modèle</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date d'envoi</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date entretien</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date signature</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
               {contracts.map((contract) => (
                 <tr key={contract.id} className="hover:bg-gray-50">
-                  {/* ✅ AFFICHAGE CANDIDAT CORRIGÉ */}
+                  {/* ✅ AFFICHAGE CANDIDAT */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm">
                       <p className="font-medium text-gray-900">
@@ -201,17 +213,32 @@ export function ContractsList() {
                     </div>
                   </td>
 
-                  {/* ✅ AFFICHAGE MODÈLE CORRIGÉ */}
+                  {/* ✅ AFFICHAGE MODÈLE */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {contract.modele?.nom || 'N/A'}
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(contract.statut)}</td>
-                  
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(contract.date_envoi).toLocaleDateString('fr-FR')}
+                  {/* ✅ AFFICHAGE STATUT */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getStatusBadge(contract.statut)}
                   </td>
                   
+                  {/* ✅ AFFICHAGE DATE D'ENVOI */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDate(contract.date_envoi)}
+                  </td>
+
+                  {/* ✅ AFFICHAGE DATE ENTRETIEN (NOUVEAU) */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDate(contract.date_entretien)}
+                  </td>
+
+                  {/* ✅ AFFICHAGE DATE SIGNATURE (NOUVEAU) */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDate(contract.date_signature)}
+                  </td>
+                  
+                  {/* ✅ AFFICHAGE ACTIONS */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
                       onClick={() => onViewContract(contract)}
