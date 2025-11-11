@@ -24,6 +24,7 @@ export default function MedicalCertificateManager({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -128,8 +129,7 @@ export default function MedicalCertificateManager({
         throw new Error(data.error || 'Erreur lors de l\'envoi de l\'email');
       }
 
-      alert('Email envoyé avec succès ! Le salarié va recevoir un lien pour uploader son certificat médical.');
-      onSuccess();
+      setShowSuccessModal(true);
     } catch (err) {
       console.error('Erreur envoi email:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors de l\'envoi de l\'email');
@@ -189,6 +189,15 @@ export default function MedicalCertificateManager({
           error={error}
           onSendEmail={handleSendEmail}
           onCancel={() => setMode('choice')}
+        />
+      )}
+
+      {showSuccessModal && (
+        <SuccessModal
+          onClose={() => {
+            setShowSuccessModal(false);
+            onSuccess();
+          }}
         />
       )}
     </div>
@@ -374,6 +383,47 @@ function EmailMode({
             </>
           )}
         </button>
+      </div>
+    </div>
+  );
+}
+
+function SuccessModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 animate-in zoom-in-95 duration-300">
+        <div className="text-center">
+          <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-in zoom-in duration-500">
+            <CheckCircle className="w-12 h-12 text-white" />
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            Email envoyé avec succès !
+          </h2>
+
+          <p className="text-gray-600 mb-6 leading-relaxed">
+            Le salarié va recevoir un lien pour uploader son certificat médical.
+          </p>
+
+          <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4 mb-6">
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold text-purple-700">📧 Email envoyé</span><br/>
+              Le salarié recevra des instructions claires pour télécharger son document.
+            </p>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            Parfait !
+          </button>
+        </div>
       </div>
     </div>
   );
