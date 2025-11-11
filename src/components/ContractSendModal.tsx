@@ -96,6 +96,7 @@ export default function ContractSendModal({
 
     setSending(true);
     try {
+      // ✅ ÉTAPE 1 : Créer le contrat en base (mais avec statut 'en_attente_signature')
       const { data: contrat, error: contratError } = await supabase
         .from('contrat')
         .insert({
@@ -107,24 +108,16 @@ export default function ContractSendModal({
             nom_salarie: employeeName,
             email_salarie: employeeEmail
           },
-          statut: 'envoye'
+          statut: 'en_attente_signature'  // ✅ CHANGÉ : Pas 'envoye' tout de suite
         })
         .select()
         .single();
 
       if (contratError) throw contratError;
 
-      const { error: profilError } = await supabase
-        .from('profil')
-        .update({
-          statut: 'contrat_envoye',
-          site_id: selectedSite
-        })
-        .eq('id', profilId);
+      console.log('Contrat créé:', contrat.id);
 
-      if (profilError) throw profilError;
-
-      // Créer la demande de signature Yousign
+      // ✅ ÉTAPE 2 : CRÉER LA DEMANDE YOUSIGN AVANT DE MARQUER COMME ENVOYÉ
       let yousignData;
       try {
         const yousignPayload = {
@@ -165,11 +158,39 @@ export default function ContractSendModal({
           yousignData = await yousignResponse.json();
           console.log('Demande de signature Yousign créée:', yousignData);
         }
+
+        // ✅ ÉTAPE 3 : MAINTENANT, mettre le statut à 'envoye' seulement si Yousign a réussi
+        const { error: updateError } = await supabase
+          .from('contrat')
+          .update({
+            statut: 'envoye'
+          })
+          .eq('id', contrat.id);
+
+        if (updateError) throw updateError;
+
+        console.log('Contrat marqué comme envoyé');
+
       } catch (fetchError: any) {
         console.error('Erreur lors de l\'appel Yousign:', fetchError);
-        alert(`ERREUR YOUSIGN : ${fetchError.message}\n\nLe contrat a été créé mais la signature électronique n'a pas pu être initialisée. Vérifiez les logs de la fonction create-yousign-signature dans Supabase.`);
+        
+        // ✅ SUPPRIMER LE CONTRAT SI YOUSIGN ÉCHOUE
+        await supabase.from('contrat').delete().eq('id', contrat.id);
+        
+        alert(`ERREUR YOUSIGN : ${fetchError.message}\n\nLe contrat n'a pas pu être envoyé. Veuillez réessayer.`);
         throw fetchError;
       }
+
+      // ✅ ÉTAPE 4 : Mettre à jour le profil
+      const { error: profilError } = await supabase
+        .from('profil')
+        .update({
+          statut: 'contrat_envoye',
+          site_id: selectedSite
+        })
+        .eq('id', profilId);
+
+      if (profilError) throw profilError;
 
       onSuccess();
       onClose();
