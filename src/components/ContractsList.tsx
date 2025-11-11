@@ -39,7 +39,27 @@ export function ContractsList() {
     fetchContracts();
   }, []);
 
-  // ✅ FONCTION CORRIGÉE - Récupère les données séparément
+  // ✅ FONCTION POUR RÉCUPÉRER LA DATE D'ENTRETIEN
+  const getDateEntretien = async (profilId: string): Promise<string | undefined> => {
+    try {
+      const { data, error } = await supabase
+        .from('profil_statut_historique')
+        .select('date_changement')
+        .eq('profil_id', profilId)
+        .eq('nouveau_statut', 'Entretien')
+        .order('date_changement', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (error || !data) return undefined;
+      return data.date_changement;
+    } catch (error) {
+      console.error('Erreur récupération date entretien:', error);
+      return undefined;
+    }
+  };
+
+  // ✅ FONCTION CORRIGÉE - Récupère les données séparément AVEC date d'entretien
   const fetchContracts = async () => {
     try {
       setLoading(true);
@@ -75,7 +95,13 @@ export function ContractsList() {
 
       if (modelesError) console.error('Erreur modèles:', modelesError);
 
-      // 4. Fusionne les données
+      // 4. Récupère les dates d'entretien pour chaque profil
+      const datesEntretien: Record<string, string | undefined> = {};
+      for (const profilId of profilIds) {
+        datesEntretien[profilId] = await getDateEntretien(profilId);
+      }
+
+      // 5. Fusionne les données
       const contractsWithData: Contract[] = contractsData.map(contract => {
         const profilData = profils?.find(p => p.id === contract.profil_id);
         const modeleData = modeles?.find(m => m.id === contract.modele_id);
@@ -83,7 +109,8 @@ export function ContractsList() {
         return {
           ...contract,
           candidat: profilData ? profilData : undefined,
-          modele: modeleData ? modeleData : undefined
+          modele: modeleData ? modeleData : undefined,
+          date_entretien: datesEntretien[contract.profil_id]
         };
       });
 
@@ -228,12 +255,12 @@ export function ContractsList() {
                     {formatDate(contract.date_envoi)}
                   </td>
 
-                  {/* ✅ AFFICHAGE DATE ENTRETIEN (NOUVEAU) */}
+                  {/* ✅ AFFICHAGE DATE ENTRETIEN (DEPUIS HISTORIQUE) */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(contract.date_entretien)}
                   </td>
 
-                  {/* ✅ AFFICHAGE DATE SIGNATURE (NOUVEAU) */}
+                  {/* ✅ AFFICHAGE DATE SIGNATURE */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(contract.date_signature)}
                   </td>
