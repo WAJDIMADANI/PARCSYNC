@@ -247,10 +247,18 @@ export function CandidateList() {
         .eq('id', pendingStatutChange.candidateId);
 
       if (error) throw error;
+
+      // Fermer le modal et réinitialiser l'état
+      setShowStatutConfirmModal(false);
+      setPendingStatutChange(null);
+
       fetchData();
     } catch (error) {
       console.error('Erreur mise à jour code couleur:', error);
       alert('Erreur lors de la mise à jour');
+      // Fermer le modal même en cas d'erreur
+      setShowStatutConfirmModal(false);
+      setPendingStatutChange(null);
     }
   };
 
