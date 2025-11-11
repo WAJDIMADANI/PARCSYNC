@@ -66,7 +66,7 @@ export function ContractViewModal({
   const handleDownload = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-contract`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-pdf`,
         {
           method: 'POST',
           headers: {
@@ -79,8 +79,8 @@ export function ContractViewModal({
 
       const data = await response.json();
 
-      if (data.success && data.fileUrl) {
-        window.open(data.fileUrl, '_blank');
+      if (data.success && data.url) {
+        window.open(data.url, '_blank');
       } else {
         alert('Erreur: ' + (data.error || 'Impossible de télécharger le PDF'));
       }
