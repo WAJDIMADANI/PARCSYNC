@@ -10,19 +10,19 @@ function AppContent() {
   const { user, loading } = useAuth();
   const path = window.location.pathname;
 
-  if (path === '/apply') {
+  if (path === '/apply' || path.startsWith('/apply/')) {
     return <Apply />;
   }
 
-  if (path === '/onboarding') {
+  if (path === '/onboarding' || path.startsWith('/onboarding/')) {
     return <OnboardingForm />;
   }
 
-  if (path === '/contract-signature') {
+  if (path === '/contract-signature' || path.startsWith('/contract-signature/')) {
     return <ContractSignature />;
   }
 
-  if (path === '/upload-medical-certificate') {
+  if (path === '/upload-medical-certificate' || path.startsWith('/upload-medical-certificate/')) {
     return <UploadMedicalCertificate />;
   }
 
