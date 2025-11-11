@@ -231,25 +231,20 @@ export function CandidateList() {
     if (!pendingStatutChange) return;
 
     try {
+      // Préparer les données à mettre à jour
+      const updateData: Record<string, any> = {
+        statut_candidature: pendingStatutChange.newStatut
+      };
+
+      // Si le nouveau statut est 'entretien', ajouter la date
+      if (pendingStatutChange.newStatut === 'entretien') {
+        updateData.date_entretien = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('candidat')
-      .update({ statut_candidature: pendingStatutChange.newStatut })
-.eq('id', pendingStatutChange.candidateId);
-
-// PAR :
-
-// Préparer les données à mettre à jour
-const updateData = { 
-  statut_candidature: pendingStatutChange.newStatut 
-};
-
-// Si le nouveau statut est 'entretien', ajouter la date
-if (pendingStatutChange.newStatut === 'entretien') {
-  updateData.date_entretien = new Date().toISOString();
-}
-
-.update(updateData)
-.eq('id', pendingStatutChange.candidateId);
+        .update(updateData)
+        .eq('id', pendingStatutChange.candidateId);
 
       if (error) throw error;
       fetchData();
