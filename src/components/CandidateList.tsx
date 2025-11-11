@@ -233,44 +233,23 @@ export function CandidateList() {
     try {
       const { error } = await supabase
         .from('candidat')
-        .update({ statut_candidature: pendingStatutChange.newStatut })
-        .eq('id', pendingStatutChange.candidateId);
+      .update({ statut_candidature: pendingStatutChange.newStatut })
+.eq('id', pendingStatutChange.candidateId);
 
-      if (error) throw error;
+// PAR :
 
-      const candidate = candidates.find(c => c.id === pendingStatutChange.candidateId);
+// Préparer les données à mettre à jour
+const updateData = { 
+  statut_candidature: pendingStatutChange.newStatut 
+};
 
-      if (pendingStatutChange.newStatut === 'pre_embauche' && candidate) {
-        await sendOnboardingEmail(candidate);
-      }
+// Si le nouveau statut est 'entretien', ajouter la date
+if (pendingStatutChange.newStatut === 'entretien') {
+  updateData.date_entretien = new Date().toISOString();
+}
 
-      if (pendingStatutChange.newStatut === 'candidature_rejetee' && candidate) {
-        await sendRejectionEmail(candidate);
-      }
-
-      fetchData();
-      setShowStatutConfirmModal(false);
-      setPendingStatutChange(null);
-    } catch (error) {
-      console.error('Erreur mise à jour statut:', error);
-      alert('Erreur lors de la mise à jour');
-      setShowStatutConfirmModal(false);
-      setPendingStatutChange(null);
-    }
-  };
-
-  const cancelStatutChange = () => {
-    setShowStatutConfirmModal(false);
-    setPendingStatutChange(null);
-    fetchData();
-  };
-
-  const handleCodeCouleurChange = async (candidateId: string, newColor: string | null) => {
-    try {
-      const { error } = await supabase
-        .from('candidat')
-        .update({ code_couleur_rh: newColor })
-        .eq('id', candidateId);
+.update(updateData)
+.eq('id', pendingStatutChange.candidateId);
 
       if (error) throw error;
       fetchData();
