@@ -10,12 +10,12 @@ interface Contract {
   statut: string;
   date_envoi: string;
   date_signature?: string;
-  profil?: {
+  candidat?: {
     nom: string;
     prenom: string;
     email: string;
   };
-  modeles_contrats?: {
+  modele?: {
     nom: string;
   };
 }
@@ -49,8 +49,8 @@ export function ContractsList() {
           statut,
           date_envoi,
           date_signature,
-          profil!contrat_profil_id_fkey(nom, prenom, email),
-          modeles_contrats!contrat_modele_id_fkey(nom)
+          candidat:profil_id(nom, prenom, email),
+          modele:modele_id(nom)
         `)
         .order('date_envoi', { ascending: false });
 
@@ -159,13 +159,13 @@ export function ContractsList() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm">
                       <p className="font-medium text-gray-900">
-                        {contract.profil?.prenom} {contract.profil?.nom}
+                        {contract.candidat?.[0]?.prenom} {contract.candidat?.[0]?.nom}
                       </p>
-                      <p className="text-gray-500">{contract.profil?.email}</p>
+                      <p className="text-gray-500">{contract.candidat?.[0]?.email}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {contract.modeles_contrats?.nom || 'N/A'}
+                    {contract.modele?.[0]?.nom || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(contract.statut)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
