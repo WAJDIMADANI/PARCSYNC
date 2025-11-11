@@ -10,6 +10,7 @@ interface Contract {
   statut: string;
   date_envoi: string;
   date_signature?: string;
+  variables?: string;
   candidat?: {
     nom: string;
     prenom: string;
@@ -37,25 +38,55 @@ export function ContractsList() {
     fetchContracts();
   }, []);
 
+  // ✅ FONCTION CORRIGÉE - Récupère les données séparément
   const fetchContracts = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // 1. Récupère TOUS les contrats
+      const { data: contractsData, error: contractsError } = await supabase
         .from('contrat')
-        .select(`
-          id,
-          profil_id,
-          modele_id,
-          statut,
-          date_envoi,
-          date_signature,
-          candidat:profil_id(nom, prenom, email),
-          modele:modele_id(nom)
-        `)
+        .select('*')
         .order('date_envoi', { ascending: false });
 
-      if (error) throw error;
-      setContracts(data || []);
+      if (contractsError) throw contractsError;
+
+      if (!contractsData || contractsData.length === 0) {
+        setContracts([]);
+        return;
+      }
+
+      // 2. Récupère tous les profils (candidats) UNIQUES
+      const profilIds = [...new Set(contractsData.map(c => c.profil_id))];
+      const { data: profils, error: profilsError } = await supabase
+        .from('profil')
+        .select('id, nom, prenom, email')
+        .in('id', profilIds);
+
+      if (profilsError) console.error('Erreur profils:', profilsError);
+
+      // 3. Récupère tous les modèles UNIQUES
+      const modeleIds = [...new Set(contractsData.map(c => c.modele_id))];
+      const { data: modeles, error: modelesError } = await supabase
+        .from('modeles_contrats')
+        .select('id, nom')
+        .in('id', modeleIds);
+
+      if (modelesError) console.error('Erreur modèles:', modelesError);
+
+      // 4. Fusionne les données
+      const contractsWithData: Contract[] = contractsData.map(contract => {
+        const profilData = profils?.find(p => p.id === contract.profil_id);
+        const modeleData = modeles?.find(m => m.id === contract.modele_id);
+
+        return {
+          ...contract,
+          candidat: profilData ? profilData : undefined,
+          modele: modeleData ? modeleData : undefined
+        };
+      });
+
+      setContracts(contractsWithData);
     } catch (error) {
       console.error('Erreur lors du chargement des contrats:', error);
     } finally {
@@ -156,21 +187,31 @@ export function ContractsList() {
             <tbody className="divide-y divide-gray-200 bg-white">
               {contracts.map((contract) => (
                 <tr key={contract.id} className="hover:bg-gray-50">
+                  {/* ✅ AFFICHAGE CANDIDAT CORRIGÉ */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm">
                       <p className="font-medium text-gray-900">
-                        {contract.candidat?.[0]?.prenom} {contract.candidat?.[0]?.nom}
+                        {contract.candidat
+                          ? `${contract.candidat.prenom} ${contract.candidat.nom}`
+                          : 'N/A'}
                       </p>
-                      <p className="text-gray-500">{contract.candidat?.[0]?.email}</p>
+                      <p className="text-gray-500">
+                        {contract.candidat?.email || 'N/A'}
+                      </p>
                     </div>
                   </td>
+
+                  {/* ✅ AFFICHAGE MODÈLE CORRIGÉ */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {contract.modele?.[0]?.nom || 'N/A'}
+                    {contract.modele?.nom || 'N/A'}
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(contract.statut)}</td>
+                  
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(contract.date_envoi).toLocaleDateString('fr-FR')}
                   </td>
+                  
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
                       onClick={() => onViewContract(contract)}
