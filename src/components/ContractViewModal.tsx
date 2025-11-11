@@ -1,70 +1,87 @@
-import { X, Mail, Download, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { X, Download } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
-interface ContractViewModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  contractUrl: string;
-  contractId: string;
-  employeeName: string;
-  employeeEmail?: string;
+interface Contract {
+  id: string;
+  profil_id: string;
+  modele_id: string;
+  statut: string;
+  variables: string;
+  date_signature?: string;
 }
 
-export function ContractViewModal({
-  isOpen,
+interface ContractViewModalProps {
+  contract: Contract;
+  onClose: () => void;
+  onDownload?: () => void;
+}
+
+export default function ContractViewModal({
+  contract,
   onClose,
-  contractUrl,
-  contractId,
-  employeeName,
-  employeeEmail
+  onDownload
 }: ContractViewModalProps) {
-  const [sending, setSending] = useState(false);
+  const [contractData, setContractData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [htmlContent, setHtmlContent] = useState('');
+  const [downloading, setDownloading] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    fetchContractData();
+  }, [contract.id]);
 
-  const handleSendEmail = async () => {
-    if (!employeeEmail) {
-      alert('Email du salarié non disponible');
-      return;
-    }
-
-    if (!confirm(`Envoyer le contrat par email à ${employeeEmail} ?`)) {
-      return;
-    }
-
-    setSending(true);
+  const fetchContractData = async () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-contract-email`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            contractId,
-            employeeEmail,
-            employeeName
-          })
-        }
-      );
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('contrat')
+        .select(`
+          id,
+          statut,
+          variables,
+          date_signature,
+          modele:modele_id(
+            id,
+            nom,
+            contenu_html
+          ),
+          profil:profil_id(
+            nom,
+            prenom,
+            email
+          )
+        `)
+        .eq('id', contract.id)
+        .single();
 
-      if (!response.ok) {
-        throw new Error('Erreur lors de l\'envoi de l\'email');
+      if (error) throw error;
+
+      setContractData(data);
+
+      // Générer le HTML avec les variables
+      if (data.modele && data.modele.contenu_html && data.variables) {
+        let html = data.modele.contenu_html;
+        const variables = JSON.parse(data.variables);
+
+        Object.entries(variables).forEach(([key, value]) => {
+          const regex = new RegExp(`{{${key}}}`, 'g');
+          html = html.replace(regex, String(value));
+        });
+
+        setHtmlContent(html);
       }
-
-      alert('Email envoyé avec succès !');
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'envoi de l\'email');
+      console.error('Erreur lors du chargement:', error);
     } finally {
-      setSending(false);
+      setLoading(false);
     }
   };
 
+  // ✅ FONCTION CORRIGÉE - Télécharge le PDF signé depuis Yousign
   const handleDownload = async () => {
     try {
+      setDownloading(true);
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-pdf`,
         {
@@ -73,89 +90,116 @@ export function ContractViewModal({
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
           },
-          body: JSON.stringify({ contractId })
+          body: JSON.stringify({ contractId: contract.id })
         }
       );
 
       const data = await response.json();
 
       if (data.success && data.url) {
+        // Ouvrir le PDF dans un nouvel onglet
         window.open(data.url, '_blank');
       } else {
         alert('Erreur: ' + (data.error || 'Impossible de télécharger le PDF'));
       }
     } catch (error: any) {
       alert('Erreur lors du téléchargement: ' + error.message);
+    } finally {
+      setDownloading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Contrat de {employeeName}
-            </h2>
-            {employeeEmail && (
-              <p className="text-sm text-gray-500 mt-1">{employeeEmail}</p>
-            )}
+            <h2 className="text-2xl font-bold text-gray-900">Aperçu du contrat</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {contractData?.profil?.[0]?.prenom} {contractData?.profil?.[0]?.nom}
+            </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* PDF Viewer */}
-        <div className="flex-1 overflow-hidden bg-gray-100">
-          <iframe
-            src={contractUrl}
-            className="w-full h-full border-0"
-            title="Contrat PDF"
-          />
-        </div>
-
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <button
-            onClick={handleDownload}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Télécharger
-          </button>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Fermer
-            </button>
-            {employeeEmail && (
+          <div className="flex items-center gap-2">
+            {contract.statut === 'signe' && (
               <button
-                onClick={handleSendEmail}
-                disabled={sending}
-                className="flex items-center gap-2 px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleDownload}
+                disabled={downloading}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                title="Télécharger le PDF signé"
               >
-                {sending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Envoi en cours...
-                  </>
-                ) : (
-                  <>
-                    <Mail className="w-4 h-4" />
-                    Envoyer par email
-                  </>
-                )}
+                <Download size={20} />
+                {downloading ? 'Téléchargement...' : 'Télécharger PDF'}
               </button>
             )}
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 p-2"
+              title="Fermer"
+            >
+              <X size={24} />
+            </button>
           </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <p className="text-gray-500">Chargement du contrat...</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Status Badge */}
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-gray-600">Statut:</span>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    contract.statut === 'signe'
+                      ? 'bg-green-100 text-green-800'
+                      : contract.statut === 'en_attente_signature'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  {contract.statut === 'signe'
+                    ? 'Signé'
+                    : contract.statut === 'en_attente_signature'
+                    ? 'En attente de signature'
+                    : contract.statut}
+                </span>
+                {contract.date_signature && (
+                  <span className="text-sm text-gray-500">
+                    Signé le {new Date(contract.date_signature).toLocaleDateString('fr-FR')}
+                  </span>
+                )}
+              </div>
+
+              {/* Contract Content */}
+              <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
+                <div
+                  className="prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: htmlContent }}
+                />
+              </div>
+
+              {/* Contract Info */}
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                <div>
+                  <p className="text-sm text-gray-600">Email du signataire</p>
+                  <p className="font-medium text-gray-900">
+                    {contractData?.profil?.[0]?.email}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Modèle de contrat</p>
+                  <p className="font-medium text-gray-900">
+                    {contractData?.modele?.[0]?.nom}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
