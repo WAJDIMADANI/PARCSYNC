@@ -248,13 +248,21 @@ export function CandidateList() {
 
       if (error) throw error;
 
+      // Si le nouveau statut est 'pre_embauche', envoyer l'email d'onboarding
+      if (pendingStatutChange.newStatut === 'pre_embauche') {
+        const candidate = candidates.find(c => c.id === pendingStatutChange.candidateId);
+        if (candidate) {
+          await sendOnboardingEmail(candidate);
+        }
+      }
+
       // Fermer le modal et réinitialiser l'état
       setShowStatutConfirmModal(false);
       setPendingStatutChange(null);
 
       fetchData();
     } catch (error) {
-      console.error('Erreur mise à jour code couleur:', error);
+      console.error('Erreur mise à jour statut:', error);
       alert('Erreur lors de la mise à jour');
       // Fermer le modal même en cas d'erreur
       setShowStatutConfirmModal(false);
