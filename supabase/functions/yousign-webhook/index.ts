@@ -75,8 +75,9 @@ Deno.serve(async (req: Request) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     const eventType = webhookData.event_name || webhookData.type;
-    const signatureRequestId = webhookData.signature_request?.id || webhookData.data?.signature_request_id;
-    const externalId = webhookData.signature_request?.external_id;
+    const signatureRequest = webhookData.data?.signature_request || webhookData.signature_request;
+    const signatureRequestId = signatureRequest?.id || webhookData.data?.signature_request_id;
+    const externalId = signatureRequest?.external_id;
 
     if (!signatureRequestId && !externalId) {
       console.error("No signature_request_id or external_id found in webhook");
@@ -87,6 +88,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(`Processing event: ${eventType}, signatureRequestId: ${signatureRequestId}, externalId: ${externalId}`);
+    console.log("Full signature request data:", JSON.stringify(signatureRequest, null, 2));
 
     // Trouver le contrat par yousign_signature_request_id ou external_id
     let contractId = externalId;
@@ -134,15 +136,15 @@ Deno.serve(async (req: Request) => {
         };
 
         // Télécharger et sauvegarder le document signé
-        if (webhookData.signature_request?.documents?.[0]?.id) {
-          const documentId = webhookData.signature_request.documents[0].id;
-          const signatureRequestId = webhookData.signature_request.id;
+        if (signatureRequest?.documents?.[0]?.id) {
+          const documentId = signatureRequest.documents[0].id;
+          const signatureRequestIdForDownload = signatureRequest.id;
 
           try {
             const YOUSIGN_API_KEY = Deno.env.get("YOUSIGN_API_KEY");
 
             // Télécharger le document signé depuis Yousign
-            const downloadUrl = `https://api-sandbox.yousign.app/v3/signature_requests/${signatureRequestId}/documents/${documentId}/download`;
+            const downloadUrl = `https://api-sandbox.yousign.app/v3/signature_requests/${signatureRequestIdForDownload}/documents/${documentId}/download`;
             console.log("Downloading signed document from:", downloadUrl);
 
             const downloadResponse = await fetch(downloadUrl, {
@@ -170,8 +172,11 @@ Deno.serve(async (req: Request) => {
                 if (contractsInfo.length > 0) {
                   const profilId = contractsInfo[0].profil_id;
 
-                  // Upload using convention: documents/contrats/{profil_id}/{contrat_id}-signed.pdf
-                  const fileName = `documents/contrats/${profilId}/${contractId}-signed.pdf`;
+                  // Upload using convention: contrats/{profil_id}/{contrat_id}-signed.pdf
+                  const fileName = `contrats/${profilId}/${contractId}-signed.pdf`;
+
+                  // Convertir le blob en array buffer
+                  const arrayBuffer = await pdfBlob.arrayBuffer();
 
                   const uploadResponse = await fetch(
                     `${SUPABASE_URL}/storage/v1/object/documents/${fileName}`,
@@ -179,15 +184,19 @@ Deno.serve(async (req: Request) => {
                       method: 'POST',
                       headers: {
                         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                        'apikey': SUPABASE_SERVICE_ROLE_KEY || '',
                         'Content-Type': 'application/pdf',
                       },
-                      body: pdfBlob,
+                      body: arrayBuffer,
                     }
                   );
 
                   if (uploadResponse.ok) {
                     updateData.fichier_signe_url = fileName;
                     console.log("Signed document saved to storage:", fileName);
+                  } else {
+                    const errorText = await uploadResponse.text();
+                    console.error("Error uploading signed document:", uploadResponse.status, errorText);
                   }
                 }
               }
@@ -328,13 +337,17 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error("Error in yousign-webhook:", error);
+    console.error("Error stack:", error.stack);
+
+    // Retourner 200 pour éviter que Yousign ne réessaie continuellement
     return new Response(
       JSON.stringify({
         error: error.message,
-        success: false
+        success: false,
+        note: "Error logged but returning 200 to prevent retries"
       }),
       {
-        status: 500,
+        status: 200,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
