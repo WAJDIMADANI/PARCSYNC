@@ -10,7 +10,7 @@ interface Contract {
   statut: string;
   date_envoi: string;
   date_signature?: string;
-  date_entretien?: string;
+  date_entree?: string;
   variables?: string;
   candidat?: {
     nom: string;
@@ -39,14 +39,14 @@ export function ContractsList() {
     fetchContracts();
   }, []);
 
-  // ✅ FONCTION POUR RÉCUPÉRER LA DATE D'ENTRETIEN
-  const getDateEntretien = async (profilId: string): Promise<string | undefined> => {
+  // ✅ FONCTION POUR RÉCUPÉRER LA DATE D'ENTRÉE (activation du salarié)
+  const getDateEntree = async (profilId: string): Promise<string | undefined> => {
     try {
       const { data, error } = await supabase
         .from('profil_statut_historique')
         .select('date_changement')
         .eq('profil_id', profilId)
-        .eq('nouveau_statut', 'Entretien')
+        .eq('nouveau_statut', 'Actif')
         .order('date_changement', { ascending: true })
         .limit(1)
         .single();
@@ -54,7 +54,7 @@ export function ContractsList() {
       if (error || !data) return undefined;
       return data.date_changement;
     } catch (error) {
-      console.error('Erreur récupération date entretien:', error);
+      console.error('Erreur récupération date entrée:', error);
       return undefined;
     }
   };
@@ -95,10 +95,10 @@ export function ContractsList() {
 
       if (modelesError) console.error('Erreur modèles:', modelesError);
 
-      // 4. Récupère les dates d'entretien pour chaque profil
-      const datesEntretien: Record<string, string | undefined> = {};
+      // 4. Récupère les dates d'entrée pour chaque profil
+      const datesEntree: Record<string, string | undefined> = {};
       for (const profilId of profilIds) {
-        datesEntretien[profilId] = await getDateEntretien(profilId);
+        datesEntree[profilId] = await getDateEntree(profilId);
       }
 
       // 5. Fusionne les données
@@ -110,7 +110,7 @@ export function ContractsList() {
           ...contract,
           candidat: profilData ? profilData : undefined,
           modele: modeleData ? modeleData : undefined,
-          date_entretien: datesEntretien[contract.profil_id]
+          date_entree: datesEntree[contract.profil_id]
         };
       });
 
@@ -218,7 +218,7 @@ export function ContractsList() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modèle</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date d'envoi</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date entretien</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date entrée</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date signature</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
@@ -255,9 +255,9 @@ export function ContractsList() {
                     {formatDate(contract.date_envoi)}
                   </td>
 
-                  {/* ✅ AFFICHAGE DATE ENTRETIEN (DEPUIS HISTORIQUE) */}
+                  {/* ✅ AFFICHAGE DATE ENTRÉE (DEPUIS HISTORIQUE) */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(contract.date_entretien)}
+                    {formatDate(contract.date_entree)}
                   </td>
 
                   {/* ✅ AFFICHAGE DATE SIGNATURE */}
