@@ -1,303 +1,200 @@
-import { useState, useEffect } from 'react';
-import { supabase, getStorageUrl } from '../lib/supabase';
-import { Search, CheckCircle, Clock, Send, Eye } from 'lucide-react';
-import { ContractViewModal } from './ContractViewModal';
-import { ContractPreviewModal } from './ContractPreviewModal';
-
-interface Employee {
-  prenom: string;
-  nom: string;
-}
-
-interface ModeleContrat {
-  type_contrat: string;
-}
+import React, { useState, useEffect } from 'react';
+import { Download, Eye, Trash2, Mail } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import ContractViewModal from './ContractViewModal';
 
 interface Contract {
   id: string;
   profil_id: string;
-  variables: {
-    date_debut?: string;
-    date_fin?: string;
-    salaire?: string;
-    heures_semaine?: string;
-    nom_salarie?: string;
-    email_salarie?: string;
-    [key: string]: any;
-  };
-  date_signature: string | null;
-  yousign_signed_at: string | null;
-  fichier_contrat_url: string | null;
-  fichier_signe_url: string | null;
+  modele_id: string;
   statut: string;
-  created_at: string;
-  profil?: Employee;
-  modeles_contrats?: ModeleContrat;
+  date_envoi: string;
+  date_signature?: string;
+  candidat?: {
+    nom: string;
+    prenom: string;
+    email: string;
+  };
+  modele?: {
+    nom: string;
+  };
 }
 
-export function ContractsList() {
+interface Candidate {
+  id: string;
+  nom: string;
+  prenom: string;
+  email: string;
+}
+
+export default function ContractsList() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [sendingContract, setSendingContract] = useState<string | null>(null);
-  const [viewingContract, setViewingContract] = useState<Contract | null>(null);
-  const [modalContractUrl, setModalContractUrl] = useState<string>('');
-  const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [previewingContract, setPreviewingContract] = useState<Contract | null>(null);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    fetchContracts();
   }, []);
 
-  const fetchData = async () => {
+  const fetchContracts = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('contrat')
         .select(`
-          *,
-          profil:profil_id(prenom, nom),
-          modeles_contrats:modele_id(type_contrat)
+          id,
+          profil_id,
+          modele_id,
+          statut,
+          date_envoi,
+          date_signature,
+          candidat:profil_id(nom, prenom, email),
+          modele:modele_id(nom)
         `)
-        .order('created_at', { ascending: false });
+        .order('date_envoi', { ascending: false });
 
       if (error) throw error;
       setContracts(data || []);
     } catch (error) {
-      console.error('Erreur chargement:', error);
+      console.error('Erreur lors du chargement des contrats:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const markAsSigned = async (id: string) => {
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { color: string; label: string }> = {
+      'en_attente_signature': { color: 'bg-yellow-100 text-yellow-800', label: 'En attente' },
+      'signe': { color: 'bg-green-100 text-green-800', label: 'Signé' },
+      'refuse': { color: 'bg-red-100 text-red-800', label: 'Refusé' },
+      'expire': { color: 'bg-gray-100 text-gray-800', label: 'Expiré' },
+      'contrat_envoye': { color: 'bg-blue-100 text-blue-800', label: 'Envoyé' }
+    };
+
+    const statusInfo = statusMap[status] || { color: 'bg-gray-100 text-gray-800', label: status };
+    return <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color}`}>{statusInfo.label}</span>;
+  };
+
+  const onDeleteContract = async (contractId: string) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce contrat ?')) return;
+
     try {
       const { error } = await supabase
         .from('contrat')
-        .update({
-          date_signature: new Date().toISOString(),
-          statut: 'signe'
-        })
-        .eq('id', id);
+        .delete()
+        .eq('id', contractId);
 
       if (error) throw error;
-      fetchData();
+      setContracts(contracts.filter(c => c.id !== contractId));
+      alert('Contrat supprimé avec succès');
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de la mise à jour');
+      console.error('Erreur lors de la suppression:', error);
+      alert('Erreur lors de la suppression du contrat');
     }
   };
 
-  const viewContract = async (contract: Contract) => {
-    let url = contract.fichier_signe_url || contract.fichier_contrat_url;
-
-    if (!url) {
-      // Si pas de fichier, afficher l'aperçu du contrat
-      setPreviewingContract(contract);
-      return;
-    }
-
-    // Ouvrir le modal avec le PDF
-    setModalContractUrl(getStorageUrl(url));
-    setViewingContract(contract);
-  };
-
-  const resendContract = async (contractId: string) => {
-    const contract = contracts.find(c => c.id === contractId);
-    if (!contract) return;
-
-    if (!contract.variables?.email_salarie) {
-      alert('Email du salarié manquant. Impossible de renvoyer le contrat.');
-      return;
-    }
-
-    if (!confirm('Voulez-vous renvoyer le contrat au candidat ?')) {
-      return;
-    }
-
-    setSendingContract(contractId);
+  // ✅ FONCTION CORRIGÉE - Télécharge le PDF signé depuis Yousign
+  const onDownloadPdf = async (contractId: string) => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-pdf`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
           },
-          body: JSON.stringify({
-            contractId: contract.id
-          })
+          body: JSON.stringify({ contractId })
         }
       );
 
-      if (!response.ok) {
-        throw new Error('Erreur lors de l\'envoi du contrat');
-      }
+      const data = await response.json();
 
-      alert('Contrat renvoyé avec succès au candidat !');
-      fetchData();
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'envoi du contrat');
-    } finally {
-      setSendingContract(null);
+      if (data.success && data.url) {
+        // Ouvrir le PDF dans un nouvel onglet
+        window.open(data.url, '_blank');
+      } else {
+        alert('Erreur: ' + (data.error || 'Impossible de télécharger le PDF'));
+      }
+    } catch (error: any) {
+      alert('Erreur lors du téléchargement: ' + error.message);
     }
   };
 
-  const filteredContracts = contracts.filter(c =>
-    `${c.profil?.prenom || ''} ${c.profil?.nom || ''} ${c.modeles_contrats?.type_contrat || ''}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const onViewContract = (contract: Contract) => {
+    setSelectedContract(contract);
+    setShowModal(true);
+  };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <div className="flex justify-center items-center h-64">Chargement...</div>;
   }
 
   return (
-    <div>
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Contrats</h1>
-          <p className="text-gray-600 mt-1">{contracts.length} contrat(s)</p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Contrats</h1>
       </div>
 
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Rechercher un contrat..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      {filteredContracts.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <p className="text-gray-600">Aucun contrat trouvé</p>
+      {contracts.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <p className="text-gray-500">Aucun contrat trouvé</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Salarié
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date début
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date fin
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rémunération
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Heures/sem
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Signature
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidat</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modèle</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date d'envoi</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredContracts.map((contract) => (
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {contracts.map((contract) => (
                 <tr key={contract.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {contract.profil ? `${contract.profil.prenom} ${contract.profil.nom}` : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {contract.modeles_contrats?.type_contrat ? (
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        contract.modeles_contrats.type_contrat.toLowerCase() === 'cdi' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {contract.modeles_contrats.type_contrat.toUpperCase()}
-                      </span>
-                    ) : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {contract.variables?.date_debut ? new Date(contract.variables.date_debut).toLocaleDateString('fr-FR') : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {contract.variables?.date_fin ? new Date(contract.variables.date_fin).toLocaleDateString('fr-FR') : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {contract.variables?.salaire ? `${parseFloat(contract.variables.salaire).toLocaleString()} €` : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {contract.variables?.heures_semaine ? `${contract.variables.heures_semaine}h` : '-'}
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col">
-                      {contract.date_signature || contract.yousign_signed_at ? (
-                        <>
-                          <span className="flex items-center text-green-600">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Signé
-                          </span>
-                          <span className="text-xs text-gray-500 mt-1">
-                            {new Date(contract.date_signature || contract.yousign_signed_at || '').toLocaleDateString('fr-FR')}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="flex items-center text-orange-600">
-                          <Clock className="w-4 h-4 mr-1" />
-                          En attente
-                        </span>
-                      )}
+                    <div className="text-sm">
+                      <p className="font-medium text-gray-900">
+                        {contract.candidat?.[0]?.prenom} {contract.candidat?.[0]?.nom}
+                      </p>
+                      <p className="text-gray-500">{contract.candidat?.[0]?.email}</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2">
-                      {/* Consulter le contrat - Toujours visible */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {contract.modele?.[0]?.nom || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(contract.statut)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(contract.date_envoi).toLocaleDateString('fr-FR')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button
+                      onClick={() => onViewContract(contract)}
+                      className="inline-flex items-center px-3 py-1 rounded-md text-blue-600 hover:bg-blue-50"
+                      title="Voir le contrat"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    {contract.statut === 'signe' && (
                       <button
-                        onClick={() => viewContract(contract)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50"
-                        title="Consulter le contrat"
+                        onClick={() => onDownloadPdf(contract.id)}
+                        className="inline-flex items-center px-3 py-1 rounded-md text-green-600 hover:bg-green-50"
+                        title="Télécharger le PDF signé"
                       >
-                        <Eye className="w-4 h-4" />
-                        Consulter
+                        <Download size={18} />
                       </button>
-
-                      {/* Actions pour contrats non signés */}
-                      {!contract.date_signature && !contract.yousign_signed_at && (
-                        <>
-                          {/* Envoyer au candidat */}
-                          <button
-                            onClick={() => resendContract(contract.id)}
-                            disabled={sendingContract === contract.id}
-                            className="text-orange-600 hover:text-orange-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-orange-50 disabled:opacity-50"
-                            title="Renvoyer au candidat"
-                          >
-                            <Send className="w-4 h-4" />
-                            {sendingContract === contract.id ? 'Envoi...' : 'Envoyer'}
-                          </button>
-
-                          {/* Marquer signé manuellement */}
-                          <button
-                            onClick={() => markAsSigned(contract.id)}
-                            className="text-green-600 hover:text-green-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-green-50"
-                            title="Marquer comme signé"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Marquer signé
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    )}
+                    <button
+                      onClick={() => onDeleteContract(contract.id)}
+                      className="inline-flex items-center px-3 py-1 rounded-md text-red-600 hover:bg-red-50"
+                      title="Supprimer le contrat"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -306,123 +203,14 @@ export function ContractsList() {
         </div>
       )}
 
-      {/* Loading overlay pendant la génération du PDF */}
-      {generatingPdf && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl p-8 flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="text-lg font-medium text-gray-900">Génération du contrat en cours...</p>
-            <p className="text-sm text-gray-500">Veuillez patienter</p>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de consultation PDF */}
-      {viewingContract && (
+      {showModal && selectedContract && (
         <ContractViewModal
-          isOpen={true}
+          contract={selectedContract}
           onClose={() => {
-            setViewingContract(null);
-            setModalContractUrl('');
+            setShowModal(false);
+            setSelectedContract(null);
           }}
-          contractUrl={modalContractUrl}
-          contractId={viewingContract.id}
-          employeeName={viewingContract.profil ? `${viewingContract.profil.prenom} ${viewingContract.profil.nom}` : viewingContract.variables?.nom_salarie || 'Salarié'}
-          employeeEmail={viewingContract.variables?.email_salarie}
-        />
-      )}
-
-      {/* Modal d'aperçu (quand pas de PDF) */}
-      {previewingContract && (
-        <ContractPreviewModal
-          isOpen={true}
-          onClose={() => setPreviewingContract(null)}
-          contract={previewingContract}
-          onDownloadPdf={async () => {
-            setGeneratingPdf(true);
-            try {
-              const response = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-contract-pdf`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-                  },
-                  body: JSON.stringify({
-                    contractId: previewingContract.id
-                  })
-                }
-              );
-
-              if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
-              }
-
-              const result = await response.json();
-
-              if (result.url) {
-                // Télécharger le PDF
-                const pdfUrl = getStorageUrl(result.url);
-                const link = document.createElement('a');
-                link.href = pdfUrl;
-                link.download = `contrat-${previewingContract.profil?.prenom}-${previewingContract.profil?.nom}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                // Rafraîchir les données
-                await fetchData();
-                setPreviewingContract(null);
-              } else {
-                throw new Error('Aucune URL retournée');
-              }
-            } catch (error: any) {
-              console.error('Erreur:', error);
-              alert(`Erreur lors de la génération du PDF:\n${error.message}`);
-            } finally {
-              setGeneratingPdf(false);
-            }
-          }}
-          onSendEmail={
-            previewingContract.variables?.email_salarie
-              ? async () => {
-                  setGeneratingPdf(true);
-                  try {
-                    const response = await fetch(
-                      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-contract-email`,
-                      {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-                        },
-                        body: JSON.stringify({
-                          contractId: previewingContract.id,
-                          employeeEmail: previewingContract.variables.email_salarie,
-                          employeeName: previewingContract.profil
-                            ? `${previewingContract.profil.prenom} ${previewingContract.profil.nom}`
-                            : previewingContract.variables.nom_salarie || 'Salarié'
-                        })
-                      }
-                    );
-
-                    if (!response.ok) {
-                      throw new Error('Erreur lors de l\'envoi de l\'email');
-                    }
-
-                    alert('Email envoyé avec succès !');
-                    setPreviewingContract(null);
-                  } catch (error) {
-                    console.error('Erreur:', error);
-                    alert('Erreur lors de l\'envoi de l\'email');
-                  } finally {
-                    setGeneratingPdf(false);
-                  }
-                }
-              : undefined
-          }
+          onDownload={() => onDownloadPdf(selectedContract.id)}
         />
       )}
     </div>
