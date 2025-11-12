@@ -134,10 +134,10 @@ export function ContractTemplates() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
+    if (file && (file.type === 'application/pdf' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx'))) {
       setFormData({ ...formData, file });
     } else {
-      alert('Seuls les fichiers PDF sont acceptés');
+      alert('Seuls les fichiers PDF et Word (.docx) sont acceptés');
     }
   };
 
@@ -147,7 +147,7 @@ export function ContractTemplates() {
 
     setUploading(true);
     try {
-      const fileExt = 'pdf';
+      const fileExt = formData.file.name.endsWith('.docx') ? 'docx' : 'pdf';
       const fileName = `${Date.now()}_${formData.nom.replace(/[^a-z0-9]/gi, '_')}.${fileExt}`;
       const filePath = `${fileName}`;
 
@@ -603,12 +603,12 @@ export function ContractTemplates() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Fichier PDF
+                  Fichier Word ou PDF
                 </label>
                 <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
                   <input
                     type="file"
-                    accept="application/pdf"
+                    accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     onChange={handleFileChange}
                     className="hidden"
                     id="file-upload"
@@ -620,7 +620,7 @@ export function ContractTemplates() {
                       <p className="text-sm text-slate-700">{formData.file.name}</p>
                     ) : (
                       <>
-                        <p className="text-sm text-slate-600">Cliquez pour sélectionner un PDF</p>
+                        <p className="text-sm text-slate-600">Cliquez pour sélectionner un fichier Word (.docx) ou PDF</p>
                         <p className="text-xs text-slate-500 mt-1">Max 10 MB</p>
                       </>
                     )}
