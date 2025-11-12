@@ -198,12 +198,13 @@ Deno.serve(async (req: Request) => {
     // Récupérer le contrat avec le modèle
     console.log("Fetching contract with ID:", contractId);
     const contractResponse = await fetch(
-      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,modele:modele_id(nom,type_contrat,contenu_html,fichier_url,fichier_nom),profil:profil_id(prenom,nom,email)`,
+      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,modele:modele_id(*),profil:profil_id(*)`,
       {
         headers: {
           "apikey": SUPABASE_SERVICE_ROLE_KEY,
           "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          "Accept": "application/json"
+          "Accept": "application/json",
+          "Content-Type": "application/json"
         }
       }
     );
