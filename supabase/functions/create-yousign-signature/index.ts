@@ -25,7 +25,7 @@ async function generateContractHTML(contract: any): Promise<string> {
   return html;
 }
 
-// ✅ Fonction pour générer le PDF via PDFShift
+// ✅ Fonction pour générer le PDF via PDFShift (pour les modèles HTML)
 async function generatePDF(htmlContent: string): Promise<ArrayBuffer> {
   const PDFSHIFT_API_KEY = Deno.env.get("PDFSHIFT_API_KEY");
 
@@ -51,6 +51,111 @@ async function generatePDF(htmlContent: string): Promise<ArrayBuffer> {
   }
 
   return await response.arrayBuffer();
+}
+
+// ✅ NEW: Fonction pour convertir Word → PDF via CloudConvert
+async function convertWordToPDF(
+  wordFileUrl: string,
+  variables: Record<string, any>
+): Promise<ArrayBuffer> {
+  const CLOUDCONVERT_API_KEY = Deno.env.get("CLOUDCONVERT_API_KEY");
+
+  if (!CLOUDCONVERT_API_KEY) {
+    throw new Error("CLOUDCONVERT_API_KEY not configured");
+  }
+
+  console.log("Starting CloudConvert Word → PDF conversion...");
+
+  // Étape 1: Créer un job de conversion
+  const jobResponse = await fetch("https://api.cloudconvert.com/v2/jobs", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${CLOUDCONVERT_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      tasks: {
+        "import-word": {
+          operation: "import/url",
+          url: wordFileUrl
+        },
+        "merge-variables": {
+          operation: "merge",
+          input: "import-word",
+          output_format: "docx",
+          variables: variables
+        },
+        "convert-to-pdf": {
+          operation: "convert",
+          input: "merge-variables",
+          output_format: "pdf"
+        },
+        "export-pdf": {
+          operation: "export/url",
+          input: "convert-to-pdf"
+        }
+      }
+    })
+  });
+
+  if (!jobResponse.ok) {
+    const errorText = await jobResponse.text();
+    throw new Error(`CloudConvert job creation error: ${errorText}`);
+  }
+
+  const jobData = await jobResponse.json();
+  const jobId = jobData.data.id;
+  console.log("CloudConvert job created:", jobId);
+
+  // Étape 2: Attendre la fin du job (polling)
+  let jobStatus = jobData.data.status;
+  let attempts = 0;
+  const maxAttempts = 30;
+
+  while (jobStatus !== "finished" && jobStatus !== "error" && attempts < maxAttempts) {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const statusResponse = await fetch(`https://api.cloudconvert.com/v2/jobs/${jobId}`, {
+      headers: {
+        "Authorization": `Bearer ${CLOUDCONVERT_API_KEY}`
+      }
+    });
+
+    if (!statusResponse.ok) {
+      throw new Error("Failed to check CloudConvert job status");
+    }
+
+    const statusData = await statusResponse.json();
+    jobStatus = statusData.data.status;
+    attempts++;
+
+    console.log(`CloudConvert job status: ${jobStatus} (attempt ${attempts})`);
+  }
+
+  if (jobStatus === "error") {
+    throw new Error("CloudConvert job failed");
+  }
+
+  if (jobStatus !== "finished") {
+    throw new Error("CloudConvert job timeout");
+  }
+
+  // Étape 3: Récupérer l'URL du PDF
+  const exportTask = jobData.data.tasks.find((t: any) => t.name === "export-pdf");
+  if (!exportTask || !exportTask.result?.files?.[0]?.url) {
+    throw new Error("CloudConvert export task not found");
+  }
+
+  const pdfUrl = exportTask.result.files[0].url;
+  console.log("PDF generated at:", pdfUrl);
+
+  // Étape 4: Télécharger le PDF
+  const pdfResponse = await fetch(pdfUrl);
+  if (!pdfResponse.ok) {
+    throw new Error("Failed to download converted PDF");
+  }
+
+  return await pdfResponse.arrayBuffer();
 }
 
 Deno.serve(async (req: Request) => {
@@ -90,10 +195,10 @@ Deno.serve(async (req: Request) => {
       throw new Error("Supabase configuration missing");
     }
 
-    // Récupérer le contrat
+    // Récupérer le contrat avec le modèle
     console.log("Fetching contract with ID:", contractId);
     const contractResponse = await fetch(
-      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,modele:modele_id(nom,type_contrat,contenu_html),profil:profil_id(prenom,nom,email)`,
+      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,modele:modele_id(nom,type_contrat,contenu_html,fichier_url,fichier_nom),profil:profil_id(prenom,nom,email)`,
       {
         headers: {
           "apikey": SUPABASE_SERVICE_ROLE_KEY,
@@ -126,18 +231,34 @@ Deno.serve(async (req: Request) => {
       throw new Error("Email employé invalide ou manquant dans le profil");
     }
 
-    if (!contract.modele?.contenu_html) {
-      throw new Error("Le modèle de contrat n'a pas de contenu HTML associé");
+    // ✅ DÉCISION : PDF ou Word ?
+    let pdfArrayBuffer: ArrayBuffer;
+    const isWordFile = contract.modele?.fichier_nom?.toLowerCase().endsWith('.docx');
+
+    if (isWordFile && contract.modele?.fichier_url) {
+      // ✅ OPTION 1 : Fichier Word → CloudConvert
+      console.log("Detected Word file, using CloudConvert...");
+
+      const variables = typeof contract.variables === 'string'
+        ? JSON.parse(contract.variables)
+        : contract.variables;
+
+      pdfArrayBuffer = await convertWordToPDF(contract.modele.fichier_url, variables);
+      console.log("Word → PDF conversion completed");
+
+    } else if (contract.modele?.contenu_html) {
+      // ✅ OPTION 2 : HTML → PDF (méthode classique)
+      console.log("Using HTML → PDF conversion...");
+      const htmlContent = await generateContractHTML(contract);
+      pdfArrayBuffer = await generatePDF(htmlContent);
+      console.log("HTML → PDF conversion completed");
+
+    } else {
+      throw new Error("Le modèle de contrat n'a ni fichier Word ni contenu HTML");
     }
 
-    // ✅ ÉTAPE 0 : GÉNÉRER LE PDF EN MÉMOIRE
-    console.log("Step 0: Generating PDF from HTML template...");
-    const htmlContent = await generateContractHTML(contract);
-    console.log("HTML generated, length:", htmlContent.length);
-
-    const pdfArrayBuffer = await generatePDF(htmlContent);
     const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
-    console.log("PDF generated in memory, size:", pdfBlob.size, "bytes");
+    console.log("PDF ready for Yousign, size:", pdfBlob.size, "bytes");
 
     // ✅ ÉTAPE 1 : Créer une signature request
     console.log("Step 1: Creating signature request...");
