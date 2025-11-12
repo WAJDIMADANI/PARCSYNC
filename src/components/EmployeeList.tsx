@@ -241,46 +241,50 @@ export function EmployeeList() {
   const getStatutBadge = (statut: string, employeeId: string) => {
     // Vérifier le statut réel du contrat
     const contractStatus = getEmployeeContractStatus(employeeId);
-    
+
     if (contractStatus === 'signe') {
-      return 'bg-green-100 text-green-700';
+      return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
     }
-    
+
     if (contractStatus === 'en_attente_signature') {
-      return 'bg-yellow-100 text-yellow-700';
+      return 'bg-amber-100 text-amber-800 border border-amber-300';
     }
-    
+
     switch (statut) {
       case 'actif':
-        return 'bg-green-100 text-green-700';
+        return 'bg-teal-100 text-teal-800 border border-teal-300';
       case 'en_attente_contrat':
-        return 'bg-orange-100 text-orange-700';
+        return 'bg-orange-100 text-orange-800 border border-orange-300';
       case 'contrat_envoye':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-sky-100 text-sky-800 border border-sky-300';
       case 'inactif':
-        return 'bg-red-100 text-red-700';
+        return 'bg-rose-100 text-rose-800 border border-rose-300';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-slate-100 text-slate-800 border border-slate-300';
     }
   };
 
   const getStatutLabel = (statut: string, employeeId: string) => {
     // Vérifier le statut réel du contrat
     const contractStatus = getEmployeeContractStatus(employeeId);
-    
+
     if (contractStatus === 'signe') {
-      return '✅ Signé';
+      return '✓ Signé';
     }
-    
+
     if (contractStatus === 'en_attente_signature') {
-      return '📤 Contrat envoyé';
+      return '⏳ En attente signature';
     }
-    
+
     switch (statut) {
+      case 'actif':
+        return '✓ Actif';
       case 'en_attente_contrat':
-        return 'En attente contrat';
+        return '⏳ En attente contrat';
       case 'contrat_envoye':
-        return 'Contrat envoyé';
+        return '📧 Contrat envoyé';
+      case 'inactif':
+        return '✕ Inactif';
       default:
         return statut;
     }
@@ -502,7 +506,7 @@ export function EmployeeList() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatutBadge(employee.statut, employee.id)}`}>
+                      <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-lg shadow-sm ${getStatutBadge(employee.statut, employee.id)}`}>
                         {getStatutLabel(employee.statut, employee.id)}
                       </span>
                     </td>
