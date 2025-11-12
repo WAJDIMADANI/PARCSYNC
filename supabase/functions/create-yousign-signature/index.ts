@@ -11,145 +11,43 @@ interface SignatureRequest {
 
 // ✅ Fonction pour générer l'HTML du contrat avec les variables
 async function generateContractHTML(contract: any): Promise<string> {
+  let html = contract.modele.contenu_html;
   const variables = typeof contract.variables === 'string'
     ? JSON.parse(contract.variables)
     : contract.variables;
 
-  const profil = contract.profil || {};
-  const modele = contract.modele || {};
+  // Remplacer les variables {{variable}} par les vraies valeurs
+  Object.entries(variables).forEach(([key, value]) => {
+    const regex = new RegExp(`{{${key}}}`, 'g');
+    html = html.replace(regex, String(value || ''));
+  });
 
-  // Si le modèle a du HTML custom, l'utiliser
-  if (modele.contenu_html) {
-    let html = modele.contenu_html;
-    Object.entries(variables).forEach(([key, value]) => {
-      const regex = new RegExp(`{{${key}}}`, 'g');
-      html = html.replace(regex, String(value || ''));
-    });
-    return html;
-  }
-
-  // Sinon, générer un HTML par défaut
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      font-size: 11pt;
-      line-height: 1.6;
-      color: #000;
-      margin: 40px;
-    }
-    h1 {
-      text-align: center;
-      color: #2563eb;
-      font-size: 20pt;
-      margin-bottom: 30px;
-      border-bottom: 3px solid #2563eb;
-      padding-bottom: 10px;
-    }
-    h2 {
-      color: #1e40af;
-      font-size: 14pt;
-      margin-top: 25px;
-      margin-bottom: 15px;
-    }
-    .info-box {
-      background: #f0f9ff;
-      border-left: 4px solid #2563eb;
-      padding: 15px;
-      margin: 20px 0;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
-    }
-    th {
-      background-color: #f3f4f6;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
-  <h1>${modele.nom || 'CONTRAT DE TRAVAIL'}</h1>
-  <p style="text-align: center;"><strong>Type :</strong> ${modele.type_contrat || 'CDI'}</p>
-
-  <h2>ENTRE LES SOUSSIGNÉS :</h2>
-  <div class="info-box">
-    <p><strong>L'Employeur :</strong> PARC SYNC</p>
-  </div>
-
-  <p style="text-align: center; margin: 20px 0;"><strong>ET</strong></p>
-
-  <div class="info-box">
-    <p><strong>Le Salarié :</strong> ${profil.prenom || ''} ${profil.nom || ''}</p>
-    <p><strong>Email :</strong> ${profil.email || ''}</p>
-  </div>
-
-  <h2>INFORMATIONS DU CONTRAT</h2>
-  <table>
-    <tr>
-      <th>Poste</th>
-      <td>${variables.poste || '[Poste à définir]'}</td>
-    </tr>
-    <tr>
-      <th>Date de début</th>
-      <td>${variables.date_debut ? new Date(variables.date_debut).toLocaleDateString('fr-FR') : '[Date à définir]'}</td>
-    </tr>
-    <tr>
-      <th>Durée hebdomadaire</th>
-      <td>${variables.heures_semaine || '35'} heures</td>
-    </tr>
-    <tr>
-      <th>Salaire brut mensuel</th>
-      <td style="font-weight: bold; color: #059669;">${variables.salaire || '[Salaire à définir]'}</td>
-    </tr>
-    ${variables.lieu_travail ? `<tr><th>Lieu de travail</th><td>${variables.lieu_travail}</td></tr>` : ''}
-  </table>
-
-  <p style="margin-top: 40px; text-align: center; color: #666;">
-    Document généré automatiquement - ${new Date().toLocaleDateString('fr-FR')}
-  </p>
-</body>
-</html>
-  `;
+  return html;
 }
 
-// ✅ Fonction pour générer le PDF via HTML2PDF.it (service gratuit)
+// ✅ Fonction pour générer le PDF via PDFShift
 async function generatePDF(htmlContent: string): Promise<ArrayBuffer> {
-  const response = await fetch("https://api.html2pdf.app/v1/generate", {
+  const PDFSHIFT_API_KEY = Deno.env.get("PDFSHIFT_API_KEY");
+
+  if (!PDFSHIFT_API_KEY) {
+    throw new Error("PDFSHIFT_API_KEY not configured");
+  }
+
+  const response = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
     method: "POST",
     headers: {
+      "Authorization": `Bearer ${PDFSHIFT_API_KEY}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      html: htmlContent,
-      engine: "chrome",
-      pdf_options: {
-        format: "A4",
-        margin: {
-          top: "20mm",
-          right: "20mm",
-          bottom: "20mm",
-          left: "20mm"
-        },
-        printBackground: true
-      }
+      source: htmlContent,
+      sandbox: true
     })
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("HTML2PDF error:", errorText);
-    throw new Error(`PDF generation error: ${response.status} - ${errorText}`);
+    throw new Error(`PDFShift API error: ${errorText}`);
   }
 
   return await response.arrayBuffer();

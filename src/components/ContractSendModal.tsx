@@ -214,11 +214,11 @@ export default function ContractSendModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-y-auto">
-        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10 rounded-t-xl">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between z-10 rounded-t-xl">
           <div>
-            <h2 className="text-lg sm:text-2xl font-bold text-white">Envoyer le contrat</h2>
+            <h2 className="text-2xl font-bold text-white">Envoyer le contrat</h2>
             <p className="text-blue-100 text-sm mt-1">{employeeName}</p>
           </div>
           <button
@@ -229,7 +229,7 @@ export default function ContractSendModal({
           </button>
         </div>
 
-        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="p-6 space-y-6">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-900">
               <strong>Important :</strong> Le salarié recevra un email avec le contrat à signer et devra uploader son certificat médical.
@@ -393,7 +393,7 @@ export default function ContractSendModal({
             </div>
           </div>
 
-          <div className="border-t border-gray-200 pt-4 sm:pt-6 flex flex-col sm:flex-row gap-3 justify-end">
+          <div className="border-t border-gray-200 pt-6 flex gap-3 justify-end">
             <button
               onClick={onClose}
               className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"

@@ -82,8 +82,8 @@ export function ShareLinkModal({ onClose }: ShareLinkModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-y-auto p-4 sm:p-8 relative">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
@@ -203,7 +203,7 @@ export function ShareLinkModal({ onClose }: ShareLinkModalProps) {
                 <div ref={qrRef} className="bg-white p-4 rounded-xl shadow-lg mb-4">
                   <QRCodeCanvas
                     value={applyUrl}
-                    size={180}
+                    size={256}
                     level="H"
                     includeMargin={true}
                   />
