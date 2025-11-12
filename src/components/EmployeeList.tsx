@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, getStorageUrl } from '../lib/supabase';
-import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw } from 'lucide-react';
+import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle } from 'lucide-react';
 import EmployeeHistory from './EmployeeHistory';
 import EmployeeDeparture from './EmployeeDeparture';
 import ContractSendModal from './ContractSendModal';
@@ -43,6 +43,8 @@ interface Employee {
   secteur_id: string | null;
   manager_id: string | null;
   candidat_id: string | null;
+  certificat_medical_expiration: string | null;
+  permis_expiration: string | null;
   created_at: string;
   site?: Site;
   secteur?: Secteur;
@@ -559,6 +561,10 @@ function EmployeeDetailModal({
   const [sendingDocuments, setSendingDocuments] = useState(false);
   const [sendDocumentsSuccess, setSendDocumentsSuccess] = useState(false);
   const [sendDocumentsError, setSendDocumentsError] = useState('');
+  const [isEditingDates, setIsEditingDates] = useState(false);
+  const [editedCertificatExpiration, setEditedCertificatExpiration] = useState(employee.certificat_medical_expiration || '');
+  const [editedPermisExpiration, setEditedPermisExpiration] = useState(employee.permis_expiration || '');
+  const [savingDates, setSavingDates] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -786,6 +792,35 @@ function EmployeeDetailModal({
     return labels[type] || type;
   };
 
+  const handleSaveExpirationDates = async () => {
+    setSavingDates(true);
+    try {
+      const { error } = await supabase
+        .from('profil')
+        .update({
+          certificat_medical_expiration: editedCertificatExpiration || null,
+          permis_expiration: editedPermisExpiration || null
+        })
+        .eq('id', employee.id);
+
+      if (error) throw error;
+
+      setIsEditingDates(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde des dates:', error);
+      alert('Erreur lors de la sauvegarde des dates d\'expiration');
+    } finally {
+      setSavingDates(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditedCertificatExpiration(employee.certificat_medical_expiration || '');
+    setEditedPermisExpiration(employee.permis_expiration || '');
+    setIsEditingDates(false);
+  };
+
   // Afficher le vrai statut basé sur le contrat
   const displayStatut = contractStatus === 'signe' ? 'Signé' : 
                         contractStatus === 'en_attente_signature' ? 'Contrat envoyé' :
@@ -915,6 +950,100 @@ function EmployeeDetailModal({
                     </div>
                     <p className="text-gray-900 font-medium">{new Date(employee.date_entree).toLocaleDateString('fr-FR')}</p>
                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Section Documents importants - Dates d'expiration */}
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100/30 rounded-xl p-5 border border-purple-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-white" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg">Documents importants</h3>
+              </div>
+              {!isEditingDates ? (
+                <button
+                  onClick={() => setIsEditingDates(true)}
+                  className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Modifier
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={savingDates}
+                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveExpirationDates}
+                    disabled={savingDates}
+                    className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 shadow-sm hover:shadow-md"
+                  >
+                    {savingDates ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        Enregistrement...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Enregistrer
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {/* Certificat médical */}
+              <div className="bg-white rounded-lg p-3 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-4 h-4 text-purple-600" />
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Certificat médical - Date d'expiration</p>
+                </div>
+                {isEditingDates ? (
+                  <input
+                    type="date"
+                    value={editedCertificatExpiration}
+                    onChange={(e) => setEditedCertificatExpiration(e.target.value)}
+                    className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                  />
+                ) : (
+                  <p className="text-gray-900 font-medium">
+                    {employee.certificat_medical_expiration
+                      ? new Date(employee.certificat_medical_expiration).toLocaleDateString('fr-FR')
+                      : 'Non renseignée'}
+                  </p>
+                )}
+              </div>
+
+              {/* Permis de conduire */}
+              <div className="bg-white rounded-lg p-3 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-4 h-4 text-purple-600" />
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Permis de conduire - Date d'expiration</p>
+                </div>
+                {isEditingDates ? (
+                  <input
+                    type="date"
+                    value={editedPermisExpiration}
+                    onChange={(e) => setEditedPermisExpiration(e.target.value)}
+                    className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                  />
+                ) : (
+                  <p className="text-gray-900 font-medium">
+                    {employee.permis_expiration
+                      ? new Date(employee.permis_expiration).toLocaleDateString('fr-FR')
+                      : 'Non renseignée'}
+                  </p>
                 )}
               </div>
             </div>
