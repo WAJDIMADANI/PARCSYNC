@@ -342,15 +342,13 @@ export function ContractsList() {
                     >
                       <Eye size={18} />
                     </button>
-                    {contract.statut === 'signe' && (
-                      <button
-                        onClick={() => onDownloadPdf(contract.id)}
-                        className="inline-flex items-center px-3 py-1 rounded-md text-green-600 hover:bg-green-50"
-                        title="Télécharger le PDF signé"
-                      >
-                        <Download size={18} />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => onDownloadPdf(contract.id)}
+                      className="inline-flex items-center px-3 py-1 rounded-md text-green-600 hover:bg-green-50"
+                      title="Télécharger le PDF"
+                    >
+                      <Download size={18} />
+                    </button>
                     <button
                       onClick={() => onDeleteContract(contract.id)}
                       className="inline-flex items-center px-3 py-1 rounded-md text-red-600 hover:bg-red-50"
