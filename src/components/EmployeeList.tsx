@@ -803,13 +803,17 @@ function EmployeeDetailModal({
         })
         .eq('id', employee.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur Supabase:', error);
+        throw new Error(`Erreur de sauvegarde: ${error.message || 'Erreur inconnue'}`);
+      }
 
       setIsEditingDates(false);
       onUpdate();
     } catch (error) {
       console.error('Erreur lors de la sauvegarde des dates:', error);
-      alert('Erreur lors de la sauvegarde des dates d\'expiration');
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      alert(`Erreur lors de la sauvegarde des dates d'expiration:\n${errorMessage}\n\nVeuillez vérifier que la migration SQL a bien été exécutée dans Supabase.`);
     } finally {
       setSavingDates(false);
     }
