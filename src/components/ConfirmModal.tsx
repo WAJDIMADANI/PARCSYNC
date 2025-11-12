@@ -45,7 +45,7 @@ export function ConfirmModal({
         onClick={onCancel}
       />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-200">
+      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-2 sm:mx-0 animate-in zoom-in-95 duration-200">
         <button
           onClick={onCancel}
           className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"

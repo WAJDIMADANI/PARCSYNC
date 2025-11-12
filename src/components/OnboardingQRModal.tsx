@@ -10,8 +10,8 @@ export function OnboardingQRModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[95vh] overflow-y-auto p-4 sm:p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-900">QR Code Embauche</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -25,7 +25,7 @@ export function OnboardingQRModal({ onClose }: { onClose: () => void }) {
               Scannez ce QR code pour accéder au formulaire d'embauche complet
             </p>
             <div className="bg-white p-4 rounded-lg shadow-sm">
-              <QRCodeSVG value={onboardingUrl} size={200} level="H" includeMargin />
+              <QRCodeSVG value={onboardingUrl} size={160} level="H" includeMargin />
             </div>
           </div>
 
