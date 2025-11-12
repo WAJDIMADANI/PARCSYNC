@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Calendar, FileText, Briefcase, Mail, TrendingUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface EmployeeHistoryProps {
   profilId: string;
@@ -86,7 +87,7 @@ export default function EmployeeHistory({ profilId, employeeName, onClose }: Emp
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <LoadingSpinner size="md" text="Chargement de l'historique..." />
             </div>
           ) : events.length === 0 ? (
             <div className="text-center py-12">

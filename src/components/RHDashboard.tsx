@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { LoadingSpinner } from './LoadingSpinner';
 import {
   Users,
   UserCheck,
@@ -327,7 +328,7 @@ export function RHDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+        <LoadingSpinner size="lg" text="Chargement du tableau de bord RH..." />
       </div>
     );
   }

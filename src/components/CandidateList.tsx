@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Plus, Search, Edit2, Trash2, UserPlus, X, ChevronRight, Share2, QrCode, ChevronDown } from 'lucide-react';
 import { ShareLinkModal } from './ShareLinkModal';
 import { OnboardingQRModal } from './OnboardingQRModal';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface Site {
   id: string;
@@ -359,7 +360,7 @@ export function CandidateList() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" text="Chargement des candidats..." />
       </div>
     );
   }

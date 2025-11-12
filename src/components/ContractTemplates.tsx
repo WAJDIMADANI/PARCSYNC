@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, Upload, Trash2, Download, Plus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface ContractVariables {
   employer_name: string;
@@ -244,7 +245,7 @@ export function ContractTemplates() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <LoadingSpinner size="lg" text="Chargement des modèles..." />
       </div>
     );
   }
@@ -688,9 +689,9 @@ export function ContractTemplates() {
                 <button
                   type="submit"
                   disabled={uploading}
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {uploading ? 'Upload...' : 'Ajouter'}
+                  {uploading ? <LoadingSpinner size="sm" text="Upload..." /> : 'Ajouter'}
                 </button>
               </div>
             </form>

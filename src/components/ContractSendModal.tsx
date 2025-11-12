@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Send, FileText, Building, DollarSign, Calendar, Clock, Award } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface ContractTemplate {
   id: string;
@@ -207,7 +208,7 @@ export default function ContractSendModal({
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-xl shadow-2xl p-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <LoadingSpinner size="lg" text="Chargement..." />
         </div>
       </div>
     );
@@ -406,10 +407,7 @@ export default function ContractSendModal({
               className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
             >
               {sending ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  Envoi en cours...
-                </>
+                <LoadingSpinner size="sm" text="Envoi en cours..." />
               ) : (
                 <>
                   <Send className="w-5 h-5" />

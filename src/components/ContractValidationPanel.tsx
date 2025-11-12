@@ -3,6 +3,7 @@ import { supabase, getStorageUrl } from '../lib/supabase';
 import { Upload, CheckCircle, XCircle, FileText, AlertCircle, Check, X } from 'lucide-react';
 import MedicalCertificateManager from './MedicalCertificateManager';
 import { resolveDocUrl } from '../lib/documentStorage';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface Contract {
   id: string;
@@ -197,7 +198,7 @@ export default function ContractValidationPanel({
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-xl shadow-2xl p-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <LoadingSpinner size="lg" text="Chargement..." />
         </div>
       </div>
     );
@@ -407,10 +408,7 @@ export default function ContractValidationPanel({
               className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
             >
               {activating ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  Activation...
-                </>
+                <LoadingSpinner size="sm" variant="white" text="Activation..." />
               ) : (
                 <>
                   <Check className="w-5 h-5" />

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { X, Copy, Download, Share2, CheckCircle, Mail, Send } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface ShareLinkModalProps {
   onClose: () => void;
@@ -127,10 +128,7 @@ export function ShareLinkModal({ onClose }: ShareLinkModalProps) {
                 className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {sending ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Envoi...
-                  </>
+                  <LoadingSpinner size="sm" variant="white" text="Envoi..." />
                 ) : sent ? (
                   <>
                     <CheckCircle className="w-5 h-5" />

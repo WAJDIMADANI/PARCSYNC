@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Upload, Mail, Loader, FileText, CheckCircle } from 'lucide-react';
+import { X, Upload, Mail, FileText, CheckCircle } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface MedicalCertificateManagerProps {
   contractId: string;
@@ -311,10 +312,7 @@ function UploadMode({
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {uploading ? (
-            <>
-              <Loader className="w-4 h-4 animate-spin" />
-              Upload...
-            </>
+            <LoadingSpinner size="sm" variant="white" text="Upload..." />
           ) : (
             <>
               <Upload className="w-4 h-4" />
@@ -372,10 +370,7 @@ function EmailMode({
           className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {sending ? (
-            <>
-              <Loader className="w-4 h-4 animate-spin" />
-              Envoi...
-            </>
+            <LoadingSpinner size="sm" variant="white" text="Envoi..." />
           ) : (
             <>
               <Mail className="w-4 h-4" />

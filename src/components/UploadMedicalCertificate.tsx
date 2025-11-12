@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Upload, FileText, CheckCircle, Loader, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 export default function UploadMedicalCertificate() {
   const params = new URLSearchParams(window.location.search);
@@ -125,10 +126,7 @@ export default function UploadMedicalCertificate() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-12 h-12 text-purple-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Chargement...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Chargement..." />
       </div>
     );
   }
@@ -234,10 +232,7 @@ export default function UploadMedicalCertificate() {
             className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg"
           >
             {uploading ? (
-              <>
-                <Loader className="w-6 h-6 animate-spin" />
-                Téléchargement en cours...
-              </>
+              <LoadingSpinner size="sm" variant="white" text="Téléchargement en cours..." />
             ) : (
               <>
                 <Upload className="w-6 h-6" />

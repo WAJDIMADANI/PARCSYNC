@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Car, AlertTriangle, Wrench, Shield, TrendingUp, Calendar } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface DashboardStats {
   totalVehicules: number;
@@ -74,7 +75,7 @@ export function ParcDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" text="Chargement du tableau de bord..." />
       </div>
     );
   }

@@ -3,6 +3,7 @@ import { supabase, getStorageUrl } from '../lib/supabase';
 import { FileText, Trash2, UserX } from 'lucide-react';
 import { ConfirmModal } from './ConfirmModal';
 import { onVoirDocument } from '../lib/documentStorage';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface Candidate {
   id: string;
@@ -185,7 +186,7 @@ export function DocumentsManager() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" text="Chargement des documents..." />
       </div>
     );
   }

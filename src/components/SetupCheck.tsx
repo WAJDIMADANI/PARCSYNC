@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, XCircle, AlertCircle, Database, RefreshCw } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface ConnectionStatus {
   connected: boolean;
@@ -60,7 +61,7 @@ export function SetupCheck() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" text="Vérification de la configuration..." />
       </div>
     );
   }

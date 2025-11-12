@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Download, Eye, Trash2, Mail, Search, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ContractViewModal from './ContractViewModal';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface Contract {
   id: string;
@@ -221,7 +222,7 @@ export function ContractsList() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" text="Chargement des contrats..." />
       </div>
     );
   }

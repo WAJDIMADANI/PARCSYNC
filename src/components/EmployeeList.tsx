@@ -3,6 +3,7 @@ import { supabase, getStorageUrl } from '../lib/supabase';
 import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle } from 'lucide-react';
 import EmployeeHistory from './EmployeeHistory';
 import EmployeeDeparture from './EmployeeDeparture';
+import { LoadingSpinner } from './LoadingSpinner';
 import ContractSendModal from './ContractSendModal';
 import ContractValidationPanel from './ContractValidationPanel';
 import { resolveDocUrl } from '../lib/documentStorage';
@@ -303,7 +304,7 @@ export function EmployeeList() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" text="Chargement des employés..." />
       </div>
     );
   }
@@ -991,10 +992,7 @@ function EmployeeDetailModal({
                     className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 shadow-sm hover:shadow-md"
                   >
                     {savingDates ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        Enregistrement...
-                      </>
+                      <LoadingSpinner size="sm" variant="white" text="Enregistrement..." />
                     ) : (
                       <>
                         <Save className="w-4 h-4" />
@@ -1089,7 +1087,7 @@ function EmployeeDetailModal({
             </div>
             {loadingDocuments ? (
               <div className="flex items-center justify-center py-8 bg-white rounded-lg">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+                <LoadingSpinner size="md" text="Chargement des documents..." />
               </div>
             ) : documents.length === 0 ? (
               <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-5">
@@ -1182,10 +1180,7 @@ function EmployeeDetailModal({
                     className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {resending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        Envoi...
-                      </>
+                      <LoadingSpinner size="sm" variant="white" text="Envoi..." />
                     ) : (
                       <>
                         <RefreshCw className="w-4 h-4" />
@@ -1427,10 +1422,7 @@ function EmployeeDetailModal({
               className="px-8 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transform hover:scale-105"
             >
               {sendingDocuments ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  <span>Envoi en cours...</span>
-                </>
+                <LoadingSpinner size="sm" variant="white" text="Envoi en cours..." />
               ) : (
                 <>
                   <Send className="w-5 h-5" />

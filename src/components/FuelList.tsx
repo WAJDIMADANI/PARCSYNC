@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Fuel, Search, TrendingUp, DollarSign, Calendar } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface Vehicle {
   immatriculation: string;
@@ -93,7 +94,7 @@ export function FuelList() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" text="Chargement du carburant..." />
       </div>
     );
   }

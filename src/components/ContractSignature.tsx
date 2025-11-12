@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { FileText, Upload, CheckCircle, AlertCircle, Send } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface Contract {
   id: string;
@@ -174,7 +175,7 @@ export default function ContractSignature() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
+        <LoadingSpinner size="xl" text="Chargement du contrat..." />
       </div>
     );
   }
@@ -340,10 +341,7 @@ export default function ContractSignature() {
                         className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
                       >
                         {signing ? (
-                          <>
-                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                            Création en cours...
-                          </>
+                          <LoadingSpinner size="sm" variant="white" text="Création en cours..." />
                         ) : (
                           <>
                             <Send className="w-5 h-5" />
