@@ -104,6 +104,7 @@ export function ContractTemplates() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [fileTypeFilter, setFileTypeFilter] = useState<'all' | 'pdf' | 'word'>('all');
   const [formData, setFormData] = useState({
     nom: '',
     type_contrat: 'CDI',
@@ -233,6 +234,13 @@ export function ContractTemplates() {
     }
   };
 
+  const filteredTemplates = templates.filter((template) => {
+    if (fileTypeFilter === 'all') return true;
+    if (fileTypeFilter === 'pdf') return template.fichier_nom.toLowerCase().endsWith('.pdf');
+    if (fileTypeFilter === 'word') return template.fichier_nom.toLowerCase().endsWith('.docx');
+    return true;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -257,8 +265,41 @@ export function ContractTemplates() {
         </button>
       </div>
 
+      <div className="flex items-center gap-3 mb-6 bg-white rounded-xl p-2 shadow-sm border border-slate-200 w-fit">
+        <button
+          onClick={() => setFileTypeFilter('all')}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+            fileTypeFilter === 'all'
+              ? 'bg-primary-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          Tous
+        </button>
+        <button
+          onClick={() => setFileTypeFilter('pdf')}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+            fileTypeFilter === 'pdf'
+              ? 'bg-primary-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          PDF
+        </button>
+        <button
+          onClick={() => setFileTypeFilter('word')}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+            fileTypeFilter === 'word'
+              ? 'bg-primary-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          Word
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {templates.map((template) => (
+        {filteredTemplates.map((template) => (
           <div
             key={template.id}
             className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow"
@@ -320,6 +361,14 @@ export function ContractTemplates() {
             </div>
           </div>
         ))}
+
+        {filteredTemplates.length === 0 && templates.length > 0 && (
+          <div className="col-span-full text-center py-12">
+            <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-600 mb-2">Aucun modèle {fileTypeFilter === 'pdf' ? 'PDF' : fileTypeFilter === 'word' ? 'Word' : ''}</p>
+            <p className="text-sm text-slate-500">Essayez un autre filtre</p>
+          </div>
+        )}
 
         {templates.length === 0 && (
           <div className="col-span-full text-center py-12">
