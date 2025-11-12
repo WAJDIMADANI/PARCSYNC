@@ -10,6 +10,7 @@ interface Contract {
   statut: string;
   date_envoi: string;
   date_signature?: string;
+  date_validation?: string;
   date_entree?: string;
   variables?: string;
   candidat?: {
@@ -39,32 +40,14 @@ export function ContractsList() {
     fetchContracts();
   }, []);
 
-  // ✅ FONCTION POUR RÉCUPÉRER LA DATE D'ENTRÉE (activation du salarié)
-  const getDateEntree = async (profilId: string): Promise<string | undefined> => {
-    try {
-      const { data, error } = await supabase
-        .from('profil_statut_historique')
-        .select('date_changement')
-        .eq('profil_id', profilId)
-        .eq('nouveau_statut', 'Actif')
-        .order('date_changement', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (error || !data) return undefined;
-      return data.date_changement;
-    } catch (error) {
-      console.error('Erreur récupération date entrée:', error);
-      return undefined;
-    }
-  };
+  // Note: La date d'entrée est maintenant stockée dans contrat.date_validation
 
   // ✅ FONCTION CORRIGÉE - Récupère les données séparément AVEC date d'entretien
   const fetchContracts = async () => {
     try {
       setLoading(true);
       
-      // 1. Récupère TOUS les contrats
+      // 1. Récupère TOUS les contrats avec date_validation
       const { data: contractsData, error: contractsError } = await supabase
         .from('contrat')
         .select('*')
@@ -95,13 +78,7 @@ export function ContractsList() {
 
       if (modelesError) console.error('Erreur modèles:', modelesError);
 
-      // 4. Récupère les dates d'entrée pour chaque profil
-      const datesEntree: Record<string, string | undefined> = {};
-      for (const profilId of profilIds) {
-        datesEntree[profilId] = await getDateEntree(profilId);
-      }
-
-      // 5. Fusionne les données
+      // 4. Fusionne les données - la date d'entrée vient de date_validation
       const contractsWithData: Contract[] = contractsData.map(contract => {
         const profilData = profils?.find(p => p.id === contract.profil_id);
         const modeleData = modeles?.find(m => m.id === contract.modele_id);
@@ -110,7 +87,7 @@ export function ContractsList() {
           ...contract,
           candidat: profilData ? profilData : undefined,
           modele: modeleData ? modeleData : undefined,
-          date_entree: datesEntree[contract.profil_id]
+          date_entree: contract.date_validation
         };
       });
 
