@@ -45,7 +45,9 @@ export default function ContractSendModal({
     date_fin: '',
     heures_semaine: '35',
     taux_horaire: '',
-    lieu_travail: ''
+    lieu_travail: '',
+    birthplace: '',        // 🆕 NOUVEAU - Lieu de naissance
+    id_number: ''          // 🆕 NOUVEAU - Numéro de Sécurité Sociale
   });
 
   useEffect(() => {
@@ -391,6 +393,34 @@ export default function ContractSendModal({
                   placeholder="Adresse complète"
                 />
               </div>
+
+              {/* 🆕 NOUVEAU - Lieu de naissance */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Lieu de naissance
+                </label>
+                <input
+                  type="text"
+                  value={variables.birthplace}
+                  onChange={(e) => setVariables({...variables, birthplace: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ex: Paris, Lyon, etc."
+                />
+              </div>
+
+              {/* 🆕 NOUVEAU - Numéro de Sécurité Sociale */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Numéro de Sécurité Sociale
+                </label>
+                <input
+                  type="text"
+                  value={variables.id_number}
+                  onChange={(e) => setVariables({...variables, id_number: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ex: 1 84 12 345 678 901"
+                />
+              </div>
             </div>
           </div>
 
@@ -421,3 +451,13 @@ export default function ContractSendModal({
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
