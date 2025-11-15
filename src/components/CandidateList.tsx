@@ -567,6 +567,7 @@ export function CandidateList() {
         <CandidateModal
           sites={sites}
           secteurs={secteurs}
+          postes={postes}
           onClose={() => setShowAddModal(false)}
           onSuccess={() => {
             setShowAddModal(false);
@@ -580,6 +581,7 @@ export function CandidateList() {
           candidate={editingCandidate}
           sites={sites}
           secteurs={secteurs}
+          postes={postes}
           onClose={() => setEditingCandidate(null)}
           onSuccess={() => {
             setEditingCandidate(null);
@@ -701,12 +703,14 @@ function CandidateModal({
   candidate,
   sites,
   secteurs,
+  postes,
   onClose,
   onSuccess
 }: {
   candidate?: Candidate;
   sites: Site[];
   secteurs: Secteur[];
+  postes: Poste[];
   onClose: () => void;
   onSuccess: () => void;
 }) {
