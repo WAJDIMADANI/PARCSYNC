@@ -66,15 +66,22 @@ export function OnboardingForm() {
   const validateIban = async (iban: string) => {
     if (!iban) { setIbanError(''); return; }
     try {
-      const res = await fetch(`https://openiban.com/validate/${iban.replace(/\s/g, '')}?validateBankCode=true&getBIC=true`);
+      const cleanIban = iban.replace(/\s/g, '');
+      const res = await fetch(`https://openiban.com/validate/${cleanIban}?validateBankCode=true&getBIC=true`);
       const data = await res.json();
+      console.log('IBAN validation response:', data);
       if (data.valid) {
         setIbanError('');
-        setFormData(prev => ({ ...prev, bic: data.bankData?.bic || '', iban }));
+        const bic = data.bankData?.bic || '';
+        console.log('BIC found:', bic);
+        setFormData(prev => ({ ...prev, bic, iban: cleanIban }));
       } else {
         setIbanError('❌ IBAN invalide');
       }
-    } catch (e) { setIbanError('Erreur validation'); }
+    } catch (e) {
+      console.error('IBAN validation error:', e);
+      setIbanError('Erreur validation');
+    }
   };
 
   const [formData, setFormData] = useState({
