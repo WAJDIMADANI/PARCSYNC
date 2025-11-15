@@ -819,12 +819,37 @@ function CandidateModal({
     carte_identite_recto?: string;
     carte_identite_verso?: string;
   }>({});
+  const [ageError, setAgeError] = useState('');
 
   useEffect(() => {
     if (candidate) {
       generateSignedUrls();
     }
   }, [candidate]);
+
+  useEffect(() => {
+    if (formData.date_naissance) {
+      const age = calculateAge(formData.date_naissance);
+      if (age < 18) {
+        setAgeError(`Le candidat doit avoir au moins 18 ans (âge actuel : ${age} ans)`);
+      } else {
+        setAgeError('');
+      }
+    } else {
+      setAgeError('');
+    }
+  }, [formData.date_naissance]);
+
+  const calculateAge = (birthDate: string): number => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   const getSignedUrl = async (publicUrl: string): Promise<string> => {
     try {
@@ -1000,8 +1025,18 @@ function CandidateModal({
                 disabled={isViewMode}
                 value={formData.date_naissance}
                 onChange={(e) => setFormData({ ...formData, date_naissance: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent disabled:bg-gray-100 ${
+                  ageError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                }`}
               />
+              {ageError && (
+                <div className="mt-2 flex items-start gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium">{ageError}</span>
+                </div>
+              )}
             </div>
 
             {formData.genre === 'Femme' && (
@@ -1211,8 +1246,8 @@ function CandidateModal({
               </button>
               <button
                 type="submit"
-                disabled={loading}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                disabled={loading || !!ageError}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'En cours...' : candidate ? 'Modifier' : 'Créer'}
               </button>
