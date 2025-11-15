@@ -1338,6 +1338,7 @@ function ConvertToEmployeeModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const [ibanError, setIbanError] = useState('');
   const [formData, setFormData] = useState({
     role: '',
     date_entree: new Date().toISOString().split('T')[0],
@@ -1350,6 +1351,20 @@ function ConvertToEmployeeModal({
     bic: (candidate as any).bic || '',
   });
   const [loading, setLoading] = useState(false);
+
+  const validateIban = async (iban: string) => {
+    if (!iban) { setIbanError(''); return; }
+    try {
+      const res = await fetch(`https://openiban.com/validate/${iban.replace(/\s/g, '')}?validateBankCode=true&getBIC=true`);
+      const data = await res.json();
+      if (data.valid) {
+        setIbanError('');
+        setFormData(prev => ({ ...prev, bic: data.bankData?.bic || '', iban }));
+      } else {
+        setIbanError('❌ IBAN invalide');
+      }
+    } catch (e) { setIbanError('Erreur validation'); }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1511,10 +1526,11 @@ function ConvertToEmployeeModal({
                   type="text"
                   required
                   value={formData.iban}
-                  onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+                  onChange={(e) => { setFormData({ ...formData, iban: e.target.value }); validateIban(e.target.value); }}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${ibanError ? 'border-red-500' : 'border-gray-300'}`}
+                  placeholder="FR1420041010050500013M02606"
                 />
+                {ibanError && <div className="text-red-600 text-sm mt-1">{ibanError}</div>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">BIC *</label>
@@ -1522,9 +1538,9 @@ function ConvertToEmployeeModal({
                   type="text"
                   required
                   value={formData.bic}
-                  onChange={(e) => setFormData({ ...formData, bic: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="BNPAFRPPXXX"
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                  placeholder="Auto-rempli"
                 />
               </div>
             </div>
@@ -1583,7 +1599,7 @@ function ConvertToEmployeeModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || ibanError !== ''}
               className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
             >
               {loading ? 'Conversion...' : 'Convertir'}

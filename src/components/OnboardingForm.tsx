@@ -30,6 +30,7 @@ export function OnboardingForm() {
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [ibanError, setIbanError] = useState('');
   const searchAddress = async (query: string) => {
     if (query.length < 3) {
       setAddressSuggestions([]);
@@ -60,6 +61,20 @@ export function OnboardingForm() {
     });
 
     setShowSuggestions(false);
+  };
+
+  const validateIban = async (iban: string) => {
+    if (!iban) { setIbanError(''); return; }
+    try {
+      const res = await fetch(`https://openiban.com/validate/${iban.replace(/\s/g, '')}?validateBankCode=true&getBIC=true`);
+      const data = await res.json();
+      if (data.valid) {
+        setIbanError('');
+        setFormData(prev => ({ ...prev, bic: data.bankData?.bic || '', iban }));
+      } else {
+        setIbanError('❌ IBAN invalide');
+      }
+    } catch (e) { setIbanError('Erreur validation'); }
   };
 
   const [formData, setFormData] = useState({
@@ -594,8 +609,29 @@ export function OnboardingForm() {
               Informations bancaires
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="IBAN *" placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX" value={formData.iban} onChange={(v) => setFormData({ ...formData, iban: v })} required />
-              <FormInput label="BIC *" placeholder="BNPAFRPPXXX" value={formData.bic} onChange={(v) => setFormData({ ...formData, bic: v })} required />
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">IBAN *</label>
+                <input
+                  type="text"
+                  value={formData.iban}
+                  onChange={(e) => { setFormData({...formData, iban: e.target.value}); validateIban(e.target.value); }}
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium ${ibanError ? 'border-red-500' : 'border-slate-200'}`}
+                  placeholder="FR1420041010050500013M02606"
+                  required
+                />
+                {ibanError && <div className="text-red-600 text-sm mt-1">{ibanError}</div>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">BIC *</label>
+                <input
+                  type="text"
+                  value={formData.bic}
+                  readOnly
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-slate-100 text-slate-500 font-medium"
+                  placeholder="Auto-rempli"
+                  required
+                />
+              </div>
             </div>
           </div>
 
@@ -658,7 +694,7 @@ export function OnboardingForm() {
             </div>
           </div>
 
-          <button type="submit" disabled={loading || uploadProgress} className="w-full bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white font-bold py-4 px-4 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-glow transform hover:scale-[1.02]">
+          <button type="submit" disabled={loading || uploadProgress || ibanError !== ''} className="w-full bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white font-bold py-4 px-4 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-glow transform hover:scale-[1.02]">
             {uploadProgress ? 'Upload des fichiers...' : loading ? 'Envoi en cours...' : 'Valider mon dossier d\'embauche'}
           </button>
 
