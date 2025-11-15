@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase
 } from 'lucide-react';
 
 export type View =
@@ -24,6 +24,7 @@ export type View =
   | 'exports/parc'
   | 'admin/sites'
   | 'admin/secteurs'
+  | 'admin/postes'
   | 'admin/modeles'
   | 'admin/modeles-contrats';
 
@@ -122,6 +123,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       children: [
         { id: 'admin/sites', label: 'Sites', icon: Building, enabled: true },
         { id: 'admin/secteurs', label: 'Secteurs', icon: Tag, enabled: true },
+        { id: 'admin/postes', label: 'Postes', icon: Briefcase, enabled: true },
         { id: 'admin/modeles', label: 'Modèles', icon: FileCode, enabled: true },
         { id: 'admin/modeles-contrats', label: 'Modèles Contrats', icon: FileText, enabled: true },
       ]

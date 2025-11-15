@@ -18,6 +18,7 @@ import { ParcExports } from './ParcExports';
 import { DocumentsManager } from './DocumentsManager';
 import { RHDashboard } from './RHDashboard';
 import { ContractTemplates } from './ContractTemplates';
+import { PostesList } from './PostesList';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -76,6 +77,8 @@ export function Dashboard() {
             <p className="text-gray-600">Configuration des secteurs à venir</p>
           </div>
         );
+      case 'admin/postes':
+        return <PostesList />;
       case 'admin/modeles':
         return (
           <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -117,6 +120,7 @@ export function Dashboard() {
                 {view === 'exports/parc' && 'Exports Parc'}
                 {view === 'admin/sites' && 'Sites'}
                 {view === 'admin/secteurs' && 'Secteurs'}
+                {view === 'admin/postes' && 'Postes'}
                 {view === 'admin/modeles' && 'Modèles'}
                 {view === 'admin/modeles-contrats' && 'Modèles de Contrats'}
               </h2>

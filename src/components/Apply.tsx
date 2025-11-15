@@ -12,9 +12,16 @@ interface Secteur {
   nom: string;
 }
 
+interface Poste {
+  id: string;
+  nom: string;
+  description: string | null;
+}
+
 export function Apply() {
   const [sites, setSites] = useState<Site[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
+  const [postes, setPostes] = useState<Poste[]>([]);
   const [formData, setFormData] = useState({
     prenom: '',
     nom: '',
@@ -56,13 +63,15 @@ export function Apply() {
 
   const fetchSitesAndSecteurs = async () => {
     try {
-      const [sitesRes, secteursRes] = await Promise.all([
+      const [sitesRes, secteursRes, postesRes] = await Promise.all([
         supabase.from('site').select('id, nom').order('nom'),
         supabase.from('secteur').select('id, nom').order('nom'),
+        supabase.from('poste').select('id, nom, description').eq('actif', true).order('nom'),
       ]);
 
       if (sitesRes.data) setSites(sitesRes.data);
       if (secteursRes.data) setSecteurs(secteursRes.data);
+      if (postesRes.data) setPostes(postesRes.data);
     } catch (err) {
       console.error('Error fetching data:', err);
     }
@@ -744,15 +753,20 @@ export function Apply() {
                 <label htmlFor="poste" className="block text-sm font-semibold text-slate-700 mb-2">
                   Poste candidaté *
                 </label>
-                <input
+                <select
                   id="poste"
-                  type="text"
                   value={formData.poste}
                   onChange={(e) => setFormData({ ...formData, poste: e.target.value })}
                   required
-                  placeholder="Ex: Chauffeur, Agent de sécurité..."
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium"
-                />
+                >
+                  <option value="">Sélectionner un poste</option>
+                  {postes.map((poste) => (
+                    <option key={poste.id} value={poste.nom}>
+                      {poste.nom}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
