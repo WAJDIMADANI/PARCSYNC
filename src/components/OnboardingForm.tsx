@@ -28,6 +28,40 @@ export function OnboardingForm() {
   const [candidatId, setCandidatId] = useState<string | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchAddress = async (query: string) => {
+    if (query.length < 3) {
+      setAddressSuggestions([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`
+      );
+      const data = await response.json();
+      setAddressSuggestions(data.features || []);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error('Erreur recherche adresse:', error);
+    }
+  };
+
+  const selectAddress = (feature: any) => {
+    const properties = feature.properties;
+    const fullAddress = properties.name;
+
+    setFormData({
+      ...formData,
+      adresse: fullAddress,
+      code_postal: properties.postcode || '',
+      ville: properties.city || '',
+    });
+
+    setShowSuggestions(false);
+  };
+
   const [formData, setFormData] = useState({
     prenom: '',
     nom: '',
@@ -506,8 +540,35 @@ export function OnboardingForm() {
               Adresse
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <FormInput label="Adresse complète *" value={formData.adresse} onChange={(v) => setFormData({ ...formData, adresse: v })} required />
+              <div className="md:col-span-2 relative">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Adresse complète *</label>
+                <input
+                  type="text"
+                  value={formData.adresse}
+                  onChange={(e) => {
+                    setFormData({ ...formData, adresse: e.target.value });
+                    searchAddress(e.target.value);
+                  }}
+                  onFocus={() => formData.adresse.length >= 3 && setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  required
+                  placeholder="Tapez votre adresse..."
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                />
+
+                {showSuggestions && addressSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
+                    {addressSuggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        onClick={() => selectAddress(suggestion)}
+                        className="px-4 py-2 hover:bg-slate-100 cursor-pointer border-b border-slate-100 text-sm text-slate-700"
+                      >
+                        {suggestion.properties.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="md:col-span-2">
                 <FormInput label="Complément d'adresse" value={formData.complement_adresse} onChange={(v) => setFormData({ ...formData, complement_adresse: v })} placeholder="Bâtiment, étage, appartement..." />

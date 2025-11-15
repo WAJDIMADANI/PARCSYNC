@@ -34,6 +34,38 @@ export default function ContractSendModal({
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const searchAddress = async (query: string) => {
+    if (query.length < 3) {
+      setAddressSuggestions([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`
+      );
+      const data = await response.json();
+      setAddressSuggestions(data.features || []);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error('Erreur recherche adresse:', error);
+    }
+  };
+
+  const selectAddress = (feature: any) => {
+    const properties = feature.properties;
+    const fullAddress = properties.label;
+
+    setVariables({
+      ...variables,
+      lieu_travail: fullAddress,
+    });
+
+    setShowSuggestions(false);
+  };
 
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [selectedSite, setSelectedSite] = useState('');
@@ -381,17 +413,36 @@ export default function ContractSendModal({
                 />
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Lieu de travail
                 </label>
                 <input
                   type="text"
                   value={variables.lieu_travail}
-                  onChange={(e) => setVariables({...variables, lieu_travail: e.target.value})}
+                  onChange={(e) => {
+                    setVariables({...variables, lieu_travail: e.target.value});
+                    searchAddress(e.target.value);
+                  }}
+                  onFocus={() => variables.lieu_travail.length >= 3 && setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Adresse complète"
+                  placeholder="Tapez l'adresse du lieu de travail..."
                 />
+
+                {showSuggestions && addressSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                    {addressSuggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        onClick={() => selectAddress(suggestion)}
+                        className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 text-sm text-gray-700"
+                      >
+                        {suggestion.properties.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 🆕 NOUVEAU - Lieu de naissance */}

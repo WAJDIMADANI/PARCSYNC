@@ -820,6 +820,8 @@ function CandidateModal({
     carte_identite_verso?: string;
   }>({});
   const [ageError, setAgeError] = useState('');
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     if (candidate) {
@@ -849,6 +851,38 @@ function CandidateModal({
       age--;
     }
     return age;
+  };
+
+  const searchAddress = async (query: string) => {
+    if (query.length < 3) {
+      setAddressSuggestions([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`
+      );
+      const data = await response.json();
+      setAddressSuggestions(data.features || []);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error('Erreur recherche adresse:', error);
+    }
+  };
+
+  const selectAddress = (feature: any) => {
+    const properties = feature.properties;
+    const fullAddress = properties.name;
+
+    setFormData({
+      ...formData,
+      adresse: fullAddress,
+      code_postal: properties.postcode || '',
+      ville: properties.city || '',
+    });
+
+    setShowSuggestions(false);
   };
 
   const getSignedUrl = async (publicUrl: string): Promise<string> => {
@@ -1110,15 +1144,35 @@ function CandidateModal({
             </div>
           </div>
 
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
             <input
               type="text"
               disabled={isViewMode}
               value={formData.adresse}
-              onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, adresse: e.target.value });
+                searchAddress(e.target.value);
+              }}
+              onFocus={() => formData.adresse.length >= 3 && setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              placeholder="Tapez votre adresse..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
             />
+
+            {showSuggestions && addressSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                {addressSuggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    onClick={() => selectAddress(suggestion)}
+                    className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 text-sm text-gray-700"
+                  >
+                    {suggestion.properties.label}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
