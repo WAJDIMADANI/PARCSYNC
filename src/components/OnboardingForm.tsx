@@ -63,24 +63,51 @@ export function OnboardingForm() {
     setShowSuggestions(false);
   };
 
+  const getBicFromBankCode = (bankCode: string): string => {
+    const bankCodes: { [key: string]: string } = {
+      '20041': 'BNPAFRPP',
+      '30004': 'SOGEFRPP',
+      '10278': 'CMCIFRPP',
+      '13335': 'CEPAFRPP',
+      '11315': 'AGRIFRPP',
+      '30002': 'CRLYFRPP',
+      '16958': 'CEPAFRPP',
+      '17515': 'CCFRFRPP',
+      '10096': 'CMCIFR2A',
+      '30003': 'SOGEFRPP',
+    };
+    return bankCodes[bankCode] || '';
+  };
+
   const validateIban = async (iban: string) => {
-    if (!iban) { setIbanError(''); return; }
+    if (!iban || iban.length < 15) {
+      setIbanError('');
+      return;
+    }
+
     try {
-      const cleanIban = iban.replace(/\s/g, '');
+      const cleanIban = iban.replace(/\s/g, '').toUpperCase();
+
       const res = await fetch(`https://openiban.com/validate/${cleanIban}?validateBankCode=true&getBIC=true`);
       const data = await res.json();
-      console.log('IBAN validation response:', data);
+
       if (data.valid) {
-        setIbanError('');
-        const bic = data.bankData?.bic || '';
-        console.log('BIC found:', bic);
+        setIbanError('✅ IBAN valide');
+
+        let bic = data.bankData?.bic || '';
+
+        if (!bic && cleanIban.startsWith('FR')) {
+          const bankCode = cleanIban.substring(4, 9);
+          bic = getBicFromBankCode(bankCode);
+        }
+
         setFormData(prev => ({ ...prev, bic, iban: cleanIban }));
       } else {
         setIbanError('❌ IBAN invalide');
       }
     } catch (e) {
       console.error('IBAN validation error:', e);
-      setIbanError('Erreur validation');
+      setIbanError('❌ Erreur validation');
     }
   };
 
