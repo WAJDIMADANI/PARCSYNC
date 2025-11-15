@@ -15,6 +15,12 @@ interface Secteur {
   nom: string;
 }
 
+interface Poste {
+  id: string;
+  nom: string;
+  description: string | null;
+}
+
 interface Candidate {
   id: string;
   prenom: string;
@@ -156,6 +162,7 @@ export function CandidateList() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
+  const [postes, setPostes] = useState<Poste[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -175,19 +182,22 @@ export function CandidateList() {
 
   const fetchData = async () => {
     try {
-      const [candidatesRes, sitesRes, secteursRes] = await Promise.all([
+      const [candidatesRes, sitesRes, secteursRes, postesRes] = await Promise.all([
         supabase.from('candidat').select('*').is('deleted_at', null).neq('pipeline', 'converti_salarie').order('created_at', { ascending: false }),
         supabase.from('site').select('*').order('nom'),
-        supabase.from('secteur').select('*').order('nom')
+        supabase.from('secteur').select('*').order('nom'),
+        supabase.from('poste').select('id, nom, description').eq('actif', true).order('nom')
       ]);
 
       if (candidatesRes.error) throw candidatesRes.error;
       if (sitesRes.error) throw sitesRes.error;
       if (secteursRes.error) throw secteursRes.error;
+      if (postesRes.error) throw postesRes.error;
 
       setCandidates(candidatesRes.data || []);
       setSites(sitesRes.data || []);
       setSecteurs(secteursRes.data || []);
+      setPostes(postesRes.data || []);
     } catch (error) {
       console.error('Erreur chargement données:', error);
     } finally {
@@ -884,14 +894,19 @@ function CandidateModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Poste candidaté</label>
-              <input
-                type="text"
+              <select
                 disabled={isViewMode}
                 value={formData.poste}
                 onChange={(e) => setFormData({ ...formData, poste: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                placeholder="Ex: Chauffeur, Agent de sécurité..."
-              />
+              >
+                <option value="">Sélectionner un poste</option>
+                {postes.map((poste) => (
+                  <option key={poste.id} value={poste.nom}>
+                    {poste.nom}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
