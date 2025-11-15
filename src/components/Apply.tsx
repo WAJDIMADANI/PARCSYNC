@@ -48,6 +48,7 @@ export function Apply() {
   const [uploadProgress, setUploadProgress] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [ageError, setAgeError] = useState('');
 
   useEffect(() => {
     fetchSitesAndSecteurs();
@@ -64,6 +65,36 @@ export function Apply() {
       if (secteursRes.data) setSecteurs(secteursRes.data);
     } catch (err) {
       console.error('Error fetching data:', err);
+    }
+  };
+
+  const calculateAge = (birthDate: string): number | null => {
+    if (!birthDate) return null;
+    const birth = new Date(birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+
+    return age;
+  };
+
+  const handleDateNaissanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = e.target.value;
+    setFormData({ ...formData, date_naissance: date });
+
+    if (date) {
+      const age = calculateAge(date);
+      if (age !== null && age < 18) {
+        setAgeError(`Vous devez avoir au moins 18 ans pour postuler. Vous en avez ${age}.`);
+      } else if (age !== null && age >= 18) {
+        setAgeError('');
+      }
+    } else {
+      setAgeError('');
     }
   };
 
@@ -110,6 +141,13 @@ export function Apply() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    const age = calculateAge(formData.date_naissance);
+    if (age === null || age < 18) {
+      setError('Vous devez avoir au moins 18 ans pour postuler.');
+      setLoading(false);
+      return;
+    }
 
     if (!formData.consentement_rgpd) {
       setError('Vous devez accepter la politique de confidentialité');
@@ -422,10 +460,19 @@ export function Apply() {
                   id="date_naissance"
                   type="date"
                   value={formData.date_naissance}
-                  onChange={(e) => setFormData({ ...formData, date_naissance: e.target.value })}
+                  onChange={handleDateNaissanceChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium ${
+                    ageError
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-slate-200 focus:ring-primary-500'
+                  }`}
                 />
+                {ageError && (
+                  <div className="mt-2 text-red-600 text-sm font-medium">
+                    {ageError}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -826,8 +873,12 @@ export function Apply() {
 
           <button
             type="submit"
-            disabled={loading || uploadProgress}
-            className="w-full bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white font-bold py-4 px-4 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-glow transform hover:scale-[1.02]"
+            disabled={loading || uploadProgress || ageError !== ''}
+            className={`w-full font-bold py-4 px-4 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-glow transform hover:scale-[1.02] ${
+              loading || uploadProgress || ageError !== ''
+                ? 'bg-slate-300 text-slate-500'
+                : 'bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white'
+            }`}
           >
             {uploadProgress ? 'Upload des fichiers...' : loading ? 'Envoi en cours...' : 'Envoyer ma candidature'}
           </button>
