@@ -699,6 +699,82 @@ export function CandidateList() {
   );
 }
 
+function PosteDropdown({ value, onChange, postes, disabled }: {
+  value: string;
+  onChange: (value: string) => void;
+  postes: Poste[];
+  disabled?: boolean
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const selectedPoste = postes.find(p => p.nom === value);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Poste candidaté</label>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 bg-white text-left flex items-center justify-between"
+      >
+        <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+          {selectedPoste?.nom || 'Sélectionner un poste'}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'transform rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && !disabled && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+          <div
+            onClick={() => {
+              onChange('');
+              setIsOpen(false);
+            }}
+            className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-gray-400"
+          >
+            Sélectionner un poste
+          </div>
+          {postes.map((poste) => (
+            <div
+              key={poste.id}
+              onClick={() => {
+                onChange(poste.nom);
+                setIsOpen(false);
+              }}
+              className={`px-3 py-2 hover:bg-blue-50 cursor-pointer ${
+                value === poste.nom ? 'bg-blue-100 text-blue-900 font-medium' : 'text-gray-900'
+              }`}
+            >
+              <div className="font-medium">{poste.nom}</div>
+              {poste.description && (
+                <div className="text-xs text-gray-500 mt-0.5">{poste.description}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CandidateModal({
   candidate,
   sites,
@@ -896,22 +972,12 @@ function CandidateModal({
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Poste candidaté</label>
-              <select
-                disabled={isViewMode}
-                value={formData.poste}
-                onChange={(e) => setFormData({ ...formData, poste: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              >
-                <option value="">Sélectionner un poste</option>
-                {postes.map((poste) => (
-                  <option key={poste.id} value={poste.nom}>
-                    {poste.nom}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <PosteDropdown
+              value={formData.poste}
+              onChange={(value) => setFormData({ ...formData, poste: value })}
+              postes={postes}
+              disabled={isViewMode}
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Genre</label>
