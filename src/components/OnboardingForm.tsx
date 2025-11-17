@@ -292,6 +292,12 @@ export function OnboardingForm() {
       return;
     }
 
+    if (!formData.bic || formData.bic.trim() === '') {
+      setError('Le BIC doit être rempli. Vérifiez que l\'IBAN est valide.');
+      setLoading(false);
+      return;
+    }
+
     const requiredFiles: DocumentType[] = ['cni_recto', 'cni_verso', 'carte_vitale', 'rib', 'permis_recto', 'permis_verso'];
     const missingFiles = requiredFiles.filter(f => !files[f]);
 
@@ -660,9 +666,9 @@ export function OnboardingForm() {
                 <input
                   type="text"
                   value={formData.bic}
-                  readOnly
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-slate-100 text-slate-500 font-medium"
-                  placeholder="Auto-rempli"
+                  onChange={(e) => setFormData({...formData, bic: e.target.value})}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white font-medium focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                  placeholder="Auto-rempli après validation IBAN"
                   required
                 />
               </div>

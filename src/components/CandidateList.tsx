@@ -1408,6 +1408,11 @@ function ConvertToEmployeeModal({
       return;
     }
 
+    if (!formData.bic || formData.bic.trim() === '') {
+      alert('Le BIC doit être rempli. Vérifiez que l\'IBAN est valide.');
+      return;
+    }
+
     if (formData.casier_judiciaire_date) {
       const casierDate = new Date(formData.casier_judiciaire_date);
       const today = new Date();
@@ -1572,9 +1577,9 @@ function ConvertToEmployeeModal({
                   type="text"
                   required
                   value={formData.bic}
-                  readOnly
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
-                  placeholder="Auto-rempli"
+                  onChange={(e) => setFormData(prev => ({ ...prev, bic: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Auto-rempli après validation IBAN"
                 />
               </div>
             </div>
