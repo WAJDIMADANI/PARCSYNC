@@ -1339,6 +1339,7 @@ function ConvertToEmployeeModal({
   onSuccess: () => void;
 }) {
   const [ibanError, setIbanError] = useState('');
+  const [ibanValidationMessage, setIbanValidationMessage] = useState('');
   const [formData, setFormData] = useState({
     role: '',
     date_entree: new Date().toISOString().split('T')[0],
@@ -1381,7 +1382,8 @@ function ConvertToEmployeeModal({
       const data = await res.json();
 
       if (data.valid) {
-        setIbanError('✅ IBAN valide');
+        setIbanError('');
+        setIbanValidationMessage('✅ IBAN valide');
 
         let bic = data.bankData?.bic || '';
 
@@ -1393,10 +1395,12 @@ function ConvertToEmployeeModal({
         setFormData(prev => ({ ...prev, bic, iban: cleanIban }));
       } else {
         setIbanError('❌ IBAN invalide');
+        setIbanValidationMessage('');
       }
     } catch (e) {
       console.error('IBAN validation error:', e);
       setIbanError('❌ Erreur validation');
+      setIbanValidationMessage('');
     }
   };
 
@@ -1570,6 +1574,7 @@ function ConvertToEmployeeModal({
                   placeholder="FR1420041010050500013M02606"
                 />
                 {ibanError && <div className="text-red-600 text-sm mt-1">{ibanError}</div>}
+                {ibanValidationMessage && <div className="text-green-600 text-sm mt-1">{ibanValidationMessage}</div>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">BIC *</label>

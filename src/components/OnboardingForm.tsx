@@ -31,6 +31,7 @@ export function OnboardingForm() {
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [ibanError, setIbanError] = useState('');
+  const [ibanValidationMessage, setIbanValidationMessage] = useState('');
   const searchAddress = async (query: string) => {
     if (query.length < 3) {
       setAddressSuggestions([]);
@@ -92,7 +93,8 @@ export function OnboardingForm() {
       const data = await res.json();
 
       if (data.valid) {
-        setIbanError('✅ IBAN valide');
+        setIbanError('');
+        setIbanValidationMessage('✅ IBAN valide');
 
         let bic = data.bankData?.bic || '';
 
@@ -104,10 +106,12 @@ export function OnboardingForm() {
         setFormData(prev => ({ ...prev, bic, iban: cleanIban }));
       } else {
         setIbanError('❌ IBAN invalide');
+        setIbanValidationMessage('');
       }
     } catch (e) {
       console.error('IBAN validation error:', e);
       setIbanError('❌ Erreur validation');
+      setIbanValidationMessage('');
     }
   };
 
@@ -660,6 +664,7 @@ export function OnboardingForm() {
                   required
                 />
                 {ibanError && <div className="text-red-600 text-sm mt-1">{ibanError}</div>}
+                {ibanValidationMessage && <div className="text-green-600 text-sm mt-1">{ibanValidationMessage}</div>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">BIC *</label>
