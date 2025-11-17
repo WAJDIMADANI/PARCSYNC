@@ -582,6 +582,7 @@ function EmployeeDetailModal({
   const [editedCertificatExpiration, setEditedCertificatExpiration] = useState(employee.certificat_medical_expiration || '');
   const [editedPermisExpiration, setEditedPermisExpiration] = useState(employee.permis_expiration || '');
   const [currentEmployee, setCurrentEmployee] = useState<Employee>(employee);
+  const [currentContractStatus, setCurrentContractStatus] = useState<string | null>(contractStatus);
   const [savingDates, setSavingDates] = useState(false);
 
   // NE PAS synchroniser automatiquement avec employee pour éviter les rechargements
@@ -592,6 +593,33 @@ function EmployeeDetailModal({
     onOpen();
     fetchDocuments();
   }, []);
+
+  const refreshEmployee = async () => {
+    try {
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('profil')
+        .select('*')
+        .eq('id', currentEmployee.id)
+        .maybeSingle();
+
+      if (employeeError) throw employeeError;
+      if (employeeData) {
+        setCurrentEmployee(employeeData);
+      }
+
+      const { data: contractData } = await supabase
+        .from('contrat')
+        .select('statut')
+        .eq('profil_id', currentEmployee.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setCurrentContractStatus(contractData?.statut || null);
+    } catch (error) {
+      console.error('Erreur rafraîchissement employé:', error);
+    }
+  };
 
   const getSignedUrl = async (publicUrl: string): Promise<string> => {
     try {
@@ -724,13 +752,15 @@ function EmployeeDetailModal({
     onClose();
   };
 
-  const handleContractSent = () => {
+  const handleContractSent = async () => {
     setShowContractSend(false);
+    await refreshEmployee();
     onUpdate();
   };
 
-  const handleContractActivated = () => {
+  const handleContractActivated = async () => {
     setShowContractValidation(false);
+    await refreshEmployee();
     onUpdate();
   };
 
@@ -858,14 +888,14 @@ function EmployeeDetailModal({
   };
 
   // Afficher le vrai statut basé sur le contrat
-  const displayStatut = contractStatus === 'signe' ? 'Signé' :
-                        contractStatus === 'en_attente_signature' ? 'Contrat envoyé' :
+  const displayStatut = currentContractStatus === 'signe' ? 'Signé' :
+                        currentContractStatus === 'en_attente_signature' ? 'Contrat envoyé' :
                         currentEmployee.statut === 'en_attente_contrat' ? 'En attente contrat' :
                         currentEmployee.statut === 'contrat_envoye' ? 'Contrat envoyé' :
                         currentEmployee.statut;
 
-  const displayBadgeColor = contractStatus === 'signe' ? 'bg-green-100 text-green-700' :
-                            contractStatus === 'en_attente_signature' ? 'bg-yellow-100 text-yellow-700' :
+  const displayBadgeColor = currentContractStatus === 'signe' ? 'bg-green-100 text-green-700' :
+                            currentContractStatus === 'en_attente_signature' ? 'bg-yellow-100 text-yellow-700' :
                             currentEmployee.statut === 'actif' ? 'bg-green-100 text-green-700' :
                             currentEmployee.statut === 'en_attente_contrat' ? 'bg-orange-100 text-orange-700' :
                             currentEmployee.statut === 'contrat_envoye' ? 'bg-blue-100 text-blue-700' :
@@ -1196,14 +1226,14 @@ function EmployeeDetailModal({
                 </button>
               )}
 
-              {(currentEmployee.statut === 'contrat_envoye' || contractStatus === 'signe' || contractStatus === 'en_attente_signature') && (
+              {(currentEmployee.statut === 'contrat_envoye' || currentContractStatus === 'signe' || currentContractStatus === 'en_attente_signature') && (
                 <>
                   <button
                     onClick={() => setShowContractValidation(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg font-medium"
                   >
                     <CheckCircle className="w-4 h-4" />
-                    {contractStatus === 'signe' ? 'Activer le salarié' : 'Valider le contrat'}
+                    {currentContractStatus === 'signe' ? 'Activer le salarié' : 'Valider le contrat'}
                   </button>
                   <button
                     onClick={() => setShowResendConfirm(true)}
