@@ -138,11 +138,7 @@ export default function ContractSendModal({
     { type: 'carte_vitale', label: 'Carte Vitale' },
     { type: 'rib', label: 'RIB' },
     { type: 'permis_recto', label: 'Permis (recto)' },
-    { type: 'permis_verso', label: 'Permis (verso)' },
-    { type: 'casier_judiciaire', label: 'Casier judiciaire' },
-    { type: 'attestation_points', label: 'Attestation de points' },
-    { type: 'cv', label: 'CV' },
-    { type: 'lettre_motivation', label: 'Lettre de motivation' }
+    { type: 'permis_verso', label: 'Permis (verso)' }
   ];
 
   const getDocumentStatus = (docType: string) => {
@@ -365,7 +361,7 @@ export default function ContractSendModal({
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-gray-600" />
                 <div className="text-left">
-                  <h3 className="font-semibold text-gray-900">Documents du candidat</h3>
+                  <h3 className="font-semibold text-gray-900">Documents du salarié</h3>
                   <p className="text-sm text-gray-600">
                     {providedCount}/{requiredDocuments.length} documents fournis
                   </p>
