@@ -79,11 +79,13 @@ export function EmployeeList() {
   const [filterStatut, setFilterStatut] = useState<string>('');
   const [filterSite, setFilterSite] = useState<string>('');
   const [filterSecteur, setFilterSecteur] = useState<string>('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
-    
+
     // S'abonner aux changements de contrats en temps réel
+    // MAIS ne pas recharger si un modal est ouvert
     const contractsChannel = supabase
       .channel('contracts-changes')
       .on(
@@ -95,8 +97,12 @@ export function EmployeeList() {
         },
         (payload) => {
           console.log('🔔 Contrat mis à jour:', payload);
-          // Rafraîchir les données quand un contrat change
-          fetchData();
+          // Ne rafraîchir QUE si aucun modal n'est ouvert
+          if (!isModalOpen) {
+            fetchData();
+          } else {
+            console.log('⏸️ Modal ouvert, refresh différé');
+          }
         }
       )
       .subscribe();
@@ -113,8 +119,8 @@ export function EmployeeList() {
       emp => emp.statut === 'contrat_envoye'
     );
 
-    // Ne pas auto-refresh si un employé est sélectionné (modal ouvert)
-    if (hasWaitingContract && !selectedEmployee) {
+    // Ne pas auto-refresh si un modal est ouvert
+    if (hasWaitingContract && !isModalOpen) {
       console.log('🔄 Auto-refresh activé (contrats en attente)');
       const interval = setInterval(() => {
         fetchData(true); // true = silent refresh
@@ -122,7 +128,7 @@ export function EmployeeList() {
 
       return () => clearInterval(interval);
     }
-  }, [employees, selectedEmployee]);
+  }, [employees, isModalOpen]);
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -529,9 +535,15 @@ export function EmployeeList() {
       {selectedEmployee && (
         <EmployeeDetailModal
           employee={selectedEmployee}
-          onClose={() => setSelectedEmployee(null)}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedEmployee(null);
+            // Rafraîchir les données APRÈS la fermeture du modal
+            fetchData();
+          }}
           onUpdate={fetchData}
           contractStatus={getEmployeeContractStatus(selectedEmployee.id)}
+          onOpen={() => setIsModalOpen(true)}
         />
       )}
     </div>
@@ -542,12 +554,14 @@ function EmployeeDetailModal({
   employee,
   onClose,
   onUpdate,
-  contractStatus
+  contractStatus,
+  onOpen
 }: {
   employee: Employee;
   onClose: () => void;
   onUpdate: () => void;
   contractStatus: string | null;
+  onOpen: () => void;
 }) {
   const [showHistory, setShowHistory] = useState(false);
   const [showDeparture, setShowDeparture] = useState(false);
@@ -570,16 +584,14 @@ function EmployeeDetailModal({
   const [currentEmployee, setCurrentEmployee] = useState<Employee>(employee);
   const [savingDates, setSavingDates] = useState(false);
 
-  // Synchroniser currentEmployee avec employee si la prop change
-  useEffect(() => {
-    setCurrentEmployee(employee);
-    setEditedCertificatExpiration(employee.certificat_medical_expiration || '');
-    setEditedPermisExpiration(employee.permis_expiration || '');
-  }, [employee]);
+  // NE PAS synchroniser automatiquement avec employee pour éviter les rechargements
+  // Le modal garde son état local stable pendant toute sa durée de vie
 
   useEffect(() => {
+    // Signaler que le modal est ouvert
+    onOpen();
     fetchDocuments();
-  }, [currentEmployee.id]);
+  }, []);
 
   const getSignedUrl = async (publicUrl: string): Promise<string> => {
     try {
@@ -828,9 +840,8 @@ function EmployeeDetailModal({
 
       setIsEditingDates(false);
 
-      // Appeler onUpdate en arrière-plan pour rafraîchir la liste principale
-      // mais sans attendre, pour ne pas bloquer l'interface
-      setTimeout(() => onUpdate(), 100);
+      // NE PAS appeler onUpdate() pour éviter le rechargement du modal
+      // La liste principale se mettra à jour automatiquement quand on fermera le modal
     } catch (error) {
       console.error('Erreur lors de la sauvegarde des dates:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
