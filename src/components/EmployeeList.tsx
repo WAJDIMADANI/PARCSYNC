@@ -10,8 +10,8 @@ import { resolveDocUrl } from '../lib/documentStorage';
 
 interface Document {
   id: string;
-  type_document: string;
-  file_url?: string;
+  type: string;
+  fichier_url?: string;
   storage_path?: string;
   bucket?: string;
   date_emission?: string;
@@ -630,7 +630,7 @@ function EmployeeDetailModal({
       const { data, error } = await supabase
         .from('document')
         .select('*')
-        .in('owner_id', ids)
+        .in('proprietaire_id', ids)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -673,16 +673,16 @@ function EmployeeDetailModal({
         try {
           const url = await resolveDocUrl(doc);
           return {
-            type_document: doc.type,
+            type: doc.type,
             label: getDocumentLabel(doc.type),
             url
           };
         } catch (error) {
           console.error('Erreur résolution URL:', error);
           return {
-            type_document: doc.type,
+            type: doc.type,
             label: getDocumentLabel(doc.type),
-            url: getStorageUrl(doc.file_url || doc.storage_path || '')
+            url: getStorageUrl(doc.fichier_url || doc.storage_path || '')
           };
         }
       }));
@@ -798,7 +798,7 @@ function EmployeeDetailModal({
     }
   };
 
-  const getDocumentLabel = (type_document: string) => {
+  const getDocumentLabel = (type: string) => {
     const labels: Record<string, string> = {
       'cni_recto': 'CNI Recto',
       'cni_verso': 'CNI Verso',
@@ -1156,7 +1156,7 @@ function EmployeeDetailModal({
                     </div>
                     <button
                       onClick={async () => {
-                        const signedUrl = await getSignedUrl(doc.file_url);
+                        const signedUrl = await getSignedUrl(doc.fichier_url);
                         window.open(signedUrl, '_blank');
                       }}
                       className="px-3 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium text-xs shadow-sm hover:shadow-md flex items-center gap-1.5 transform hover:scale-105"
