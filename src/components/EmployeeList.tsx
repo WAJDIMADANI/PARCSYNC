@@ -538,14 +538,14 @@ export function EmployeeList() {
   );
 }
 
-function EmployeeDetailModal({ 
-  employee, 
-  onClose, 
+function EmployeeDetailModal({
+  employee,
+  onClose,
   onUpdate,
-  contractStatus 
-}: { 
-  employee: Employee; 
-  onClose: () => void; 
+  contractStatus
+}: {
+  employee: Employee;
+  onClose: () => void;
   onUpdate: () => void;
   contractStatus: string | null;
 }) {
@@ -567,11 +567,19 @@ function EmployeeDetailModal({
   const [isEditingDates, setIsEditingDates] = useState(false);
   const [editedCertificatExpiration, setEditedCertificatExpiration] = useState(employee.certificat_medical_expiration || '');
   const [editedPermisExpiration, setEditedPermisExpiration] = useState(employee.permis_expiration || '');
+  const [currentEmployee, setCurrentEmployee] = useState<Employee>(employee);
   const [savingDates, setSavingDates] = useState(false);
+
+  // Synchroniser currentEmployee avec employee si la prop change
+  useEffect(() => {
+    setCurrentEmployee(employee);
+    setEditedCertificatExpiration(employee.certificat_medical_expiration || '');
+    setEditedPermisExpiration(employee.permis_expiration || '');
+  }, [employee]);
 
   useEffect(() => {
     fetchDocuments();
-  }, [employee.id]);
+  }, [currentEmployee.id]);
 
   const getSignedUrl = async (publicUrl: string): Promise<string> => {
     try {
@@ -602,9 +610,9 @@ function EmployeeDetailModal({
 
   const fetchDocuments = async () => {
     try {
-      const ids = [employee.id];
-      if (employee.candidat_id) {
-        ids.push(employee.candidat_id);
+      const ids = [currentEmployee.id];
+      if (currentEmployee.candidat_id) {
+        ids.push(currentEmployee.candidat_id);
       }
 
       const { data, error } = await supabase
@@ -676,8 +684,8 @@ function EmployeeDetailModal({
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
-            employeeEmail: employee.email,
-            employeeName: `${employee.prenom} ${employee.nom}`,
+            employeeEmail: currentEmployee.email,
+            employeeName: `${currentEmployee.prenom} ${currentEmployee.nom}`,
             documents: documentsInfo
           }),
         }
@@ -724,7 +732,7 @@ function EmployeeDetailModal({
       const { data: contrat, error: contratError } = await supabase
         .from('contrat')
         .select('*')
-        .eq('profil_id', employee.id)
+        .eq('profil_id', currentEmployee.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -744,8 +752,8 @@ function EmployeeDetailModal({
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
-            employeeEmail: employee.email,
-            employeeName: `${employee.prenom} ${employee.nom}`,
+            employeeEmail: currentEmployee.email,
+            employeeName: `${currentEmployee.prenom} ${currentEmployee.nom}`,
             contractId: contrat.id,
             variables: contrat.variables
           })
@@ -804,15 +812,25 @@ function EmployeeDetailModal({
           certificat_medical_expiration: editedCertificatExpiration || null,
           permis_expiration: editedPermisExpiration || null
         })
-        .eq('id', employee.id);
+        .eq('id', currentEmployee.id);
 
       if (error) {
         console.error('Erreur Supabase:', error);
         throw new Error(`Erreur de sauvegarde: ${error.message || 'Erreur inconnue'}`);
       }
 
+      // Mettre à jour l'employé localement au lieu de recharger tout
+      setCurrentEmployee({
+        ...currentEmployee,
+        certificat_medical_expiration: editedCertificatExpiration || null,
+        permis_expiration: editedPermisExpiration || null
+      });
+
       setIsEditingDates(false);
-      onUpdate();
+
+      // Appeler onUpdate en arrière-plan pour rafraîchir la liste principale
+      // mais sans attendre, pour ne pas bloquer l'interface
+      setTimeout(() => onUpdate(), 100);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde des dates:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
@@ -823,23 +841,23 @@ function EmployeeDetailModal({
   };
 
   const handleCancelEdit = () => {
-    setEditedCertificatExpiration(employee.certificat_medical_expiration || '');
-    setEditedPermisExpiration(employee.permis_expiration || '');
+    setEditedCertificatExpiration(currentEmployee.certificat_medical_expiration || '');
+    setEditedPermisExpiration(currentEmployee.permis_expiration || '');
     setIsEditingDates(false);
   };
 
   // Afficher le vrai statut basé sur le contrat
-  const displayStatut = contractStatus === 'signe' ? 'Signé' : 
+  const displayStatut = contractStatus === 'signe' ? 'Signé' :
                         contractStatus === 'en_attente_signature' ? 'Contrat envoyé' :
-                        employee.statut === 'en_attente_contrat' ? 'En attente contrat' :
-                        employee.statut === 'contrat_envoye' ? 'Contrat envoyé' :
-                        employee.statut;
+                        currentEmployee.statut === 'en_attente_contrat' ? 'En attente contrat' :
+                        currentEmployee.statut === 'contrat_envoye' ? 'Contrat envoyé' :
+                        currentEmployee.statut;
 
   const displayBadgeColor = contractStatus === 'signe' ? 'bg-green-100 text-green-700' :
                             contractStatus === 'en_attente_signature' ? 'bg-yellow-100 text-yellow-700' :
-                            employee.statut === 'actif' ? 'bg-green-100 text-green-700' :
-                            employee.statut === 'en_attente_contrat' ? 'bg-orange-100 text-orange-700' :
-                            employee.statut === 'contrat_envoye' ? 'bg-blue-100 text-blue-700' :
+                            currentEmployee.statut === 'actif' ? 'bg-green-100 text-green-700' :
+                            currentEmployee.statut === 'en_attente_contrat' ? 'bg-orange-100 text-orange-700' :
+                            currentEmployee.statut === 'contrat_envoye' ? 'bg-blue-100 text-blue-700' :
                             'bg-red-100 text-red-700';
 
   return (
@@ -854,15 +872,15 @@ function EmployeeDetailModal({
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-white">
-                  {employee.prenom} {employee.nom}
+                  {currentEmployee.prenom} {currentEmployee.nom}
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
                   <span className={`px-3 py-1 text-xs font-semibold rounded-full ${displayBadgeColor} bg-white/90`}>
                     {displayStatut}
                   </span>
-                  {employee.role && (
+                  {currentEmployee.role && (
                     <span className="px-3 py-1 text-xs font-semibold bg-white/20 backdrop-blur text-white rounded-full border border-white/30">
-                      {employee.role}
+                      {currentEmployee.role}
                     </span>
                   )}
                 </div>
@@ -894,16 +912,16 @@ function EmployeeDetailModal({
                     <Mail className="w-4 h-4 text-blue-600" />
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</p>
                   </div>
-                  <p className="text-gray-900 font-medium">{employee.email}</p>
+                  <p className="text-gray-900 font-medium">{currentEmployee.email}</p>
                 </div>
 
-                {employee.tel && (
+                {currentEmployee.tel && (
                   <div className="bg-white rounded-lg p-3 shadow-sm">
                     <div className="flex items-center gap-2 mb-1">
                       <Phone className="w-4 h-4 text-blue-600" />
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Téléphone</p>
                     </div>
-                    <p className="text-gray-900 font-medium">{employee.tel}</p>
+                    <p className="text-gray-900 font-medium">{currentEmployee.tel}</p>
                   </div>
                 )}
               </div>
@@ -919,43 +937,43 @@ function EmployeeDetailModal({
               </div>
 
               <div className="space-y-3">
-                {employee.site && (
+                {currentEmployee.site && (
                   <div className="bg-white rounded-lg p-3 shadow-sm">
                     <div className="flex items-center gap-2 mb-1">
                       <Building className="w-4 h-4 text-green-600" />
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Site</p>
                     </div>
-                    <p className="text-gray-900 font-medium">{employee.site.nom}</p>
+                    <p className="text-gray-900 font-medium">{currentEmployee.site.nom}</p>
                   </div>
                 )}
 
-                {employee.secteur && (
+                {currentEmployee.secteur && (
                   <div className="bg-white rounded-lg p-3 shadow-sm">
                     <div className="flex items-center gap-2 mb-1">
                       <MapPin className="w-4 h-4 text-green-600" />
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Secteur</p>
                     </div>
-                    <p className="text-gray-900 font-medium">{employee.secteur.nom}</p>
+                    <p className="text-gray-900 font-medium">{currentEmployee.secteur.nom}</p>
                   </div>
                 )}
 
-                {employee.manager && (
+                {currentEmployee.manager && (
                   <div className="bg-white rounded-lg p-3 shadow-sm">
                     <div className="flex items-center gap-2 mb-1">
                       <User className="w-4 h-4 text-green-600" />
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Manager</p>
                     </div>
-                    <p className="text-gray-900 font-medium">{employee.manager.prenom} {employee.manager.nom}</p>
+                    <p className="text-gray-900 font-medium">{currentEmployee.manager.prenom} {currentEmployee.manager.nom}</p>
                   </div>
                 )}
 
-                {employee.date_entree && (
+                {currentEmployee.date_entree && (
                   <div className="bg-white rounded-lg p-3 shadow-sm">
                     <div className="flex items-center gap-2 mb-1">
                       <Calendar className="w-4 h-4 text-green-600" />
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date d'entrée</p>
                     </div>
-                    <p className="text-gray-900 font-medium">{new Date(employee.date_entree).toLocaleDateString('fr-FR')}</p>
+                    <p className="text-gray-900 font-medium">{new Date(currentEmployee.date_entree).toLocaleDateString('fr-FR')}</p>
                   </div>
                 )}
               </div>
@@ -1022,8 +1040,8 @@ function EmployeeDetailModal({
                   />
                 ) : (
                   <p className="text-gray-900 font-medium">
-                    {employee.certificat_medical_expiration
-                      ? new Date(employee.certificat_medical_expiration).toLocaleDateString('fr-FR')
+                    {currentEmployee.certificat_medical_expiration
+                      ? new Date(currentEmployee.certificat_medical_expiration).toLocaleDateString('fr-FR')
                       : 'Non renseignée'}
                   </p>
                 )}
@@ -1044,8 +1062,8 @@ function EmployeeDetailModal({
                   />
                 ) : (
                   <p className="text-gray-900 font-medium">
-                    {employee.permis_expiration
-                      ? new Date(employee.permis_expiration).toLocaleDateString('fr-FR')
+                    {currentEmployee.permis_expiration
+                      ? new Date(currentEmployee.permis_expiration).toLocaleDateString('fr-FR')
                       : 'Non renseignée'}
                   </p>
                 )}
@@ -1149,7 +1167,7 @@ function EmployeeDetailModal({
                 <span className="text-white text-xs font-bold">#</span>
               </div>
               <p className="text-sm text-gray-600">
-                <span className="font-semibold text-gray-700">ID:</span> <span className="font-mono text-gray-900">{employee.id}</span>
+                <span className="font-semibold text-gray-700">ID:</span> <span className="font-mono text-gray-900">{currentEmployee.id}</span>
               </p>
             </div>
           </div>
@@ -1157,7 +1175,7 @@ function EmployeeDetailModal({
           {/* Actions */}
           <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200">
             <div className="flex flex-wrap gap-3">
-              {employee.statut === 'en_attente_contrat' && (
+              {currentEmployee.statut === 'en_attente_contrat' && (
                 <button
                   onClick={() => setShowContractSend(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg font-medium"
@@ -1167,7 +1185,7 @@ function EmployeeDetailModal({
                 </button>
               )}
 
-              {(employee.statut === 'contrat_envoye' || contractStatus === 'signe' || contractStatus === 'en_attente_signature') && (
+              {(currentEmployee.statut === 'contrat_envoye' || contractStatus === 'signe' || contractStatus === 'en_attente_signature') && (
                 <>
                   <button
                     onClick={() => setShowContractValidation(true)}
@@ -1201,7 +1219,7 @@ function EmployeeDetailModal({
                 Voir l'historique
               </button>
 
-              {employee.statut === 'actif' && (
+              {currentEmployee.statut === 'actif' && (
                 <button
                   onClick={() => setShowDeparture(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -1218,16 +1236,16 @@ function EmployeeDetailModal({
 
     {showHistory && (
       <EmployeeHistory
-        profilId={employee.id}
-        employeeName={`${employee.prenom} ${employee.nom}`}
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
         onClose={() => setShowHistory(false)}
       />
     )}
 
     {showDeparture && (
       <EmployeeDeparture
-        profilId={employee.id}
-        employeeName={`${employee.prenom} ${employee.nom}`}
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
         onClose={() => setShowDeparture(false)}
         onSuccess={handleDepartureSuccess}
       />
@@ -1235,9 +1253,9 @@ function EmployeeDetailModal({
 
     {showContractSend && (
       <ContractSendModal
-        profilId={employee.id}
-        employeeName={`${employee.prenom} ${employee.nom}`}
-        employeeEmail={employee.email}
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
+        employeeEmail={currentEmployee.email}
         onClose={() => setShowContractSend(false)}
         onSuccess={handleContractSent}
       />
@@ -1245,8 +1263,8 @@ function EmployeeDetailModal({
 
     {showContractValidation && (
       <ContractValidationPanel
-        profilId={employee.id}
-        employeeName={`${employee.prenom} ${employee.nom}`}
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
         onClose={() => setShowContractValidation(false)}
         onActivate={handleContractActivated}
       />
@@ -1257,7 +1275,7 @@ function EmployeeDetailModal({
         <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
           <h3 className="text-xl font-bold text-gray-900 mb-4">Renvoyer le contrat</h3>
           <p className="text-gray-700 mb-6">
-            Voulez-vous renvoyer l'email de contrat à <strong>{employee.prenom} {employee.nom}</strong> ?
+            Voulez-vous renvoyer l'email de contrat à <strong>{currentEmployee.prenom} {currentEmployee.nom}</strong> ?
           </p>
           <div className="flex gap-3 justify-end">
             <button
@@ -1287,7 +1305,7 @@ function EmployeeDetailModal({
             <h3 className="text-xl font-bold text-gray-900">Email envoyé !</h3>
           </div>
           <p className="text-gray-700 mb-6">
-            L'email de contrat a été renvoyé avec succès à <strong>{employee.prenom} {employee.nom}</strong>.
+            L'email de contrat a été renvoyé avec succès à <strong>{currentEmployee.prenom} {currentEmployee.nom}</strong>.
           </p>
           <div className="flex justify-end">
             <button
@@ -1357,10 +1375,10 @@ function EmployeeDetailModal({
                   <User className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-gray-900 text-lg">{employee.prenom} {employee.nom}</p>
+                  <p className="font-bold text-gray-900 text-lg">{currentEmployee.prenom} {currentEmployee.nom}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <Mail className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                    <p className="text-sm text-gray-600 truncate">{employee.email}</p>
+                    <p className="text-sm text-gray-600 truncate">{currentEmployee.email}</p>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">{new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 </div>
@@ -1449,12 +1467,12 @@ function EmployeeDetailModal({
               Les documents ont été envoyés avec succès à
             </p>
             <p className="font-semibold text-gray-900 mb-6">
-              {employee.prenom} {employee.nom}
+              {currentEmployee.prenom} {currentEmployee.nom}
             </p>
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 w-full">
               <p className="text-sm text-green-800">
                 <Mail className="w-4 h-4 inline mr-2" />
-                Email envoyé à : <strong>{employee.email}</strong>
+                Email envoyé à : <strong>{currentEmployee.email}</strong>
               </p>
             </div>
             <button
