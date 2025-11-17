@@ -94,14 +94,14 @@ export default function ContractSignature() {
       const { data: docData, error: docError } = await supabase
         .from('document')
         .insert([{
-          proprietaire_type: 'profil',
-          proprietaire_id: contract.profil_id,
-          type: 'certificat_medical',
-          fichier_url: filePath,
+          owner_type_document: 'profil',
+          owner_id: contract.profil_id,
+          type_document: 'certificat_medical',
+          file_url: filePath,
           date_emission: null,
           date_expiration: null
         }])
-        .select('id, proprietaire_type, proprietaire_id, type, fichier_url, created_at')
+        .select('id, owner_type, owner_id, type, file_url, created_at')
         .single();
 
       if (docError) throw docError;

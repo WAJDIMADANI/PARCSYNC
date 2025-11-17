@@ -67,7 +67,7 @@ export default function ContractValidationPanel({
       if (contractData?.certificat_medical_id) {
         const { data: certDoc } = await supabase
           .from('document')
-          .select('fichier_url, storage_path, bucket')
+          .select('file_url, storage_path, bucket')
           .eq('id', contractData.certificat_medical_id)
           .maybeSingle();
 
@@ -77,7 +77,7 @@ export default function ContractValidationPanel({
             setCertificatUrl(url);
           } catch (error) {
             console.error('Erreur résolution URL certificat:', error);
-            setCertificatUrl(getStorageUrl(certDoc.fichier_url || certDoc.storage_path || ''));
+            setCertificatUrl(getStorageUrl(certDoc.file_url || certDoc.storage_path || ''));
           }
         }
       }
@@ -85,7 +85,7 @@ export default function ContractValidationPanel({
       if (contractData?.dpae_id) {
         const { data: dpaeDoc } = await supabase
           .from('document')
-          .select('fichier_url, storage_path, bucket')
+          .select('file_url, storage_path, bucket')
           .eq('id', contractData.dpae_id)
           .maybeSingle();
 
@@ -95,7 +95,7 @@ export default function ContractValidationPanel({
             setDpaeUrl(url);
           } catch (error) {
             console.error('Erreur résolution URL DPAE:', error);
-            setDpaeUrl(getStorageUrl(dpaeDoc.fichier_url || dpaeDoc.storage_path || ''));
+            setDpaeUrl(getStorageUrl(dpaeDoc.file_url || dpaeDoc.storage_path || ''));
           }
         }
       }
@@ -129,10 +129,10 @@ export default function ContractValidationPanel({
       const { data: docData, error: docError } = await supabase
         .from('document')
         .insert({
-          proprietaire_id: profilId,
-          proprietaire_type: 'profil',
-          type: 'dpae',
-          fichier_url: urlData.publicUrl
+          owner_id: profilId,
+          owner_type_document: 'profil',
+          type_document: 'dpae',
+          file_url: urlData.publicUrl
         })
         .select()
         .single();

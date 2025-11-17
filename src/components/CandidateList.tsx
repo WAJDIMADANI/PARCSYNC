@@ -1463,15 +1463,15 @@ function ConvertToEmployeeModal({
       const { data: documents } = await supabase
         .from('document')
         .select('*')
-        .eq('proprietaire_id', candidate.id)
-        .eq('proprietaire_type', 'candidat');
+        .eq('owner_id', candidate.id)
+        .eq('owner_type', 'candidat');
 
       if (documents && documents.length > 0) {
         const newDocuments = documents.map(doc => ({
-          proprietaire_id: profilData.id,
-          proprietaire_type: 'profil',
-          type: doc.type,
-          fichier_url: doc.fichier_url,
+          owner_id: profilData.id,
+          owner_type_document: 'profil',
+          type_document: doc.type,
+          file_url: doc.file_url,
           date_emission: doc.date_emission,
           date_expiration: doc.date_expiration,
           statut: doc.statut,

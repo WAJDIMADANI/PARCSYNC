@@ -282,18 +282,20 @@ export function Apply() {
       const documents = [];
       if (cvUrl) {
         documents.push({
-          proprietaire_type: 'candidat',
-          proprietaire_id: candidatId,
-          type: 'cv',
-          fichier_url: cvUrl,
+          owner_type: 'candidat',
+          owner_id: candidatId,
+          type_document: 'cv',
+          file_url: cvUrl,
+          file_name: 'cv.pdf'
         });
       }
       if (lettreUrl) {
         documents.push({
-          proprietaire_type: 'candidat',
-          proprietaire_id: candidatId,
-          type: 'lettre_motivation',
-          fichier_url: lettreUrl,
+          owner_type: 'candidat',
+          owner_id: candidatId,
+          type_document: 'lettre_motivation',
+          file_url: lettreUrl,
+          file_name: 'lettre_motivation.pdf'
         });
       }
 

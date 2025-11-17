@@ -91,10 +91,11 @@ export default function UploadMedicalCertificate() {
       const { data: docData, error: insertError } = await supabase
         .from('document')
         .insert([{
-          proprietaire_type: 'profil',
-          proprietaire_id: contractData.profil_id,
-          type: 'certificat_medical',
-          fichier_url: fileName,
+          owner_type: 'profil',
+          owner_id: contractData.profil_id,
+          type_document: 'certificat_medical',
+          file_url: fileName,
+          file_name: file.name,
           date_emission: null,
           date_expiration: null
         }])

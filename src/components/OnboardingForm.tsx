@@ -417,10 +417,11 @@ export function OnboardingForm() {
               console.log('✅ Inserting document record for', docType, ':', fileUrl);
               const { error: insertError } = await supabase.from('document').insert([
                 {
-                  proprietaire_type: ownerType,
-                  proprietaire_id: finalEmployeeId,
-                  type: docType,
-                  fichier_url: fileUrl,
+                  owner_type: ownerType,
+                  owner_id: finalEmployeeId,
+                  type_document: docType,
+                  file_url: fileUrl,
+                  file_name: file.name,
                   date_emission: null,
                   date_expiration: null
                 },

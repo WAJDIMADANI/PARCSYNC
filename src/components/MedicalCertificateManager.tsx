@@ -75,14 +75,14 @@ export default function MedicalCertificateManager({
       const { data: docData, error: insertError } = await supabase
         .from('document')
         .insert([{
-          proprietaire_type: 'profil',
-          proprietaire_id: contractData.profil_id,
-          type: 'certificat_medical',
-          fichier_url: fileName,
+          owner_type_document: 'profil',
+          owner_id: contractData.profil_id,
+          type_document: 'certificat_medical',
+          file_url: fileName,
           date_emission: null,
           date_expiration: null
         }])
-        .select('id, proprietaire_type, proprietaire_id, type, fichier_url, created_at')
+        .select('id, owner_type, owner_id, type, file_url, created_at')
         .single();
 
       if (insertError) throw insertError;

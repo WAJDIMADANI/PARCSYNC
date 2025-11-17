@@ -14,10 +14,10 @@ interface Candidate {
 
 interface Document {
   id: string;
-  proprietaire_id: string;
-  proprietaire_type: string;
-  type: string;
-  fichier_url?: string;
+  owner_id: string;
+  owner_type: string;
+  type_document: string;
+  file_url?: string;
   storage_path?: string;
   bucket?: string;
   created_at: string;
@@ -57,7 +57,7 @@ export function DocumentsManager() {
     try {
       const [candidatesRes, documentsRes] = await Promise.all([
         supabase.from('candidat').select('id, prenom, nom, email').is('deleted_at', null).order('nom'),
-        supabase.from('document').select('*').eq('proprietaire_type', 'candidat').order('created_at', { ascending: false })
+        supabase.from('document').select('*').eq('owner_type', 'candidat').order('created_at', { ascending: false })
       ]);
 
       if (candidatesRes.error) throw candidatesRes.error;
@@ -68,7 +68,7 @@ export function DocumentsManager() {
 
       // Filter documents to only show those belonging to active candidates
       const filteredDocuments = (documentsRes.data || []).filter(doc =>
-        activeCandidateIds.has(doc.proprietaire_id)
+        activeCandidateIds.has(doc.owner_id)
       );
 
       setCandidates(activeCandidates);
@@ -91,10 +91,11 @@ export function DocumentsManager() {
       if (uploadError) throw uploadError;
 
       const { error: insertError } = await supabase.from('document').insert([{
-        proprietaire_type: 'candidat',
-        proprietaire_id: candidatId,
-        type: type,
-        fichier_url: fileName,
+        owner_type: 'candidat',
+        owner_id: candidatId,
+        type_document: type,
+        file_url: fileName,
+        file_name: file.name,
         date_emission: null,
         date_expiration: null
       }]);
@@ -149,18 +150,18 @@ export function DocumentsManager() {
         setConfirmModal({ ...confirmModal, isOpen: false });
         try {
           // Get all documents for this candidate
-          const candidateDocs = documents.filter(d => d.proprietaire_id === candidatId);
+          const candidateDocs = documents.filter(d => d.owner_id === candidatId);
 
           // Delete all files from storage
           for (const doc of candidateDocs) {
-            const pathMatch = doc.fichier_url.match(/documents\/(.+)$/);
+            const pathMatch = doc.file_url?.match(/documents\/(.+)$/);
             if (pathMatch) {
               await supabase.storage.from('documents').remove([pathMatch[1]]);
             }
           }
 
           // Delete all documents from database
-          await supabase.from('document').delete().eq('proprietaire_id', candidatId);
+          await supabase.from('document').delete().eq('owner_id', candidatId);
 
           // Soft delete the candidate
           const { error } = await supabase
@@ -180,7 +181,7 @@ export function DocumentsManager() {
   };
 
   const getCandidateDocuments = (candidatId: string) => {
-    return documents.filter(d => d.proprietaire_id === candidatId && d.proprietaire_type === 'candidat');
+    return documents.filter(d => d.owner_id === candidatId && d.owner_type === 'candidat');
   };
 
   if (loading) {
