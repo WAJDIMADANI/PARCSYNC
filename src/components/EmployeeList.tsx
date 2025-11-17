@@ -107,12 +107,14 @@ export function EmployeeList() {
   }, []);
 
   // Auto-refresh toutes les 5 secondes si des contrats sont en attente de signature
+  // MAIS seulement si aucun modal n'est ouvert
   useEffect(() => {
     const hasWaitingContract = employees.some(
       emp => emp.statut === 'contrat_envoye'
     );
 
-    if (hasWaitingContract) {
+    // Ne pas auto-refresh si un employé est sélectionné (modal ouvert)
+    if (hasWaitingContract && !selectedEmployee) {
       console.log('🔄 Auto-refresh activé (contrats en attente)');
       const interval = setInterval(() => {
         fetchData(true); // true = silent refresh
@@ -120,7 +122,7 @@ export function EmployeeList() {
 
       return () => clearInterval(interval);
     }
-  }, [employees]);
+  }, [employees, selectedEmployee]);
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
