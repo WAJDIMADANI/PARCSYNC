@@ -15,6 +15,12 @@ interface Site {
   nom: string;
 }
 
+interface Poste {
+  id: string;
+  nom: string;
+  description: string | null;
+}
+
 interface Document {
   id: string;
   type: string;
@@ -39,6 +45,7 @@ export default function ContractSendModal({
 }: ContractSendModalProps) {
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
+  const [postes, setPostes] = useState<Poste[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
@@ -99,16 +106,19 @@ export default function ContractSendModal({
 
   const fetchData = async () => {
     try {
-      const [templatesRes, sitesRes] = await Promise.all([
+      const [templatesRes, sitesRes, postesRes] = await Promise.all([
         supabase.from('modeles_contrats').select('*').order('nom'),
-        supabase.from('site').select('*').order('nom')
+        supabase.from('site').select('*').order('nom'),
+        supabase.from('poste').select('id, nom, description').eq('actif', true).order('nom')
       ]);
 
       if (templatesRes.error) throw templatesRes.error;
       if (sitesRes.error) throw sitesRes.error;
+      if (postesRes.error) throw postesRes.error;
 
       setTemplates(templatesRes.data || []);
       setSites(sitesRes.data || []);
+      setPostes(postesRes.data || []);
     } catch (error) {
       console.error('Erreur chargement données:', error);
     } finally {
@@ -501,14 +511,19 @@ export default function ContractSendModal({
                   <Award className="w-4 h-4 inline mr-1" />
                   Poste *
                 </label>
-                <input
-                  type="text"
+                <select
                   value={variables.poste}
                   onChange={(e) => setVariables({...variables, poste: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Ex: Chauffeur livreur"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                   required
-                />
+                >
+                  <option value="">Sélectionner un poste</option>
+                  {postes.map(poste => (
+                    <option key={poste.id} value={poste.nom}>
+                      {poste.nom}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
