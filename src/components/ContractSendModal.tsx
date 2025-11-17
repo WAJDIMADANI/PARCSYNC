@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Send, FileText, Building, DollarSign, Calendar, Clock, Award } from 'lucide-react';
+import { X, Send, FileText, Building, DollarSign, Calendar, Clock, Award, CheckCircle, XCircle, Mail, Eye } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface ContractTemplate {
@@ -13,6 +13,14 @@ interface ContractTemplate {
 interface Site {
   id: string;
   nom: string;
+}
+
+interface Document {
+  id: string;
+  type_document: string;
+  file_url: string | null;
+  file_name: string | null;
+  created_at: string;
 }
 
 interface ContractSendModalProps {
@@ -36,6 +44,9 @@ export default function ContractSendModal({
   const [sending, setSending] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [showDocuments, setShowDocuments] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
 
   const searchAddress = async (query: string) => {
     if (query.length < 3) {
@@ -84,6 +95,7 @@ export default function ContractSendModal({
 
   useEffect(() => {
     fetchData();
+    fetchDocuments();
   }, []);
 
   const fetchData = async () => {
@@ -102,6 +114,79 @@ export default function ContractSendModal({
       console.error('Erreur chargement données:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDocuments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('document')
+        .select('*')
+        .eq('owner_type', 'profil')
+        .eq('owner_id', profilId);
+
+      if (error) throw error;
+      setDocuments(data || []);
+    } catch (error) {
+      console.error('Erreur chargement documents:', error);
+    }
+  };
+
+  const requiredDocuments = [
+    { type: 'cni_recto', label: 'CNI Recto' },
+    { type: 'cni_verso', label: 'CNI Verso' },
+    { type: 'carte_vitale', label: 'Carte Vitale' },
+    { type: 'rib', label: 'RIB' },
+    { type: 'permis_recto', label: 'Permis (recto)' },
+    { type: 'permis_verso', label: 'Permis (verso)' },
+    { type: 'casier_judiciaire', label: 'Casier judiciaire' },
+    { type: 'attestation_points', label: 'Attestation de points' },
+    { type: 'cv', label: 'CV' },
+    { type: 'lettre_motivation', label: 'Lettre de motivation' }
+  ];
+
+  const getDocumentStatus = (docType: string) => {
+    return documents.find(d => d.type_document === docType);
+  };
+
+  const missingDocuments = requiredDocuments.filter(doc => !getDocumentStatus(doc.type));
+  const providedCount = requiredDocuments.length - missingDocuments.length;
+
+  const handleSendReminder = async () => {
+    if (missingDocuments.length === 0) {
+      alert('Tous les documents ont été fournis.');
+      return;
+    }
+
+    setSendingReminder(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-documents-reminder`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            profilId,
+            employeeName,
+            employeeEmail,
+            missingDocuments: missingDocuments.map(d => d.label)
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'envoi de l\'email');
+      }
+
+      alert('Email de relance envoyé avec succès.');
+    } catch (error) {
+      console.error('Erreur envoi email:', error);
+      alert('Erreur lors de l\'envoi de l\'email de relance.');
+    } finally {
+      setSendingReminder(false);
     }
   };
 
@@ -270,6 +355,104 @@ export default function ContractSendModal({
               <strong>Important :</strong> Le salarié recevra un email avec le contrat à signer et devra uploader son certificat médical.
               Vous pourrez ensuite uploader la DPAE pour finaliser l'activation.
             </p>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg">
+            <button
+              onClick={() => setShowDocuments(!showDocuments)}
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-gray-600" />
+                <div className="text-left">
+                  <h3 className="font-semibold text-gray-900">Documents du candidat</h3>
+                  <p className="text-sm text-gray-600">
+                    {providedCount}/{requiredDocuments.length} documents fournis
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {missingDocuments.length > 0 && (
+                  <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-medium rounded-full">
+                    {missingDocuments.length} manquant{missingDocuments.length > 1 ? 's' : ''}
+                  </span>
+                )}
+                {missingDocuments.length === 0 && (
+                  <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
+                    Complet
+                  </span>
+                )}
+                <span className="text-gray-400">{showDocuments ? '▼' : '▶'}</span>
+              </div>
+            </button>
+
+            {showDocuments && (
+              <div className="border-t border-gray-200 p-6">
+                <div className="space-y-3 mb-4">
+                  {requiredDocuments.map(doc => {
+                    const status = getDocumentStatus(doc.type);
+                    return (
+                      <div
+                        key={doc.type}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          status
+                            ? 'bg-green-50 border-green-200'
+                            : 'bg-red-50 border-red-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {status ? (
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-600" />
+                          )}
+                          <span className={`font-medium ${
+                            status ? 'text-green-900' : 'text-red-900'
+                          }`}>
+                            {doc.label}
+                          </span>
+                        </div>
+                        {status && status.file_url && (
+                          <a
+                            href={status.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors text-sm font-medium"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Voir
+                          </a>
+                        )}
+                        {!status && (
+                          <span className="px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-lg">
+                            Manquant
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {missingDocuments.length > 0 && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <button
+                      onClick={handleSendReminder}
+                      disabled={sendingReminder}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                    >
+                      {sendingReminder ? (
+                        <LoadingSpinner size="sm" text="Envoi en cours..." />
+                      ) : (
+                        <>
+                          <Mail className="w-5 h-5" />
+                          Relancer pour les {missingDocuments.length} document{missingDocuments.length > 1 ? 's' : ''} manquant{missingDocuments.length > 1 ? 's' : ''}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
