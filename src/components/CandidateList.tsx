@@ -453,7 +453,7 @@ export function CandidateList() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                   Code RH
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -515,7 +515,7 @@ export function CandidateList() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <CodeCouleurDropdown
                         value={candidate.code_couleur_rh}
                         onChange={(value) => handleCodeCouleurChange(candidate.id, value)}
