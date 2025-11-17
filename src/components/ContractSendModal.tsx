@@ -17,9 +17,8 @@ interface Site {
 
 interface Document {
   id: string;
-  type_document: string;
-  file_url: string | null;
-  file_name: string | null;
+  type: string;
+  fichier_url: string | null;
   created_at: string;
 }
 
@@ -122,8 +121,8 @@ export default function ContractSendModal({
       const { data, error } = await supabase
         .from('document')
         .select('*')
-        .eq('owner_type', 'profil')
-        .eq('owner_id', profilId);
+        .eq('proprietaire_type', 'profil')
+        .eq('proprietaire_id', profilId);
 
       if (error) throw error;
       setDocuments(data || []);
@@ -142,7 +141,7 @@ export default function ContractSendModal({
   ];
 
   const getDocumentStatus = (docType: string) => {
-    return documents.find(d => d.type_document === docType);
+    return documents.find(d => d.type === docType);
   };
 
   const missingDocuments = requiredDocuments.filter(doc => !getDocumentStatus(doc.type));
