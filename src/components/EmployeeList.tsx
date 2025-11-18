@@ -650,15 +650,11 @@ function EmployeeDetailModal({
 
   const fetchDocuments = async () => {
     try {
-      const ids = [currentEmployee.id];
-      if (currentEmployee.candidat_id) {
-        ids.push(currentEmployee.candidat_id);
-      }
-
       const { data, error } = await supabase
         .from('document')
         .select('*')
-        .in('proprietaire_id', ids)
+        .eq('owner_id', currentEmployee.id)
+        .eq('owner_type', 'profil')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
