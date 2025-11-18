@@ -1177,8 +1177,8 @@ function EmployeeDetailModal({
                       <FileText className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 text-sm">{doc.file_name || doc.type_document || getDocumentLabel(doc.type)}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="font-medium">{doc.type_document}</p>
+                      <p className="text-xs text-gray-500">
                         Téléchargé le {new Date(doc.created_at).toLocaleDateString('fr-FR')}
                       </p>
                     </div>
