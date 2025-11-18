@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Search, Edit2, Trash2, UserPlus, X, ChevronRight, Share2, QrCode, ChevronDown } from 'lucide-react';
+import { Plus, Search, CreditCard as Edit2, Trash2, UserPlus, X, ChevronRight, Share2, QrCode, ChevronDown } from 'lucide-react';
 import { ShareLinkModal } from './ShareLinkModal';
 import { OnboardingQRModal } from './OnboardingQRModal';
 import { LoadingSpinner } from './LoadingSpinner';
