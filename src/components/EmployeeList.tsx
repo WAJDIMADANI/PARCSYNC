@@ -11,6 +11,8 @@ import { resolveDocUrl } from '../lib/documentStorage';
 interface Document {
   id: string;
   type: string;
+  file_name?: string;
+  type_document?: string;
   fichier_url?: string;
   storage_path?: string;
   bucket?: string;
@@ -1175,10 +1177,10 @@ function EmployeeDetailModal({
                       <FileText className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 text-sm">{getDocumentLabel(doc.type)}</p>
-                      {doc.date_expiration && (
-                        <p className="text-xs text-gray-500 mt-0.5">Expire le {new Date(doc.date_expiration).toLocaleDateString('fr-FR')}</p>
-                      )}
+                      <p className="font-bold text-gray-900 text-sm">{doc.file_name || doc.type_document || getDocumentLabel(doc.type)}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Téléchargé le {new Date(doc.created_at).toLocaleDateString('fr-FR')}
+                      </p>
                     </div>
                     <button
                       onClick={async () => {
