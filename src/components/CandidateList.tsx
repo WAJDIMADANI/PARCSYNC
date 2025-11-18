@@ -481,7 +481,9 @@ export function CandidateList() {
                       {candidate.prenom}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {candidate.poste || '-'}
+                      <div className="truncate max-w-[250px]" title={candidate.poste || '-'}>
+                        {candidate.poste || '-'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {site?.nom || '-'}
