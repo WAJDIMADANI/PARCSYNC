@@ -90,11 +90,15 @@ export function DocumentsManager() {
 
       if (uploadError) throw uploadError;
 
+      const { data: urlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
       const { error: insertError } = await supabase.from('document').insert([{
         owner_type: 'candidat',
         owner_id: candidatId,
         type_document: type,
-        file_url: fileName,
+        file_url: urlData.publicUrl,
         file_name: file.name,
         date_emission: null,
         date_expiration: null
