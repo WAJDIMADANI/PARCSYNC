@@ -1202,17 +1202,16 @@ function EmployeeDetailModal({
                         Téléchargé le {new Date(doc.created_at).toLocaleDateString('fr-FR')}
                       </p>
                     </div>
-                    <button
-                      onClick={async () => {
-                        const signedUrl = await getSignedUrl(doc.fichier_url);
-                        window.open(signedUrl, '_blank');
-                      }}
+                    <a
+                      href={doc.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="px-3 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium text-xs shadow-sm hover:shadow-md flex items-center gap-1.5 transform hover:scale-105"
                       title="Voir le document"
                     >
                       <FileText className="w-4 h-4" />
                       Voir
-                    </button>
+                    </a>
                   </div>
                 ))}
               </div>
