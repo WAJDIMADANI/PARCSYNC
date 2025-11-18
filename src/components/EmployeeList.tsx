@@ -652,15 +652,35 @@ function EmployeeDetailModal({
 
   const fetchDocuments = async () => {
     try {
-      const { data, error } = await supabase
+      // Charger les documents du profil
+      const { data: profilDocs, error: profilError } = await supabase
         .from('document')
         .select('*')
         .eq('owner_id', currentEmployee.id)
-        .eq('owner_type', 'profil')
-        .order('created_at', { ascending: false });
+        .eq('owner_type', 'profil');
 
-      if (error) throw error;
-      setDocuments(data || []);
+      if (profilError) throw profilError;
+
+      let allDocuments = profilDocs || [];
+
+      // Charger les documents du candidat lié (si candidat_id existe)
+      if (currentEmployee.candidat_id) {
+        const { data: candidatDocs, error: candidatError } = await supabase
+          .from('document')
+          .select('*')
+          .eq('owner_id', currentEmployee.candidat_id)
+          .eq('owner_type', 'candidat');
+
+        if (candidatError) throw candidatError;
+
+        // Fusionner les deux tableaux
+        allDocuments = [...allDocuments, ...(candidatDocs || [])];
+      }
+
+      // Trier par date (plus récent d'abord)
+      allDocuments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setDocuments(allDocuments);
     } catch (error) {
       console.error('Erreur chargement documents:', error);
     } finally {
