@@ -4,6 +4,7 @@ import { Plus, Search, CreditCard as Edit2, Trash2, UserPlus, X, ChevronRight, S
 import { ShareLinkModal } from './ShareLinkModal';
 import { OnboardingQRModal } from './OnboardingQRModal';
 import { LoadingSpinner } from './LoadingSpinner';
+import CodeCouleurModal from './CodeCouleurModal';
 
 interface Site {
   id: string;
@@ -46,6 +47,7 @@ interface Candidate {
   poste?: string;
   statut_candidature?: string;
   code_couleur_rh?: string;
+  note_interne?: string | null;
 }
 
 const STATUT_CANDIDATURE = [
@@ -175,6 +177,8 @@ export function CandidateList() {
   const [deletingCandidateId, setDeletingCandidateId] = useState<string | null>(null);
   const [showStatutConfirmModal, setShowStatutConfirmModal] = useState(false);
   const [pendingStatutChange, setPendingStatutChange] = useState<{ candidateId: string; newStatut: string; candidateName: string } | null>(null);
+  const [showCodeCouleurModal, setShowCodeCouleurModal] = useState(false);
+  const [editingCodeCandidate, setEditingCodeCandidate] = useState<Candidate | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -286,11 +290,14 @@ export function CandidateList() {
     setPendingStatutChange(null);
   };
 
-  const handleCodeCouleurChange = async (candidatId: string, newColor: string | null) => {
+  const handleCodeCouleurChange = async (candidatId: string, newColor: string | null, noteInterne: string) => {
     try {
       const { error } = await supabase
         .from('candidat')
-        .update({ code_couleur_rh: newColor })
+        .update({
+          code_couleur_rh: newColor,
+          note_interne: noteInterne || null
+        })
         .eq('id', candidatId);
 
       if (error) throw error;
@@ -300,6 +307,16 @@ export function CandidateList() {
       console.error('Erreur mise à jour couleur:', error);
       alert('Erreur lors de la mise à jour de la couleur');
     }
+  };
+
+  const openCodeCouleurModal = (candidate: Candidate) => {
+    setEditingCodeCandidate(candidate);
+    setShowCodeCouleurModal(true);
+  };
+
+  const handleSaveCodeCouleur = async (codeCouleur: string | null, noteInterne: string) => {
+    if (!editingCodeCandidate) return;
+    await handleCodeCouleurChange(editingCodeCandidate.id, codeCouleur, noteInterne);
   };
 
   const sendOnboardingEmail = async (candidate: Candidate) => {
@@ -518,10 +535,19 @@ export function CandidateList() {
                       </select>
                     </td>
                     <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
-                      <CodeCouleurDropdown
-                        value={candidate.code_couleur_rh}
-                        onChange={(value) => handleCodeCouleurChange(candidate.id, value)}
-                      />
+                      <button
+                        onClick={() => openCodeCouleurModal(candidate)}
+                        className="flex items-center gap-2 text-sm border border-gray-300 rounded px-3 py-1.5 min-w-[120px] bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <div className={`w-4 h-4 rounded-full flex-shrink-0 ${
+                          candidate.code_couleur_rh
+                            ? CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh)?.color
+                            : 'border-2 border-gray-300'
+                        }`}></div>
+                        <span className="flex-1 text-left">
+                          {CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh)?.label || 'Aucun'}
+                        </span>
+                      </button>
                     </td>
                     <td className="px-2 py-3 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
@@ -589,6 +615,20 @@ export function CandidateList() {
             setEditingCandidate(null);
             fetchData();
           }}
+        />
+      )}
+
+      {showCodeCouleurModal && editingCodeCandidate && (
+        <CodeCouleurModal
+          isOpen={showCodeCouleurModal}
+          currentValue={editingCodeCandidate.code_couleur_rh || null}
+          candidateName={`${editingCodeCandidate.prenom} ${editingCodeCandidate.nom}`}
+          currentNote={editingCodeCandidate.note_interne}
+          onClose={() => {
+            setShowCodeCouleurModal(false);
+            setEditingCodeCandidate(null);
+          }}
+          onSave={handleSaveCodeCouleur}
         />
       )}
 
@@ -1288,6 +1328,16 @@ function CandidateModal({
                   </a>
                 )}
               </div>
+            </div>
+          )}
+
+          {candidate && candidate.note_interne && (
+            <div className="border-t pt-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Note interne RH</h3>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{candidate.note_interne}</p>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">Cette note est uniquement visible par l'équipe RH</p>
             </div>
           )}
 
