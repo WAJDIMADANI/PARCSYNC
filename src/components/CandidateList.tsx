@@ -425,38 +425,38 @@ export function CandidateList() {
           <p className="text-gray-600">Aucun candidat trouvé</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Nom
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Prénom
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Poste
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Site
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Code Postal
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  CP
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Documents
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Docs
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                  Code RH
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Code
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -474,67 +474,67 @@ export function CandidateList() {
                     className="hover:bg-gray-50 cursor-pointer"
                     onClick={() => setEditingCandidate(candidate)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {candidate.nom}
+                    <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <div className="truncate max-w-[120px]" title={candidate.nom}>{candidate.nom}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {candidate.prenom}
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      <div className="truncate max-w-[100px]" title={candidate.prenom}>{candidate.prenom}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      <div className="truncate max-w-[250px]" title={candidate.poste || '-'}>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600">
+                      <div className="truncate max-w-[150px]" title={candidate.poste || '-'}>
                         {candidate.poste || '-'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {site?.nom || '-'}
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600">
+                      <div className="truncate max-w-[100px]" title={site?.nom || '-'}>{site?.nom || '-'}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
                       {candidate.code_postal || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {new Date(candidate.created_at).toLocaleDateString('fr-FR')}
+                    <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
+                      {new Date(candidate.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-2 py-3 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => setEditingCandidate(candidate)}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium ${
+                        className={`px-2 py-1 rounded text-xs font-medium ${
                           hasDocuments
                             ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                             : 'bg-gray-100 text-gray-500'
                         } transition-colors`}
                       >
-                        {hasDocuments ? 'Voir' : 'Aucun'}
+                        {hasDocuments ? 'Voir' : '-'}
                       </button>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-3 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <select
                         value={statutCandidature}
                         onChange={(e) => handleStatutChange(candidate.id, e.target.value)}
-                        className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="text-xs border border-gray-300 rounded px-1 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
                       >
                         {STATUT_CANDIDATURE.map(s => (
                           <option key={s.value} value={s.value}>{s.label}</option>
                         ))}
                       </select>
                     </td>
-                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
                       <CodeCouleurDropdown
                         value={candidate.code_couleur_rh}
                         onChange={(value) => handleCodeCouleurChange(candidate.id, value)}
                       />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-2 py-3 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
                         {statutCandidature === 'salarie' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setConvertingCandidate(candidate);
                             }}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
                             title="Convertir en salarié"
                           >
-                            <UserPlus className="w-4 h-4" />
+                            <UserPlus className="w-3.5 h-3.5" />
                           </button>
                         )}
                         <button
@@ -542,18 +542,18 @@ export function CandidateList() {
                             e.stopPropagation();
                             setEditingCandidate(candidate);
                           }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             confirmDelete(candidate.id);
                           }}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
