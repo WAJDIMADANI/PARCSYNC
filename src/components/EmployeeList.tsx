@@ -842,7 +842,7 @@ function EmployeeDetailModal({
 
       // Envoyer l'email
       const emailResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-contract-email`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/end-contract-email`,
         {
           method: 'POST',
           headers: {
@@ -863,7 +863,7 @@ function EmployeeDetailModal({
         console.error('Erreur API (status ' + emailResponse.status + '):', errorText);
 
         if (emailResponse.status === 404) {
-          throw new Error('La fonction d\'envoi d\'email n\'est pas déployée. Veuillez déployer la fonction "send-contract-email" sur Supabase.');
+          throw new Error('La fonction d\'envoi d\'email n\'est pas déployée. Veuillez déployer la fonction "end-contract-email" sur Supabase.');
         }
 
         try {
