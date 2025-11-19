@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Search } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { ConfirmModal } from './ConfirmModal';
 
 const STATUT_CANDIDATURE = [
   { value: 'candidature_recue', label: 'Candidature reçue' },
@@ -83,6 +84,7 @@ export function VivierList() {
     key: 'date_disponibilite',
     direction: 'asc',
   });
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; newStatus: string; candidateId: string } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -362,6 +364,44 @@ export function VivierList() {
           onSuccess={() => {
             setSelectedCandidateId(null);
             setFullCandidate(null);
+            fetchData();
+          }}
+        />
+      )}
+
+      {confirmModal && (
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title="Confirmer le changement de statut"
+          message="Voulez-vous vraiment changer le statut de ce candidat ?"
+          confirmText="Confirmer"
+          cancelText="Annuler"
+          type="info"
+          onConfirm={async () => {
+            try {
+              await supabase
+                .from('candidat')
+                .update({ statut_candidature: confirmModal.newStatus })
+                .eq('id', confirmModal.candidateId);
+
+              if (confirmModal.newStatus !== 'vivier') {
+                await supabase
+                  .from('vivier')
+                  .delete()
+                  .eq('candidat_id', confirmModal.candidateId);
+              }
+
+              setConfirmModal(null);
+              setSelectedCandidateId(null);
+              setFullCandidate(null);
+              fetchData();
+            } catch (error) {
+              console.error('Erreur mise à jour statut:', error);
+              alert('Erreur lors de la mise à jour du statut');
+            }
+          }}
+          onCancel={() => {
+            setConfirmModal(null);
             fetchData();
           }}
         />
@@ -705,16 +745,12 @@ function CandidateModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">Statut candidature</label>
               <select
                 value={candidate.statut_candidature || 'candidature_recue'}
-                onChange={async (e) => {
-                  try {
-                    await supabase
-                      .from('candidat')
-                      .update({ statut_candidature: e.target.value })
-                      .eq('id', candidate.id);
-                    onSuccess();
-                  } catch (error) {
-                    console.error('Erreur mise à jour statut:', error);
-                  }
+                onChange={(e) => {
+                  setConfirmModal({
+                    isOpen: true,
+                    newStatus: e.target.value,
+                    candidateId: candidate.id
+                  });
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
