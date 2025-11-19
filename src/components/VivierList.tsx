@@ -465,11 +465,22 @@ function CandidateModal({
     setLoading(true);
 
     try {
+      // Mettre à jour le candidat
       const { error } = await supabase
         .from('candidat')
         .update(formData)
         .eq('id', candidate.id);
       if (error) throw error;
+
+      // Si le statut change et n'est plus 'vivier', supprimer de la table vivier
+      if (formData.statut_candidature !== 'vivier') {
+        const { error: deleteError } = await supabase
+          .from('vivier')
+          .delete()
+          .eq('candidat_id', candidate.id);
+        if (deleteError) throw deleteError;
+      }
+
       onSuccess();
     } catch (error) {
       console.error('Erreur:', error);
