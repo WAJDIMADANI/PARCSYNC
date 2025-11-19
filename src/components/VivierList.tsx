@@ -3,6 +3,14 @@ import { supabase } from '../lib/supabase';
 import { Search } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 
+const STATUT_CANDIDATURE = [
+  { value: 'candidature_recue', label: 'Candidature reçue' },
+  { value: 'vivier', label: 'Vivier' },
+  { value: 'entretien', label: 'Entretien' },
+  { value: 'pre_embauche', label: 'Pré-embauche' },
+  { value: 'candidature_rejetee', label: 'Candidature rejetée' }
+];
+
 interface VivierCandidate {
   id: string;
   candidat_id: string;
@@ -15,6 +23,7 @@ interface VivierCandidate {
   mois_disponibilite: string | null;
   created_at: string;
   updated_at: string;
+  statut_candidature?: string;
 }
 
 interface Site {
@@ -87,19 +96,41 @@ export function VivierList() {
 
   const fetchData = async () => {
     try {
-      const [vivierRes, sitesRes, secteursRes, postesRes] = await Promise.all([
-        supabase.from('vivier').select('*').order('created_at', { ascending: false }),
+      // Charger le vivier avec les statuts depuis candidat
+      const { data: vivierData, error: vivierError } = await supabase
+        .from('vivier')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (vivierError) throw vivierError;
+
+      // Charger les statuts depuis candidat pour chaque entrée vivier
+      const vivierWithStatus = await Promise.all(
+        (vivierData || []).map(async (v) => {
+          const { data: candidatData } = await supabase
+            .from('candidat')
+            .select('statut_candidature')
+            .eq('id', v.candidat_id)
+            .single();
+
+          return {
+            ...v,
+            statut_candidature: candidatData?.statut_candidature || 'vivier'
+          };
+        })
+      );
+
+      const [sitesRes, secteursRes, postesRes] = await Promise.all([
         supabase.from('site').select('*').order('nom'),
         supabase.from('secteur').select('*').order('nom'),
         supabase.from('poste').select('id, nom, description').eq('actif', true).order('nom')
       ]);
 
-      if (vivierRes.error) throw vivierRes.error;
       if (sitesRes.error) throw sitesRes.error;
       if (secteursRes.error) throw secteursRes.error;
       if (postesRes.error) throw postesRes.error;
 
-      setCandidates(vivierRes.data || []);
+      setCandidates(vivierWithStatus);
       setSites(sitesRes.data || []);
       setSecteurs(secteursRes.data || []);
       setPostes(postesRes.data || []);
@@ -257,6 +288,9 @@ export function VivierList() {
                     )}
                   </div>
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Statut
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -283,6 +317,30 @@ export function VivierList() {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
                     {formatDisponibilite(candidate)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={candidate.statut_candidature || 'vivier'}
+                      onChange={async (e) => {
+                        try {
+                          await supabase
+                            .from('candidat')
+                            .update({
+                              statut_candidature: e.target.value,
+                              updated_at: new Date().toISOString()
+                            })
+                            .eq('id', candidate.candidat_id);
+                          fetchData();
+                        } catch (error) {
+                          console.error('Erreur mise à jour statut:', error);
+                        }
+                      }}
+                      className="text-sm px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {STATUT_CANDIDATURE.map(s => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </select>
                   </td>
                 </tr>
               ))}
