@@ -325,10 +325,7 @@ export function VivierList() {
                         try {
                           await supabase
                             .from('candidat')
-                            .update({
-                              statut_candidature: e.target.value,
-                              updated_at: new Date().toISOString()
-                            })
+                            .update({ statut_candidature: e.target.value })
                             .eq('id', candidate.candidat_id);
                           fetchData();
                         } catch (error) {
@@ -698,10 +695,7 @@ function CandidateModal({
                   try {
                     await supabase
                       .from('candidat')
-                      .update({
-                        statut_candidature: e.target.value,
-                        updated_at: new Date().toISOString()
-                      })
+                      .update({ statut_candidature: e.target.value })
                       .eq('id', candidate.id);
                     onSuccess();
                   } catch (error) {
