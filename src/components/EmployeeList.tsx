@@ -803,6 +803,32 @@ function EmployeeDetailModal({
         return;
       }
 
+      // Si le contrat n'a pas de demande Yousign, on en crée une
+      if (!contrat.yousign_signature_request_id) {
+        console.log('Pas de demande Yousign existante, création en cours...');
+
+        const yousignResponse = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({ contractId: contrat.id })
+          }
+        );
+
+        if (!yousignResponse.ok) {
+          const errorText = await yousignResponse.text();
+          console.error('Erreur Yousign:', errorText);
+          throw new Error('Impossible de créer la demande de signature Yousign');
+        }
+
+        console.log('Demande Yousign créée avec succès');
+      }
+
+      // Envoyer l'email
       const emailResponse = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-contract-email`,
         {
