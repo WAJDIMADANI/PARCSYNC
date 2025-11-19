@@ -300,12 +300,14 @@ export default function ContractSendModal({
 
       } catch (fetchError: any) {
         console.error('Erreur lors de l\'appel Yousign:', fetchError);
-        
+
         // ✅ SUPPRIMER LE CONTRAT SI YOUSIGN ÉCHOUE
         await supabase.from('contrat').delete().eq('id', contrat.id);
-        
-        alert(`ERREUR YOUSIGN : ${fetchError.message}\n\nLe contrat n'a pas pu être envoyé. Veuillez réessayer.`);
-        throw fetchError;
+
+        const errorMsg = fetchError.message || 'Erreur réseau lors du renvoi de l\'email';
+        alert(`Erreur lors du renvoi de l'email :\n\n${errorMsg}`);
+        setSending(false);
+        return;
       }
 
       // ✅ ÉTAPE 4 : Mettre à jour le profil
