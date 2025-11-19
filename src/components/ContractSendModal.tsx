@@ -133,8 +133,8 @@ export default function ContractSendModal({
       const { data, error } = await supabase
         .from('document')
         .select('*')
-        .eq('proprietaire_type', 'profil')
-        .eq('proprietaire_id', profilId);
+        .eq('owner_type', 'profil')
+        .eq('owner_id', profilId);
 
       if (error) throw error;
       setDocuments(data || []);
