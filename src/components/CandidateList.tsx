@@ -398,7 +398,14 @@ export function CandidateList() {
     if (!vivierCandidate) return;
 
     try {
-      const { error } = await supabase.from('vivier').insert([{
+      // Vérifier si le candidat existe déjà dans le vivier
+      const { data: existingVivier } = await supabase
+        .from('vivier')
+        .select('id')
+        .eq('candidat_id', vivierCandidate.id)
+        .maybeSingle();
+
+      const vivierData = {
         candidat_id: vivierCandidate.id,
         nom: vivierCandidate.nom,
         prenom: vivierCandidate.prenom,
@@ -407,9 +414,24 @@ export function CandidateList() {
         poste_souhaite: vivierCandidate.poste,
         date_disponibilite: dateDisponibilite,
         mois_disponibilite: moisDisponibilite,
-      }]);
+      };
 
-      if (error) throw error;
+      if (existingVivier) {
+        // UPDATE si existe déjà
+        const { error } = await supabase
+          .from('vivier')
+          .update(vivierData)
+          .eq('candidat_id', vivierCandidate.id);
+
+        if (error) throw error;
+      } else {
+        // INSERT si n'existe pas
+        const { error } = await supabase
+          .from('vivier')
+          .insert([vivierData]);
+
+        if (error) throw error;
+      }
 
       await supabase
         .from('candidat')
