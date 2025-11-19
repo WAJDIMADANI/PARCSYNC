@@ -806,26 +806,38 @@ function EmployeeDetailModal({
       // Si le contrat n'a pas de demande Yousign, on en crée une
       if (!contrat.yousign_signature_request_id) {
         console.log('Pas de demande Yousign existante, création en cours...');
+        console.log('Contract ID:', contrat.id);
+        console.log('API URL:', `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`);
 
-        const yousignResponse = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({ contractId: contrat.id })
+        try {
+          const yousignResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              },
+              body: JSON.stringify({ contractId: contrat.id })
+            }
+          );
+
+          console.log('Yousign Response Status:', yousignResponse.status);
+
+          if (!yousignResponse.ok) {
+            const errorText = await yousignResponse.text();
+            console.error('Erreur Yousign (status ' + yousignResponse.status + '):', errorText);
+            throw new Error('Impossible de créer la demande de signature Yousign: ' + errorText.substring(0, 100));
           }
-        );
 
-        if (!yousignResponse.ok) {
-          const errorText = await yousignResponse.text();
-          console.error('Erreur Yousign:', errorText);
-          throw new Error('Impossible de créer la demande de signature Yousign');
+          const yousignData = await yousignResponse.json();
+          console.log('Demande Yousign créée avec succès:', yousignData);
+        } catch (fetchError) {
+          console.error('FETCH ERROR:', fetchError);
+          throw new Error('Erreur réseau lors de la création Yousign: ' + (fetchError instanceof Error ? fetchError.message : 'Unknown'));
         }
-
-        console.log('Demande Yousign créée avec succès');
+      } else {
+        console.log('Demande Yousign déjà existante:', contrat.yousign_signature_request_id);
       }
 
       // Envoyer l'email
