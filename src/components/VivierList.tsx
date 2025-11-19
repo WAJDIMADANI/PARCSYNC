@@ -120,6 +120,9 @@ export function VivierList() {
         })
       );
 
+      // Filtrer pour n'afficher QUE les candidats avec statut 'vivier'
+      const filteredVivier = vivierWithStatus.filter(v => v.statut_candidature === 'vivier');
+
       const [sitesRes, secteursRes, postesRes] = await Promise.all([
         supabase.from('site').select('*').order('nom'),
         supabase.from('secteur').select('*').order('nom'),
@@ -130,7 +133,7 @@ export function VivierList() {
       if (secteursRes.error) throw secteursRes.error;
       if (postesRes.error) throw postesRes.error;
 
-      setCandidates(vivierWithStatus);
+      setCandidates(filteredVivier);
       setSites(sitesRes.data || []);
       setSecteurs(secteursRes.data || []);
       setPostes(postesRes.data || []);
