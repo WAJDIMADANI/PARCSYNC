@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Send, FileText, Building, DollarSign, Calendar, Clock, Award, CheckCircle, XCircle, Mail, Eye } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import SuccessNotification from './SuccessNotification';
 
 interface ContractTemplate {
   id: string;
@@ -53,6 +54,7 @@ export default function ContractSendModal({
   const [documents, setDocuments] = useState<Document[]>([]);
   const [showDocuments, setShowDocuments] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const searchAddress = async (query: string) => {
     if (query.length < 3) {
@@ -317,8 +319,12 @@ export default function ContractSendModal({
 
       if (profilError) throw profilError;
 
-      onSuccess();
-      onClose();
+      setShowSuccess(true);
+
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 2500);
     } catch (error: any) {
       console.error('Erreur envoi contrat:', error);
       const errorMessage = error.message || 'Erreur inconnue lors de l\'envoi du contrat';
@@ -339,8 +345,15 @@ export default function ContractSendModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <>
+      {showSuccess && (
+        <SuccessNotification
+          message="Contrat envoyé avec succès"
+          onClose={() => setShowSuccess(false)}
+        />
+      )}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between z-10 rounded-t-xl">
           <div>
             <h2 className="text-2xl font-bold text-white">Envoyer le contrat</h2>
@@ -595,7 +608,8 @@ export default function ContractSendModal({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
