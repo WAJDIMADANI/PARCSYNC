@@ -263,12 +263,16 @@ export function CandidateList() {
 
       if (error) throw error;
 
+      const candidate = candidates.find(c => c.id === pendingStatutChange.candidateId);
+
       // Si le nouveau statut est 'pre_embauche', envoyer l'email d'onboarding
-      if (pendingStatutChange.newStatut === 'pre_embauche') {
-        const candidate = candidates.find(c => c.id === pendingStatutChange.candidateId);
-        if (candidate) {
-          await sendOnboardingEmail(candidate);
-        }
+      if (pendingStatutChange.newStatut === 'pre_embauche' && candidate) {
+        await sendOnboardingEmail(candidate);
+      }
+
+      // Si le nouveau statut est 'candidature_rejetee', envoyer l'email de refus
+      if (pendingStatutChange.newStatut === 'candidature_rejetee' && candidate) {
+        await sendRejectionEmail(candidate);
       }
 
       // Fermer le modal et réinitialiser l'état
