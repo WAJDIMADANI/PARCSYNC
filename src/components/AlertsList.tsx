@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertTriangle, FileText, Calendar } from 'lucide-react';
+import { AlertTriangle, FileText, Calendar, Archive } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface ExpiringDoc {
@@ -21,11 +21,22 @@ interface ExpiringContract {
   jours_restants: number;
 }
 
-export function AlertsList() {
+interface VivierNotification {
+  id: string;
+  candidat_id: string;
+  nom: string;
+  prenom: string;
+  date_disponibilite: string | null;
+  mois_disponibilite: string | null;
+  jours_avant_disponibilite: number | null;
+}
+
+export function AlertsList({ onVivierClick }: { onVivierClick?: (candidatId: string) => void }) {
   const [expiringDocs, setExpiringDocs] = useState<ExpiringDoc[]>([]);
   const [expiringContracts, setExpiringContracts] = useState<ExpiringContract[]>([]);
+  const [vivierNotifications, setVivierNotifications] = useState<VivierNotification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'docs' | 'contracts'>('docs');
+  const [activeTab, setActiveTab] = useState<'docs' | 'contracts' | 'vivier'>('docs');
 
   useEffect(() => {
     fetchAlerts();
@@ -33,16 +44,19 @@ export function AlertsList() {
 
   const fetchAlerts = async () => {
     try {
-      const [docsRes, contractsRes] = await Promise.all([
+      const [docsRes, contractsRes, vivierRes] = await Promise.all([
         supabase.from('v_docs_expirant').select('*'),
-        supabase.from('v_contrats_cdd_fin').select('*')
+        supabase.from('v_contrats_cdd_fin').select('*'),
+        supabase.rpc('get_vivier_notifications')
       ]);
 
       if (docsRes.error) throw docsRes.error;
       if (contractsRes.error) throw contractsRes.error;
+      if (vivierRes.error) throw vivierRes.error;
 
       setExpiringDocs(docsRes.data || []);
       setExpiringContracts(contractsRes.data || []);
+      setVivierNotifications(vivierRes.data || []);
     } catch (error) {
       console.error('Erreur chargement alertes:', error);
     } finally {
@@ -87,6 +101,17 @@ export function AlertsList() {
         >
           <Calendar className="w-5 h-5 mr-2" />
           CDD fin proche ({expiringContracts.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('vivier')}
+          className={`flex items-center px-6 py-3 rounded-lg transition-colors ${
+            activeTab === 'vivier'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <Archive className="w-5 h-5 mr-2" />
+          Vivier disponible ({vivierNotifications.length})
         </button>
       </div>
 
@@ -201,6 +226,85 @@ export function AlertsList() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'vivier' && (
+        <div>
+          {vivierNotifications.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <Archive className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">Aucun candidat du vivier disponible prochainement</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nom
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Prénom
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date de disponibilité
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Disponible dans
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {vivierNotifications.map((notif) => {
+                    const formatDisponibilite = () => {
+                      if (notif.date_disponibilite) {
+                        return new Date(notif.date_disponibilite).toLocaleDateString('fr-FR');
+                      }
+                      if (notif.mois_disponibilite) {
+                        const [year, month] = notif.mois_disponibilite.split('-');
+                        const date = new Date(parseInt(year), parseInt(month) - 1);
+                        return date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                      }
+                      return '-';
+                    };
+
+                    return (
+                      <tr
+                        key={notif.id}
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => onVivierClick && onVivierClick(notif.candidat_id)}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {notif.nom}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {notif.prenom}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {formatDisponibilite()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            notif.jours_avant_disponibilite !== null && notif.jours_avant_disponibilite <= 7
+                              ? 'bg-green-100 text-green-700'
+                              : notif.jours_avant_disponibilite !== null && notif.jours_avant_disponibilite <= 15
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            <Archive className="w-3 h-3 mr-1" />
+                            {notif.jours_avant_disponibilite !== null
+                              ? `${notif.jours_avant_disponibilite} jours`
+                              : 'Ce mois-ci'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

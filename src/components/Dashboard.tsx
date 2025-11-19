@@ -19,6 +19,7 @@ import { DocumentsManager } from './DocumentsManager';
 import { RHDashboard } from './RHDashboard';
 import { ContractTemplates } from './ContractTemplates';
 import { PostesList } from './PostesList';
+import { VivierList } from './VivierList';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -39,7 +40,9 @@ export function Dashboard() {
       case 'rh/courriers':
         return <LettersList />;
       case 'rh/alertes':
-        return <AlertsList />;
+        return <AlertsList onVivierClick={() => setView('rh/vivier')} />;
+      case 'rh/vivier':
+        return <VivierList />;
       case 'parc/vehicules':
         return <VehicleList />;
       case 'parc/ct-assurance':
@@ -109,6 +112,7 @@ export function Dashboard() {
                 {view === 'rh/contrats' && 'Contrats'}
                 {view === 'rh/courriers' && 'Courriers'}
                 {view === 'rh/alertes' && 'Alertes'}
+                {view === 'rh/vivier' && 'Vivier'}
                 {view === 'parc/vehicules' && 'Véhicules'}
                 {view === 'parc/ct-assurance' && 'CT & Assurance'}
                 {view === 'parc/maintenance' && 'Maintenance & Garage'}

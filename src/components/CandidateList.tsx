@@ -5,6 +5,7 @@ import { ShareLinkModal } from './ShareLinkModal';
 import { OnboardingQRModal } from './OnboardingQRModal';
 import { LoadingSpinner } from './LoadingSpinner';
 import CodeCouleurModal from './CodeCouleurModal';
+import { VivierDisponibiliteModal } from './VivierDisponibiliteModal';
 
 interface Site {
   id: string;
@@ -55,6 +56,7 @@ const STATUT_CANDIDATURE = [
   { value: 'entretien', label: 'Entretien' },
   { value: 'pre_embauche', label: 'Pré-embauche' },
   { value: 'salarie', label: 'Salarié' },
+  { value: 'vivier', label: 'Vivier' },
   { value: 'candidature_rejetee', label: 'Candidature rejetée' },
 ];
 
@@ -179,6 +181,8 @@ export function CandidateList() {
   const [pendingStatutChange, setPendingStatutChange] = useState<{ candidateId: string; newStatut: string; candidateName: string } | null>(null);
   const [showCodeCouleurModal, setShowCodeCouleurModal] = useState(false);
   const [editingCodeCandidate, setEditingCodeCandidate] = useState<Candidate | null>(null);
+  const [showVivierModal, setShowVivierModal] = useState(false);
+  const [vivierCandidate, setVivierCandidate] = useState<Candidate | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -233,6 +237,12 @@ export function CandidateList() {
   const handleStatutChange = (candidateId: string, newStatut: string) => {
     const candidate = candidates.find(c => c.id === candidateId);
     if (!candidate) return;
+
+    if (newStatut === 'vivier') {
+      setVivierCandidate(candidate);
+      setShowVivierModal(true);
+      return;
+    }
 
     setPendingStatutChange({
       candidateId,
@@ -381,6 +391,39 @@ export function CandidateList() {
       console.error('Erreur envoi email de refus:', error);
       setSuccessMessage('Erreur lors de l\'envoi de l\'email de refus');
       setShowSuccessModal(true);
+    }
+  };
+
+  const handleVivierConfirm = async (dateDisponibilite: string | null, moisDisponibilite: string | null) => {
+    if (!vivierCandidate) return;
+
+    try {
+      const { error } = await supabase.from('vivier').insert([{
+        candidat_id: vivierCandidate.id,
+        nom: vivierCandidate.nom,
+        prenom: vivierCandidate.prenom,
+        telephone: vivierCandidate.tel,
+        email: vivierCandidate.email,
+        poste_souhaite: vivierCandidate.poste,
+        date_disponibilite: dateDisponibilite,
+        mois_disponibilite: moisDisponibilite,
+      }]);
+
+      if (error) throw error;
+
+      await supabase
+        .from('candidat')
+        .update({ statut_candidature: 'vivier' })
+        .eq('id', vivierCandidate.id);
+
+      setSuccessMessage(`${vivierCandidate.prenom} ${vivierCandidate.nom} a été ajouté au vivier !`);
+      setShowSuccessModal(true);
+      setShowVivierModal(false);
+      setVivierCandidate(null);
+      fetchData();
+    } catch (error) {
+      console.error('Erreur ajout vivier:', error);
+      alert('Erreur lors de l\'ajout au vivier');
     }
   };
 
@@ -740,6 +783,17 @@ export function CandidateList() {
             </div>
           </div>
         </div>
+      )}
+
+      {showVivierModal && vivierCandidate && (
+        <VivierDisponibiliteModal
+          candidateName={`${vivierCandidate.prenom} ${vivierCandidate.nom}`}
+          onClose={() => {
+            setShowVivierModal(false);
+            setVivierCandidate(null);
+          }}
+          onConfirm={handleVivierConfirm}
+        />
       )}
     </div>
   );
