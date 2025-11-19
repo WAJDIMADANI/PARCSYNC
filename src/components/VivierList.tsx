@@ -640,7 +640,10 @@ function CandidateModal({
                   try {
                     await supabase
                       .from('candidat')
-                      .update({ statut_candidature: e.target.value })
+                      .update({
+                        statut_candidature: e.target.value,
+                        updated_at: new Date().toISOString()
+                      })
                       .eq('id', candidate.id);
                     onSuccess();
                   } catch (error) {
