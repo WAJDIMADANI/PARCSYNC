@@ -65,8 +65,8 @@ export default function ContractViewModal({
       // Fusionne les données
       const fullData = {
         ...contractData,
-        profil: [profil],
-        modele: [modele]
+        profil: profil,
+        modele: modele
       };
 
       setContractData(fullData);
@@ -129,7 +129,7 @@ export default function ContractViewModal({
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Aperçu du contrat</h2>
             <p className="text-sm text-gray-500 mt-1">
-              {contractData?.profil?.[0]?.prenom} {contractData?.profil?.[0]?.nom}
+              {contractData?.profil?.prenom} {contractData?.profil?.nom}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -200,13 +200,13 @@ export default function ContractViewModal({
                 <div>
                   <p className="text-sm text-gray-600">Email du signataire</p>
                   <p className="font-medium text-gray-900">
-                    {contractData?.profil?.[0]?.email}
+                    {contractData?.profil?.email}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Modèle de contrat</p>
                   <p className="font-medium text-gray-900">
-                    {contractData?.modele?.[0]?.nom}
+                    {contractData?.modele?.nom}
                   </p>
                 </div>
               </div>
