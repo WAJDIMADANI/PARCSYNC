@@ -130,9 +130,9 @@ export default function ContractValidationPanel({
         .from('document')
         .insert({
           owner_id: profilId,
-          owner_type_document: 'profil',
-          type_document: 'dpae',
-          file_url: urlData.publicUrl
+          owner_type: 'profil',
+          type: 'dpae',
+          fichier_url: urlData.publicUrl
         })
         .select()
         .single();
