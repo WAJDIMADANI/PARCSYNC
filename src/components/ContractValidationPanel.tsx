@@ -127,12 +127,12 @@ export default function ContractValidationPanel({
         .getPublicUrl(filePath);
 
       const { data: docData, error: docError } = await supabase
-        .from('documents')
+        .from('document')
         .insert({
           owner_id: profilId,
           owner_type: 'profil',
-          type_document: 'dpae',
-          file_url: urlData.publicUrl
+          type: 'dpae',
+          fichier_url: urlData.publicUrl
         })
         .select()
         .single();
