@@ -34,7 +34,7 @@ export default function ContractViewModal({
   const fetchContractData = async () => {
     try {
       setLoading(true);
-      
+
       // 1. Récupère le contrat
       const { data: contractData, error: contractError } = await supabase
         .from('contrat')
@@ -44,6 +44,8 @@ export default function ContractViewModal({
 
       if (contractError) throw contractError;
 
+      console.log('📋 Contract data:', contractData);
+
       // 2. Récupère le profil (candidat)
       const { data: profil, error: profilError } = await supabase
         .from('profil')
@@ -52,6 +54,7 @@ export default function ContractViewModal({
         .single();
 
       if (profilError) throw profilError;
+      console.log('👤 Profil data:', profil);
 
       // 3. Récupère le modèle
       const { data: modele, error: modeleError } = await supabase
@@ -61,6 +64,7 @@ export default function ContractViewModal({
         .single();
 
       if (modeleError) throw modeleError;
+      console.log('📄 Modele data:', modele);
 
       // Fusionne les données
       const fullData = {
@@ -69,6 +73,7 @@ export default function ContractViewModal({
         modele: modele
       };
 
+      console.log('✅ Full data merged:', fullData);
       setContractData(fullData);
 
       // Génère le HTML avec les variables
