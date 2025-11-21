@@ -71,6 +71,8 @@ export function Apply() {
     site_id: '',
     secteur_id: '',
     poste: '',
+    type_piece_identite: 'carte_identite',
+    date_fin_validite_piece: '',
     consentement_rgpd: false,
     accepte_vivier: false,
   });
@@ -199,7 +201,13 @@ export function Apply() {
     }
 
     if (!files.carte_identite_recto || !files.carte_identite_verso) {
-      setError('Les deux faces de la carte d\'identité sont obligatoires');
+      setError('Les deux faces de la pièce d\'identité sont obligatoires');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.type_piece_identite === 'carte_sejour' && !formData.date_fin_validite_piece) {
+      setError('La date de fin de validité est obligatoire pour une carte de séjour');
       setLoading(false);
       return;
     }
@@ -245,6 +253,8 @@ export function Apply() {
         site_id: formData.site_id || null,
         secteur_id: formData.secteur_id || null,
         poste: formData.poste || null,
+        type_piece_identite: formData.type_piece_identite,
+        date_fin_validite_piece: formData.date_fin_validite_piece || null,
         cv_url: cvUrl,
         lettre_motivation_url: lettreUrl,
         carte_identite_recto_url: rectoUrl,
@@ -886,8 +896,43 @@ export function Apply() {
                 accept=".pdf,.doc,.docx"
               />
 
+              <div>
+                <label htmlFor="type_piece_identite" className="block text-sm font-semibold text-slate-700 mb-2">
+                  Type de pièce d'identité *
+                </label>
+                <select
+                  id="type_piece_identite"
+                  value={formData.type_piece_identite}
+                  onChange={(e) => setFormData({ ...formData, type_piece_identite: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                  required
+                >
+                  <option value="carte_identite">Carte d'identité</option>
+                  <option value="passeport">Passeport</option>
+                  <option value="carte_sejour">Carte de séjour</option>
+                </select>
+              </div>
+
+              {formData.type_piece_identite === 'carte_sejour' && (
+                <div>
+                  <label htmlFor="date_fin_validite_piece" className="block text-sm font-semibold text-slate-700 mb-2">
+                    Date de fin de validité *
+                  </label>
+                  <input
+                    type="date"
+                    id="date_fin_validite_piece"
+                    value={formData.date_fin_validite_piece}
+                    onChange={(e) => setFormData({ ...formData, date_fin_validite_piece: e.target.value })}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-slate-500">La date de fin de validité de votre carte de séjour</p>
+                </div>
+              )}
+
               <FileUploadField
-                label="Carte d'identité RECTO *"
+                label={`${formData.type_piece_identite === 'carte_identite' ? "Carte d'identité" : formData.type_piece_identite === 'passeport' ? 'Passeport' : 'Carte de séjour'} RECTO *`}
                 file={files.carte_identite_recto}
                 onChange={(e) => handleFileChange(e, 'carte_identite_recto')}
                 onRemove={() => removeFile('carte_identite_recto')}
@@ -896,7 +941,7 @@ export function Apply() {
               />
 
               <FileUploadField
-                label="Carte d'identité VERSO *"
+                label={`${formData.type_piece_identite === 'carte_identite' ? "Carte d'identité" : formData.type_piece_identite === 'passeport' ? 'Passeport' : 'Carte de séjour'} VERSO *`}
                 file={files.carte_identite_verso}
                 onChange={(e) => handleFileChange(e, 'carte_identite_verso')}
                 onRemove={() => removeFile('carte_identite_verso')}
