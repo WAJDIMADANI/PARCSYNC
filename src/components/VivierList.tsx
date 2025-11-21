@@ -60,6 +60,8 @@ interface FullCandidate {
   date_naissance?: string;
   nationalite?: string;
   date_permis_conduire?: string;
+  type_piece_identite?: string;
+  date_fin_validite_piece?: string;
   cv_url?: string;
   lettre_motivation_url?: string;
   carte_identite_recto_url?: string;
@@ -673,6 +675,18 @@ function CandidateModal({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
               />
             </div>
+
+            {candidate?.type_piece_identite === 'carte_sejour' && candidate?.date_fin_validite_piece && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date fin validité carte séjour</label>
+                <input
+                  type="date"
+                  disabled
+                  value={candidate.date_fin_validite_piece}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
+                />
+              </div>
+            )}
           </div>
 
           <div>

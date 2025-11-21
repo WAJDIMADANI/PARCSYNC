@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Sparkles, CheckCircle, Upload, X } from 'lucide-react';
+import { COUNTRIES } from '../lib/countries';
 
 interface Site {
   id: string;
@@ -589,7 +590,23 @@ export function OnboardingForm() {
               )}
 
               <FormInput label="Lieu de naissance *" value={formData.lieu_naissance} onChange={(v) => setFormData({ ...formData, lieu_naissance: v })} required />
-              <FormInput label="Pays de naissance *" value={formData.pays_naissance} onChange={(v) => setFormData({ ...formData, pays_naissance: v })} required />
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Pays de naissance *</label>
+                <select
+                  value={formData.pays_naissance}
+                  onChange={(e) => setFormData({ ...formData, pays_naissance: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                >
+                  <option value="">Sélectionner un pays</option>
+                  {COUNTRIES.map((country) => (
+                    <option key={country} value={country}>
+                      {country}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <FormInput label="Nationalité *" value={formData.nationalite} onChange={(v) => setFormData({ ...formData, nationalite: v })} required />
               <FormInput label="Numéro de Sécurité Sociale *" value={formData.numero_securite_sociale} onChange={(v) => setFormData({ ...formData, numero_securite_sociale: v })} placeholder="X XX XX XX XXX XXX XX" required />
             </div>

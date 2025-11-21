@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Sparkles, CheckCircle, Upload, X } from 'lucide-react';
+import { COUNTRIES } from '../lib/countries';
 
 interface Site {
   id: string;
@@ -63,6 +64,7 @@ export function Apply() {
     email: '',
     genre: '',
     date_naissance: '',
+    pays_naissance: '',
     nationalite: '',
     adresse: '',
     code_postal: '',
@@ -245,6 +247,7 @@ export function Apply() {
         tel: formData.telephone,
         genre: formData.genre,
         date_naissance: formData.date_naissance || null,
+        pays_naissance: formData.pays_naissance || null,
         nationalite: formData.nationalite,
         adresse: formData.adresse,
         code_postal: formData.code_postal,
@@ -528,6 +531,26 @@ export function Apply() {
                     {ageError}
                   </div>
                 )}
+              </div>
+
+              <div>
+                <label htmlFor="pays_naissance" className="block text-sm font-semibold text-slate-700 mb-2">
+                  Pays de naissance *
+                </label>
+                <select
+                  id="pays_naissance"
+                  value={formData.pays_naissance}
+                  onChange={(e) => setFormData({ ...formData, pays_naissance: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                >
+                  <option value="">Sélectionner un pays</option>
+                  {COUNTRIES.map((country) => (
+                    <option key={country} value={country}>
+                      {country}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
