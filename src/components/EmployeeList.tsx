@@ -586,6 +586,8 @@ function EmployeeDetailModal({
   const [currentEmployee, setCurrentEmployee] = useState<Employee>(employee);
   const [currentContractStatus, setCurrentContractStatus] = useState<string | null>(contractStatus);
   const [savingDates, setSavingDates] = useState(false);
+  const [candidatTypePiece, setCandidatTypePiece] = useState<string | null>(null);
+  const [candidatDateFinValidite, setCandidatDateFinValidite] = useState<string | null>(null);
 
   // NE PAS synchroniser automatiquement avec employee pour éviter les rechargements
   // Le modal garde son état local stable pendant toute sa durée de vie
@@ -594,7 +596,28 @@ function EmployeeDetailModal({
     // Signaler que le modal est ouvert
     onOpen();
     fetchDocuments();
+    fetchCandidatInfo();
   }, []);
+
+  const fetchCandidatInfo = async () => {
+    if (!currentEmployee.candidat_id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('candidat')
+        .select('type_piece_identite, date_fin_validite_piece')
+        .eq('id', currentEmployee.candidat_id)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) {
+        setCandidatTypePiece(data.type_piece_identite);
+        setCandidatDateFinValidite(data.date_fin_validite_piece);
+      }
+    } catch (error) {
+      console.error('Erreur chargement infos candidat:', error);
+    }
+  };
 
   const refreshEmployee = async () => {
     try {
@@ -1165,6 +1188,19 @@ function EmployeeDetailModal({
                   </p>
                 )}
               </div>
+
+              {/* Carte de séjour - Afficher UNIQUEMENT si type_piece_identite = 'carte_sejour' */}
+              {candidatTypePiece === 'carte_sejour' && candidatDateFinValidite && (
+                <div className="bg-white rounded-lg p-3 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="w-4 h-4 text-purple-600" />
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Carte de séjour - Date d'expiration</p>
+                  </div>
+                  <p className="text-gray-900 font-medium">
+                    {new Date(candidatDateFinValidite).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
