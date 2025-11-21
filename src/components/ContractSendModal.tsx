@@ -391,11 +391,24 @@ export default function ContractSendModal({
                 required
               >
                 <option value="">Sélectionner un modèle</option>
-                {templates.map(template => (
-                  <option key={template.id} value={template.id}>
-                    {template.nom} ({template.type_contrat})
-                  </option>
-                ))}
+                {(() => {
+                  const groupedTemplates = templates.reduce((acc, template) => {
+                    const type = template.type_contrat;
+                    if (!acc[type]) acc[type] = [];
+                    acc[type].push(template);
+                    return acc;
+                  }, {} as Record<string, ContractTemplate[]>);
+
+                  return Object.entries(groupedTemplates).map(([type, typeTemplates]) => (
+                    <optgroup key={type} label={type}>
+                      {typeTemplates.map(template => (
+                        <option key={template.id} value={template.id}>
+                          {template.nom}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ));
+                })()}
               </select>
             </div>
 

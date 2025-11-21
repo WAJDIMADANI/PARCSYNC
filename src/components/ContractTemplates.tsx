@@ -55,10 +55,7 @@ interface ContractTemplate {
 const CONTRACT_TYPES = [
   { value: 'CDI', label: 'CDI - Contrat à Durée Indéterminée' },
   { value: 'CDD', label: 'CDD - Contrat à Durée Déterminée' },
-  { value: 'Stage', label: 'Stage' },
-  { value: 'Intérim', label: 'Intérim' },
-  { value: 'Apprentissage', label: 'Apprentissage' },
-  { value: 'Professionnalisation', label: 'Professionnalisation' },
+  { value: 'Avenant', label: 'Avenant' },
 ];
 
 const getDefaultVariables = (): ContractVariables => ({
@@ -106,6 +103,7 @@ export function ContractTemplates() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [fileTypeFilter, setFileTypeFilter] = useState<'all' | 'pdf' | 'word'>('all');
+  const [contractTypeFilter, setContractTypeFilter] = useState<'all' | 'CDI' | 'CDD' | 'Avenant'>('all');
   const [formData, setFormData] = useState({
     nom: '',
     type_contrat: 'CDI',
@@ -236,10 +234,13 @@ export function ContractTemplates() {
   };
 
   const filteredTemplates = templates.filter((template) => {
-    if (fileTypeFilter === 'all') return true;
-    if (fileTypeFilter === 'pdf') return template.fichier_nom.toLowerCase().endsWith('.pdf');
-    if (fileTypeFilter === 'word') return template.fichier_nom.toLowerCase().endsWith('.docx');
-    return true;
+    const matchesFileType = fileTypeFilter === 'all' ||
+      (fileTypeFilter === 'pdf' && template.fichier_nom.toLowerCase().endsWith('.pdf')) ||
+      (fileTypeFilter === 'word' && template.fichier_nom.toLowerCase().endsWith('.docx'));
+
+    const matchesContractType = contractTypeFilter === 'all' || template.type_contrat === contractTypeFilter;
+
+    return matchesFileType && matchesContractType;
   });
 
   if (loading) {
@@ -296,6 +297,50 @@ export function ContractTemplates() {
           }`}
         >
           Word
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3 mb-6 bg-white rounded-xl p-2 shadow-sm border border-slate-200 w-fit">
+        <span className="text-sm font-medium text-slate-600 px-2">Type:</span>
+        <button
+          onClick={() => setContractTypeFilter('all')}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+            contractTypeFilter === 'all'
+              ? 'bg-accent-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          Tous
+        </button>
+        <button
+          onClick={() => setContractTypeFilter('CDI')}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+            contractTypeFilter === 'CDI'
+              ? 'bg-accent-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          CDI
+        </button>
+        <button
+          onClick={() => setContractTypeFilter('CDD')}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+            contractTypeFilter === 'CDD'
+              ? 'bg-accent-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          CDD
+        </button>
+        <button
+          onClick={() => setContractTypeFilter('Avenant')}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+            contractTypeFilter === 'Avenant'
+              ? 'bg-accent-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          Avenant
         </button>
       </div>
 
