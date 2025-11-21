@@ -20,6 +20,8 @@ import { RHDashboard } from './RHDashboard';
 import { ContractTemplates } from './ContractTemplates';
 import { PostesList } from './PostesList';
 import { VivierList } from './VivierList';
+import { SitesList } from './SitesList';
+import { SecteursList } from './SecteursList';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -67,19 +69,9 @@ export function Dashboard() {
       case 'exports/parc':
         return <ParcExports />;
       case 'admin/sites':
-        return (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Gestion des Sites</h2>
-            <p className="text-gray-600">Configuration des sites à venir</p>
-          </div>
-        );
+        return <SitesList />;
       case 'admin/secteurs':
-        return (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Gestion des Secteurs</h2>
-            <p className="text-gray-600">Configuration des secteurs à venir</p>
-          </div>
-        );
+        return <SecteursList />;
       case 'admin/postes':
         return <PostesList />;
       case 'admin/modeles':
