@@ -27,7 +27,8 @@ export type View =
   | 'admin/secteurs'
   | 'admin/postes'
   | 'admin/modeles'
-  | 'admin/modeles-contrats';
+  | 'admin/modeles-contrats'
+  | 'admin/import-salarie';
 
 interface SidebarProps {
   currentView: View;
@@ -128,6 +129,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'admin/postes', label: 'Postes', icon: Briefcase, enabled: true },
         { id: 'admin/modeles', label: 'Modèles', icon: FileCode, enabled: true },
         { id: 'admin/modeles-contrats', label: 'Modèles Contrats', icon: FileText, enabled: true },
+        { id: 'admin/import-salarie', label: 'Import Salarié Test', icon: UserPlus, enabled: true },
       ]
     },
   ];

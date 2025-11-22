@@ -22,6 +22,7 @@ import { PostesList } from './PostesList';
 import { VivierList } from './VivierList';
 import { SitesList } from './SitesList';
 import { SecteursList } from './SecteursList';
+import { ImportSalarieTest } from './ImportSalarieTest';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -83,6 +84,8 @@ export function Dashboard() {
         );
       case 'admin/modeles-contrats':
         return <ContractTemplates />;
+      case 'admin/import-salarie':
+        return <ImportSalarieTest />;
       default:
         return <CandidateList />;
     }
@@ -119,6 +122,7 @@ export function Dashboard() {
                 {view === 'admin/postes' && 'Postes'}
                 {view === 'admin/modeles' && 'Modèles'}
                 {view === 'admin/modeles-contrats' && 'Modèles de Contrats'}
+                {view === 'admin/import-salarie' && 'Import Salarié Test'}
               </h2>
             </div>
 
