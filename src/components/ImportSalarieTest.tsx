@@ -60,11 +60,11 @@ export function ImportSalarieTest() {
     contrat_remuneration_brut: '',
     contrat_duree_hebdo_hours: '',
     avenant_1_date: '',
+    avenant_1_date_fin: '',
     avenant_1_type: '',
     avenant_2_date: '',
+    avenant_2_date_fin: '',
     avenant_2_type: '',
-    avenant_3_date: '',
-    avenant_3_type: '',
   });
 
   useEffect(() => {
@@ -165,17 +165,24 @@ export function ImportSalarieTest() {
       }
 
       const avenants = [
-        { date: formData.avenant_1_date, type: formData.avenant_1_type },
-        { date: formData.avenant_2_date, type: formData.avenant_2_type },
-        { date: formData.avenant_3_date, type: formData.avenant_3_type },
-      ].filter((a) => a.date && a.type);
+        {
+          date_debut: formData.avenant_1_date,
+          date_fin: formData.avenant_1_date_fin,
+          type: formData.avenant_1_type
+        },
+        {
+          date_debut: formData.avenant_2_date,
+          date_fin: formData.avenant_2_date_fin,
+          type: formData.avenant_2_type
+        },
+      ].filter((a) => a.date_debut && a.type);
 
       if (avenants.length > 0) {
         const avenantInserts = avenants.map((a) => ({
           profil_id: employeeData.id,
           type: 'avenant',
-          date_debut: a.date,
-          date_fin: null,
+          date_debut: a.date_debut,
+          date_fin: a.date_fin || null,
           remuneration_brut: null,
           duree_hebdo_hours: null,
           esign: 'signed',
@@ -227,11 +234,11 @@ export function ImportSalarieTest() {
         contrat_remuneration_brut: '',
         contrat_duree_hebdo_hours: '',
         avenant_1_date: '',
+        avenant_1_date_fin: '',
         avenant_1_type: '',
         avenant_2_date: '',
+        avenant_2_date_fin: '',
         avenant_2_type: '',
-        avenant_3_date: '',
-        avenant_3_type: '',
       });
 
       setTimeout(() => {
@@ -615,12 +622,18 @@ export function ImportSalarieTest() {
             Avenants (optionnel)
           </h3>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
               <FormInput
-                label="Avenant 1 - Date"
+                label="Avenant 1 - Date début"
                 type="date"
                 value={formData.avenant_1_date}
                 onChange={(v) => setFormData({ ...formData, avenant_1_date: v })}
+              />
+              <FormInput
+                label="Avenant 1 - Date fin"
+                type="date"
+                value={formData.avenant_1_date_fin}
+                onChange={(v) => setFormData({ ...formData, avenant_1_date_fin: v })}
               />
               <FormInput
                 label="Avenant 1 - Type"
@@ -629,32 +642,24 @@ export function ImportSalarieTest() {
                 placeholder="Ex: Augmentation salaire"
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
               <FormInput
-                label="Avenant 2 - Date"
+                label="Avenant 2 - Date début"
                 type="date"
                 value={formData.avenant_2_date}
                 onChange={(v) => setFormData({ ...formData, avenant_2_date: v })}
+              />
+              <FormInput
+                label="Avenant 2 - Date fin"
+                type="date"
+                value={formData.avenant_2_date_fin}
+                onChange={(v) => setFormData({ ...formData, avenant_2_date_fin: v })}
               />
               <FormInput
                 label="Avenant 2 - Type"
                 value={formData.avenant_2_type}
                 onChange={(v) => setFormData({ ...formData, avenant_2_type: v })}
                 placeholder="Ex: Changement horaires"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-              <FormInput
-                label="Avenant 3 - Date"
-                type="date"
-                value={formData.avenant_3_date}
-                onChange={(v) => setFormData({ ...formData, avenant_3_date: v })}
-              />
-              <FormInput
-                label="Avenant 3 - Type"
-                value={formData.avenant_3_type}
-                onChange={(v) => setFormData({ ...formData, avenant_3_type: v })}
-                placeholder="Ex: Changement de poste"
               />
             </div>
           </div>
