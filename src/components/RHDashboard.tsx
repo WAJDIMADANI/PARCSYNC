@@ -279,18 +279,12 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
 
   const fetchIncidentsStats = async () => {
     try {
-      const { data: courriers } = await supabase
-        .from('courrier')
-        .select('id, created_at, modele, profil_id, profil:profil_id(nom, prenom)')
-        .in('modele', [
-          'avertissement',
-          'mise_a_pied',
-          'blâme',
-          'rappel_reglement',
-        ])
-        .order('created_at', { ascending: false });
+      const { data: incidents } = await supabase
+        .from('incident')
+        .select('*, profil:profil_id(nom, prenom)')
+        .order('date_creation_incident', { ascending: false });
 
-      if (!courriers) {
+      if (!incidents) {
         setStats((prev) => ({
           ...prev,
           incidents: {
@@ -307,32 +301,42 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       const now = new Date();
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const ce_mois = courriers.filter(
-        (c) => new Date(c.created_at) >= firstDayOfMonth
+      const actifs = incidents.filter((i) => i.statut === 'actif').length;
+      const enCours = incidents.filter((i) => i.statut === 'en_cours').length;
+      const ce_mois = incidents.filter(
+        (i) => new Date(i.date_creation_incident) >= firstDayOfMonth
       ).length;
 
       const typeMap: { [key: string]: number } = {};
-      courriers.forEach((c) => {
-        if (c.modele) {
-          typeMap[c.modele] = (typeMap[c.modele] || 0) + 1;
+      incidents.forEach((i) => {
+        if (i.type) {
+          typeMap[i.type] = (typeMap[i.type] || 0) + 1;
         }
       });
 
+      const getTypeLabel = (type: string) => {
+        switch (type) {
+          case 'titre_sejour': return 'Titre de séjour';
+          case 'visite_medicale': return 'Visite médicale';
+          case 'permis_conduire': return 'Permis de conduire';
+          case 'contrat_cdd': return 'Contrat CDD';
+          default: return type;
+        }
+      };
+
       const par_type = Object.entries(typeMap).map(([type, count]) => ({
-        type: type
-          .replace('_', ' ')
-          .replace(/\b\w/g, (l) => l.toUpperCase()),
+        type: getTypeLabel(type),
         count,
       }));
 
       const employeMap: { [key: string]: { nom: string; prenom: string; count: number } } = {};
-      courriers.forEach((c: any) => {
-        if (c.profil_id && c.profil) {
-          const key = c.profil_id;
+      incidents.forEach((i: any) => {
+        if (i.profil_id && i.profil && i.statut !== 'resolu') {
+          const key = i.profil_id;
           if (!employeMap[key]) {
             employeMap[key] = {
-              nom: c.profil.nom,
-              prenom: c.profil.prenom,
+              nom: i.profil.nom,
+              prenom: i.profil.prenom,
               count: 0,
             };
           }
@@ -344,13 +348,15 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
+      const activeIncidents = incidents.filter((i) => i.statut === 'actif').slice(0, 5);
+
       setStats((prev) => ({
         ...prev,
         incidents: {
-          total: courriers.length,
+          total: actifs + enCours,
           ce_mois,
           par_type,
-          recents: courriers.slice(0, 5),
+          recents: activeIncidents,
           top_employes,
         },
       }));
@@ -414,15 +420,20 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           color="amber"
         />
 
-        <StatCard
-          icon={<AlertTriangle className="w-6 h-6" />}
-          title="Incidents"
-          value={stats.incidents.total}
-          subtitle={`${stats.incidents.ce_mois} ce mois`}
-          trend={stats.incidents.ce_mois > stats.incidents.total / 12 ? 'up' : 'down'}
-          trendValue="Voir détails"
-          color="red"
-        />
+        <button
+          onClick={() => onNavigate?.('rh/incidents')}
+          className="text-left hover:scale-105 transition-transform"
+        >
+          <StatCard
+            icon={<AlertTriangle className="w-6 h-6" />}
+            title="Incidents"
+            value={stats.incidents.total}
+            subtitle={`${stats.incidents.ce_mois} ce mois`}
+            trend={stats.incidents.ce_mois > stats.incidents.total / 12 ? 'up' : 'down'}
+            trendValue="Voir détails"
+            color="red"
+          />
+        </button>
       </div>
 
       <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-xl shadow-sm border border-blue-200 p-6 mb-6">

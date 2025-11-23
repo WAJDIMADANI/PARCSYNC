@@ -25,6 +25,8 @@ import { SecteursList } from './SecteursList';
 import { ImportSalarieTest } from './ImportSalarieTest';
 import { ImportSalariesBulk } from './ImportSalariesBulk';
 import { NotificationsList } from './NotificationsList';
+import { IncidentsList } from './IncidentsList';
+import { IncidentHistory } from './IncidentHistory';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -54,6 +56,10 @@ export function Dashboard() {
         return <AlertsList onVivierClick={() => setView('rh/vivier')} />;
       case 'rh/notifications':
         return <NotificationsList initialTab={viewParams?.tab} />;
+      case 'rh/incidents':
+        return <IncidentsList />;
+      case 'rh/incidents-historique':
+        return <IncidentHistory />;
       case 'rh/vivier':
         return <VivierList />;
       case 'parc/vehicules':

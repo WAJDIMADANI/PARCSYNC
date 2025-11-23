@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History
 } from 'lucide-react';
 
 export type View =
@@ -13,6 +13,8 @@ export type View =
   | 'rh/courriers'
   | 'rh/alertes'
   | 'rh/notifications'
+  | 'rh/incidents'
+  | 'rh/incidents-historique'
   | 'rh/vivier'
   | 'rh/documents'
   | 'parc/vehicules'
@@ -95,6 +97,8 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'rh/courriers', label: 'Courriers', icon: Mail, enabled: true },
         { id: 'rh/alertes', label: 'Alertes', icon: Bell, enabled: true },
         { id: 'rh/notifications', label: 'Notifications', icon: Sparkles, enabled: true },
+        { id: 'rh/incidents', label: 'Incidents', icon: AlertCircle, enabled: true },
+        { id: 'rh/incidents-historique', label: 'Historique incidents', icon: History, enabled: true },
         { id: 'rh/vivier', label: 'Vivier', icon: Archive, enabled: true },
       ]
     },
