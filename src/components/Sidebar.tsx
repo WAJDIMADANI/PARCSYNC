@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload
 } from 'lucide-react';
 
 export type View =
@@ -28,7 +28,8 @@ export type View =
   | 'admin/postes'
   | 'admin/modeles'
   | 'admin/modeles-contrats'
-  | 'admin/import-salarie';
+  | 'admin/import-salarie'
+  | 'admin/import-bulk';
 
 interface SidebarProps {
   currentView: View;
@@ -130,6 +131,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'admin/modeles', label: 'Modèles', icon: FileCode, enabled: true },
         { id: 'admin/modeles-contrats', label: 'Modèles Contrats', icon: FileText, enabled: true },
         { id: 'admin/import-salarie', label: 'Import Salarié Test', icon: UserPlus, enabled: true },
+        { id: 'admin/import-bulk', label: 'Import en Masse', icon: Upload, enabled: true },
       ]
     },
   ];

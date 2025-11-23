@@ -23,6 +23,7 @@ import { VivierList } from './VivierList';
 import { SitesList } from './SitesList';
 import { SecteursList } from './SecteursList';
 import { ImportSalarieTest } from './ImportSalarieTest';
+import { ImportSalariesBulk } from './ImportSalariesBulk';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -86,6 +87,8 @@ export function Dashboard() {
         return <ContractTemplates />;
       case 'admin/import-salarie':
         return <ImportSalarieTest />;
+      case 'admin/import-bulk':
+        return <ImportSalariesBulk />;
       default:
         return <CandidateList />;
     }
