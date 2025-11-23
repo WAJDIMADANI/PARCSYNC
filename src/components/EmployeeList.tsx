@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, getStorageUrl } from '../lib/supabase';
-import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe } from 'lucide-react';
 import EmployeeHistory from './EmployeeHistory';
 import EmployeeDeparture from './EmployeeDeparture';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -54,6 +54,19 @@ interface Employee {
   site?: Site;
   secteur?: Secteur;
   manager?: { prenom: string; nom: string };
+  date_naissance: string | null;
+  lieu_naissance: string | null;
+  pays_naissance: string | null;
+  nationalite: string | null;
+  genre: string | null;
+  nom_naissance: string | null;
+  numero_securite_sociale: string | null;
+  adresse: string | null;
+  complement_adresse: string | null;
+  ville: string | null;
+  code_postal: string | null;
+  iban: string | null;
+  bic: string | null;
 }
 
 interface Contract {
@@ -684,6 +697,40 @@ function EmployeeDetailModal({
   const [candidatTypePiece, setCandidatTypePiece] = useState<string | null>(null);
   const [candidatDateFinValidite, setCandidatDateFinValidite] = useState<string | null>(null);
 
+  // Tab system
+  const [activeTab, setActiveTab] = useState<'overview' | 'personal' | 'address' | 'banking'>('overview');
+
+  // Masking states
+  const [showSecuriteSociale, setShowSecuriteSociale] = useState(false);
+  const [showIBAN, setShowIBAN] = useState(false);
+
+  // Edit states for new tabs
+  const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [isEditingBanking, setIsEditingBanking] = useState(false);
+  const [savingPersonal, setSavingPersonal] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [savingBanking, setSavingBanking] = useState(false);
+
+  // Edited fields for personal info
+  const [editedDateNaissance, setEditedDateNaissance] = useState(currentEmployee.date_naissance || '');
+  const [editedLieuNaissance, setEditedLieuNaissance] = useState(currentEmployee.lieu_naissance || '');
+  const [editedPaysNaissance, setEditedPaysNaissance] = useState(currentEmployee.pays_naissance || '');
+  const [editedNationalite, setEditedNationalite] = useState(currentEmployee.nationalite || '');
+  const [editedGenre, setEditedGenre] = useState(currentEmployee.genre || '');
+  const [editedNomNaissance, setEditedNomNaissance] = useState(currentEmployee.nom_naissance || '');
+  const [editedNumeroSS, setEditedNumeroSS] = useState(currentEmployee.numero_securite_sociale || '');
+
+  // Edited fields for address
+  const [editedAdresse, setEditedAdresse] = useState(currentEmployee.adresse || '');
+  const [editedComplementAdresse, setEditedComplementAdresse] = useState(currentEmployee.complement_adresse || '');
+  const [editedVille, setEditedVille] = useState(currentEmployee.ville || '');
+  const [editedCodePostal, setEditedCodePostal] = useState(currentEmployee.code_postal || '');
+
+  // Edited fields for banking
+  const [editedIBAN, setEditedIBAN] = useState(currentEmployee.iban || '');
+  const [editedBIC, setEditedBIC] = useState(currentEmployee.bic || '');
+
   // NE PAS synchroniser automatiquement avec employee pour éviter les rechargements
   // Le modal garde son état local stable pendant toute sa durée de vie
 
@@ -1061,6 +1108,147 @@ function EmployeeDetailModal({
     setIsEditingDates(false);
   };
 
+  // Masking functions
+  const maskSecuriteSociale = (numero: string | null) => {
+    if (!numero) return 'Non renseigné';
+    if (showSecuriteSociale) return numero;
+    const cleaned = numero.replace(/\s/g, '');
+    if (cleaned.length < 8) return numero;
+    return `${cleaned.slice(0, 1)} ${cleaned.slice(1, 3)} ${cleaned.slice(3, 5)} •• ••• ••• ${cleaned.slice(-2)}`;
+  };
+
+  const maskIBAN = (iban: string | null) => {
+    if (!iban) return 'Non renseigné';
+    if (showIBAN) return iban;
+    const cleaned = iban.replace(/\s/g, '');
+    if (cleaned.length < 8) return iban;
+    return `${cleaned.slice(0, 4)} •••• •••• •••• •••• ${cleaned.slice(-4)}`;
+  };
+
+  // Save functions for new tabs
+  const handleSavePersonalInfo = async () => {
+    setSavingPersonal(true);
+    try {
+      const { error } = await supabase
+        .from('profil')
+        .update({
+          date_naissance: editedDateNaissance || null,
+          lieu_naissance: editedLieuNaissance || null,
+          pays_naissance: editedPaysNaissance || null,
+          nationalite: editedNationalite || null,
+          genre: editedGenre || null,
+          nom_naissance: editedNomNaissance || null,
+          numero_securite_sociale: editedNumeroSS || null
+        })
+        .eq('id', currentEmployee.id);
+
+      if (error) throw error;
+
+      setCurrentEmployee({
+        ...currentEmployee,
+        date_naissance: editedDateNaissance || null,
+        lieu_naissance: editedLieuNaissance || null,
+        pays_naissance: editedPaysNaissance || null,
+        nationalite: editedNationalite || null,
+        genre: editedGenre || null,
+        nom_naissance: editedNomNaissance || null,
+        numero_securite_sociale: editedNumeroSS || null
+      });
+
+      setIsEditingPersonal(false);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde des informations personnelles');
+    } finally {
+      setSavingPersonal(false);
+    }
+  };
+
+  const handleSaveAddress = async () => {
+    setSavingAddress(true);
+    try {
+      const { error } = await supabase
+        .from('profil')
+        .update({
+          adresse: editedAdresse || null,
+          complement_adresse: editedComplementAdresse || null,
+          ville: editedVille || null,
+          code_postal: editedCodePostal || null
+        })
+        .eq('id', currentEmployee.id);
+
+      if (error) throw error;
+
+      setCurrentEmployee({
+        ...currentEmployee,
+        adresse: editedAdresse || null,
+        complement_adresse: editedComplementAdresse || null,
+        ville: editedVille || null,
+        code_postal: editedCodePostal || null
+      });
+
+      setIsEditingAddress(false);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde de l\'adresse');
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  const handleSaveBanking = async () => {
+    setSavingBanking(true);
+    try {
+      const { error } = await supabase
+        .from('profil')
+        .update({
+          iban: editedIBAN || null,
+          bic: editedBIC || null
+        })
+        .eq('id', currentEmployee.id);
+
+      if (error) throw error;
+
+      setCurrentEmployee({
+        ...currentEmployee,
+        iban: editedIBAN || null,
+        bic: editedBIC || null
+      });
+
+      setIsEditingBanking(false);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde des informations bancaires');
+    } finally {
+      setSavingBanking(false);
+    }
+  };
+
+  const handleCancelPersonalEdit = () => {
+    setEditedDateNaissance(currentEmployee.date_naissance || '');
+    setEditedLieuNaissance(currentEmployee.lieu_naissance || '');
+    setEditedPaysNaissance(currentEmployee.pays_naissance || '');
+    setEditedNationalite(currentEmployee.nationalite || '');
+    setEditedGenre(currentEmployee.genre || '');
+    setEditedNomNaissance(currentEmployee.nom_naissance || '');
+    setEditedNumeroSS(currentEmployee.numero_securite_sociale || '');
+    setIsEditingPersonal(false);
+  };
+
+  const handleCancelAddressEdit = () => {
+    setEditedAdresse(currentEmployee.adresse || '');
+    setEditedComplementAdresse(currentEmployee.complement_adresse || '');
+    setEditedVille(currentEmployee.ville || '');
+    setEditedCodePostal(currentEmployee.code_postal || '');
+    setIsEditingAddress(false);
+  };
+
+  const handleCancelBankingEdit = () => {
+    setEditedIBAN(currentEmployee.iban || '');
+    setEditedBIC(currentEmployee.bic || '');
+    setIsEditingBanking(false);
+  };
+
   // Afficher le vrai statut basé sur le contrat
   const displayStatut = currentContractStatus === 'signe' ? 'Signé' :
                         currentContractStatus === 'en_attente_signature' ? 'Contrat envoyé' :
@@ -1109,7 +1297,68 @@ function EmployeeDetailModal({
             </button>
           </div>
 
+          {/* Tab Navigation */}
+          <div className="bg-gray-50 border-b border-gray-200">
+            <div className="px-6 flex gap-1">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`px-4 py-3 font-medium text-sm transition-all ${
+                  activeTab === 'overview'
+                    ? 'text-blue-700 border-b-2 border-blue-700 bg-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  <span>Vue d'ensemble</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('personal')}
+                className={`px-4 py-3 font-medium text-sm transition-all ${
+                  activeTab === 'personal'
+                    ? 'text-blue-700 border-b-2 border-blue-700 bg-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  <span>Informations personnelles</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('address')}
+                className={`px-4 py-3 font-medium text-sm transition-all ${
+                  activeTab === 'address'
+                    ? 'text-blue-700 border-b-2 border-blue-700 bg-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Home className="w-4 h-4" />
+                  <span>Adresse</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('banking')}
+                className={`px-4 py-3 font-medium text-sm transition-all ${
+                  activeTab === 'banking'
+                    ? 'text-blue-700 border-b-2 border-blue-700 bg-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  <span>Informations bancaires</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Vue d'ensemble Tab */}
+          {activeTab === 'overview' && (
+          <>
           {/* Grid des informations */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Informations de contact */}
@@ -1436,6 +1685,493 @@ function EmployeeDetailModal({
               )}
             </div>
           </div>
+          </>
+          )}
+
+          {/* Informations personnelles Tab */}
+          {activeTab === 'personal' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100/30 rounded-xl p-5 border border-orange-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg">Informations personnelles</h3>
+                  </div>
+                  {!isEditingPersonal && (
+                    <button
+                      onClick={() => setIsEditingPersonal(true)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Modifier
+                    </button>
+                  )}
+                </div>
+
+                {isEditingPersonal ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Date de naissance
+                        </label>
+                        <input
+                          type="date"
+                          value={editedDateNaissance}
+                          onChange={(e) => setEditedDateNaissance(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                        />
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Lieu de naissance
+                        </label>
+                        <input
+                          type="text"
+                          value={editedLieuNaissance}
+                          onChange={(e) => setEditedLieuNaissance(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                        />
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Pays de naissance
+                        </label>
+                        <input
+                          type="text"
+                          value={editedPaysNaissance}
+                          onChange={(e) => setEditedPaysNaissance(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                        />
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Nationalité
+                        </label>
+                        <input
+                          type="text"
+                          value={editedNationalite}
+                          onChange={(e) => setEditedNationalite(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                        />
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Genre
+                        </label>
+                        <select
+                          value={editedGenre}
+                          onChange={(e) => setEditedGenre(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                        >
+                          <option value="">Sélectionner...</option>
+                          <option value="Homme">Homme</option>
+                          <option value="Femme">Femme</option>
+                          <option value="Autre">Autre</option>
+                        </select>
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Nom de naissance
+                        </label>
+                        <input
+                          type="text"
+                          value={editedNomNaissance}
+                          onChange={(e) => setEditedNomNaissance(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                        />
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 shadow-sm md:col-span-2">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Numéro de sécurité sociale
+                        </label>
+                        <input
+                          type="text"
+                          value={editedNumeroSS}
+                          onChange={(e) => setEditedNumeroSS(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm font-mono"
+                          placeholder="1 89 03 75 123 456 78"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 justify-end pt-2">
+                      <button
+                        onClick={handleCancelPersonalEdit}
+                        disabled={savingPersonal}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        onClick={handleSavePersonalInfo}
+                        disabled={savingPersonal}
+                        className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+                      >
+                        {savingPersonal ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Enregistrement...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            Enregistrer
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="w-4 h-4 text-orange-600" />
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date de naissance</p>
+                      </div>
+                      <p className="text-gray-900 font-medium">
+                        {currentEmployee.date_naissance
+                          ? new Date(currentEmployee.date_naissance).toLocaleDateString('fr-FR')
+                          : <span className="text-gray-400 italic">Non renseigné</span>}
+                      </p>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <MapPin className="w-4 h-4 text-orange-600" />
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lieu de naissance</p>
+                      </div>
+                      <p className="text-gray-900 font-medium">
+                        {currentEmployee.lieu_naissance || <span className="text-gray-400 italic">Non renseigné</span>}
+                      </p>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Globe className="w-4 h-4 text-orange-600" />
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pays de naissance</p>
+                      </div>
+                      <p className="text-gray-900 font-medium">
+                        {currentEmployee.pays_naissance || <span className="text-gray-400 italic">Non renseigné</span>}
+                      </p>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Globe className="w-4 h-4 text-orange-600" />
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nationalité</p>
+                      </div>
+                      <p className="text-gray-900 font-medium">
+                        {currentEmployee.nationalite || <span className="text-gray-400 italic">Non renseigné</span>}
+                      </p>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <User className="w-4 h-4 text-orange-600" />
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Genre</p>
+                      </div>
+                      <p className="text-gray-900 font-medium">
+                        {currentEmployee.genre || <span className="text-gray-400 italic">Non renseigné</span>}
+                      </p>
+                    </div>
+
+                    {currentEmployee.nom_naissance && (
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <div className="flex items-center gap-2 mb-1">
+                          <User className="w-4 h-4 text-orange-600" />
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nom de naissance</p>
+                        </div>
+                        <p className="text-gray-900 font-medium">{currentEmployee.nom_naissance}</p>
+                      </div>
+                    )}
+
+                    <div className="bg-white rounded-lg p-3 shadow-sm md:col-span-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-orange-600" />
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Numéro de sécurité sociale</p>
+                        </div>
+                        {currentEmployee.numero_securite_sociale && (
+                          <button
+                            onClick={() => setShowSecuriteSociale(!showSecuriteSociale)}
+                            className="text-orange-600 hover:text-orange-700 transition-colors"
+                          >
+                            {showSecuriteSociale ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-gray-900 font-medium font-mono">
+                        {maskSecuriteSociale(currentEmployee.numero_securite_sociale)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Adresse Tab */}
+          {activeTab === 'address' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-cyan-50 to-cyan-100/30 rounded-xl p-5 border border-cyan-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-cyan-600 rounded-lg flex items-center justify-center">
+                      <Home className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg">Adresse</h3>
+                  </div>
+                  {!isEditingAddress && (
+                    <button
+                      onClick={() => setIsEditingAddress(true)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-cyan-600 text-white text-sm rounded-lg hover:bg-cyan-700 transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Modifier
+                    </button>
+                  )}
+                </div>
+
+                {isEditingAddress ? (
+                  <div className="space-y-3">
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                        Adresse ligne 1
+                      </label>
+                      <input
+                        type="text"
+                        value={editedAdresse}
+                        onChange={(e) => setEditedAdresse(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                        placeholder="Numéro et rue"
+                      />
+                    </div>
+
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                        Adresse ligne 2 (complément)
+                      </label>
+                      <input
+                        type="text"
+                        value={editedComplementAdresse}
+                        onChange={(e) => setEditedComplementAdresse(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                        placeholder="Bâtiment, appartement, etc."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Code postal
+                        </label>
+                        <input
+                          type="text"
+                          value={editedCodePostal}
+                          onChange={(e) => setEditedCodePostal(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                          placeholder="75001"
+                        />
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Ville
+                        </label>
+                        <input
+                          type="text"
+                          value={editedVille}
+                          onChange={(e) => setEditedVille(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                          placeholder="Paris"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 justify-end pt-2">
+                      <button
+                        onClick={handleCancelAddressEdit}
+                        disabled={savingAddress}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        onClick={handleSaveAddress}
+                        disabled={savingAddress}
+                        className="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50"
+                      >
+                        {savingAddress ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Enregistrement...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            Enregistrer
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {currentEmployee.adresse || currentEmployee.ville ? (
+                      <div className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-cyan-600">
+                        {currentEmployee.adresse && (
+                          <p className="text-gray-900 font-medium">{currentEmployee.adresse}</p>
+                        )}
+                        {currentEmployee.complement_adresse && (
+                          <p className="text-gray-700">{currentEmployee.complement_adresse}</p>
+                        )}
+                        {(currentEmployee.code_postal || currentEmployee.ville) && (
+                          <p className="text-gray-900 font-medium mt-1">
+                            {currentEmployee.code_postal} {currentEmployee.ville}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-lg p-4 shadow-sm text-center">
+                        <MapPin className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-gray-400 italic">Aucune adresse renseignée</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Informations bancaires Tab */}
+          {activeTab === 'banking' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-red-50 to-red-100/30 rounded-xl p-5 border border-red-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                      <CreditCard className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg">Informations bancaires</h3>
+                  </div>
+                  {!isEditingBanking && (
+                    <button
+                      onClick={() => setIsEditingBanking(true)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Modifier
+                    </button>
+                  )}
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">
+                    <strong>Données sensibles :</strong> Ces informations sont confidentielles et masquées par défaut.
+                  </p>
+                </div>
+
+                {isEditingBanking ? (
+                  <div className="space-y-3">
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                        IBAN
+                      </label>
+                      <input
+                        type="text"
+                        value={editedIBAN}
+                        onChange={(e) => setEditedIBAN(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm font-mono"
+                        placeholder="FR76 1234 5678 9012 3456 7890 123"
+                      />
+                    </div>
+
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                        BIC
+                      </label>
+                      <input
+                        type="text"
+                        value={editedBIC}
+                        onChange={(e) => setEditedBIC(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm font-mono"
+                        placeholder="BNPAFRPPXXX"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 justify-end pt-2">
+                      <button
+                        onClick={handleCancelBankingEdit}
+                        disabled={savingBanking}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        onClick={handleSaveBanking}
+                        disabled={savingBanking}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        {savingBanking ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Enregistrement...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            Enregistrer
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-4 h-4 text-red-600" />
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">IBAN</p>
+                        </div>
+                        {currentEmployee.iban && (
+                          <button
+                            onClick={() => setShowIBAN(!showIBAN)}
+                            className="text-red-600 hover:text-red-700 transition-colors"
+                          >
+                            {showIBAN ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-gray-900 font-medium font-mono text-sm">
+                        {maskIBAN(currentEmployee.iban)}
+                      </p>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Building className="w-4 h-4 text-red-600" />
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">BIC</p>
+                      </div>
+                      <p className="text-gray-900 font-medium font-mono text-sm">
+                        {currentEmployee.bic || <span className="text-gray-400 italic">Non renseigné</span>}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
