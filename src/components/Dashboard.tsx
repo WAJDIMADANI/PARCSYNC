@@ -24,6 +24,7 @@ import { SitesList } from './SitesList';
 import { SecteursList } from './SecteursList';
 import { ImportSalarieTest } from './ImportSalarieTest';
 import { ImportSalariesBulk } from './ImportSalariesBulk';
+import { NotificationsList } from './NotificationsList';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -45,6 +46,8 @@ export function Dashboard() {
         return <LettersList />;
       case 'rh/alertes':
         return <AlertsList onVivierClick={() => setView('rh/vivier')} />;
+      case 'rh/notifications':
+        return <NotificationsList />;
       case 'rh/vivier':
         return <VivierList />;
       case 'parc/vehicules':
@@ -110,6 +113,7 @@ export function Dashboard() {
                 {view === 'rh/contrats' && 'Contrats'}
                 {view === 'rh/courriers' && 'Courriers'}
                 {view === 'rh/alertes' && 'Alertes'}
+                {view === 'rh/notifications' && 'Notifications'}
                 {view === 'rh/vivier' && 'Vivier'}
                 {view === 'parc/vehicules' && 'Véhicules'}
                 {view === 'parc/ct-assurance' && 'CT & Assurance'}

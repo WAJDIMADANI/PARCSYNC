@@ -39,6 +39,10 @@ interface Stats {
     non_lues: number;
     urgentes: number;
     documents_expires: number;
+    titre_sejour: number;
+    visite_medicale: number;
+    permis_conduire: number;
+    contrat_cdd: number;
   };
   incidents: {
     total: number;
@@ -72,6 +76,10 @@ export function RHDashboard() {
       non_lues: 0,
       urgentes: 0,
       documents_expires: 0,
+      titre_sejour: 0,
+      visite_medicale: 0,
+      permis_conduire: 0,
+      contrat_cdd: 0,
     },
     incidents: {
       total: 0,
@@ -107,10 +115,18 @@ export function RHDashboard() {
       })
       .subscribe();
 
+    const notificationsChannel = supabase
+      .channel('notifications-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notification' }, () => {
+        fetchNotificationsStats();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(candidatsChannel);
       supabase.removeChannel(profilsChannel);
       supabase.removeChannel(alertesChannel);
+      supabase.removeChannel(notificationsChannel);
     };
   }, []);
 
@@ -220,6 +236,11 @@ export function RHDashboard() {
         .select('date_expiration')
         .not('date_expiration', 'is', null);
 
+      const { data: notifications } = await supabase
+        .from('notification')
+        .select('type, statut')
+        .in('statut', ['active', 'email_envoye']);
+
       const non_lues = alertes?.filter((a) => !a.is_read).length || 0;
       const urgentes = alertes?.filter((a) => a.priorite === 'haute').length || 0;
 
@@ -229,6 +250,11 @@ export function RHDashboard() {
           (d) => d.date_expiration && new Date(d.date_expiration) <= now
         ).length || 0;
 
+      const titre_sejour = notifications?.filter(n => n.type === 'titre_sejour').length || 0;
+      const visite_medicale = notifications?.filter(n => n.type === 'visite_medicale').length || 0;
+      const permis_conduire = notifications?.filter(n => n.type === 'permis_conduire').length || 0;
+      const contrat_cdd = notifications?.filter(n => n.type === 'contrat_cdd').length || 0;
+
       setStats((prev) => ({
         ...prev,
         notifications: {
@@ -236,6 +262,10 @@ export function RHDashboard() {
           non_lues,
           urgentes,
           documents_expires,
+          titre_sejour,
+          visite_medicale,
+          permis_conduire,
+          contrat_cdd,
         },
       }));
     } catch (error) {
@@ -389,6 +419,66 @@ export function RHDashboard() {
           trendValue="Voir détails"
           color="red"
         />
+      </div>
+
+      <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-xl shadow-sm border border-blue-200 p-6 mb-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
+          <div className="p-2 bg-blue-600 rounded-lg">
+            <Bell className="w-6 h-6 text-white" />
+          </div>
+          Notifications urgentes - Documents à renouveler
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Titres de séjour</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {stats.notifications.titre_sejour || 0}
+                </p>
+              </div>
+              <AlertCircle className="w-8 h-8 text-red-400" />
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-4 border-l-4 border-green-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Visites médicales</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.notifications.visite_medicale || 0}
+                </p>
+              </div>
+              <FileText className="w-8 h-8 text-green-400" />
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-4 border-l-4 border-orange-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Permis de conduire</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {stats.notifications.permis_conduire || 0}
+                </p>
+              </div>
+              <AlertCircle className="w-8 h-8 text-orange-400" />
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-4 border-l-4 border-red-600">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Contrats CDD</p>
+                <p className="text-2xl font-bold text-red-700">
+                  {stats.notifications.contrat_cdd || 0}
+                </p>
+              </div>
+              <Calendar className="w-8 h-8 text-red-400" />
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-600">
+            Total: <span className="font-bold text-blue-700">{(stats.notifications.titre_sejour || 0) + (stats.notifications.visite_medicale || 0) + (stats.notifications.permis_conduire || 0) + (stats.notifications.contrat_cdd || 0)}</span> notifications actives
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

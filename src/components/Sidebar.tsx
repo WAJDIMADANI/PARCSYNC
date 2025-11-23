@@ -12,6 +12,7 @@ export type View =
   | 'rh/contrats'
   | 'rh/courriers'
   | 'rh/alertes'
+  | 'rh/notifications'
   | 'rh/vivier'
   | 'rh/documents'
   | 'parc/vehicules'
@@ -93,6 +94,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'rh/contrats', label: 'Contrats', icon: FileText, enabled: true },
         { id: 'rh/courriers', label: 'Courriers', icon: Mail, enabled: true },
         { id: 'rh/alertes', label: 'Alertes', icon: Bell, enabled: true },
+        { id: 'rh/notifications', label: 'Notifications', icon: Sparkles, enabled: true },
         { id: 'rh/vivier', label: 'Vivier', icon: Archive, enabled: true },
       ]
     },
