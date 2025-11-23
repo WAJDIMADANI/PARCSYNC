@@ -46,8 +46,9 @@ interface Employee {
   secteur_id: string | null;
   manager_id: string | null;
   candidat_id: string | null;
-  certificat_medical_expiration: string | null;
-  permis_expiration: string | null;
+  date_fin_visite_medicale: string | null;
+  type_piece_identite: string | null;
+  titre_sejour_fin_validite: string | null;
   created_at: string;
   site?: Site;
   secteur?: Secteur;
@@ -581,8 +582,8 @@ function EmployeeDetailModal({
   const [sendDocumentsSuccess, setSendDocumentsSuccess] = useState(false);
   const [sendDocumentsError, setSendDocumentsError] = useState('');
   const [isEditingDates, setIsEditingDates] = useState(false);
-  const [editedCertificatExpiration, setEditedCertificatExpiration] = useState(employee.certificat_medical_expiration || '');
-  const [editedPermisExpiration, setEditedPermisExpiration] = useState(employee.permis_expiration || '');
+  const [editedCertificatExpiration, setEditedCertificatExpiration] = useState(employee.date_fin_visite_medicale || '');
+  const [editedTitreSejourExpiration, setEditedTitreSejourExpiration] = useState(employee.titre_sejour_fin_validite || '');
   const [currentEmployee, setCurrentEmployee] = useState<Employee>(employee);
   const [currentContractStatus, setCurrentContractStatus] = useState<string | null>(contractStatus);
   const [savingDates, setSavingDates] = useState(false);
@@ -930,8 +931,8 @@ function EmployeeDetailModal({
       const { error } = await supabase
         .from('profil')
         .update({
-          certificat_medical_expiration: editedCertificatExpiration || null,
-          permis_expiration: editedPermisExpiration || null
+          date_fin_visite_medicale: editedCertificatExpiration || null,
+          titre_sejour_fin_validite: editedTitreSejourExpiration || null
         })
         .eq('id', currentEmployee.id);
 
@@ -943,8 +944,8 @@ function EmployeeDetailModal({
       // Mettre à jour l'employé localement au lieu de recharger tout
       setCurrentEmployee({
         ...currentEmployee,
-        certificat_medical_expiration: editedCertificatExpiration || null,
-        permis_expiration: editedPermisExpiration || null
+        date_fin_visite_medicale: editedCertificatExpiration || null,
+        titre_sejour_fin_validite: editedTitreSejourExpiration || null
       });
 
       setIsEditingDates(false);
@@ -961,8 +962,8 @@ function EmployeeDetailModal({
   };
 
   const handleCancelEdit = () => {
-    setEditedCertificatExpiration(currentEmployee.certificat_medical_expiration || '');
-    setEditedPermisExpiration(currentEmployee.permis_expiration || '');
+    setEditedCertificatExpiration(currentEmployee.date_fin_visite_medicale || '');
+    setEditedTitreSejourExpiration(currentEmployee.titre_sejour_fin_validite || '');
     setIsEditingDates(false);
   };
 
@@ -1160,45 +1161,34 @@ function EmployeeDetailModal({
                   />
                 ) : (
                   <p className="text-gray-900 font-medium">
-                    {currentEmployee.certificat_medical_expiration
-                      ? new Date(currentEmployee.certificat_medical_expiration).toLocaleDateString('fr-FR')
+                    {currentEmployee.date_fin_visite_medicale
+                      ? new Date(currentEmployee.date_fin_visite_medicale).toLocaleDateString('fr-FR')
                       : 'Non renseignée'}
                   </p>
                 )}
               </div>
 
-              {/* Permis de conduire */}
-              <div className="bg-white rounded-lg p-3 shadow-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <FileText className="w-4 h-4 text-purple-600" />
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Permis de conduire - Date d'expiration</p>
-                </div>
-                {isEditingDates ? (
-                  <input
-                    type="date"
-                    value={editedPermisExpiration}
-                    onChange={(e) => setEditedPermisExpiration(e.target.value)}
-                    className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
-                  />
-                ) : (
-                  <p className="text-gray-900 font-medium">
-                    {currentEmployee.permis_expiration
-                      ? new Date(currentEmployee.permis_expiration).toLocaleDateString('fr-FR')
-                      : 'Non renseignée'}
-                  </p>
-                )}
-              </div>
-
-              {/* Carte de séjour - Afficher UNIQUEMENT si type_piece_identite = 'carte_sejour' */}
-              {candidatTypePiece === 'carte_sejour' && candidatDateFinValidite && (
+              {/* Titre de séjour - Afficher UNIQUEMENT si type_piece_identite = 'Titre de séjour' */}
+              {currentEmployee.type_piece_identite === 'Titre de séjour' && (
                 <div className="bg-white rounded-lg p-3 shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="w-4 h-4 text-purple-600" />
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Carte de séjour - Date d'expiration</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Titre de séjour - Date fin de validité</p>
                   </div>
-                  <p className="text-gray-900 font-medium">
-                    {new Date(candidatDateFinValidite).toLocaleDateString('fr-FR')}
-                  </p>
+                  {isEditingDates ? (
+                    <input
+                      type="date"
+                      value={editedTitreSejourExpiration}
+                      onChange={(e) => setEditedTitreSejourExpiration(e.target.value)}
+                      className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                    />
+                  ) : (
+                    <p className="text-gray-900 font-medium">
+                      {currentEmployee.titre_sejour_fin_validite
+                        ? new Date(currentEmployee.titre_sejour_fin_validite).toLocaleDateString('fr-FR')
+                        : 'Non renseignée'}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

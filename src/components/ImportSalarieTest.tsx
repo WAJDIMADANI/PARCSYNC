@@ -40,7 +40,6 @@ export function ImportSalarieTest() {
     ville: '',
     type_piece_identite: '',
     numero_securite_sociale: '',
-    nir: '',
     iban: '',
     bic: '',
     date_permis_conduire: '',
@@ -48,7 +47,6 @@ export function ImportSalarieTest() {
     permis_points: '',
     titre_sejour_fin_validite: '',
     secteur_id: '',
-    site_id: '',
     date_entree: '',
     date_visite_medicale: '',
     date_fin_visite_medicale: '',
@@ -61,10 +59,8 @@ export function ImportSalarieTest() {
     contrat_duree_hebdo_hours: '',
     avenant_1_date: '',
     avenant_1_date_fin: '',
-    avenant_1_type: '',
     avenant_2_date: '',
     avenant_2_date_fin: '',
-    avenant_2_type: '',
   });
 
   useEffect(() => {
@@ -121,7 +117,6 @@ export function ImportSalarieTest() {
             ville: formData.ville || null,
             type_piece_identite: formData.type_piece_identite || null,
             numero_securite_sociale: formData.numero_securite_sociale || null,
-            nir: formData.nir || null,
             iban: formData.iban || null,
             bic: formData.bic || null,
             date_permis_conduire: formData.date_permis_conduire || null,
@@ -132,7 +127,6 @@ export function ImportSalarieTest() {
             date_fin_visite_medicale: formData.date_fin_visite_medicale || null,
             periode_essai: formData.periode_essai || null,
             modele_contrat: formData.modele_contrat || null,
-            site_id: formData.site_id || null,
             secteur_id: formData.secteur_id || null,
             date_entree: formData.date_entree || null,
             statut: 'actif',
@@ -167,15 +161,13 @@ export function ImportSalarieTest() {
       const avenants = [
         {
           date_debut: formData.avenant_1_date,
-          date_fin: formData.avenant_1_date_fin,
-          type: formData.avenant_1_type
+          date_fin: formData.avenant_1_date_fin
         },
         {
           date_debut: formData.avenant_2_date,
-          date_fin: formData.avenant_2_date_fin,
-          type: formData.avenant_2_type
+          date_fin: formData.avenant_2_date_fin
         },
-      ].filter((a) => a.date_debut && a.type);
+      ].filter((a) => a.date_debut);
 
       if (avenants.length > 0) {
         const avenantInserts = avenants.map((a) => ({
@@ -214,7 +206,6 @@ export function ImportSalarieTest() {
         ville: '',
         type_piece_identite: '',
         numero_securite_sociale: '',
-        nir: '',
         iban: '',
         bic: '',
         date_permis_conduire: '',
@@ -222,7 +213,6 @@ export function ImportSalarieTest() {
         permis_points: '',
         titre_sejour_fin_validite: '',
         secteur_id: '',
-        site_id: '',
         date_entree: '',
         date_visite_medicale: '',
         date_fin_visite_medicale: '',
@@ -235,10 +225,8 @@ export function ImportSalarieTest() {
         contrat_duree_hebdo_hours: '',
         avenant_1_date: '',
         avenant_1_date_fin: '',
-        avenant_1_type: '',
         avenant_2_date: '',
         avenant_2_date_fin: '',
-        avenant_2_type: '',
       });
 
       setTimeout(() => {
@@ -423,22 +411,26 @@ export function ImportSalarieTest() {
             Documents d'identité
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInput
-              label="Type de pièce d'identité"
-              value={formData.type_piece_identite}
-              onChange={(v) => setFormData({ ...formData, type_piece_identite: v })}
-              placeholder="Ex: CNI, Passeport, Titre de séjour"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Type de pièce d'identité</label>
+              <select
+                value={formData.type_piece_identite}
+                onChange={(e) => setFormData({ ...formData, type_piece_identite: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">Sélectionner</option>
+                <option value="CNI">Carte Nationale d'Identité</option>
+                <option value="Passeport">Passeport</option>
+                <option value="Titre de séjour">Titre de séjour</option>
+                <option value="Permis de conduire">Permis de conduire</option>
+                <option value="Carte de résident">Carte de résident</option>
+              </select>
+            </div>
             <FormInput
               label="Numéro de Sécurité Sociale"
               value={formData.numero_securite_sociale}
               onChange={(v) => setFormData({ ...formData, numero_securite_sociale: v })}
               placeholder="X XX XX XX XXX XXX XX"
-            />
-            <FormInput
-              label="NIR"
-              value={formData.nir}
-              onChange={(v) => setFormData({ ...formData, nir: v })}
             />
             <FormInput
               label="Fin de validité titre de séjour"
@@ -511,21 +503,6 @@ export function ImportSalarieTest() {
                 {secteurs.map((secteur) => (
                   <option key={secteur.id} value={secteur.id}>
                     {secteur.nom}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Site</label>
-              <select
-                value={formData.site_id}
-                onChange={(e) => setFormData({ ...formData, site_id: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">Sélectionner un site</option>
-                {sites.map((site) => (
-                  <option key={site.id} value={site.id}>
-                    {site.nom}
                   </option>
                 ))}
               </select>
@@ -622,7 +599,7 @@ export function ImportSalarieTest() {
             Avenants (optionnel)
           </h3>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
               <FormInput
                 label="Avenant 1 - Date début"
                 type="date"
@@ -635,14 +612,8 @@ export function ImportSalarieTest() {
                 value={formData.avenant_1_date_fin}
                 onChange={(v) => setFormData({ ...formData, avenant_1_date_fin: v })}
               />
-              <FormInput
-                label="Avenant 1 - Type"
-                value={formData.avenant_1_type}
-                onChange={(v) => setFormData({ ...formData, avenant_1_type: v })}
-                placeholder="Ex: Augmentation salaire"
-              />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
               <FormInput
                 label="Avenant 2 - Date début"
                 type="date"
@@ -654,12 +625,6 @@ export function ImportSalarieTest() {
                 type="date"
                 value={formData.avenant_2_date_fin}
                 onChange={(v) => setFormData({ ...formData, avenant_2_date_fin: v })}
-              />
-              <FormInput
-                label="Avenant 2 - Type"
-                value={formData.avenant_2_type}
-                onChange={(v) => setFormData({ ...formData, avenant_2_type: v })}
-                placeholder="Ex: Changement horaires"
               />
             </div>
           </div>
