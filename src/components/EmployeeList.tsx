@@ -49,6 +49,7 @@ interface Employee {
   date_fin_visite_medicale: string | null;
   type_piece_identite: string | null;
   titre_sejour_fin_validite: string | null;
+  matricule_tca: string | null;
   created_at: string;
   site?: Site;
   secteur?: Secteur;
@@ -64,7 +65,7 @@ interface Contract {
   created_at: string;
 }
 
-type SortField = 'nom' | 'prenom' | 'role' | 'statut' | 'site' | 'created_at';
+type SortField = 'matricule_tca' | 'nom' | 'prenom' | 'role' | 'statut' | 'secteur' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 
 export function EmployeeList() {
@@ -80,7 +81,6 @@ export function EmployeeList() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatut, setFilterStatut] = useState<string>('');
-  const [filterSite, setFilterSite] = useState<string>('');
   const [filterSecteur, setFilterSecteur] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -208,17 +208,20 @@ export function EmployeeList() {
 
   const filteredAndSortedEmployees = employees
     .filter(emp => {
-      const matchesSearch = `${emp.prenom} ${emp.nom} ${emp.email} ${emp.role || ''}`.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = `${emp.prenom} ${emp.nom} ${emp.email} ${emp.role || ''} ${emp.matricule_tca || ''}`.toLowerCase().includes(search.toLowerCase());
       const matchesStatut = !filterStatut || emp.statut === filterStatut;
-      const matchesSite = !filterSite || emp.site_id === filterSite;
       const matchesSecteur = !filterSecteur || emp.secteur_id === filterSecteur;
-      return matchesSearch && matchesStatut && matchesSite && matchesSecteur;
+      return matchesSearch && matchesStatut && matchesSecteur;
     })
     .sort((a, b) => {
       let aValue: any;
       let bValue: any;
 
       switch (sortField) {
+        case 'matricule_tca':
+          aValue = (a.matricule_tca || '').toLowerCase();
+          bValue = (b.matricule_tca || '').toLowerCase();
+          break;
         case 'nom':
           aValue = a.nom.toLowerCase();
           bValue = b.nom.toLowerCase();
@@ -235,9 +238,9 @@ export function EmployeeList() {
           aValue = a.statut.toLowerCase();
           bValue = b.statut.toLowerCase();
           break;
-        case 'site':
-          aValue = (a.site?.nom || '').toLowerCase();
-          bValue = (b.site?.nom || '').toLowerCase();
+        case 'secteur':
+          aValue = (a.secteur?.nom || '').toLowerCase();
+          bValue = (b.secteur?.nom || '').toLowerCase();
           break;
         case 'created_at':
           aValue = new Date(a.created_at).getTime();
@@ -306,11 +309,10 @@ export function EmployeeList() {
 
   const clearFilters = () => {
     setFilterStatut('');
-    setFilterSite('');
     setFilterSecteur('');
   };
 
-  const hasActiveFilters = filterStatut || filterSite || filterSecteur;
+  const hasActiveFilters = filterStatut || filterSecteur;
 
   if (loading) {
     return (
@@ -347,14 +349,14 @@ export function EmployeeList() {
             }`}
           >
             <Filter className="w-5 h-5" />
-            Filtres {hasActiveFilters && `(${[filterStatut, filterSite, filterSecteur].filter(Boolean).length})`}
+            Filtres {hasActiveFilters && `(${[filterStatut, filterSecteur].filter(Boolean).length})`}
           </button>
         </div>
       </div>
 
       {showFilters && (
         <div className="mb-6 bg-white rounded-lg shadow p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
               <select
@@ -367,20 +369,6 @@ export function EmployeeList() {
                 <option value="en_attente_contrat">En attente contrat</option>
                 <option value="contrat_envoye">Contrat envoyé</option>
                 <option value="inactif">Inactif</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Site</label>
-              <select
-                value={filterSite}
-                onChange={(e) => setFilterSite(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Tous les sites</option>
-                {sites.map(site => (
-                  <option key={site.id} value={site.id}>{site.nom}</option>
-                ))}
               </select>
             </div>
 
@@ -436,6 +424,15 @@ export function EmployeeList() {
               <thead className="bg-gray-50">
                 <tr>
                   <th
+                    onClick={() => handleSort('matricule_tca')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    <div className="flex items-center gap-2">
+                      Matricule
+                      {getSortIcon('matricule_tca')}
+                    </div>
+                  </th>
+                  <th
                     onClick={() => handleSort('nom')}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   >
@@ -463,12 +460,12 @@ export function EmployeeList() {
                     </div>
                   </th>
                   <th
-                    onClick={() => handleSort('site')}
+                    onClick={() => handleSort('secteur')}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   >
                     <div className="flex items-center gap-2">
-                      Site
-                      {getSortIcon('site')}
+                      Secteur
+                      {getSortIcon('secteur')}
                     </div>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -502,6 +499,9 @@ export function EmployeeList() {
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{employee.matricule_tca || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{employee.nom}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -511,7 +511,7 @@ export function EmployeeList() {
                       <div className="text-sm text-gray-600">{employee.role || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{employee.site?.nom || '-'}</div>
+                      <div className="text-sm text-gray-600">{employee.secteur?.nom || '-'}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">{employee.email}</div>
@@ -1052,19 +1052,19 @@ function EmployeeDetailModal({
             <div className="bg-gradient-to-br from-green-50 to-green-100/30 rounded-xl p-5 border border-green-200">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                  <Building className="w-4 h-4 text-white" />
+                  <Briefcase className="w-4 h-4 text-white" />
                 </div>
                 <h3 className="font-bold text-gray-900 text-lg">Affectation</h3>
               </div>
 
               <div className="space-y-3">
-                {currentEmployee.site && (
+                {currentEmployee.matricule_tca && (
                   <div className="bg-white rounded-lg p-3 shadow-sm">
                     <div className="flex items-center gap-2 mb-1">
-                      <Building className="w-4 h-4 text-green-600" />
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Site</p>
+                      <Briefcase className="w-4 h-4 text-green-600" />
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Matricule TCA</p>
                     </div>
-                    <p className="text-gray-900 font-medium">{currentEmployee.site.nom}</p>
+                    <p className="text-gray-900 font-medium">{currentEmployee.matricule_tca}</p>
                   </div>
                 )}
 
@@ -1075,16 +1075,6 @@ function EmployeeDetailModal({
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Secteur</p>
                     </div>
                     <p className="text-gray-900 font-medium">{currentEmployee.secteur.nom}</p>
-                  </div>
-                )}
-
-                {currentEmployee.manager && (
-                  <div className="bg-white rounded-lg p-3 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <User className="w-4 h-4 text-green-600" />
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Manager</p>
-                    </div>
-                    <p className="text-gray-900 font-medium">{currentEmployee.manager.prenom} {currentEmployee.manager.nom}</p>
                   </div>
                 )}
 
