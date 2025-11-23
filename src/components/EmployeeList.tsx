@@ -1501,12 +1501,19 @@ function EmployeeDetailModal({
                 )}
               </div>
 
-              {/* Titre de séjour - Afficher UNIQUEMENT si type_piece_identite = 'Titre de séjour' */}
-              {currentEmployee.type_piece_identite === 'Titre de séjour' && (
+              {/* Carte de séjour - Afficher si type_piece_identite = 'Carte de séjour' OU 'Titre de séjour' */}
+              {(currentEmployee.type_piece_identite === 'Carte de séjour' ||
+                currentEmployee.type_piece_identite === 'Titre de séjour' ||
+                candidatTypePiece === 'Carte de séjour' ||
+                candidatTypePiece === 'Titre de séjour') && (
                 <div className="bg-white rounded-lg p-3 shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="w-4 h-4 text-purple-600" />
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Titre de séjour - Date fin de validité</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      {currentEmployee.type_piece_identite === 'Carte de séjour' || candidatTypePiece === 'Carte de séjour'
+                        ? 'Carte de séjour - Date d\'expiration'
+                        : 'Titre de séjour - Date fin de validité'}
+                    </p>
                   </div>
                   {isEditingDates ? (
                     <input
@@ -1519,6 +1526,8 @@ function EmployeeDetailModal({
                     <p className="text-gray-900 font-medium">
                       {currentEmployee.titre_sejour_fin_validite
                         ? new Date(currentEmployee.titre_sejour_fin_validite).toLocaleDateString('fr-FR')
+                        : candidatDateFinValidite
+                        ? new Date(candidatDateFinValidite).toLocaleDateString('fr-FR')
                         : 'Non renseignée'}
                     </p>
                   )}
