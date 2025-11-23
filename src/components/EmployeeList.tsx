@@ -1501,38 +1501,55 @@ function EmployeeDetailModal({
                 )}
               </div>
 
-              {/* Carte de séjour - Afficher si type_piece_identite = 'Carte de séjour' OU 'Titre de séjour' */}
-              {(currentEmployee.type_piece_identite === 'Carte de séjour' ||
-                currentEmployee.type_piece_identite === 'Titre de séjour' ||
-                candidatTypePiece === 'Carte de séjour' ||
-                candidatTypePiece === 'Titre de séjour') && (
-                <div className="bg-white rounded-lg p-3 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4 text-purple-600" />
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      {currentEmployee.type_piece_identite === 'Carte de séjour' || candidatTypePiece === 'Carte de séjour'
-                        ? 'Carte de séjour - Date d\'expiration'
-                        : 'Titre de séjour - Date fin de validité'}
-                    </p>
+              {/* Carte de séjour - Afficher si type_piece_identite contient séjour/résident */}
+              {(() => {
+                const typePiece = currentEmployee.type_piece_identite?.toLowerCase() || '';
+                const typePieceCandidat = candidatTypePiece?.toLowerCase() || '';
+                const hasTitreSejour =
+                  typePiece.includes('sejour') ||
+                  typePiece.includes('séjour') ||
+                  typePiece.includes('resident') ||
+                  typePiece.includes('résident') ||
+                  typePieceCandidat.includes('sejour') ||
+                  typePieceCandidat.includes('séjour') ||
+                  typePieceCandidat.includes('resident') ||
+                  typePieceCandidat.includes('résident');
+
+                if (!hasTitreSejour) return null;
+
+                const isResident = typePiece.includes('resident') || typePiece.includes('résident') ||
+                                   typePieceCandidat.includes('resident') || typePieceCandidat.includes('résident');
+                const label = isResident
+                  ? 'Carte de résident - Date d\'expiration'
+                  : 'Carte/Titre de séjour - Date d\'expiration';
+
+                return (
+                  <div className="bg-white rounded-lg p-3 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="w-4 h-4 text-purple-600" />
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        {label}
+                      </p>
+                    </div>
+                    {isEditingDates ? (
+                      <input
+                        type="date"
+                        value={editedTitreSejourExpiration}
+                        onChange={(e) => setEditedTitreSejourExpiration(e.target.value)}
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                      />
+                    ) : (
+                      <p className="text-gray-900 font-medium">
+                        {currentEmployee.titre_sejour_fin_validite
+                          ? new Date(currentEmployee.titre_sejour_fin_validite).toLocaleDateString('fr-FR')
+                          : candidatDateFinValidite
+                          ? new Date(candidatDateFinValidite).toLocaleDateString('fr-FR')
+                          : 'Non renseignée'}
+                      </p>
+                    )}
                   </div>
-                  {isEditingDates ? (
-                    <input
-                      type="date"
-                      value={editedTitreSejourExpiration}
-                      onChange={(e) => setEditedTitreSejourExpiration(e.target.value)}
-                      className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
-                    />
-                  ) : (
-                    <p className="text-gray-900 font-medium">
-                      {currentEmployee.titre_sejour_fin_validite
-                        ? new Date(currentEmployee.titre_sejour_fin_validite).toLocaleDateString('fr-FR')
-                        : candidatDateFinValidite
-                        ? new Date(candidatDateFinValidite).toLocaleDateString('fr-FR')
-                        : 'Non renseignée'}
-                    </p>
-                  )}
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
 
