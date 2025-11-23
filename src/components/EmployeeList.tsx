@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, getStorageUrl } from '../lib/supabase';
-import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle } from 'lucide-react';
+import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import EmployeeHistory from './EmployeeHistory';
 import EmployeeDeparture from './EmployeeDeparture';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -83,6 +83,8 @@ export function EmployeeList() {
   const [filterStatut, setFilterStatut] = useState<string>('');
   const [filterSecteur, setFilterSecteur] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   useEffect(() => {
     fetchData();
@@ -206,6 +208,11 @@ export function EmployeeList() {
     return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
+  // Réinitialiser la page à 1 quand les filtres changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStatut, filterSecteur]);
+
   const filteredAndSortedEmployees = employees
     .filter(emp => {
       const matchesSearch = `${emp.prenom} ${emp.nom} ${emp.email} ${emp.role || ''} ${emp.matricule_tca || ''}`.toLowerCase().includes(search.toLowerCase());
@@ -254,6 +261,23 @@ export function EmployeeList() {
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
+
+  // Calcul de la pagination
+  const totalItems = filteredAndSortedEmployees.length;
+  const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
+  const startIndex = itemsPerPage === -1 ? 0 : (currentPage - 1) * itemsPerPage;
+  const endIndex = itemsPerPage === -1 ? totalItems : Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedEmployees = itemsPerPage === -1 ? filteredAndSortedEmployees : filteredAndSortedEmployees.slice(startIndex, endIndex);
+
+  const handleItemsPerPageChange = (value: number) => {
+    setItemsPerPage(value);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const getStatutBadge = (statut: string, employeeId: string) => {
     // Vérifier le statut réel du contrat
@@ -327,9 +351,23 @@ export function EmployeeList() {
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Employés</h1>
-          <p className="text-gray-600 mt-1">
-            {filteredAndSortedEmployees.length} employé(s) {hasActiveFilters && `(sur ${employees.length} au total)`}
-          </p>
+          <div className="flex items-center gap-4 mt-1">
+            <p className="text-gray-600">
+              {filteredAndSortedEmployees.length} employé(s) {hasActiveFilters && `(sur ${employees.length} au total)`}
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">Affichage par page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={-1}>Tout</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
@@ -492,7 +530,7 @@ export function EmployeeList() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredAndSortedEmployees.map((employee) => (
+                {paginatedEmployees.map((employee) => (
                   <tr
                     key={employee.id}
                     onClick={() => setSelectedEmployee(employee)}
@@ -532,6 +570,62 @@ export function EmployeeList() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span className="font-medium">Affichage de {startIndex + 1} à {endIndex}</span>
+                <span className="text-gray-400">sur</span>
+                <span className="font-medium">{totalItems}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(1)}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+                  title="Première page"
+                >
+                  <ChevronsLeft className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+                  title="Page précédente"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                <div className="flex items-center gap-2 px-4">
+                  <span className="text-sm font-medium text-gray-700">Page</span>
+                  <span className="px-3 py-1 bg-blue-600 text-white rounded-lg font-bold text-sm">{currentPage}</span>
+                  <span className="text-sm text-gray-500">sur</span>
+                  <span className="text-sm font-medium text-gray-700">{totalPages}</span>
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+                  title="Page suivante"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={() => handlePageChange(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+                  title="Dernière page"
+                >
+                  <ChevronsRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
