@@ -21,13 +21,23 @@ interface Notification {
   };
 }
 
-export function NotificationsList() {
+interface NotificationsListProps {
+  initialTab?: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd';
+}
+
+export function NotificationsList({ initialTab }: NotificationsListProps = {}) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd'>('titre_sejour');
+  const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd'>(initialTab || 'titre_sejour');
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatut, setFilterStatut] = useState<string>('all');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   useEffect(() => {
     fetchNotifications();

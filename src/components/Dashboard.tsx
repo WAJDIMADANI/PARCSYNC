@@ -28,7 +28,13 @@ import { NotificationsList } from './NotificationsList';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
+  const [viewParams, setViewParams] = useState<any>(null);
   const { signOut, user } = useAuth();
+
+  const handleViewChange = (newView: View, params?: any) => {
+    setView(newView);
+    setViewParams(params || null);
+  };
 
   const renderView = () => {
     switch (view) {
@@ -47,7 +53,7 @@ export function Dashboard() {
       case 'rh/alertes':
         return <AlertsList onVivierClick={() => setView('rh/vivier')} />;
       case 'rh/notifications':
-        return <NotificationsList />;
+        return <NotificationsList initialTab={viewParams?.tab} />;
       case 'rh/vivier':
         return <VivierList />;
       case 'parc/vehicules':
@@ -61,7 +67,7 @@ export function Dashboard() {
       case 'parc/amendes':
         return <FinesList />;
       case 'dashboards/rh':
-        return <RHDashboard />;
+        return <RHDashboard onNavigate={handleViewChange} />;
       case 'dashboards/parc':
         return <ParcDashboard />;
       case 'exports/rh':
@@ -99,7 +105,7 @@ export function Dashboard() {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <Sidebar currentView={view} onViewChange={setView} />
+      <Sidebar currentView={view} onViewChange={(v) => handleViewChange(v)} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 px-6 py-5 shadow-sm">

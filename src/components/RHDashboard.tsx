@@ -53,7 +53,11 @@ interface Stats {
   };
 }
 
-export function RHDashboard() {
+interface RHDashboardProps {
+  onNavigate?: (view: string, params?: any) => void;
+}
+
+export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
   const [stats, setStats] = useState<Stats>({
     candidates: {
       total: 0,
@@ -429,7 +433,10 @@ export function RHDashboard() {
           Notifications urgentes - Documents à renouveler
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
+          <button
+            onClick={() => onNavigate?.('rh/notifications', { tab: 'titre_sejour' })}
+            className="bg-white rounded-lg p-4 border-l-4 border-red-500 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Titres de séjour</p>
@@ -439,8 +446,11 @@ export function RHDashboard() {
               </div>
               <AlertCircle className="w-8 h-8 text-red-400" />
             </div>
-          </div>
-          <div className="bg-white rounded-lg p-4 border-l-4 border-green-500">
+          </button>
+          <button
+            onClick={() => onNavigate?.('rh/notifications', { tab: 'visite_medicale' })}
+            className="bg-white rounded-lg p-4 border-l-4 border-green-500 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Visites médicales</p>
@@ -450,8 +460,11 @@ export function RHDashboard() {
               </div>
               <FileText className="w-8 h-8 text-green-400" />
             </div>
-          </div>
-          <div className="bg-white rounded-lg p-4 border-l-4 border-orange-500">
+          </button>
+          <button
+            onClick={() => onNavigate?.('rh/notifications', { tab: 'permis_conduire' })}
+            className="bg-white rounded-lg p-4 border-l-4 border-orange-500 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Permis de conduire</p>
@@ -461,8 +474,11 @@ export function RHDashboard() {
               </div>
               <AlertCircle className="w-8 h-8 text-orange-400" />
             </div>
-          </div>
-          <div className="bg-white rounded-lg p-4 border-l-4 border-red-600">
+          </button>
+          <button
+            onClick={() => onNavigate?.('rh/notifications', { tab: 'contrat_cdd' })}
+            className="bg-white rounded-lg p-4 border-l-4 border-red-600 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Contrats CDD</p>
@@ -472,7 +488,7 @@ export function RHDashboard() {
               </div>
               <Calendar className="w-8 h-8 text-red-400" />
             </div>
-          </div>
+          </button>
         </div>
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600">
