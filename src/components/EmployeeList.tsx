@@ -67,6 +67,7 @@ interface Employee {
   code_postal: string | null;
   iban: string | null;
   bic: string | null;
+  modele_contrat: string | null;
 }
 
 interface Contract {
@@ -1432,6 +1433,22 @@ function EmployeeDetailModal({
                 )}
               </div>
             </div>
+
+            {/* Modèle de contrat signé */}
+            {currentEmployee.modele_contrat && (
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-xl p-5 border border-blue-200">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-lg">Modèle de contrat signé</h3>
+                </div>
+
+                <div className="bg-white rounded-lg p-3 shadow-sm">
+                  <p className="text-gray-900 font-medium">{currentEmployee.modele_contrat}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Section Documents importants - Dates d'expiration */}
