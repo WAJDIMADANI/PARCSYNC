@@ -59,8 +59,12 @@ export function ImportSalarieTest() {
     contrat_duree_hebdo_hours: '',
     avenant_1_date: '',
     avenant_1_date_fin: '',
+    avenant_1_remuneration_brut: '',
+    avenant_1_duree_hebdo_hours: '',
     avenant_2_date: '',
     avenant_2_date_fin: '',
+    avenant_2_remuneration_brut: '',
+    avenant_2_duree_hebdo_hours: '',
   });
 
   useEffect(() => {
@@ -161,11 +165,15 @@ export function ImportSalarieTest() {
       const avenants = [
         {
           date_debut: formData.avenant_1_date,
-          date_fin: formData.avenant_1_date_fin
+          date_fin: formData.avenant_1_date_fin,
+          remuneration_brut: formData.avenant_1_remuneration_brut,
+          duree_hebdo_hours: formData.avenant_1_duree_hebdo_hours
         },
         {
           date_debut: formData.avenant_2_date,
-          date_fin: formData.avenant_2_date_fin
+          date_fin: formData.avenant_2_date_fin,
+          remuneration_brut: formData.avenant_2_remuneration_brut,
+          duree_hebdo_hours: formData.avenant_2_duree_hebdo_hours
         },
       ].filter((a) => a.date_debut);
 
@@ -175,8 +183,8 @@ export function ImportSalarieTest() {
           type: 'avenant',
           date_debut: a.date_debut,
           date_fin: a.date_fin || null,
-          remuneration_brut: null,
-          duree_hebdo_hours: null,
+          remuneration_brut: a.remuneration_brut ? parseFloat(a.remuneration_brut) : null,
+          duree_hebdo_hours: a.duree_hebdo_hours ? parseFloat(a.duree_hebdo_hours) : null,
           esign: 'signed',
         }));
 
@@ -225,8 +233,12 @@ export function ImportSalarieTest() {
         contrat_duree_hebdo_hours: '',
         avenant_1_date: '',
         avenant_1_date_fin: '',
+        avenant_1_remuneration_brut: '',
+        avenant_1_duree_hebdo_hours: '',
         avenant_2_date: '',
         avenant_2_date_fin: '',
+        avenant_2_remuneration_brut: '',
+        avenant_2_duree_hebdo_hours: '',
       });
 
       setTimeout(() => {
@@ -599,33 +611,67 @@ export function ImportSalarieTest() {
             Avenants (optionnel)
           </h3>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-              <FormInput
-                label="Avenant 1 - Date début"
-                type="date"
-                value={formData.avenant_1_date}
-                onChange={(v) => setFormData({ ...formData, avenant_1_date: v })}
-              />
-              <FormInput
-                label="Avenant 1 - Date fin"
-                type="date"
-                value={formData.avenant_1_date_fin}
-                onChange={(v) => setFormData({ ...formData, avenant_1_date_fin: v })}
-              />
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Avenant 1</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormInput
+                  label="Date début"
+                  type="date"
+                  value={formData.avenant_1_date}
+                  onChange={(v) => setFormData({ ...formData, avenant_1_date: v })}
+                />
+                <FormInput
+                  label="Date fin"
+                  type="date"
+                  value={formData.avenant_1_date_fin}
+                  onChange={(v) => setFormData({ ...formData, avenant_1_date_fin: v })}
+                />
+                <FormInput
+                  label="Rémunération brute"
+                  type="number"
+                  value={formData.avenant_1_remuneration_brut}
+                  onChange={(v) => setFormData({ ...formData, avenant_1_remuneration_brut: v })}
+                  placeholder="Ex: 2200"
+                />
+                <FormInput
+                  label="Heures hebdomadaires"
+                  type="number"
+                  value={formData.avenant_1_duree_hebdo_hours}
+                  onChange={(v) => setFormData({ ...formData, avenant_1_duree_hebdo_hours: v })}
+                  placeholder="Ex: 35"
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-              <FormInput
-                label="Avenant 2 - Date début"
-                type="date"
-                value={formData.avenant_2_date}
-                onChange={(v) => setFormData({ ...formData, avenant_2_date: v })}
-              />
-              <FormInput
-                label="Avenant 2 - Date fin"
-                type="date"
-                value={formData.avenant_2_date_fin}
-                onChange={(v) => setFormData({ ...formData, avenant_2_date_fin: v })}
-              />
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Avenant 2</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormInput
+                  label="Date début"
+                  type="date"
+                  value={formData.avenant_2_date}
+                  onChange={(v) => setFormData({ ...formData, avenant_2_date: v })}
+                />
+                <FormInput
+                  label="Date fin"
+                  type="date"
+                  value={formData.avenant_2_date_fin}
+                  onChange={(v) => setFormData({ ...formData, avenant_2_date_fin: v })}
+                />
+                <FormInput
+                  label="Rémunération brute"
+                  type="number"
+                  value={formData.avenant_2_remuneration_brut}
+                  onChange={(v) => setFormData({ ...formData, avenant_2_remuneration_brut: v })}
+                  placeholder="Ex: 2400"
+                />
+                <FormInput
+                  label="Heures hebdomadaires"
+                  type="number"
+                  value={formData.avenant_2_duree_hebdo_hours}
+                  onChange={(v) => setFormData({ ...formData, avenant_2_duree_hebdo_hours: v })}
+                  placeholder="Ex: 39"
+                />
+              </div>
             </div>
           </div>
         </div>

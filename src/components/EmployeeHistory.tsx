@@ -70,6 +70,12 @@ export default function EmployeeHistory({ profilId, employeeName, onClose }: Emp
         .limit(1)
         .maybeSingle();
 
+      const { data: allContrats } = await supabase
+        .from('contrat')
+        .select('id, type, date_debut, date_fin, remuneration_brut, duree_hebdo_hours, esign, created_at')
+        .eq('profil_id', profilId)
+        .order('date_debut', { ascending: true });
+
       const steps: PipelineStep[] = [
         {
           id: 1,
@@ -117,7 +123,29 @@ export default function EmployeeHistory({ profilId, employeeName, onClose }: Emp
         .order('date', { ascending: false });
 
       if (error) throw error;
-      setEvents(data || []);
+
+      const contratEvents: TimelineEvent[] = (allContrats || []).map((contrat) => ({
+        id: contrat.id,
+        source: 'contrat',
+        type: contrat.type === 'avenant' ? 'avenant' : 'contrat_' + contrat.type,
+        date: contrat.date_debut,
+        description: contrat.type === 'avenant'
+          ? 'Avenant au contrat'
+          : `Contrat ${contrat.type.toUpperCase()} signé`,
+        metadata: {
+          'Type': contrat.type.toUpperCase(),
+          'Salaire brut': contrat.remuneration_brut ? `${contrat.remuneration_brut}€` : 'Non renseigné',
+          'Heures hebdo': contrat.duree_hebdo_hours ? `${contrat.duree_hebdo_hours}h` : 'Non renseigné',
+          ...(contrat.date_fin && { 'Date de fin': new Date(contrat.date_fin).toLocaleDateString('fr-FR') })
+        },
+        created_at: contrat.created_at
+      }));
+
+      const allEvents = [...(data || []), ...contratEvents].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      setEvents(allEvents);
     } catch (error) {
       console.error('Erreur chargement historique:', error);
     } finally {
