@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { X, Send, FileText, Building, DollarSign, Calendar, Clock, Award, CheckCircle, XCircle, Mail, Eye } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import SuccessNotification from './SuccessNotification';
+import { calculateTrialEndDate, formatDateFR } from '../lib/trialPeriodCalculator';
 
 interface ContractTemplate {
   id: string;
@@ -55,6 +56,8 @@ export default function ContractSendModal({
   const [showDocuments, setShowDocuments] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [renewTrial, setRenewTrial] = useState(false);
+  const [trialPeriodInfo, setTrialPeriodInfo] = useState<{ endDate: string; description: string } | null>(null);
 
   const searchAddress = async (query: string) => {
     if (query.length < 3) {
@@ -100,6 +103,23 @@ export default function ContractSendModal({
     birthplace: '',        // 🆕 NOUVEAU - Lieu de naissance
     id_number: ''          // 🆕 NOUVEAU - Numéro de Sécurité Sociale
   });
+
+  useEffect(() => {
+    if (selectedTemplate && variables.date_debut) {
+      const template = templates.find(t => t.id === selectedTemplate);
+      if (template) {
+        const result = calculateTrialEndDate(
+          template.type_contrat,
+          variables.date_debut,
+          variables.date_fin || undefined,
+          renewTrial
+        );
+        setTrialPeriodInfo(result);
+      }
+    } else {
+      setTrialPeriodInfo(null);
+    }
+  }, [selectedTemplate, variables.date_debut, variables.date_fin, renewTrial, templates]);
 
   useEffect(() => {
     fetchData();
@@ -311,12 +331,18 @@ export default function ContractSendModal({
       }
 
       // ✅ ÉTAPE 4 : Mettre à jour le profil
+      const updateData: any = {
+        statut: 'contrat_envoye',
+        site_id: selectedSite
+      };
+
+      if (trialPeriodInfo?.endDate) {
+        updateData.date_fin_periode_essai = trialPeriodInfo.endDate;
+      }
+
       const { error: profilError } = await supabase
         .from('profil')
-        .update({
-          statut: 'contrat_envoye',
-          site_id: selectedSite
-        })
+        .update(updateData)
         .eq('id', profilId);
 
       if (profilError) throw profilError;
@@ -536,6 +562,33 @@ export default function ContractSendModal({
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
+            </div>
+
+            {selectedTemplate && templates.find(t => t.id === selectedTemplate)?.type_contrat === 'CDI' && (
+              <div className="mt-4">
+                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={renewTrial}
+                    onChange={(e) => setRenewTrial(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span>Renouveler la période d'essai (4 mois au lieu de 2 mois)</span>
+                </label>
+              </div>
+            )}
+
+            {trialPeriodInfo && (
+              <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-green-900 mb-2">Période d'essai calculée</h4>
+                <div className="text-sm text-green-800">
+                  <p><strong>Durée :</strong> {trialPeriodInfo.description}</p>
+                  <p><strong>Date de fin :</strong> {formatDateFR(trialPeriodInfo.endDate)} ({trialPeriodInfo.endDate})</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
