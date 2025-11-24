@@ -21,6 +21,7 @@ interface Contract {
   };
   modele?: {
     nom: string;
+    type_contrat: string;
   };
 }
 
@@ -71,25 +72,40 @@ export function ContractsList() {
 
       if (profilsError) console.error('Erreur profils:', profilsError);
 
-      // 3. Récupère tous les modèles UNIQUES
+      // 3. Récupère tous les modèles UNIQUES avec type_contrat
       const modeleIds = [...new Set(contractsData.map(c => c.modele_id))];
       const { data: modeles, error: modelesError } = await supabase
         .from('modeles_contrats')
-        .select('id, nom')
+        .select('id, nom, type_contrat')
         .in('id', modeleIds);
 
       if (modelesError) console.error('Erreur modèles:', modelesError);
 
-      // 4. Fusionne les données - la date d'entrée vient de date_validation
+      // 4. Fusionne les données - la date d'entrée vient de variables.date_debut ou date_validation
       const contractsWithData: Contract[] = contractsData.map(contract => {
         const profilData = profils?.find(p => p.id === contract.profil_id);
         const modeleData = modeles?.find(m => m.id === contract.modele_id);
+
+        // Extraire la date de début depuis les variables si disponible
+        let dateEntree = contract.date_validation;
+        if (contract.variables) {
+          try {
+            const vars = typeof contract.variables === 'string'
+              ? JSON.parse(contract.variables)
+              : contract.variables;
+            if (vars.date_debut) {
+              dateEntree = vars.date_debut;
+            }
+          } catch (e) {
+            console.error('Erreur parsing variables:', e);
+          }
+        }
 
         return {
           ...contract,
           candidat: profilData ? profilData : undefined,
           modele: modeleData ? modeleData : undefined,
-          date_entree: contract.date_validation
+          date_entree: dateEntree
         };
       });
 
@@ -140,6 +156,31 @@ export function ContractsList() {
       <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold ${statusInfo.color} shadow-sm`}>
         <span className="text-base">{statusInfo.icon}</span>
         {statusInfo.label}
+      </span>
+    );
+  };
+
+  const getContractTypeBadge = (type: string) => {
+    const typeMap: Record<string, { color: string; icon: string }> = {
+      'CDI': {
+        color: 'bg-green-100 text-green-800 border border-green-300',
+        icon: '📄'
+      },
+      'CDD': {
+        color: 'bg-orange-100 text-orange-800 border border-orange-300',
+        icon: '📋'
+      },
+      'Avenant': {
+        color: 'bg-blue-100 text-blue-800 border border-blue-300',
+        icon: '📝'
+      }
+    };
+
+    const typeInfo = typeMap[type] || { color: 'bg-gray-100 text-gray-800 border border-gray-300', icon: '📄' };
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${typeInfo.color}`}>
+        <span>{typeInfo.icon}</span>
+        {type}
       </span>
     );
   };
@@ -285,6 +326,7 @@ export function ContractsList() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidat</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modèle</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date d'envoi</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date entrée</th>
@@ -312,6 +354,11 @@ export function ContractsList() {
                   {/* ✅ AFFICHAGE MODÈLE */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {contract.modele?.nom || 'N/A'}
+                  </td>
+
+                  {/* ✅ AFFICHAGE TYPE DE CONTRAT */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {contract.modele?.type_contrat ? getContractTypeBadge(contract.modele.type_contrat) : 'N/A'}
                   </td>
 
                   {/* ✅ AFFICHAGE STATUT */}
