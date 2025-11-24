@@ -152,13 +152,13 @@ export function ContractTemplates() {
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('modeles_contrats')
+        .from('modeles-contrats')
         .upload(filePath, formData.file);
 
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
-        .from('modeles_contrats')
+        .from('modeles-contrats')
         .getPublicUrl(filePath);
 
       const { error: dbError } = await supabase
@@ -191,7 +191,7 @@ export function ContractTemplates() {
       const fileName = fichierUrl.split('/').pop();
       if (fileName) {
         await supabase.storage
-          .from('modeles_contrats')
+          .from('modeles-contrats')
           .remove([fileName]);
       }
 
@@ -214,7 +214,7 @@ export function ContractTemplates() {
       if (!fileName) return;
 
       const { data, error } = await supabase.storage
-        .from('modeles_contrats')
+        .from('modeles-contrats')
         .download(fileName);
 
       if (error) throw error;
