@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Download, Eye, Trash2, Mail, Search, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Download, Eye, Trash2, Search, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ContractViewModal from './ContractViewModal';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -18,18 +18,15 @@ interface Contract {
     nom: string;
     prenom: string;
     email: string;
+    modele_contrat?: string;
+    secteur?: {
+      nom: string;
+    };
   };
   modele?: {
     nom: string;
     type_contrat: string;
   };
-}
-
-interface Candidate {
-  id: string;
-  nom: string;
-  prenom: string;
-  email: string;
 }
 
 export function ContractsList() {
@@ -63,11 +60,11 @@ export function ContractsList() {
         return;
       }
 
-      // 2. Récupère tous les profils (candidats) UNIQUES
+      // 2. Récupère tous les profils (candidats) UNIQUES avec modele_contrat et secteur
       const profilIds = [...new Set(contractsData.map(c => c.profil_id))];
       const { data: profils, error: profilsError } = await supabase
         .from('profil')
-        .select('id, nom, prenom, email')
+        .select('id, nom, prenom, email, modele_contrat, secteur:secteur_id(nom)')
         .in('id', profilIds);
 
       if (profilsError) console.error('Erreur profils:', profilsError);
@@ -254,10 +251,14 @@ export function ContractsList() {
       : '';
     const candidatEmail = contract.candidat?.email?.toLowerCase() || '';
     const modeleName = contract.modele?.nom?.toLowerCase() || '';
+    const modeleContratSigne = contract.candidat?.modele_contrat?.toLowerCase() || '';
+    const secteurName = contract.candidat?.secteur?.nom?.toLowerCase() || '';
 
     return candidatName.includes(query) ||
            candidatEmail.includes(query) ||
-           modeleName.includes(query);
+           modeleName.includes(query) ||
+           modeleContratSigne.includes(query) ||
+           secteurName.includes(query);
   });
 
   if (loading) {
@@ -327,6 +328,8 @@ export function ContractsList() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidat</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modèle</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modèle contrat signé</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Secteur</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date d'envoi</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date entrée</th>
@@ -359,6 +362,22 @@ export function ContractsList() {
                   {/* ✅ AFFICHAGE TYPE DE CONTRAT */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     {contract.modele?.type_contrat ? getContractTypeBadge(contract.modele.type_contrat) : 'N/A'}
+                  </td>
+
+                  {/* ✅ AFFICHAGE MODÈLE CONTRAT SIGNÉ */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {contract.candidat?.modele_contrat || 'N/A'}
+                  </td>
+
+                  {/* ✅ AFFICHAGE SECTEUR */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {contract.candidat?.secteur?.nom ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-100 text-teal-800 border border-teal-300">
+                        {contract.candidat.secteur.nom}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-500">N/A</span>
+                    )}
                   </td>
 
                   {/* ✅ AFFICHAGE STATUT */}

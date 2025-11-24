@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -7,7 +7,7 @@ interface Contract {
   profil_id: string;
   modele_id: string;
   statut: string;
-  variables: string;
+  variables?: string;
   date_signature?: string;
 }
 
@@ -19,8 +19,7 @@ interface ContractViewModalProps {
 
 export default function ContractViewModal({
   contract,
-  onClose,
-  onDownload
+  onClose
 }: ContractViewModalProps) {
   const [contractData, setContractData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -46,10 +45,10 @@ export default function ContractViewModal({
 
       console.log('📋 Contract data:', contractData);
 
-      // 2. Récupère le profil (candidat)
+      // 2. Récupère le profil (candidat) avec modele_contrat et secteur
       const { data: profil, error: profilError } = await supabase
         .from('profil')
-        .select('nom, prenom, email')
+        .select('nom, prenom, email, modele_contrat, secteur:secteur_id(nom)')
         .eq('id', contractData.profil_id)
         .single();
 
@@ -214,6 +213,24 @@ export default function ContractViewModal({
                     {contractData?.modele?.nom}
                   </p>
                 </div>
+                {contractData?.profil?.modele_contrat && (
+                  <div>
+                    <p className="text-sm text-gray-600">Modèle de contrat signé</p>
+                    <p className="font-medium text-gray-900">
+                      {contractData.profil.modele_contrat}
+                    </p>
+                  </div>
+                )}
+                {contractData?.profil?.secteur?.nom && (
+                  <div>
+                    <p className="text-sm text-gray-600">Secteur</p>
+                    <p className="font-medium text-gray-900">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-100 text-teal-800 border border-teal-300">
+                        {contractData.profil.secteur.nom}
+                      </span>
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
