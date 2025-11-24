@@ -413,10 +413,10 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         <StatCard
           icon={<Bell className="w-6 h-6" />}
           title="Notifications"
-          value={stats.notifications.non_lues}
-          subtitle={`${stats.notifications.urgentes} urgentes`}
-          trend={stats.notifications.urgentes > 0 ? 'up' : 'neutral'}
-          trendValue={`${stats.notifications.documents_expires} docs expirés`}
+          value={(stats.notifications.titre_sejour || 0) + (stats.notifications.visite_medicale || 0) + (stats.notifications.permis_conduire || 0) + (stats.notifications.contrat_cdd || 0)}
+          subtitle={`${stats.notifications.documents_expires} docs expirés`}
+          trend={((stats.notifications.titre_sejour || 0) + (stats.notifications.visite_medicale || 0) + (stats.notifications.permis_conduire || 0) + (stats.notifications.contrat_cdd || 0)) > 0 ? 'up' : 'neutral'}
+          trendValue={`Documents à renouveler`}
           color="amber"
         />
 
