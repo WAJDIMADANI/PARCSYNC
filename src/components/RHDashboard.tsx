@@ -390,35 +390,50 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          icon={<Users className="w-6 h-6" />}
-          title="Candidatures"
-          value={stats.candidates.total}
-          subtitle={`${stats.candidates.nouveau} nouveaux`}
-          trend={stats.candidates.recent7d > stats.candidates.recent24h ? 'up' : 'down'}
-          trendValue={`${stats.candidates.recent24h} aujourd'hui`}
-          color="blue"
-        />
+        <button
+          onClick={() => onNavigate?.('rh/candidats')}
+          className="text-left hover:scale-105 transition-transform"
+        >
+          <StatCard
+            icon={<Users className="w-6 h-6" />}
+            title="Candidatures"
+            value={stats.candidates.total}
+            subtitle={`${stats.candidates.nouveau} nouveaux`}
+            trend={stats.candidates.recent7d > stats.candidates.recent24h ? 'up' : 'down'}
+            trendValue={`${stats.candidates.recent24h} aujourd'hui`}
+            color="blue"
+          />
+        </button>
 
-        <StatCard
-          icon={<UserCheck className="w-6 h-6" />}
-          title="Salariés Actifs"
-          value={stats.employees.actifs}
-          subtitle={`${stats.employees.nouveaux_mois} ce mois`}
-          trend={stats.employees.nouveaux_mois > 0 ? 'up' : 'neutral'}
-          trendValue={`${stats.employees.periode_essai} en période d'essai`}
-          color="green"
-        />
+        <button
+          onClick={() => onNavigate?.('rh/salaries')}
+          className="text-left hover:scale-105 transition-transform"
+        >
+          <StatCard
+            icon={<UserCheck className="w-6 h-6" />}
+            title="Salariés Actifs"
+            value={stats.employees.actifs}
+            subtitle={`${stats.employees.nouveaux_mois} ce mois`}
+            trend={stats.employees.nouveaux_mois > 0 ? 'up' : 'neutral'}
+            trendValue={`${stats.employees.periode_essai} en période d'essai`}
+            color="green"
+          />
+        </button>
 
-        <StatCard
-          icon={<Bell className="w-6 h-6" />}
-          title="Notifications"
-          value={(stats.notifications.titre_sejour || 0) + (stats.notifications.visite_medicale || 0) + (stats.notifications.permis_conduire || 0) + (stats.notifications.contrat_cdd || 0)}
-          subtitle={`${stats.notifications.documents_expires} docs expirés`}
-          trend={((stats.notifications.titre_sejour || 0) + (stats.notifications.visite_medicale || 0) + (stats.notifications.permis_conduire || 0) + (stats.notifications.contrat_cdd || 0)) > 0 ? 'up' : 'neutral'}
-          trendValue={`Documents à renouveler`}
-          color="amber"
-        />
+        <button
+          onClick={() => onNavigate?.('rh/notifications')}
+          className="text-left hover:scale-105 transition-transform"
+        >
+          <StatCard
+            icon={<Bell className="w-6 h-6" />}
+            title="Notifications"
+            value={(stats.notifications.titre_sejour || 0) + (stats.notifications.visite_medicale || 0) + (stats.notifications.permis_conduire || 0) + (stats.notifications.contrat_cdd || 0)}
+            subtitle={`${stats.notifications.documents_expires} docs expirés`}
+            trend={((stats.notifications.titre_sejour || 0) + (stats.notifications.visite_medicale || 0) + (stats.notifications.permis_conduire || 0) + (stats.notifications.contrat_cdd || 0)) > 0 ? 'up' : 'neutral'}
+            trendValue={`Documents à renouveler`}
+            color="amber"
+          />
+        </button>
 
         <button
           onClick={() => onNavigate?.('rh/incidents')}
