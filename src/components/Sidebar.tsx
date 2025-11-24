@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone
 } from 'lucide-react';
 
 export type View =
@@ -17,6 +17,7 @@ export type View =
   | 'rh/incidents-historique'
   | 'rh/vivier'
   | 'rh/documents'
+  | 'rh/demandes'
   | 'parc/vehicules'
   | 'parc/ct-assurance'
   | 'parc/maintenance'
@@ -32,7 +33,8 @@ export type View =
   | 'admin/modeles'
   | 'admin/modeles-contrats'
   | 'admin/import-salarie'
-  | 'admin/import-bulk';
+  | 'admin/import-bulk'
+  | 'admin/utilisateurs';
 
 interface SidebarProps {
   currentView: View;
@@ -100,6 +102,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'rh/incidents', label: 'Incidents', icon: AlertCircle, enabled: true },
         { id: 'rh/incidents-historique', label: 'Historique incidents', icon: History, enabled: true },
         { id: 'rh/vivier', label: 'Vivier', icon: Archive, enabled: true },
+        { id: 'rh/demandes', label: 'Demandes', icon: Phone, enabled: true },
       ]
     },
     {
@@ -138,6 +141,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'admin/modeles-contrats', label: 'Modèles Contrats', icon: FileText, enabled: true },
         { id: 'admin/import-salarie', label: 'Import Salarié Test', icon: UserPlus, enabled: true },
         { id: 'admin/import-bulk', label: 'Import en Masse', icon: Upload, enabled: true },
+        { id: 'admin/utilisateurs', label: 'Utilisateurs', icon: Users, enabled: true },
       ]
     },
   ];

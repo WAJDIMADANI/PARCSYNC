@@ -15,6 +15,7 @@ import {
   XCircle,
   Calendar,
   Bell,
+  Phone,
 } from 'lucide-react';
 
 interface Stats {
@@ -50,6 +51,11 @@ interface Stats {
     par_type: { type: string; count: number }[];
     recents: any[];
     top_employes: { nom: string; prenom: string; count: number }[];
+  };
+  demandes: {
+    total: number;
+    en_attente: number;
+    urgentes: number;
   };
 }
 
@@ -91,6 +97,11 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       par_type: [],
       recents: [],
       top_employes: [],
+    },
+    demandes: {
+      total: 0,
+      en_attente: 0,
+      urgentes: 0,
     },
   });
   const [loading, setLoading] = useState(true);
@@ -141,6 +152,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       fetchEmployeesStats(),
       fetchNotificationsStats(),
       fetchIncidentsStats(),
+      fetchDemandesStats(),
     ]);
     setLoading(false);
   };
@@ -365,6 +377,40 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
     }
   };
 
+  const fetchDemandesStats = async () => {
+    try {
+      const { data: demandes } = await supabase
+        .from('demande_standard')
+        .select('statut, priorite');
+
+      if (!demandes) {
+        setStats((prev) => ({
+          ...prev,
+          demandes: {
+            total: 0,
+            en_attente: 0,
+            urgentes: 0,
+          },
+        }));
+        return;
+      }
+
+      const en_attente = demandes.filter((d) => d.statut === 'en_attente').length;
+      const urgentes = demandes.filter((d) => d.statut === 'en_attente' && d.priorite === 'urgente').length;
+
+      setStats((prev) => ({
+        ...prev,
+        demandes: {
+          total: demandes.length,
+          en_attente,
+          urgentes,
+        },
+      }));
+    } catch (error) {
+      console.error('Error fetching demandes stats:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -389,7 +435,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <button
           onClick={() => onNavigate?.('rh/candidats')}
           className="text-left hover:scale-105 transition-transform"
@@ -417,6 +463,21 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             trend={stats.employees.nouveaux_mois > 0 ? 'up' : 'neutral'}
             trendValue={`${stats.employees.periode_essai} en période d'essai`}
             color="green"
+          />
+        </button>
+
+        <button
+          onClick={() => onNavigate?.('rh/demandes')}
+          className="text-left hover:scale-105 transition-transform"
+        >
+          <StatCard
+            icon={<Phone className="w-6 h-6" />}
+            title="Demandes"
+            value={stats.demandes.total}
+            subtitle={`${stats.demandes.en_attente} en attente`}
+            trend={stats.demandes.urgentes > 0 ? 'up' : 'neutral'}
+            trendValue={`${stats.demandes.urgentes} urgentes`}
+            color="blue"
           />
         </button>
 

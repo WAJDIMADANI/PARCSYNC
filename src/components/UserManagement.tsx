@@ -1,0 +1,445 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { PermissionGuard } from './PermissionGuard';
+import { Users, UserPlus, X, Save, Trash2, CheckCircle, XCircle, Edit2, Shield } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
+
+interface AppUser {
+  id: string;
+  auth_user_id: string | null;
+  email: string;
+  nom: string;
+  prenom: string;
+  actif: boolean;
+  created_at: string;
+}
+
+interface UserPermission {
+  id: string;
+  utilisateur_id: string;
+  section_id: string;
+  actif: boolean;
+}
+
+const AVAILABLE_PERMISSIONS = [
+  { section: 'RH', permissions: [
+    { id: 'rh/candidats', label: 'Candidats' },
+    { id: 'rh/salaries', label: 'Salariés' },
+    { id: 'rh/contrats', label: 'Contrats' },
+    { id: 'rh/courriers', label: 'Courriers' },
+    { id: 'rh/alertes', label: 'Alertes' },
+    { id: 'rh/notifications', label: 'Notifications' },
+    { id: 'rh/incidents', label: 'Incidents' },
+    { id: 'rh/incidents-historique', label: 'Historique incidents' },
+    { id: 'rh/vivier', label: 'Vivier' },
+    { id: 'rh/demandes', label: 'Demandes' },
+  ]},
+  { section: 'Parc', permissions: [
+    { id: 'parc/vehicules', label: 'Véhicules' },
+    { id: 'parc/ct-assurance', label: 'CT & Assurance' },
+    { id: 'parc/maintenance', label: 'Maintenance' },
+  ]},
+  { section: 'Administration', permissions: [
+    { id: 'admin/sites', label: 'Sites' },
+    { id: 'admin/secteurs', label: 'Secteurs' },
+    { id: 'admin/postes', label: 'Postes' },
+    { id: 'admin/modeles', label: 'Modèles' },
+    { id: 'admin/modeles-contrats', label: 'Modèles de contrats' },
+    { id: 'admin/utilisateurs', label: 'Utilisateurs' },
+  ]},
+];
+
+export function UserManagement() {
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [permissions, setPermissions] = useState<UserPermission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
+  const [email, setEmail] = useState('');
+  const [nom, setNom] = useState('');
+  const [prenom, setPrenom] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchPermissions();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('app_utilisateur')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (err: any) {
+      console.error('Error fetching users:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPermissions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('utilisateur_permissions')
+        .select('*');
+
+      if (error) throw error;
+      setPermissions(data || []);
+    } catch (err: any) {
+      console.error('Error fetching permissions:', err);
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSaving(true);
+
+    try {
+      const { error: insertError } = await supabase
+        .from('app_utilisateur')
+        .insert({
+          email: email.trim(),
+          nom: nom.trim(),
+          prenom: prenom.trim(),
+          actif: true,
+        });
+
+      if (insertError) throw insertError;
+
+      setShowAddModal(false);
+      setEmail('');
+      setNom('');
+      setPrenom('');
+      await fetchUsers();
+    } catch (err: any) {
+      console.error('Error adding user:', err);
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('app_utilisateur')
+        .update({ actif: !currentStatus })
+        .eq('id', userId);
+
+      if (error) throw error;
+      await fetchUsers();
+    } catch (err: any) {
+      console.error('Error toggling user status:', err);
+      setError(err.message);
+    }
+  };
+
+  const openPermissionsModal = (user: AppUser) => {
+    setSelectedUser(user);
+    setShowPermissionsModal(true);
+  };
+
+  const getUserPermissions = (userId: string): string[] => {
+    return permissions
+      .filter(p => p.utilisateur_id === userId && p.actif)
+      .map(p => p.section_id);
+  };
+
+  const hasPermission = (userId: string, permissionId: string): boolean => {
+    return getUserPermissions(userId).includes(permissionId);
+  };
+
+  const togglePermission = async (userId: string, permissionId: string) => {
+    try {
+      const existing = permissions.find(
+        p => p.utilisateur_id === userId && p.section_id === permissionId
+      );
+
+      if (existing) {
+        const { error } = await supabase
+          .from('utilisateur_permissions')
+          .update({ actif: !existing.actif })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('utilisateur_permissions')
+          .insert({
+            utilisateur_id: userId,
+            section_id: permissionId,
+            actif: true,
+          });
+
+        if (error) throw error;
+      }
+
+      await fetchPermissions();
+    } catch (err: any) {
+      console.error('Error toggling permission:', err);
+      setError(err.message);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <LoadingSpinner size="lg" text="Chargement des utilisateurs..." />
+      </div>
+    );
+  }
+
+  return (
+    <PermissionGuard permission="admin/utilisateurs">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Gestion des utilisateurs</h1>
+            <p className="text-slate-600 mt-1">Gérez les utilisateurs et leurs permissions</p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium"
+          >
+            <UserPlus className="w-5 h-5" />
+            Ajouter un utilisateur
+          </button>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Utilisateur
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Permissions
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {users.map((user) => (
+                  <tr key={user.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary-100 rounded-lg">
+                          <Users className="w-5 h-5 text-primary-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-900">
+                            {user.prenom} {user.nom}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm text-slate-600">{user.email}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => openPermissionsModal(user)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        <Shield className="w-4 h-4" />
+                        {getUserPermissions(user.id).length} permissions
+                      </button>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => toggleUserStatus(user.id, user.actif)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          user.actif
+                            ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                            : 'bg-red-50 text-red-700 hover:bg-red-100'
+                        }`}
+                      >
+                        {user.actif ? (
+                          <>
+                            <CheckCircle className="w-4 h-4" />
+                            Actif
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-4 h-4" />
+                            Inactif
+                          </>
+                        )}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => openPermissionsModal(user)}
+                        className="text-primary-600 hover:text-primary-700 font-medium text-sm"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-slate-900">Ajouter un utilisateur</h3>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddUser} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Prénom
+                  </label>
+                  <input
+                    type="text"
+                    value={prenom}
+                    onChange={(e) => setPrenom(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Nom
+                  </label>
+                  <input
+                    type="text"
+                    value={nom}
+                    onChange={(e) => setNom(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium disabled:opacity-50"
+                  >
+                    {saving ? 'Création...' : 'Créer'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {showPermissionsModal && selectedUser && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">
+                    Permissions de {selectedUser.prenom} {selectedUser.nom}
+                  </h3>
+                  <p className="text-sm text-slate-600 mt-1">{selectedUser.email}</p>
+                </div>
+                <button
+                  onClick={() => setShowPermissionsModal(false)}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-6">
+                  {AVAILABLE_PERMISSIONS.map((group) => (
+                    <div key={group.section}>
+                      <h4 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider">
+                        {group.section}
+                      </h4>
+                      <div className="space-y-2">
+                        {group.permissions.map((perm) => (
+                          <label
+                            key={perm.id}
+                            className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={hasPermission(selectedUser.id, perm.id)}
+                              onChange={() => togglePermission(selectedUser.id, perm.id)}
+                              className="w-5 h-5 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                            />
+                            <span className="text-sm font-medium text-slate-700">
+                              {perm.label}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-200">
+                <button
+                  onClick={() => setShowPermissionsModal(false)}
+                  className="w-full px-4 py-2.5 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </PermissionGuard>
+  );
+}

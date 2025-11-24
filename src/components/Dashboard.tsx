@@ -27,6 +27,8 @@ import { ImportSalariesBulk } from './ImportSalariesBulk';
 import { NotificationsList } from './NotificationsList';
 import { IncidentsList } from './IncidentsList';
 import { IncidentHistory } from './IncidentHistory';
+import { UserManagement } from './UserManagement';
+import { DemandesPage } from './DemandesPage';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -62,6 +64,8 @@ export function Dashboard() {
         return <IncidentHistory />;
       case 'rh/vivier':
         return <VivierList />;
+      case 'rh/demandes':
+        return <DemandesPage />;
       case 'parc/vehicules':
         return <VehicleList />;
       case 'parc/ct-assurance':
@@ -104,6 +108,8 @@ export function Dashboard() {
         return <ImportSalarieTest />;
       case 'admin/import-bulk':
         return <ImportSalariesBulk />;
+      case 'admin/utilisateurs':
+        return <UserManagement />;
       default:
         return <CandidateList />;
     }
@@ -127,6 +133,7 @@ export function Dashboard() {
                 {view === 'rh/alertes' && 'Alertes'}
                 {view === 'rh/notifications' && 'Notifications'}
                 {view === 'rh/vivier' && 'Vivier'}
+                {view === 'rh/demandes' && 'Demandes'}
                 {view === 'parc/vehicules' && 'Véhicules'}
                 {view === 'parc/ct-assurance' && 'CT & Assurance'}
                 {view === 'parc/maintenance' && 'Maintenance & Garage'}
@@ -142,6 +149,7 @@ export function Dashboard() {
                 {view === 'admin/modeles' && 'Modèles'}
                 {view === 'admin/modeles-contrats' && 'Modèles de Contrats'}
                 {view === 'admin/import-salarie' && 'Import Salarié Test'}
+                {view === 'admin/utilisateurs' && 'Gestion des Utilisateurs'}
               </h2>
             </div>
 
