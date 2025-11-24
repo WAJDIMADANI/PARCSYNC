@@ -95,7 +95,7 @@ export default function ImportantDocumentUpload({ profilId, onClose, onSuccess }
           owner_type: 'profil',
           type_document: documentType,
           file_name: documentName || selectedFile.name,
-          fichier_url: publicUrl,
+          file_url: publicUrl,
           storage_path: filePath,
           bucket: 'documents',
           date_expiration: expirationDate || null,
