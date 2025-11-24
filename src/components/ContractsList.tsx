@@ -19,6 +19,7 @@ interface Contract {
     prenom: string;
     email: string;
     modele_contrat?: string;
+    date_entree?: string;
     secteur?: {
       nom: string;
     };
@@ -64,7 +65,7 @@ export function ContractsList() {
       const profilIds = [...new Set(contractsData.map(c => c.profil_id))];
       const { data: profils, error: profilsError } = await supabase
         .from('profil')
-        .select('id, nom, prenom, email, modele_contrat, secteur:secteur_id(nom)')
+        .select('id, nom, prenom, email, modele_contrat, date_entree, secteur:secteur_id(nom)')
         .in('id', profilIds);
 
       if (profilsError) console.error('Erreur profils:', profilsError);
@@ -78,31 +79,16 @@ export function ContractsList() {
 
       if (modelesError) console.error('Erreur modèles:', modelesError);
 
-      // 4. Fusionne les données - la date d'entrée vient de variables.date_debut ou date_validation
+      // 4. Fusionne les données - la date d'entrée vient du profil du salarié
       const contractsWithData: Contract[] = contractsData.map(contract => {
         const profilData = profils?.find(p => p.id === contract.profil_id);
         const modeleData = modeles?.find(m => m.id === contract.modele_id);
-
-        // Extraire la date de début depuis les variables si disponible
-        let dateEntree = contract.date_validation;
-        if (contract.variables) {
-          try {
-            const vars = typeof contract.variables === 'string'
-              ? JSON.parse(contract.variables)
-              : contract.variables;
-            if (vars.date_debut) {
-              dateEntree = vars.date_debut;
-            }
-          } catch (e) {
-            console.error('Erreur parsing variables:', e);
-          }
-        }
 
         return {
           ...contract,
           candidat: profilData ? profilData : undefined,
           modele: modeleData ? modeleData : undefined,
-          date_entree: dateEntree
+          date_entree: profilData?.date_entree || null
         };
       });
 
