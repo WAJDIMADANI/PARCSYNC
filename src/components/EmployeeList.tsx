@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, getStorageUrl } from '../lib/supabase';
-import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload } from 'lucide-react';
+import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload, Trash2 } from 'lucide-react';
 import EmployeeHistory from './EmployeeHistory';
 import EmployeeDeparture from './EmployeeDeparture';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -690,6 +690,10 @@ function EmployeeDetailModal({
   const [sendingDocuments, setSendingDocuments] = useState(false);
   const [sendDocumentsSuccess, setSendDocumentsSuccess] = useState(false);
   const [sendDocumentsError, setSendDocumentsError] = useState('');
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  const [deletingDocument, setDeletingDocument] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [isEditingDates, setIsEditingDates] = useState(false);
   const [editedCertificatExpiration, setEditedCertificatExpiration] = useState(employee.date_fin_visite_medicale || '');
   const [editedTitreSejourExpiration, setEditedTitreSejourExpiration] = useState(employee.titre_sejour_fin_validite || '');
@@ -931,6 +935,53 @@ function EmployeeDetailModal({
       setSendDocumentsError(error instanceof Error ? error.message : 'Erreur lors de l\'envoi des documents');
     } finally {
       setSendingDocuments(false);
+    }
+  };
+
+  const handleDeleteDocument = async () => {
+    if (!documentToDelete) return;
+
+    setDeletingDocument(true);
+    setDeleteError('');
+
+    try {
+      // Delete from storage if storage_path exists
+      if (documentToDelete.storage_path) {
+        const { error: storageError } = await supabase.storage
+          .from(documentToDelete.bucket || 'documents')
+          .remove([documentToDelete.storage_path]);
+
+        if (storageError) {
+          console.error('Erreur suppression fichier storage:', storageError);
+          // Continue anyway to delete database record
+        }
+      }
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('document')
+        .delete()
+        .eq('id', documentToDelete.id);
+
+      if (dbError) throw dbError;
+
+      // Refresh documents list
+      await fetchDocuments();
+
+      // Close modal and show success
+      setDocumentToDelete(null);
+      setDeleteSuccess(true);
+
+      // Auto-close success notification after 2 seconds
+      setTimeout(() => {
+        setDeleteSuccess(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Erreur suppression document:', error);
+      setDeleteError(error instanceof Error ? error.message : 'Erreur lors de la suppression du document');
+      setDocumentToDelete(null);
+    } finally {
+      setDeletingDocument(false);
     }
   };
 
@@ -1655,16 +1706,26 @@ function EmployeeDetailModal({
                         Téléchargé le {new Date(doc.created_at).toLocaleDateString('fr-FR')}
                       </p>
                     </div>
-                    <a
-                      href={doc.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium text-xs shadow-sm hover:shadow-md flex items-center gap-1.5 transform hover:scale-105"
-                      title="Voir le document"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Voir
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={doc.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium text-xs shadow-sm hover:shadow-md flex items-center gap-1.5 transform hover:scale-105"
+                        title="Voir le document"
+                      >
+                        <FileText className="w-4 h-4" />
+                        Voir
+                      </a>
+                      <button
+                        onClick={() => setDocumentToDelete(doc)}
+                        className="px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium text-xs shadow-sm hover:shadow-md flex items-center gap-1.5 transform hover:scale-105"
+                        title="Supprimer le document"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Supprimer
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2502,6 +2563,154 @@ function EmployeeDetailModal({
             </div>
             <button
               onClick={() => setSendDocumentsError('')}
+              className="w-full px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl hover:from-gray-700 hover:to-gray-800 transition-all font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Delete Document Confirmation Modal */}
+    {documentToDelete && (
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[70] animate-fade-in">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden transform animate-scale-in">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Confirmer la suppression</h3>
+                <p className="text-red-100 text-sm">Cette action est irréversible</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setDocumentToDelete(null)}
+              disabled={deletingDocument}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 space-y-6">
+            {/* Warning */}
+            <div className="bg-red-50 border-l-4 border-red-500 rounded-r-lg p-4">
+              <div className="flex gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-900 mb-1">Attention</p>
+                  <p className="text-sm text-red-700">
+                    Vous êtes sur le point de supprimer définitivement ce document. Cette action ne peut pas être annulée.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Document Info */}
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-gray-900 text-lg mb-1">{documentToDelete.type_document}</p>
+                  <p className="text-sm text-gray-600">
+                    Téléchargé le {new Date(documentToDelete.created_at).toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </p>
+                  {documentToDelete.file_name && (
+                    <p className="text-xs text-gray-500 mt-1 truncate">
+                      Fichier : {documentToDelete.file_name}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Confirmation Text */}
+            <div className="text-center">
+              <p className="text-gray-700">
+                Êtes-vous sûr de vouloir supprimer ce document ?
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-gray-200 bg-gray-50 px-6 py-4 flex items-center justify-end gap-3">
+            <button
+              onClick={() => setDocumentToDelete(null)}
+              disabled={deletingDocument}
+              className="px-6 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleDeleteDocument}
+              disabled={deletingDocument}
+              className="px-6 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {deletingDocument ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Supprimer définitivement
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Delete Success Notification */}
+    {deleteSuccess && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[70] animate-fade-in">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 transform animate-scale-in">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mb-6 animate-bounce-once shadow-lg">
+              <Check className="w-10 h-10 text-white" strokeWidth={3} />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">Document supprimé !</h3>
+            <p className="text-gray-600 mb-6">
+              Le document a été supprimé avec succès de la base de données et du stockage.
+            </p>
+            <div className="w-full h-2 bg-gradient-to-r from-green-400 to-green-600 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Delete Error Notification */}
+    {deleteError && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[70] animate-fade-in">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 transform animate-scale-in">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mb-6 shadow-lg">
+              <X className="w-10 h-10 text-white" strokeWidth={3} />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">Erreur de suppression</h3>
+            <p className="text-gray-600 mb-2">
+              Une erreur s'est produite lors de la suppression du document :
+            </p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 w-full">
+              <p className="text-sm text-red-800 font-medium">
+                {deleteError}
+              </p>
+            </div>
+            <button
+              onClick={() => setDeleteError('')}
               className="w-full px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl hover:from-gray-700 hover:to-gray-800 transition-all font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               Fermer
