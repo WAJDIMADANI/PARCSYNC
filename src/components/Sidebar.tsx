@@ -158,14 +158,14 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
           </div>
           <div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-              PARC SYNC
+              MAD IMPACT
             </h1>
             <p className="text-xs font-medium text-accent-400">Vague 2 - Flotte</p>
           </div>
         </div>
       </div>
 
-      <nav className="p-4 space-y-1">
+      <nav className="p-4 space-y-1 pb-20">
         {navigation.map((item) => {
           if (isSection(item)) {
             const isExpanded = expandedSections.has(item.id);
@@ -248,10 +248,10 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         })}
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-900 to-transparent">
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-3 border border-slate-700/50">
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-slate-900 to-transparent">
+        <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-2 border border-slate-700/50">
           <p className="text-xs text-slate-400 text-center font-medium">
-            Propulsé par PARC SYNC
+            Propulsé par MAD IMPACT
           </p>
         </div>
       </div>
