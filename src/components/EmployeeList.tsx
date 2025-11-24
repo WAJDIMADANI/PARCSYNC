@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, getStorageUrl } from '../lib/supabase';
-import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload, Trash2 } from 'lucide-react';
+import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload } from 'lucide-react';
 import EmployeeHistory from './EmployeeHistory';
 import EmployeeDeparture from './EmployeeDeparture';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -699,7 +699,6 @@ function EmployeeDetailModal({
   const [candidatTypePiece, setCandidatTypePiece] = useState<string | null>(null);
   const [candidatDateFinValidite, setCandidatDateFinValidite] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [importantDocuments, setImportantDocuments] = useState<Document[]>([]);
 
   // Tab system
   const [activeTab, setActiveTab] = useState<'overview' | 'personal' | 'address' | 'banking'>('overview');
@@ -743,7 +742,6 @@ function EmployeeDetailModal({
     onOpen();
     fetchDocuments();
     fetchCandidatInfo();
-    fetchImportantDocuments();
   }, []);
 
   const fetchCandidatInfo = async () => {
@@ -820,49 +818,6 @@ function EmployeeDetailModal({
     }
   };
 
-  const fetchImportantDocuments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('document')
-        .select('*')
-        .eq('profil_id', currentEmployee.id)
-        .in('type_document', ['certificat_medical', 'titre_sejour', 'piece_identite', 'permis_conduire', 'autre'])
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setImportantDocuments(data || []);
-    } catch (error) {
-      console.error('Erreur chargement documents importants:', error);
-    }
-  };
-
-  const deleteImportantDocument = async (docId: string, storagePath: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) return;
-
-    try {
-      // Delete from storage
-      if (storagePath) {
-        await supabase.storage
-          .from('documents')
-          .remove([storagePath]);
-      }
-
-      // Delete from database
-      const { error } = await supabase
-        .from('document')
-        .delete()
-        .eq('id', docId);
-
-      if (error) throw error;
-
-      // Refresh documents
-      await fetchImportantDocuments();
-      await refreshEmployee();
-    } catch (error) {
-      console.error('Erreur suppression document:', error);
-      alert('Erreur lors de la suppression du document.');
-    }
-  };
 
   const fetchDocuments = async () => {
     try {
@@ -1625,70 +1580,6 @@ function EmployeeDetailModal({
                 );
               })()}
 
-              {/* Uploaded Important Documents */}
-              {importantDocuments.length > 0 && (
-                <div className="pt-3 border-t border-purple-200">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Documents uploadés</p>
-                  <div className="space-y-2">
-                    {importantDocuments.map((doc) => {
-                      const docTypeLabels: Record<string, string> = {
-                        certificat_medical: 'Certificat médical',
-                        titre_sejour: 'Titre de séjour',
-                        piece_identite: 'Pièce d\'identité',
-                        permis_conduire: 'Permis de conduire',
-                        autre: 'Autre'
-                      };
-                      const docTypeLabel = docTypeLabels[doc.type_document || ''] || doc.type_document;
-
-                      return (
-                        <div key={doc.id} className="bg-white rounded-lg p-3 shadow-sm border border-purple-100 hover:border-purple-300 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <FileText className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">
-                                  {doc.file_name || 'Document sans nom'}
-                                </p>
-                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                                  <span className="font-medium text-purple-600">{docTypeLabel}</span>
-                                  {doc.date_expiration && (
-                                    <>
-                                      <span>•</span>
-                                      <span>Expire le {new Date(doc.date_expiration).toLocaleDateString('fr-FR')}</span>
-                                    </>
-                                  )}
-                                  <span>•</span>
-                                  <span>Ajouté le {new Date(doc.created_at).toLocaleDateString('fr-FR')}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 ml-2">
-                              <button
-                                onClick={async () => {
-                                  if (doc.fichier_url) {
-                                    window.open(doc.fichier_url, '_blank');
-                                  }
-                                }}
-                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                title="Ouvrir le document"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => deleteImportantDocument(doc.id, doc.storage_path || '')}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Supprimer le document"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -2626,7 +2517,7 @@ function EmployeeDetailModal({
         profilId={currentEmployee.id}
         onClose={() => setShowUploadModal(false)}
         onSuccess={async () => {
-          await fetchImportantDocuments();
+          await fetchDocuments();
           await refreshEmployee();
         }}
       />

@@ -91,7 +91,8 @@ export default function ImportantDocumentUpload({ profilId, onClose, onSuccess }
       const { error: insertError } = await supabase
         .from('document')
         .insert({
-          profil_id: profilId,
+          owner_id: profilId,
+          owner_type: 'profil',
           type_document: documentType,
           file_name: documentName || selectedFile.name,
           fichier_url: publicUrl,
