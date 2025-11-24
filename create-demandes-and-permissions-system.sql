@@ -72,31 +72,6 @@ CREATE POLICY "Authenticated users can view users"
   TO authenticated
   USING (true);
 
--- Policy: Seuls les admins peuvent créer/modifier/supprimer des utilisateurs
--- (Admin = a la permission 'admin/utilisateurs')
-CREATE POLICY "Admins can manage users"
-  ON app_utilisateur
-  FOR ALL
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM utilisateur_permissions up
-      INNER JOIN app_utilisateur au ON au.id = up.utilisateur_id
-      WHERE au.auth_user_id = auth.uid()
-      AND up.section_id = 'admin/utilisateurs'
-      AND up.actif = true
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM utilisateur_permissions up
-      INNER JOIN app_utilisateur au ON au.id = up.utilisateur_id
-      WHERE au.auth_user_id = auth.uid()
-      AND up.section_id = 'admin/utilisateurs'
-      AND up.actif = true
-    )
-  );
-
 -- =====================================================
 -- 2. TABLE: utilisateur_permissions
 -- =====================================================
@@ -124,30 +99,6 @@ CREATE POLICY "Authenticated users can view all permissions"
   FOR SELECT
   TO authenticated
   USING (true);
-
--- Policy: Seuls les admins peuvent gérer les permissions
-CREATE POLICY "Admins can manage permissions"
-  ON utilisateur_permissions
-  FOR ALL
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM utilisateur_permissions up
-      INNER JOIN app_utilisateur au ON au.id = up.utilisateur_id
-      WHERE au.auth_user_id = auth.uid()
-      AND up.section_id = 'admin/utilisateurs'
-      AND up.actif = true
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM utilisateur_permissions up
-      INNER JOIN app_utilisateur au ON au.id = up.utilisateur_id
-      WHERE au.auth_user_id = auth.uid()
-      AND up.section_id = 'admin/utilisateurs'
-      AND up.actif = true
-    )
-  );
 
 -- =====================================================
 -- 3. TABLE: demande_standard
@@ -349,6 +300,58 @@ COMMENT ON TABLE utilisateur_permissions IS 'Permissions granulaires par section
 COMMENT ON TABLE demande_standard IS 'Demandes créées par les standardistes lors des appels téléphoniques des salariés';
 COMMENT ON VIEW utilisateur_avec_permissions IS 'Vue facilitant la récupération d''un utilisateur avec toutes ses permissions';
 COMMENT ON FUNCTION get_demandes_stats IS 'Fonction retournant les statistiques des demandes pour le dashboard';
+
+-- =====================================================
+-- 8. POLICIES ADMIN (à ajouter après création des tables)
+-- =====================================================
+
+-- Policy: Seuls les admins peuvent créer/modifier/supprimer des utilisateurs
+CREATE POLICY "Admins can manage users"
+  ON app_utilisateur
+  FOR ALL
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM utilisateur_permissions up
+      INNER JOIN app_utilisateur au ON au.id = up.utilisateur_id
+      WHERE au.auth_user_id = auth.uid()
+      AND up.section_id = 'admin/utilisateurs'
+      AND up.actif = true
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM utilisateur_permissions up
+      INNER JOIN app_utilisateur au ON au.id = up.utilisateur_id
+      WHERE au.auth_user_id = auth.uid()
+      AND up.section_id = 'admin/utilisateurs'
+      AND up.actif = true
+    )
+  );
+
+-- Policy: Seuls les admins peuvent gérer les permissions
+CREATE POLICY "Admins can manage permissions"
+  ON utilisateur_permissions
+  FOR ALL
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM utilisateur_permissions up
+      INNER JOIN app_utilisateur au ON au.id = up.utilisateur_id
+      WHERE au.auth_user_id = auth.uid()
+      AND up.section_id = 'admin/utilisateurs'
+      AND up.actif = true
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM utilisateur_permissions up
+      INNER JOIN app_utilisateur au ON au.id = up.utilisateur_id
+      WHERE au.auth_user_id = auth.uid()
+      AND up.section_id = 'admin/utilisateurs'
+      AND up.actif = true
+    )
+  );
 
 -- =====================================================
 -- FIN DU SCRIPT
