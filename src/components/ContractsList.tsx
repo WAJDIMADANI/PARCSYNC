@@ -325,9 +325,7 @@ export function ContractsList() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidat</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modèle</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salarié</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modèle contrat signé</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Secteur</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
@@ -340,7 +338,7 @@ export function ContractsList() {
             <tbody className="divide-y divide-gray-200 bg-white">
               {filteredContracts.map((contract) => (
                 <tr key={contract.id} className="hover:bg-gray-50">
-                  {/* ✅ AFFICHAGE CANDIDAT */}
+                  {/* ✅ AFFICHAGE SALARIÉ */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm">
                       <p className="font-medium text-gray-900">
@@ -352,16 +350,6 @@ export function ContractsList() {
                         {contract.candidat?.email || 'N/A'}
                       </p>
                     </div>
-                  </td>
-
-                  {/* ✅ AFFICHAGE MODÈLE */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {contract.modele?.nom || 'N/A'}
-                  </td>
-
-                  {/* ✅ AFFICHAGE TYPE DE CONTRAT */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {contract.modele?.type_contrat ? getContractTypeBadge(contract.modele.type_contrat) : 'N/A'}
                   </td>
 
                   {/* ✅ AFFICHAGE MODÈLE CONTRAT SIGNÉ */}
