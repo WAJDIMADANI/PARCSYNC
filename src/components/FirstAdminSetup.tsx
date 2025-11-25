@@ -53,6 +53,7 @@ export function FirstAdminSetup({ onComplete }: FirstAdminSetupProps) {
         'rh/alertes',
         'rh/notifications',
         'rh/incidents',
+        'rh/incidents-historique',
         'rh/vivier',
         'rh/demandes',
         'parc/vehicules',
