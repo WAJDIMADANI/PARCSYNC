@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { PermissionGuard } from './PermissionGuard';
-import { Phone, Search, X, Save, AlertCircle, Clock, CheckCircle, Edit2, Filter, User } from 'lucide-react';
+import { Phone, Search, X, Save, AlertCircle, Clock, CheckCircle, Edit2, Filter, User, History, ArrowRight, Eye } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface Profil {
@@ -73,6 +73,17 @@ export function DemandesPage() {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // NOUVEAUX STATES - Historique Salarié
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [selectedProfilForHistory, setSelectedProfilForHistory] = useState<Profil | null>(null);
+  const [employeeHistory, setEmployeeHistory] = useState<Demande[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // NOUVEAUX STATES - Confirmation Statut
+  const [showStatusConfirmModal, setShowStatusConfirmModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{demandeId: string, demande: Demande, oldStatut: string, newStatut: string} | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
     fetchDemandes();
@@ -286,6 +297,85 @@ export function DemandesPage() {
 
   const demandesEnAttente = demandes.filter((d) => d.statut === 'en_attente').length;
 
+  // NOUVELLE FONCTION - Chargement historique
+  const fetchEmployeeHistory = async (profilId: string) => {
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from('demande_standard')
+        .select(`
+          *,
+          creator:created_by(nom, prenom),
+          treater:treated_by(nom, prenom)
+        `)
+        .eq('profil_id', profilId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setEmployeeHistory(data || []);
+    } catch (err: any) {
+      console.error('Error fetching employee history:', err);
+      setError(err.message);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // NOUVELLE FONCTION - Ouverture modal historique
+  const openEmployeeHistory = (profil: Profil) => {
+    setSelectedProfilForHistory(profil);
+    setShowHistoryModal(true);
+    fetchEmployeeHistory(profil.id);
+  };
+
+  // NOUVELLE FONCTION - Fermeture modal historique
+  const closeHistoryModal = () => {
+    setShowHistoryModal(false);
+    setSelectedProfilForHistory(null);
+    setEmployeeHistory([]);
+  };
+
+  // NOUVELLE FONCTION - Demande de changement statut
+  const handleStatusChangeRequest = (demande: Demande, newStatut: string) => {
+    setPendingStatusChange({
+      demandeId: demande.id,
+      demande: demande,
+      oldStatut: demande.statut,
+      newStatut: newStatut
+    });
+    setShowStatusConfirmModal(true);
+  };
+
+  // NOUVELLE FONCTION - Confirmation changement
+  const confirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+
+    setUpdatingStatus(true);
+    try {
+      await updateStatut(pendingStatusChange.demandeId, pendingStatusChange.newStatut as any);
+      setShowStatusConfirmModal(false);
+      setPendingStatusChange(null);
+    } catch (err: any) {
+      console.error('Error confirming status change:', err);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // NOUVELLE FONCTION - Annulation changement
+  const cancelStatusChange = () => {
+    setShowStatusConfirmModal(false);
+    setPendingStatusChange(null);
+  };
+
+  // Calculer les statistiques d'historique
+  const historyStats = {
+    total: employeeHistory.length,
+    enAttente: employeeHistory.filter(d => d.statut === 'en_attente').length,
+    enCours: employeeHistory.filter(d => d.statut === 'en_cours').length,
+    traitees: employeeHistory.filter(d => d.statut === 'traitee').length
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -411,14 +501,19 @@ export function DemandesPage() {
                     </td>
                     <td className="px-6 py-4">
                       {demande.profil ? (
-                        <div>
-                          <p className="font-semibold text-slate-900">
-                            {demande.profil.prenom} {demande.profil.nom}
-                          </p>
-                          {demande.profil.tel && (
-                            <p className="text-xs text-slate-500">{demande.profil.tel}</p>
-                          )}
-                        </div>
+                        <button
+                          onClick={() => openEmployeeHistory(demande.profil!)}
+                          className="text-left hover:bg-slate-100 rounded-lg p-2 -m-2 transition-colors w-full"
+                        >
+                          <div>
+                            <p className="font-semibold text-slate-900 hover:text-primary-600 transition-colors">
+                              {demande.profil.prenom} {demande.profil.nom}
+                            </p>
+                            {demande.profil.tel && (
+                              <p className="text-xs text-slate-500">{demande.profil.tel}</p>
+                            )}
+                          </div>
+                        </button>
                       ) : (
                         <div>
                           <p className="font-semibold text-slate-900">
@@ -448,7 +543,7 @@ export function DemandesPage() {
                     <td className="px-6 py-4">
                       <select
                         value={demande.statut}
-                        onChange={(e) => updateStatut(demande.id, e.target.value as any)}
+                        onChange={(e) => handleStatusChangeRequest(demande, e.target.value)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-0 focus:ring-2 focus:ring-primary-500 ${
                           demande.statut === 'en_attente'
                             ? 'bg-amber-100 text-amber-700'
@@ -825,6 +920,252 @@ export function DemandesPage() {
                       <Save className="w-5 h-5" />
                       Enregistrer
                     </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showHistoryModal && selectedProfilForHistory && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                <div className="flex items-center gap-3">
+                  <History className="w-6 h-6 text-primary-600" />
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">
+                      Historique - {selectedProfilForHistory.prenom} {selectedProfilForHistory.nom}
+                    </h3>
+                    <p className="text-sm text-slate-600">
+                      {selectedProfilForHistory.tel} • {selectedProfilForHistory.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={closeHistoryModal}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                    <p className="text-sm font-medium text-slate-600 mb-1">Total</p>
+                    <p className="text-2xl font-bold text-slate-900">{historyStats.total}</p>
+                  </div>
+                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                    <p className="text-sm font-medium text-amber-700 mb-1">En attente</p>
+                    <p className="text-2xl font-bold text-amber-900">{historyStats.enAttente}</p>
+                  </div>
+                  <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                    <p className="text-sm font-medium text-blue-700 mb-1">En cours</p>
+                    <p className="text-2xl font-bold text-blue-900">{historyStats.enCours}</p>
+                  </div>
+                  <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                    <p className="text-sm font-medium text-green-700 mb-1">Traitées</p>
+                    <p className="text-2xl font-bold text-green-900">{historyStats.traitees}</p>
+                  </div>
+                </div>
+
+                {loadingHistory ? (
+                  <div className="flex items-center justify-center py-12">
+                    <LoadingSpinner size="lg" text="Chargement de l'historique..." />
+                  </div>
+                ) : employeeHistory.length === 0 ? (
+                  <div className="text-center py-12">
+                    <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-600">Aucune demande trouvée pour ce salarié</p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Type</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Description</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Statut</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Créé par</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {employeeHistory.map((historique) => (
+                          <tr key={historique.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-3">
+                              <p className="text-sm text-slate-900">
+                                {new Date(historique.created_at).toLocaleDateString('fr-FR')}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {new Date(historique.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-sm text-slate-700">{historique.type_demande}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-sm text-slate-700 truncate max-w-xs">
+                                {historique.description.substring(0, 50)}{historique.description.length > 50 ? '...' : ''}
+                              </p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                                  historique.statut === 'en_attente'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : historique.statut === 'en_cours'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-green-100 text-green-700'
+                                }`}
+                              >
+                                {historique.statut === 'en_attente' ? 'En attente' : historique.statut === 'en_cours' ? 'En cours' : 'Traitée'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              {historique.creator ? (
+                                <p className="text-sm text-slate-700">
+                                  {historique.creator.prenom} {historique.creator.nom}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-slate-400">Inconnu</p>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => {
+                                  closeHistoryModal();
+                                  openDetails(historique);
+                                }}
+                                className="text-primary-600 hover:text-primary-700 font-medium text-sm"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-slate-200">
+                <button
+                  onClick={closeHistoryModal}
+                  className="w-full px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showStatusConfirmModal && pendingStatusChange && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full">
+              <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                <h3 className="text-xl font-bold text-slate-900">Confirmer le changement de statut</h3>
+                <button
+                  onClick={cancelStatusChange}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-slate-600 mb-2">Demande concernée</p>
+                  <p className="font-semibold text-slate-900">
+                    {pendingStatusChange.demande.type_demande}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    {pendingStatusChange.demande.profil
+                      ? `${pendingStatusChange.demande.profil.prenom} ${pendingStatusChange.demande.profil.nom}`
+                      : `${pendingStatusChange.demande.prenom_salarie} ${pendingStatusChange.demande.nom_salarie}`
+                    }
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-center gap-4 py-4">
+                  <span
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                      pendingStatusChange.oldStatut === 'en_attente'
+                        ? 'bg-amber-100 text-amber-700'
+                        : pendingStatusChange.oldStatut === 'en_cours'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}
+                  >
+                    {pendingStatusChange.oldStatut === 'en_attente' ? 'En attente' : pendingStatusChange.oldStatut === 'en_cours' ? 'En cours' : 'Traitée'}
+                  </span>
+                  <ArrowRight className="w-5 h-5 text-slate-400" />
+                  <span
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                      pendingStatusChange.newStatut === 'en_attente'
+                        ? 'bg-amber-100 text-amber-700'
+                        : pendingStatusChange.newStatut === 'en_cours'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}
+                  >
+                    {pendingStatusChange.newStatut === 'en_attente' ? 'En attente' : pendingStatusChange.newStatut === 'en_cours' ? 'En cours' : 'Traitée'}
+                  </span>
+                </div>
+
+                {pendingStatusChange.newStatut === 'traitee' && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-green-900">Information importante</p>
+                        <p className="text-sm text-green-700 mt-1">
+                          En marquant cette demande comme traitée, la date et l'heure seront enregistrées automatiquement, ainsi que votre identité comme traiteur.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {pendingStatusChange.newStatut === 'en_cours' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">Prise en charge</p>
+                        <p className="text-sm text-blue-700 mt-1">
+                          Vous allez prendre en charge cette demande. Elle sera marquée comme en cours de traitement.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 p-6 border-t border-slate-200">
+                <button
+                  onClick={cancelStatusChange}
+                  className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
+                  disabled={updatingStatus}
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmStatusChange}
+                  disabled={updatingStatus}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {updatingStatus ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Confirmation...
+                    </>
+                  ) : (
+                    'Confirmer'
                   )}
                 </button>
               </div>
