@@ -39,7 +39,7 @@ DELETE FROM app_utilisateur;
 DO $$
 DECLARE
   v_auth_uid uuid;
-  v_email text := 'admin@test.com'; -- CHANGEZ avec votre email
+  v_email text := 'wajdi@mad-impact.com'; -- CHANGEZ avec votre email
   v_prenom text := 'Admin';         -- CHANGEZ avec votre prénom
   v_nom text := 'Système';          -- CHANGEZ avec votre nom
   v_new_user_id int;
