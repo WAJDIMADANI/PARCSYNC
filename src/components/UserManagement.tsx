@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { PermissionGuard } from './PermissionGuard';
-import { Users, UserPlus, X, Save, Trash2, CheckCircle, XCircle, Edit2, Shield } from 'lucide-react';
+import { Users, UserPlus, X, Save, Trash2, CheckCircle, XCircle, Edit2, Shield, Upload } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { AuthUsersImport } from './AuthUsersImport';
 
 interface AppUser {
   id: string;
@@ -55,6 +56,7 @@ export function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [email, setEmail] = useState('');
   const [nom, setNom] = useState('');
@@ -205,13 +207,22 @@ export function UserManagement() {
             <h1 className="text-3xl font-bold text-slate-900">Gestion des utilisateurs</h1>
             <p className="text-slate-600 mt-1">Gérez les utilisateurs et leurs permissions</p>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium"
-          >
-            <UserPlus className="w-5 h-5" />
-            Ajouter un utilisateur
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
+            >
+              <Upload className="w-5 h-5" />
+              Importer depuis Auth
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium"
+            >
+              <UserPlus className="w-5 h-5" />
+              Ajouter un utilisateur
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -435,6 +446,32 @@ export function UserManagement() {
                 >
                   Fermer
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showImportModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                <h3 className="text-xl font-bold text-slate-900">
+                  Importer les utilisateurs Supabase Auth
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowImportModal(false);
+                    fetchUsers();
+                    fetchPermissions();
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                <AuthUsersImport />
               </div>
             </div>
           </div>
