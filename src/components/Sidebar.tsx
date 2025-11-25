@@ -4,6 +4,7 @@ import {
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
   Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone
 } from 'lucide-react';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 export type View =
   | 'setup'
@@ -60,6 +61,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['rh', 'parc', 'exports', 'admin'])
   );
+  const { hasPermission } = usePermissions();
 
   const toggleSection = (sectionId: string) => {
     const newExpanded = new Set(expandedSections);
@@ -150,6 +152,26 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     return 'children' in item;
   };
 
+  const filterNavigation = () => {
+    return navigation
+      .map(item => {
+        if (isSection(item) && item.children) {
+          const visibleChildren = item.children.filter(child =>
+            hasPermission(child.id)
+          );
+
+          if (visibleChildren.length === 0) {
+            return null;
+          }
+
+          return { ...item, children: visibleChildren };
+        }
+
+        return item;
+      })
+      .filter(Boolean) as (NavItem | NavSection)[];
+  };
+
   return (
     <div className="w-72 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 h-screen overflow-y-auto flex-shrink-0 shadow-2xl">
       <div className="p-6 border-b border-slate-700/50">
@@ -170,7 +192,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       </div>
 
       <nav className="p-4 space-y-1 pb-20">
-        {navigation.map((item) => {
+        {filterNavigation().map((item) => {
           if (isSection(item)) {
             const isExpanded = expandedSections.has(item.id);
             const Icon = item.icon;
