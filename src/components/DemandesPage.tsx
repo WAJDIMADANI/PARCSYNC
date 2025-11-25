@@ -376,6 +376,7 @@ export function DemandesPage() {
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Date</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Créé par</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Salarié</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Type</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Priorité</th>
@@ -393,6 +394,20 @@ export function DemandesPage() {
                       <p className="text-xs text-slate-500">
                         {new Date(demande.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      {demande.creator ? (
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-slate-400" />
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">
+                              {demande.creator.prenom} {demande.creator.nom}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400">Utilisateur inconnu</p>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       {demande.profil ? (
@@ -706,6 +721,27 @@ export function DemandesPage() {
                 </div>
 
                 <div>
+                  <p className="text-sm font-medium text-slate-500 mb-2">Créé par</p>
+                  {selectedDemande.creator ? (
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2">
+                        <User className="w-5 h-5 text-blue-600" />
+                        <p className="font-semibold text-blue-900">
+                          {selectedDemande.creator.prenom} {selectedDemande.creator.nom}
+                        </p>
+                      </div>
+                      <p className="text-sm text-blue-700 mt-2">
+                        Le {new Date(selectedDemande.created_at).toLocaleString('fr-FR')}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <p className="text-sm text-slate-500">Utilisateur inconnu</p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
                   <p className="text-sm font-medium text-slate-500 mb-2">Salarié</p>
                   {selectedDemande.profil ? (
                     <div className="bg-slate-50 rounded-lg p-4">
@@ -742,6 +778,20 @@ export function DemandesPage() {
                     <p className="text-slate-900">
                       {new Date(selectedDemande.treated_at).toLocaleString('fr-FR')}
                     </p>
+                  </div>
+                )}
+
+                {selectedDemande.treater && (
+                  <div>
+                    <p className="text-sm font-medium text-slate-500 mb-2">Traité par</p>
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <p className="font-semibold text-green-900">
+                          {selectedDemande.treater.prenom} {selectedDemande.treater.nom}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
