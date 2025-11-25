@@ -29,6 +29,8 @@ import { IncidentsList } from './IncidentsList';
 import { IncidentHistory } from './IncidentHistory';
 import { UserManagement } from './UserManagement';
 import { DemandesPage } from './DemandesPage';
+import { LetterTemplatesManager } from './LetterTemplatesManager';
+import { GeneratedLettersList } from './GeneratedLettersList';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -96,12 +98,9 @@ export function Dashboard() {
       case 'admin/postes':
         return <PostesList />;
       case 'admin/modeles':
-        return (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Gestion des Modèles</h2>
-            <p className="text-gray-600">Configuration des modèles de documents à venir</p>
-          </div>
-        );
+        return <LetterTemplatesManager />;
+      case 'rh/courriers-generes':
+        return <GeneratedLettersList />;
       case 'admin/modeles-contrats':
         return <ContractTemplates />;
       case 'admin/import-salarie':

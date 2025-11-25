@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 
@@ -12,6 +12,7 @@ export type View =
   | 'rh/salaries'
   | 'rh/contrats'
   | 'rh/courriers'
+  | 'rh/courriers-generes'
   | 'rh/alertes'
   | 'rh/notifications'
   | 'rh/incidents'
@@ -99,6 +100,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'rh/salaries', label: 'Salariés', icon: Users, enabled: true },
         { id: 'rh/contrats', label: 'Contrats', icon: FileText, enabled: true },
         { id: 'rh/courriers', label: 'Courriers', icon: Mail, enabled: true },
+        { id: 'rh/courriers-generes', label: 'Courriers Générés', icon: FileCheck, enabled: true },
         { id: 'rh/alertes', label: 'Alertes', icon: Bell, enabled: true },
         { id: 'rh/notifications', label: 'Notifications', icon: Sparkles, enabled: true },
         { id: 'rh/incidents', label: 'Incidents', icon: AlertCircle, enabled: true },
@@ -139,7 +141,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'admin/sites', label: 'Sites', icon: Building, enabled: true },
         { id: 'admin/secteurs', label: 'Secteurs', icon: Tag, enabled: true },
         { id: 'admin/postes', label: 'Postes', icon: Briefcase, enabled: true },
-        { id: 'admin/modeles', label: 'Modèles', icon: FileCode, enabled: true },
+        { id: 'admin/modeles', label: 'Modèles de Courriers', icon: FileCode, enabled: true },
         { id: 'admin/modeles-contrats', label: 'Modèles Contrats', icon: FileText, enabled: true },
         { id: 'admin/import-salarie', label: 'Import Salarié Test', icon: UserPlus, enabled: true },
         { id: 'admin/import-bulk', label: 'Import en Masse', icon: Upload, enabled: true },
