@@ -72,8 +72,8 @@ export function GeneratedLettersList() {
         .select(`
           *,
           profil:profil_id(prenom, nom, matricule_tca, email),
-          created_by_user:created_by(prenom, nom, email),
-          envoye_par_user:envoye_par(prenom, nom, email)
+          created_by_user:app_utilisateur!courrier_genere_created_by_fkey(prenom, nom, email),
+          envoye_par_user:app_utilisateur!courrier_genere_envoye_par_fkey(prenom, nom, email)
         `)
         .order('created_at', { ascending: false });
 
