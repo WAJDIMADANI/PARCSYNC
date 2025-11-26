@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Send, FileText, Building, DollarSign, Calendar, Clock, Award, CheckCircle, XCircle, Mail, Eye } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
-import SuccessNotification from './SuccessNotification';
+import { SuccessNotification } from './SuccessNotification';
 import { calculateTrialEndDate, formatDateFR } from '../lib/trialPeriodCalculator';
 
 interface ContractTemplate {

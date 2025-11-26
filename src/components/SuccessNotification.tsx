@@ -6,7 +6,7 @@ interface SuccessNotificationProps {
   onClose: () => void;
 }
 
-export default function SuccessNotification({ message, onClose }: SuccessNotificationProps) {
+export function SuccessNotification({ message, onClose }: SuccessNotificationProps) {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();

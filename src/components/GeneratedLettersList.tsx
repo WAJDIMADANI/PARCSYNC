@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { FileText, Plus, Search, Eye, Download, Trash2, Mail, Edit, Copy } from 'lucide-react';
+import { FileText, Plus, Search, Eye, Download, Trash2, Mail, Edit, Copy, Calendar, ChevronDown } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { GenerateLetterWizard } from './GenerateLetterWizard';
 import { LetterPreviewModal } from './LetterPreviewModal';
 import { ConfirmModal } from './ConfirmModal';
 import { SendEmailModal } from './SendEmailModal';
 import { EditLetterModal } from './EditLetterModal';
+import { StatusChangeModal } from './StatusChangeModal';
+import { DownloadWithDateModal } from './DownloadWithDateModal';
+import { SuccessNotification } from './SuccessNotification';
 
 interface GeneratedLetter {
   id: string;
@@ -20,6 +23,7 @@ interface GeneratedLetter {
   canal?: string;
   sent_to?: string | null;
   sent_at?: string | null;
+  date_envoi_poste?: string | null;
   created_at: string;
   profil?: {
     prenom: string;
@@ -38,6 +42,10 @@ export function GeneratedLettersList() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, letter: GeneratedLetter | null }>({ show: false, letter: null });
   const [sendEmailLetter, setSendEmailLetter] = useState<GeneratedLetter | null>(null);
   const [editLetter, setEditLetter] = useState<GeneratedLetter | null>(null);
+  const [statusChangeLetter, setStatusChangeLetter] = useState<GeneratedLetter | null>(null);
+  const [downloadLetter, setDownloadLetter] = useState<GeneratedLetter | null>(null);
+  const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string>('');
 
   useEffect(() => {
     fetchLetters();
@@ -61,8 +69,27 @@ export function GeneratedLettersList() {
 
   const handleDownload = async (letter: GeneratedLetter) => {
     if (!letter.fichier_pdf_url) return;
+    setDownloadLetter(letter);
+  };
+
+  const handleDownloadConfirm = async (letter: GeneratedLetter, markAsSent: boolean, dateEnvoi?: Date) => {
+    if (!letter.fichier_pdf_url) return;
 
     try {
+      if (markAsSent && dateEnvoi) {
+        const { error } = await supabase
+          .from('courrier_genere')
+          .update({
+            status: 'envoye',
+            date_envoi_poste: dateEnvoi.toISOString()
+          })
+          .eq('id', letter.id);
+
+        if (error) throw error;
+        setSuccessMessage('Courrier marqué comme envoyé avec succès!');
+        await fetchLetters();
+      }
+
       const response = await fetch(letter.fichier_pdf_url);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -73,6 +100,7 @@ export function GeneratedLettersList() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      setDownloadLetter(null);
     } catch (error) {
       console.error('Erreur téléchargement:', error);
     }
@@ -123,7 +151,38 @@ export function GeneratedLettersList() {
     setEditLetter(null);
   };
 
-  const getStatusBadge = (status: string, sent_at?: string | null) => {
+  const handleStatusChange = async (newStatus: string, dateEnvoi?: Date) => {
+    if (!statusChangeLetter) return;
+
+    try {
+      const updateData: any = { status: newStatus };
+      if (newStatus === 'envoye' && dateEnvoi) {
+        updateData.date_envoi_poste = dateEnvoi.toISOString();
+      } else if (newStatus === 'generated') {
+        updateData.date_envoi_poste = null;
+      }
+
+      const { error } = await supabase
+        .from('courrier_genere')
+        .update(updateData)
+        .eq('id', statusChangeLetter.id);
+
+      if (error) throw error;
+
+      setSuccessMessage(`Statut changé en "${newStatus === 'envoye' ? 'Envoyé' : 'Généré'}" avec succès!`);
+      await fetchLetters();
+      setStatusChangeLetter(null);
+    } catch (error) {
+      console.error('Erreur changement statut:', error);
+    }
+  };
+
+  const openStatusMenu = (letter: GeneratedLetter) => {
+    setStatusChangeLetter(letter);
+    setShowStatusDropdown(null);
+  };
+
+  const getStatusBadge = (status: string, sent_at?: string | null, date_envoi_poste?: string | null) => {
     const statusMap: Record<string, { label: string; color: string }> = {
       'brouillon': { label: 'Brouillon', color: 'bg-gray-100 text-gray-700' },
       'generated': { label: 'Généré', color: 'bg-blue-100 text-blue-700' },
@@ -134,11 +193,15 @@ export function GeneratedLettersList() {
 
     const statusInfo = statusMap[status] || statusMap['generated'];
 
-    if (sent_at) {
-      return { label: 'Envoyé', color: 'bg-green-100 text-green-700' };
+    if (sent_at || status === 'envoye') {
+      return {
+        label: 'Envoyé',
+        color: 'bg-green-100 text-green-700',
+        date: date_envoi_poste
+      };
     }
 
-    return statusInfo;
+    return { ...statusInfo, date: null };
   };
 
   const confirmDelete = async () => {
@@ -303,14 +366,21 @@ export function GeneratedLettersList() {
                     {letter.sujet}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(letter.status, letter.sent_at).color}`}>
-                      {getStatusBadge(letter.status, letter.sent_at).label}
-                    </span>
-                    {letter.sent_at && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        {new Date(letter.sent_at).toLocaleDateString('fr-FR')}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openStatusMenu(letter)}
+                        className={`px-3 py-1 text-xs font-medium rounded-full flex items-center gap-1 hover:opacity-80 transition-all ${getStatusBadge(letter.status, letter.sent_at, letter.date_envoi_poste).color}`}
+                      >
+                        {getStatusBadge(letter.status, letter.sent_at, letter.date_envoi_poste).label}
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                      {letter.date_envoi_poste && (
+                        <div className="flex items-center gap-1 text-xs text-gray-600">
+                          <Calendar className="w-3 h-3" />
+                          <span>{new Date(letter.date_envoi_poste).toLocaleDateString('fr-FR')}</span>
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex gap-1 justify-end">
@@ -415,6 +485,32 @@ export function GeneratedLettersList() {
           letter={editLetter}
           onClose={() => setEditLetter(null)}
           onSave={handleEditSaved}
+        />
+      )}
+
+      {statusChangeLetter && (
+        <StatusChangeModal
+          isOpen={true}
+          currentStatus={statusChangeLetter.status}
+          onConfirm={handleStatusChange}
+          onCancel={() => setStatusChangeLetter(null)}
+          letterSubject={statusChangeLetter.sujet}
+        />
+      )}
+
+      {downloadLetter && (
+        <DownloadWithDateModal
+          isOpen={true}
+          onConfirm={(markAsSent, dateEnvoi) => handleDownloadConfirm(downloadLetter, markAsSent, dateEnvoi)}
+          onCancel={() => setDownloadLetter(null)}
+          letterSubject={downloadLetter.sujet}
+        />
+      )}
+
+      {successMessage && (
+        <SuccessNotification
+          message={successMessage}
+          onClose={() => setSuccessMessage('')}
         />
       )}
     </div>
