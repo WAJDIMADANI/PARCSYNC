@@ -55,7 +55,7 @@ export function Dashboard() {
       case 'rh/contrats':
         return <ContractsList />;
       case 'rh/courriers':
-        return <LettersList />;
+        return <GeneratedLettersList />;
       case 'rh/alertes':
         return <AlertsList onVivierClick={() => setView('rh/vivier')} />;
       case 'rh/notifications':
@@ -99,8 +99,6 @@ export function Dashboard() {
         return <PostesList />;
       case 'admin/modeles':
         return <LetterTemplatesManager />;
-      case 'rh/courriers-generes':
-        return <GeneratedLettersList />;
       case 'admin/modeles-contrats':
         return <ContractTemplates />;
       case 'admin/import-salarie':

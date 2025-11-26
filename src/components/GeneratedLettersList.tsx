@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { FileText, Plus, Search, Eye, Download, Trash2 } from 'lucide-react';
+import { FileText, Plus, Search, Eye, Download, Trash2, Mail, Edit, Copy } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { GenerateLetterWizard } from './GenerateLetterWizard';
 import { LetterPreviewModal } from './LetterPreviewModal';
 import { ConfirmModal } from './ConfirmModal';
+import { SendEmailModal } from './SendEmailModal';
+import { EditLetterModal } from './EditLetterModal';
 
 interface GeneratedLetter {
   id: string;
@@ -15,11 +17,15 @@ interface GeneratedLetter {
   variables_remplies: Record<string, any>;
   fichier_pdf_url: string | null;
   status: string;
+  canal?: string;
+  sent_to?: string | null;
+  sent_at?: string | null;
   created_at: string;
   profil?: {
     prenom: string;
     nom: string;
     matricule_tca: string;
+    email: string;
   };
 }
 
@@ -30,6 +36,8 @@ export function GeneratedLettersList() {
   const [showWizard, setShowWizard] = useState(false);
   const [previewLetter, setPreviewLetter] = useState<GeneratedLetter | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, letter: GeneratedLetter | null }>({ show: false, letter: null });
+  const [sendEmailLetter, setSendEmailLetter] = useState<GeneratedLetter | null>(null);
+  const [editLetter, setEditLetter] = useState<GeneratedLetter | null>(null);
 
   useEffect(() => {
     fetchLetters();
@@ -39,7 +47,7 @@ export function GeneratedLettersList() {
     try {
       const { data, error } = await supabase
         .from('courrier_genere')
-        .select('*, profil:profil_id(prenom, nom, matricule_tca)')
+        .select('*, profil:profil_id(prenom, nom, matricule_tca, email)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -72,6 +80,65 @@ export function GeneratedLettersList() {
 
   const handleDelete = async (letter: GeneratedLetter) => {
     setDeleteConfirm({ show: true, letter });
+  };
+
+  const handleDuplicate = async (letter: GeneratedLetter) => {
+    try {
+      const { error } = await supabase
+        .from('courrier_genere')
+        .insert({
+          profil_id: letter.profil_id,
+          modele_courrier_id: null,
+          modele_nom: `${letter.modele_nom} (Copie)`,
+          sujet: letter.sujet,
+          contenu_genere: letter.contenu_genere,
+          variables_remplies: letter.variables_remplies,
+          fichier_pdf_url: null,
+          status: 'brouillon',
+          canal: letter.canal || 'courrier'
+        });
+
+      if (error) throw error;
+      fetchLetters();
+    } catch (error) {
+      console.error('Erreur duplication:', error);
+    }
+  };
+
+  const handleSendEmail = (letter: GeneratedLetter) => {
+    setSendEmailLetter(letter);
+  };
+
+  const handleEdit = (letter: GeneratedLetter) => {
+    setEditLetter(letter);
+  };
+
+  const handleEmailSent = async () => {
+    await fetchLetters();
+    setSendEmailLetter(null);
+  };
+
+  const handleEditSaved = async () => {
+    await fetchLetters();
+    setEditLetter(null);
+  };
+
+  const getStatusBadge = (status: string, sent_at?: string | null) => {
+    const statusMap: Record<string, { label: string; color: string }> = {
+      'brouillon': { label: 'Brouillon', color: 'bg-gray-100 text-gray-700' },
+      'generated': { label: 'Généré', color: 'bg-blue-100 text-blue-700' },
+      'pret': { label: 'Prêt', color: 'bg-blue-100 text-blue-700' },
+      'envoye': { label: 'Envoyé', color: 'bg-green-100 text-green-700' },
+      'erreur': { label: 'Erreur', color: 'bg-red-100 text-red-700' }
+    };
+
+    const statusInfo = statusMap[status] || statusMap['generated'];
+
+    if (sent_at) {
+      return { label: 'Envoyé', color: 'bg-green-100 text-green-700' };
+    }
+
+    return statusInfo;
   };
 
   const confirmDelete = async () => {
@@ -200,6 +267,9 @@ export function GeneratedLettersList() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Sujet
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Statut
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -232,8 +302,18 @@ export function GeneratedLettersList() {
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {letter.sujet}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(letter.status, letter.sent_at).color}`}>
+                      {getStatusBadge(letter.status, letter.sent_at).label}
+                    </span>
+                    {letter.sent_at && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {new Date(letter.sent_at).toLocaleDateString('fr-FR')}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex gap-2 justify-end">
+                    <div className="flex gap-1 justify-end">
                       <button
                         onClick={() => setPreviewLetter(letter)}
                         className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded"
@@ -241,6 +321,15 @@ export function GeneratedLettersList() {
                       >
                         <Eye className="w-4 h-4" />
                       </button>
+                      {(letter.status === 'brouillon' || !letter.sent_at) && (
+                        <button
+                          onClick={() => handleEdit(letter)}
+                          className="text-purple-600 hover:text-purple-800 p-1 hover:bg-purple-50 rounded"
+                          title="Modifier"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
                       {letter.fichier_pdf_url && (
                         <button
                           onClick={() => handleDownload(letter)}
@@ -250,6 +339,22 @@ export function GeneratedLettersList() {
                           <Download className="w-4 h-4" />
                         </button>
                       )}
+                      {letter.fichier_pdf_url && !letter.sent_at && letter.profil?.email && (
+                        <button
+                          onClick={() => handleSendEmail(letter)}
+                          className="text-orange-600 hover:text-orange-800 p-1 hover:bg-orange-50 rounded"
+                          title="Envoyer par email"
+                        >
+                          <Mail className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDuplicate(letter)}
+                        className="text-cyan-600 hover:text-cyan-800 p-1 hover:bg-cyan-50 rounded"
+                        title="Dupliquer"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => handleDelete(letter)}
                         className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded"
@@ -293,6 +398,23 @@ export function GeneratedLettersList() {
           type="danger"
           onConfirm={confirmDelete}
           onCancel={() => setDeleteConfirm({ show: false, letter: null })}
+        />
+      )}
+
+      {sendEmailLetter && sendEmailLetter.profil && (
+        <SendEmailModal
+          letter={sendEmailLetter}
+          profil={sendEmailLetter.profil}
+          onClose={() => setSendEmailLetter(null)}
+          onSuccess={handleEmailSent}
+        />
+      )}
+
+      {editLetter && (
+        <EditLetterModal
+          letter={editLetter}
+          onClose={() => setEditLetter(null)}
+          onSave={handleEditSaved}
         />
       )}
     </div>
