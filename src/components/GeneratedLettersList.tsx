@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { FileText, Plus, Search, Eye, Download, Trash2, Mail, Edit, Copy, Calendar, ChevronDown } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { GenerateLetterWizard } from './GenerateLetterWizard';
@@ -25,6 +26,18 @@ interface GeneratedLetter {
   sent_at?: string | null;
   date_envoi_poste?: string | null;
   created_at: string;
+  created_by?: string;
+  envoye_par?: string;
+  created_by_user?: {
+    prenom: string;
+    nom: string;
+    email: string;
+  };
+  envoye_par_user?: {
+    prenom: string;
+    nom: string;
+    email: string;
+  };
   profil?: {
     prenom: string;
     nom: string;
@@ -34,6 +47,7 @@ interface GeneratedLetter {
 }
 
 export function GeneratedLettersList() {
+  const { user } = useAuth();
   const [letters, setLetters] = useState<GeneratedLetter[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -55,7 +69,12 @@ export function GeneratedLettersList() {
     try {
       const { data, error } = await supabase
         .from('courrier_genere')
-        .select('*, profil:profil_id(prenom, nom, matricule_tca, email)')
+        .select(`
+          *,
+          profil:profil_id(prenom, nom, matricule_tca, email),
+          created_by_user:created_by(prenom, nom, email),
+          envoye_par_user:envoye_par(prenom, nom, email)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -81,7 +100,8 @@ export function GeneratedLettersList() {
           .from('courrier_genere')
           .update({
             status: 'envoye',
-            date_envoi_poste: dateEnvoi.toISOString()
+            date_envoi_poste: dateEnvoi.toISOString(),
+            envoye_par: user?.id
           })
           .eq('id', letter.id);
 
@@ -158,8 +178,10 @@ export function GeneratedLettersList() {
       const updateData: any = { status: newStatus };
       if (newStatus === 'envoye' && dateEnvoi) {
         updateData.date_envoi_poste = dateEnvoi.toISOString();
+        updateData.envoye_par = user?.id;
       } else if (newStatus === 'generated') {
         updateData.date_envoi_poste = null;
+        updateData.envoye_par = null;
       }
 
       const { error } = await supabase
@@ -228,7 +250,9 @@ export function GeneratedLettersList() {
       l.modele_nom.toLowerCase().includes(searchLower) ||
       l.sujet.toLowerCase().includes(searchLower) ||
       `${l.profil?.prenom} ${l.profil?.nom}`.toLowerCase().includes(searchLower) ||
-      l.profil?.matricule_tca?.toLowerCase().includes(searchLower)
+      l.profil?.matricule_tca?.toLowerCase().includes(searchLower) ||
+      `${l.created_by_user?.prenom} ${l.created_by_user?.nom}`.toLowerCase().includes(searchLower) ||
+      `${l.envoye_par_user?.prenom} ${l.envoye_par_user?.nom}`.toLowerCase().includes(searchLower)
     );
   });
 
@@ -322,6 +346,9 @@ export function GeneratedLettersList() {
                   Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Créé par
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Salarié
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -350,6 +377,17 @@ export function GeneratedLettersList() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {letter.created_by_user
+                        ? `${letter.created_by_user.prenom} ${letter.created_by_user.nom}`
+                        : '-'
+                      }
+                    </div>
+                    {letter.created_by_user?.email && (
+                      <div className="text-xs text-gray-500">{letter.created_by_user.email}</div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
                       {letter.profil ? `${letter.profil.prenom} ${letter.profil.nom}` : '-'}
                     </div>
@@ -366,18 +404,25 @@ export function GeneratedLettersList() {
                     {letter.sujet}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openStatusMenu(letter)}
-                        className={`px-3 py-1 text-xs font-medium rounded-full flex items-center gap-1 hover:opacity-80 transition-all ${getStatusBadge(letter.status, letter.sent_at, letter.date_envoi_poste).color}`}
-                      >
-                        {getStatusBadge(letter.status, letter.sent_at, letter.date_envoi_poste).label}
-                        <ChevronDown className="w-3 h-3" />
-                      </button>
-                      {letter.date_envoi_poste && (
-                        <div className="flex items-center gap-1 text-xs text-gray-600">
-                          <Calendar className="w-3 h-3" />
-                          <span>{new Date(letter.date_envoi_poste).toLocaleDateString('fr-FR')}</span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openStatusMenu(letter)}
+                          className={`px-3 py-1 text-xs font-medium rounded-full flex items-center gap-1 hover:opacity-80 transition-all ${getStatusBadge(letter.status, letter.sent_at, letter.date_envoi_poste).color}`}
+                        >
+                          {getStatusBadge(letter.status, letter.sent_at, letter.date_envoi_poste).label}
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                        {letter.date_envoi_poste && (
+                          <div className="flex items-center gap-1 text-xs text-gray-600">
+                            <Calendar className="w-3 h-3" />
+                            <span>{new Date(letter.date_envoi_poste).toLocaleDateString('fr-FR')}</span>
+                          </div>
+                        )}
+                      </div>
+                      {letter.envoye_par_user && (letter.status === 'envoye' || letter.sent_at) && (
+                        <div className="text-xs text-gray-500">
+                          Envoyé par {letter.envoye_par_user.prenom} {letter.envoye_par_user.nom}
                         </div>
                       )}
                     </div>
