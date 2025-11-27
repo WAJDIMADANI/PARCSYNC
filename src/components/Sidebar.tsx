@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 
@@ -106,6 +106,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'rh/courriers-generes', label: 'Courriers Générés', icon: FileCheck, enabled: true },
         { id: 'rh/alertes', label: 'Alertes', icon: Bell, enabled: true },
         { id: 'rh/notifications', label: 'Notifications', icon: Sparkles, enabled: true },
+        { id: 'rh/documents-manquants', label: 'Documents Manquants', icon: FileWarning, enabled: true },
         { id: 'rh/incidents', label: 'Incidents', icon: AlertCircle, enabled: true },
         { id: 'rh/incidents-historique', label: 'Historique incidents', icon: History, enabled: true },
         { id: 'rh/vivier', label: 'Vivier', icon: Archive, enabled: true },
