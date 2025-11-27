@@ -471,6 +471,7 @@ export function DemandesPage() {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Type</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Priorité</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Statut</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Traité par</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
                 </tr>
               </thead>
@@ -556,6 +557,29 @@ export function DemandesPage() {
                         <option value="en_cours">En cours</option>
                         <option value="traitee">Traitée</option>
                       </select>
+                    </td>
+                    <td className="px-6 py-4">
+                      {demande.treater ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-semibold text-green-700">
+                              {demande.treater.prenom.charAt(0)}{demande.treater.nom.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">
+                              {demande.treater.prenom} {demande.treater.nom}
+                            </p>
+                            {demande.treated_at && (
+                              <p className="text-xs text-slate-500">
+                                {new Date(demande.treated_at).toLocaleDateString('fr-FR')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-400 italic">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <button
