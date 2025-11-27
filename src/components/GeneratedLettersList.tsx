@@ -95,13 +95,20 @@ export function GeneratedLettersList() {
     if (!letter.fichier_pdf_url) return;
 
     try {
-      if (markAsSent && dateEnvoi) {
+      if (markAsSent && dateEnvoi && user) {
+        // Récupérer l'ID app_utilisateur à partir de auth.users.id
+        const { data: appUser } = await supabase
+          .from('app_utilisateur')
+          .select('id')
+          .eq('auth_id', user.id)
+          .maybeSingle();
+
         const { error } = await supabase
           .from('courrier_genere')
           .update({
             status: 'envoye',
             date_envoi_poste: dateEnvoi.toISOString(),
-            envoye_par: user?.id
+            envoye_par: appUser?.id || null
           })
           .eq('id', letter.id);
 
@@ -176,9 +183,16 @@ export function GeneratedLettersList() {
 
     try {
       const updateData: any = { status: newStatus };
-      if (newStatus === 'envoye' && dateEnvoi) {
+      if (newStatus === 'envoye' && dateEnvoi && user) {
+        // Récupérer l'ID app_utilisateur à partir de auth.users.id
+        const { data: appUser } = await supabase
+          .from('app_utilisateur')
+          .select('id')
+          .eq('auth_id', user.id)
+          .maybeSingle();
+
         updateData.date_envoi_poste = dateEnvoi.toISOString();
-        updateData.envoye_par = user?.id;
+        updateData.envoye_par = appUser?.id || null;
       } else if (newStatus === 'generated') {
         updateData.date_envoi_poste = null;
         updateData.envoye_par = null;

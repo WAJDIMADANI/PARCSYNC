@@ -207,7 +207,7 @@ export async function saveGeneratedLetter(
   content: string,
   variables: Record<string, any>,
   pdfUrl: string,
-  userId: string
+  userId: string | null
 ): Promise<string> {
   const { data, error } = await supabase
     .from('courrier_genere')

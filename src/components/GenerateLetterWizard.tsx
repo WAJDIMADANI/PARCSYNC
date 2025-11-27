@@ -169,6 +169,13 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
     setError('');
 
     try {
+      // Récupérer l'ID app_utilisateur à partir de auth.users.id
+      const { data: appUser } = await supabase
+        .from('app_utilisateur')
+        .select('id')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+
       const systemValues = formatProfileData(selectedProfile);
       const { subject, content } = getPreviewContent();
 
@@ -197,7 +204,7 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
         content,
         allVariables,
         pdfUrl,
-        user.id
+        appUser?.id || null
       );
 
       const url = window.URL.createObjectURL(pdfBlob);
