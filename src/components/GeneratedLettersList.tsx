@@ -100,7 +100,7 @@ export function GeneratedLettersList() {
         const { data: appUser } = await supabase
           .from('app_utilisateur')
           .select('id')
-          .eq('auth_id', user.id)
+          .eq('auth_user_id', user.id)
           .maybeSingle();
 
         const { error } = await supabase
@@ -188,7 +188,7 @@ export function GeneratedLettersList() {
         const { data: appUser } = await supabase
           .from('app_utilisateur')
           .select('id')
-          .eq('auth_id', user.id)
+          .eq('auth_user_id', user.id)
           .maybeSingle();
 
         updateData.date_envoi_poste = dateEnvoi.toISOString();

@@ -173,7 +173,7 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
       const { data: appUser } = await supabase
         .from('app_utilisateur')
         .select('id')
-        .eq('auth_id', user.id)
+        .eq('auth_user_id', user.id)
         .maybeSingle();
 
       const systemValues = formatProfileData(selectedProfile);
