@@ -106,36 +106,36 @@ BEGIN
   END IF;
 
   -- Étape 3: Supprimer les anciennes permissions si elles existent
-  DELETE FROM utilisateur_permission WHERE utilisateur_id = v_app_user_id;
+  DELETE FROM utilisateur_permissions WHERE utilisateur_id = v_app_user_id;
   RAISE NOTICE 'Anciennes permissions supprimées';
 
   -- Étape 4: Ajouter TOUTES les permissions (19 sections)
-  INSERT INTO utilisateur_permission (utilisateur_id, permission)
+  INSERT INTO utilisateur_permissions (utilisateur_id, section_id, actif)
   VALUES
     -- PERMISSIONS RH (10 sections)
-    (v_app_user_id, 'rh/candidats'),
-    (v_app_user_id, 'rh/salaries'),
-    (v_app_user_id, 'rh/contrats'),
-    (v_app_user_id, 'rh/courriers'),
-    (v_app_user_id, 'rh/alertes'),
-    (v_app_user_id, 'rh/notifications'),
-    (v_app_user_id, 'rh/demandes'),
-    (v_app_user_id, 'rh/incidents'),
-    (v_app_user_id, 'rh/historique'),
-    (v_app_user_id, 'rh/vivier'),
+    (v_app_user_id, 'rh/candidats', true),
+    (v_app_user_id, 'rh/salaries', true),
+    (v_app_user_id, 'rh/contrats', true),
+    (v_app_user_id, 'rh/courriers', true),
+    (v_app_user_id, 'rh/alertes', true),
+    (v_app_user_id, 'rh/notifications', true),
+    (v_app_user_id, 'rh/demandes', true),
+    (v_app_user_id, 'rh/incidents', true),
+    (v_app_user_id, 'rh/historique', true),
+    (v_app_user_id, 'rh/vivier', true),
 
     -- PERMISSIONS PARC (3 sections)
-    (v_app_user_id, 'parc/vehicules'),
-    (v_app_user_id, 'parc/maintenance'),
-    (v_app_user_id, 'parc/carburant'),
+    (v_app_user_id, 'parc/vehicules', true),
+    (v_app_user_id, 'parc/maintenance', true),
+    (v_app_user_id, 'parc/carburant', true),
 
     -- PERMISSIONS ADMINISTRATION (6 sections)
-    (v_app_user_id, 'admin/utilisateurs'),
-    (v_app_user_id, 'admin/secteurs'),
-    (v_app_user_id, 'admin/postes'),
-    (v_app_user_id, 'admin/sites'),
-    (v_app_user_id, 'admin/modeles-contrats'),
-    (v_app_user_id, 'admin/modeles-courriers');
+    (v_app_user_id, 'admin/utilisateurs', true),
+    (v_app_user_id, 'admin/secteurs', true),
+    (v_app_user_id, 'admin/postes', true),
+    (v_app_user_id, 'admin/sites', true),
+    (v_app_user_id, 'admin/modeles-contrats', true),
+    (v_app_user_id, 'admin/modeles-courriers', true);
 
   RAISE NOTICE '19 permissions ajoutées avec succès!';
   RAISE NOTICE '';
@@ -156,9 +156,9 @@ SELECT
   u.nom,
   u.prenom,
   u.actif,
-  COUNT(up.permission) as nombre_permissions,
-  array_agg(up.permission ORDER BY up.permission) as liste_permissions
+  COUNT(up.section_id) as nombre_permissions,
+  array_agg(up.section_id ORDER BY up.section_id) as liste_permissions
 FROM app_utilisateur u
-LEFT JOIN utilisateur_permission up ON u.id = up.utilisateur_id
+LEFT JOIN utilisateur_permissions up ON u.id = up.utilisateur_id
 WHERE u.email = 'admin@mad-impact.com'
 GROUP BY u.id, u.email, u.nom, u.prenom, u.actif;
