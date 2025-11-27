@@ -31,6 +31,7 @@ import { UserManagement } from './UserManagement';
 import { DemandesPage } from './DemandesPage';
 import { LetterTemplatesManager } from './LetterTemplatesManager';
 import { GeneratedLettersList } from './GeneratedLettersList';
+import { MissingDocuments } from './MissingDocuments';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -60,6 +61,8 @@ export function Dashboard() {
         return <AlertsList onVivierClick={() => setView('rh/vivier')} />;
       case 'rh/notifications':
         return <NotificationsList initialTab={viewParams?.tab} />;
+      case 'rh/documents-manquants':
+        return <MissingDocuments onNavigate={handleViewChange} />;
       case 'rh/incidents':
         return <IncidentsList />;
       case 'rh/incidents-historique':

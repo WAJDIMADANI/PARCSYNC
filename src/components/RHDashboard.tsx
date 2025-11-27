@@ -34,6 +34,7 @@ interface Stats {
     nouveaux_mois: number;
     periode_essai: number;
     departs_prevus: number;
+    documents_manquants: number;
   };
   notifications: {
     total: number;
@@ -80,6 +81,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       nouveaux_mois: 0,
       periode_essai: 0,
       departs_prevus: 0,
+      documents_manquants: 0,
     },
     notifications: {
       total: 0,
@@ -226,6 +228,9 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           new Date(p.date_sortie) <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
       ).length;
 
+      const { data: missingDocs } = await supabase.rpc('get_missing_documents_by_salarie');
+      const documents_manquants = missingDocs?.length || 0;
+
       setStats((prev) => ({
         ...prev,
         employees: {
@@ -234,6 +239,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           nouveaux_mois,
           periode_essai,
           departs_prevus,
+          documents_manquants,
         },
       }));
     } catch (error) {
@@ -583,6 +589,30 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           </p>
         </div>
       </div>
+
+      {stats.employees.documents_manquants > 0 && (
+        <div
+          onClick={() => onNavigate?.('rh/documents-manquants')}
+          className="bg-gradient-to-br from-red-50 to-red-100/30 rounded-xl shadow-md p-6 border-l-4 border-red-500 cursor-pointer hover:shadow-lg transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-red-900 flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+                Documents manquants par salarié
+              </h3>
+              <p className="text-red-700">
+                <span className="text-2xl font-bold">{stats.employees.documents_manquants}</span> salarié
+                {stats.employees.documents_manquants > 1 ? 's' : ''} avec documents manquants
+              </p>
+              <p className="text-sm text-red-600 mt-1">
+                Cliquez pour voir le détail et contacter les salariés concernés
+              </p>
+            </div>
+            <FileText className="w-12 h-12 text-red-400" />
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">

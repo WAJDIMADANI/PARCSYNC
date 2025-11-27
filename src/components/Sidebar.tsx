@@ -15,6 +15,7 @@ export type View =
   | 'rh/courriers-generes'
   | 'rh/alertes'
   | 'rh/notifications'
+  | 'rh/documents-manquants'
   | 'rh/incidents'
   | 'rh/incidents-historique'
   | 'rh/vivier'
