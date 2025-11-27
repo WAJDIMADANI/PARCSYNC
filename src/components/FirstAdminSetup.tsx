@@ -31,58 +31,88 @@ export function FirstAdminSetup({ onComplete }: FirstAdminSetupProps) {
     setLoading(true);
 
     try {
-      const { data: newUser, error: userError } = await supabase
+      const { data: existingUser, error: checkError } = await supabase
         .from('app_utilisateur')
-        .insert({
-          auth_user_id: user.id,
-          email: user.email,
-          nom: nom.trim(),
-          prenom: prenom.trim(),
-          actif: true,
-        })
-        .select()
-        .single();
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
 
-      if (userError) throw userError;
+      let userId;
 
-      const allPermissions = [
-        'rh/candidats',
-        'rh/salaries',
-        'rh/contrats',
-        'rh/courriers',
-        'rh/alertes',
-        'rh/notifications',
-        'rh/incidents',
-        'rh/incidents-historique',
-        'rh/vivier',
-        'rh/demandes',
-        'parc/vehicules',
-        'parc/ct-assurance',
-        'parc/maintenance',
-        'admin/sites',
-        'admin/secteurs',
-        'admin/postes',
-        'admin/modeles',
-        'admin/modeles-contrats',
-        'admin/utilisateurs',
-      ];
+      if (existingUser) {
+        userId = existingUser.id;
+        console.log('Utilisateur existant trouvé:', userId);
+      } else if (checkError) {
+        throw checkError;
+      } else {
+        const { data: newUser, error: userError } = await supabase
+          .from('app_utilisateur')
+          .insert({
+            auth_user_id: user.id,
+            email: user.email,
+            nom: nom.trim(),
+            prenom: prenom.trim(),
+            actif: true,
+          })
+          .select()
+          .single();
 
-      const permissionsToInsert = allPermissions.map((section_id) => ({
-        utilisateur_id: newUser.id,
-        section_id,
-        actif: true,
-      }));
+        if (userError) throw userError;
 
-      const { error: permError } = await supabase
+        userId = newUser.id;
+        console.log('Nouvel utilisateur créé:', userId);
+      }
+
+      const { data: existingPerms, error: permsCheckError } = await supabase
         .from('utilisateur_permissions')
-        .insert(permissionsToInsert);
+        .select('id')
+        .eq('utilisateur_id', userId);
 
-      if (permError) throw permError;
+      if (permsCheckError) throw permsCheckError;
+
+      if (!existingPerms || existingPerms.length === 0) {
+        const allPermissions = [
+          'rh/candidats',
+          'rh/salaries',
+          'rh/contrats',
+          'rh/courriers',
+          'rh/alertes',
+          'rh/notifications',
+          'rh/incidents',
+          'rh/incidents-historique',
+          'rh/vivier',
+          'rh/demandes',
+          'parc/vehicules',
+          'parc/ct-assurance',
+          'parc/maintenance',
+          'admin/sites',
+          'admin/secteurs',
+          'admin/postes',
+          'admin/modeles',
+          'admin/modeles-contrats',
+          'admin/utilisateurs',
+        ];
+
+        const permissionsToInsert = allPermissions.map((section_id) => ({
+          utilisateur_id: userId,
+          section_id,
+          actif: true,
+        }));
+
+        const { error: permError } = await supabase
+          .from('utilisateur_permissions')
+          .insert(permissionsToInsert);
+
+        if (permError) throw permError;
+        console.log('Permissions créées pour l\'utilisateur');
+      } else {
+        console.log('Utilisateur a déjà des permissions');
+      }
 
       onComplete();
     } catch (err: any) {
-      console.error('Error creating admin:', err);
-      setError(err.message || 'Erreur lors de la création de l\'administrateur');
+      console.error('Error in admin setup:', err);
+      setError(err.message || 'Erreur lors de la configuration');
     } finally {
       setLoading(false);
     }
