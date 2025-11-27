@@ -40,7 +40,10 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       console.log('Loading permissions for user:', user.email);
 
       const { data, error } = await supabase
-        .rpc('get_user_permissions', { user_email: user.email });
+        .from('utilisateur_avec_permissions')
+        .select('*')
+        .eq('email', user.email)
+        .maybeSingle();
 
       console.log('Permissions data:', data);
       console.log('Permissions error:', error);
@@ -49,11 +52,10 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         console.error('Error loading permissions:', error);
         setAppUser(null);
         setPermissions([]);
-      } else if (data && data.length > 0) {
-        const userPermissions = data[0];
-        console.log('Setting appUser with permissions:', userPermissions.permissions);
-        setAppUser(userPermissions as AppUser);
-        setPermissions(userPermissions.permissions || []);
+      } else if (data) {
+        console.log('Setting appUser with permissions:', data.permissions);
+        setAppUser(data as AppUser);
+        setPermissions(data.permissions || []);
       } else {
         console.log('No data found for user');
         setAppUser(null);
