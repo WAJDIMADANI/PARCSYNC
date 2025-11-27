@@ -18,27 +18,61 @@ function AppContent() {
 
   useEffect(() => {
     const checkAdminSetup = async () => {
-      if (!user) {
-        setCheckingSetup(false);
-        return;
-      }
-
       try {
-        const { data, error } = await supabase
+        if (!user) {
+          setCheckingSetup(false);
+          return;
+        }
+
+        const { data: allUsers, error: allUsersError } = await supabase
           .from('app_utilisateur')
           .select('id')
           .limit(1);
 
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-          setNeedsAdminSetup(true);
-        } else {
-          setNeedsAdminSetup(false);
+        if (allUsersError && allUsersError.code !== 'PGRST116') {
+          throw allUsersError;
         }
-      } catch (err) {
-        console.error('Error checking admin setup:', err);
+
+        if (!allUsers || allUsers.length === 0) {
+          console.log('Aucun utilisateur en base - afficher FirstAdminSetup');
+          setNeedsAdminSetup(true);
+          setCheckingSetup(false);
+          return;
+        }
+
+        const { data: currentUserData, error: currentUserError } = await supabase
+          .from('app_utilisateur')
+          .select('id, email, nom, prenom')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+
+        if (currentUserError && currentUserError.code !== 'PGRST116') {
+          throw currentUserError;
+        }
+
+        if (!currentUserData) {
+          console.log('Utilisateur connecté non trouvé - création');
+          const { error: createError } = await supabase
+            .from('app_utilisateur')
+            .insert({
+              auth_user_id: user.id,
+              email: user.email,
+              nom: user.email?.split('@')[0] || 'Utilisateur',
+              prenom: '',
+              actif: true,
+            });
+
+          if (createError) throw createError;
+
+          console.log('Utilisateur créé avec succès');
+        } else {
+          console.log('Utilisateur connecté trouvé:', currentUserData.email);
+        }
+
         setNeedsAdminSetup(false);
+      } catch (err) {
+        console.error('Erreur lors de la vérification du setup admin:', err);
+        setNeedsAdminSetup(true);
       } finally {
         setCheckingSetup(false);
       }
