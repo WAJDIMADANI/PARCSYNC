@@ -62,7 +62,9 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['rh', 'parc', 'exports', 'admin'])
   );
-  const { hasPermission } = usePermissions();
+  const { hasPermission, permissions } = usePermissions();
+
+  console.log('Sidebar - Current permissions:', permissions);
 
   const toggleSection = (sectionId: string) => {
     const newExpanded = new Set(expandedSections);
@@ -158,9 +160,13 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     return navigation
       .map(item => {
         if (isSection(item) && item.children) {
-          const visibleChildren = item.children.filter(child =>
-            hasPermission(child.id)
-          );
+          const visibleChildren = item.children.filter(child => {
+            const hasAccess = hasPermission(child.id);
+            console.log(`Checking permission for ${child.id}:`, hasAccess);
+            return hasAccess;
+          });
+
+          console.log(`Section ${item.id} - Visible children:`, visibleChildren.length);
 
           if (visibleChildren.length === 0) {
             return null;

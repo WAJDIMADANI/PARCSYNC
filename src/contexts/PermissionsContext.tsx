@@ -37,20 +37,26 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      console.log('Loading permissions for user:', user.id);
       const { data, error } = await supabase
         .from('utilisateur_avec_permissions')
         .select('*')
-        .eq('auth_user_id', user.id)
+        .eq('id', user.id)
         .maybeSingle();
+
+      console.log('Permissions data:', data);
+      console.log('Permissions error:', error);
 
       if (error) {
         console.error('Error loading permissions:', error);
         setAppUser(null);
         setPermissions([]);
       } else if (data) {
+        console.log('Setting appUser with permissions:', data.permissions);
         setAppUser(data as AppUser);
         setPermissions(data.permissions || []);
       } else {
+        console.log('No data found for user');
         setAppUser(null);
         setPermissions([]);
       }
