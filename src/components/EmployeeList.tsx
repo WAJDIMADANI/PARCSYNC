@@ -1075,16 +1075,33 @@ function EmployeeDetailModal({
           throw new Error('Erreur réseau lors de la création Yousign: ' + (fetchError instanceof Error ? fetchError.message : 'Unknown'));
         }
       } else {
-        console.log('Demande Yousign déjà existante:', contrat.yousign_signature_request_id);
+        console.log('Demande Yousign déjà existante, envoi d\'un email de rappel...');
+
+        if (!contrat.yousign_signer_id) {
+          throw new Error('ID du signataire Yousign manquant. Impossible de renvoyer l\'email.');
+        }
+
+        const reminderResponse = await fetch(
+          `https://api-sandbox.yousign.app/v3/signature_requests/${contrat.yousign_signature_request_id}/signers/${contrat.yousign_signer_id}/send_reminder`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_YOUSIGN_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!reminderResponse.ok) {
+          const errorText = await reminderResponse.text();
+          console.error('Erreur lors de l\'envoi du rappel Yousign:', errorText);
+          throw new Error('Impossible de renvoyer l\'email de rappel: ' + errorText.substring(0, 100));
+        }
+
+        console.log('Email de rappel envoyé avec succès par Yousign');
       }
 
-      // Yousign envoie automatiquement son propre email avec le lien de signature
-      // Pas besoin d'envoyer un email supplémentaire
-      if (yousignJustCreated) {
-        console.log('Email de signature envoyé automatiquement par Yousign');
-      } else {
-        console.log('Une demande Yousign existe déjà pour ce contrat. Le salarié a déjà reçu l\'email de signature.');
-      }
+      console.log('Email envoyé automatiquement par Yousign');
 
       setResendSuccess(true);
       setTimeout(() => setResendSuccess(false), 3000);
