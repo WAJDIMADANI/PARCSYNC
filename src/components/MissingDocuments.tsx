@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertTriangle, FileText, Search, User } from 'lucide-react';
+import { AlertTriangle, FileText, Search, User, Send } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import SendMissingDocumentsReminderModal from './SendMissingDocumentsReminderModal';
 
 interface MissingDocumentData {
   id: string;
@@ -30,6 +31,8 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
   const [salaries, setSalaries] = useState<MissingDocumentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [selectedSalarie, setSelectedSalarie] = useState<MissingDocumentData | null>(null);
 
   useEffect(() => {
     fetchMissingDocuments();
@@ -57,6 +60,15 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSendReminder = (salarie: MissingDocumentData) => {
+    setSelectedSalarie(salarie);
+    setShowModal(true);
+  };
+
+  const handleReminderSuccess = () => {
+    fetchMissingDocuments();
   };
 
   const filteredSalaries = salaries.filter(s => {
@@ -173,13 +185,22 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button
-                        onClick={() => onNavigate?.('rh/salaries', { profilId: salarie.id })}
-                        className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-                      >
-                        <User className="w-4 h-4" />
-                        Voir le profil
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => onNavigate?.('rh/salaries', { profilId: salarie.id })}
+                          className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                        >
+                          <User className="w-4 h-4" />
+                          Voir le profil
+                        </button>
+                        <button
+                          onClick={() => handleSendReminder(salarie)}
+                          className="px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium flex items-center gap-1 transition-colors"
+                        >
+                          <Send className="w-4 h-4" />
+                          Envoyer rappel
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -193,6 +214,20 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
             </p>
           </div>
         </div>
+      )}
+
+      {showModal && selectedSalarie && (
+        <SendMissingDocumentsReminderModal
+          profilId={selectedSalarie.id}
+          employeeName={`${selectedSalarie.prenom} ${selectedSalarie.nom}`}
+          employeeEmail={selectedSalarie.email}
+          missingDocuments={selectedSalarie.documents_manquants}
+          onClose={() => {
+            setShowModal(false);
+            setSelectedSalarie(null);
+          }}
+          onSuccess={handleReminderSuccess}
+        />
       )}
     </div>
   );

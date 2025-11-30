@@ -32,7 +32,6 @@ import { DemandesPage } from './DemandesPage';
 import { LetterTemplatesManager } from './LetterTemplatesManager';
 import { GeneratedLettersList } from './GeneratedLettersList';
 import { MissingDocuments } from './MissingDocuments';
-import MissingDocumentsWithReminder from './MissingDocumentsWithReminder';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -51,7 +50,7 @@ export function Dashboard() {
       case 'rh/candidats':
         return <CandidateList />;
       case 'rh/salaries':
-        return <EmployeeList />;
+        return <EmployeeList initialProfilId={viewParams?.profilId} />;
       case 'rh/documents':
         return <DocumentsManager />;
       case 'rh/contrats':
@@ -64,8 +63,6 @@ export function Dashboard() {
         return <NotificationsList initialTab={viewParams?.tab} />;
       case 'rh/documents-manquants':
         return <MissingDocuments onNavigate={handleViewChange} />;
-      case 'rh/documents-rappels':
-        return <MissingDocumentsWithReminder onNavigate={handleViewChange} />;
       case 'rh/incidents':
         return <IncidentsList />;
       case 'rh/incidents-historique':
@@ -137,7 +134,6 @@ export function Dashboard() {
                 {view === 'rh/alertes' && 'Alertes'}
                 {view === 'rh/notifications' && 'Notifications'}
                 {view === 'rh/documents-manquants' && 'Documents Manquants'}
-                {view === 'rh/documents-rappels' && 'Documents Manquants - Envoi Rappels'}
                 {view === 'rh/incidents' && 'Incidents'}
                 {view === 'rh/incidents-historique' && 'Historique des Incidents'}
                 {view === 'rh/vivier' && 'Vivier'}

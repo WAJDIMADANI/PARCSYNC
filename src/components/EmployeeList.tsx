@@ -83,7 +83,11 @@ interface Contract {
 type SortField = 'matricule_tca' | 'nom' | 'prenom' | 'role' | 'statut' | 'secteur' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 
-export function EmployeeList() {
+interface EmployeeListProps {
+  initialProfilId?: string;
+}
+
+export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
@@ -131,6 +135,17 @@ export function EmployeeList() {
       supabase.removeChannel(contractsChannel);
     };
   }, []);
+
+  // Si un profilId initial est fourni, ouvrir automatiquement le profil
+  useEffect(() => {
+    if (initialProfilId && employees.length > 0 && !selectedEmployee) {
+      const employee = employees.find(e => e.id === initialProfilId);
+      if (employee) {
+        setSelectedEmployee(employee);
+        setIsModalOpen(true);
+      }
+    }
+  }, [initialProfilId, employees, selectedEmployee]);
 
   // Auto-refresh toutes les 5 secondes si des contrats sont en attente de signature
   // MAIS seulement si aucun modal n'est ouvert
