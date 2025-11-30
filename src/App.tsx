@@ -6,6 +6,7 @@ import { Apply } from './components/Apply';
 import { OnboardingForm } from './components/OnboardingForm';
 import ContractSignature from './components/ContractSignature';
 import UploadMedicalCertificate from './components/UploadMedicalCertificate';
+import UploadAllMissingDocuments from './components/UploadAllMissingDocuments';
 import { FirstAdminSetup } from './components/FirstAdminSetup';
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
@@ -95,6 +96,10 @@ function AppContent() {
 
   if (path === '/upload-medical-certificate' || path.startsWith('/upload-medical-certificate/')) {
     return <UploadMedicalCertificate />;
+  }
+
+  if (path === '/upload-all-documents' || path.startsWith('/upload-all-documents/')) {
+    return <UploadAllMissingDocuments />;
   }
 
   if (loading || checkingSetup) {
