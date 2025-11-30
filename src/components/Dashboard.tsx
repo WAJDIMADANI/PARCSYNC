@@ -132,11 +132,16 @@ export function Dashboard() {
                 {view === 'rh/salaries' && 'Salariés'}
                 {view === 'rh/documents' && 'Documents'}
                 {view === 'rh/contrats' && 'Contrats'}
-                {view === 'rh/courriers' && 'Courriers'}
+                {view === 'rh/courriers' && 'Courriers Générés'}
+                {view === 'rh/courriers-generes' && 'Courriers Générés'}
                 {view === 'rh/alertes' && 'Alertes'}
                 {view === 'rh/notifications' && 'Notifications'}
+                {view === 'rh/documents-manquants' && 'Documents Manquants'}
+                {view === 'rh/documents-rappels' && 'Documents Manquants - Envoi Rappels'}
+                {view === 'rh/incidents' && 'Incidents'}
+                {view === 'rh/incidents-historique' && 'Historique des Incidents'}
                 {view === 'rh/vivier' && 'Vivier'}
-                {view === 'rh/demandes' && 'Demandes'}
+                {view === 'rh/demandes' && 'Demandes Standardistes'}
                 {view === 'parc/vehicules' && 'Véhicules'}
                 {view === 'parc/ct-assurance' && 'CT & Assurance'}
                 {view === 'parc/maintenance' && 'Maintenance & Garage'}
@@ -149,9 +154,10 @@ export function Dashboard() {
                 {view === 'admin/sites' && 'Sites'}
                 {view === 'admin/secteurs' && 'Secteurs'}
                 {view === 'admin/postes' && 'Postes'}
-                {view === 'admin/modeles' && 'Modèles'}
+                {view === 'admin/modeles' && 'Modèles de Courriers'}
                 {view === 'admin/modeles-contrats' && 'Modèles de Contrats'}
                 {view === 'admin/import-salarie' && 'Import Salarié Test'}
+                {view === 'admin/import-bulk' && 'Import en Masse'}
                 {view === 'admin/utilisateurs' && 'Gestion des Utilisateurs'}
               </h2>
             </div>
