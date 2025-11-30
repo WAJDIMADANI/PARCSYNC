@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { AlertTriangle, FileText, Search, User, Send } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
-import SendMissingDocumentsReminderModal from './SendMissingDocumentsReminderModal';
+import MissingDocumentsReminderModal from './MissingDocumentsReminderModal';
 
 interface MissingDocumentData {
   id: string;
+  profil_id: string;
   nom: string;
   prenom: string;
   email: string;
@@ -217,8 +218,8 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
       )}
 
       {showModal && selectedSalarie && (
-        <SendMissingDocumentsReminderModal
-          profilId={selectedSalarie.id}
+        <MissingDocumentsReminderModal
+          profilId={selectedSalarie.profil_id}
           employeeName={`${selectedSalarie.prenom} ${selectedSalarie.nom}`}
           employeeEmail={selectedSalarie.email}
           missingDocuments={selectedSalarie.documents_manquants}
