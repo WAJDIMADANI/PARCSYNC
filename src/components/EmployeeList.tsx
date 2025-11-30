@@ -1078,52 +1078,16 @@ function EmployeeDetailModal({
         console.log('Demande Yousign déjà existante:', contrat.yousign_signature_request_id);
       }
 
-      // Si Yousign vient d'être créé, pas besoin d'envoyer un email supplémentaire
-      // car Yousign envoie automatiquement son propre email avec le lien de signature
+      // Yousign envoie automatiquement son propre email avec le lien de signature
+      // Pas besoin d'envoyer un email supplémentaire
       if (yousignJustCreated) {
         console.log('Email de signature envoyé automatiquement par Yousign');
-        setResendSuccess(true);
-        setTimeout(() => setResendSuccess(false), 3000);
       } else {
-        // Si la demande Yousign existait déjà, on envoie un email de rappel
-        console.log('Envoi d\'un email de rappel...');
-
-        const emailResponse = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-contract-email`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({
-              employeeEmail: currentEmployee.email,
-              employeeName: `${currentEmployee.prenom} ${currentEmployee.nom}`,
-              contractId: contrat.id,
-              variables: contrat.variables
-            })
-          }
-        );
-
-        if (!emailResponse.ok) {
-          const errorText = await emailResponse.text();
-          console.error('Erreur API (status ' + emailResponse.status + '):', errorText);
-
-          if (emailResponse.status === 404) {
-            throw new Error('La fonction d\'envoi d\'email n\'est pas déployée. Veuillez déployer la fonction "send-contract-email" sur Supabase.');
-          }
-
-          try {
-            const errorData = JSON.parse(errorText);
-            throw new Error(errorData.error || 'Erreur lors de l\'envoi de l\'email');
-          } catch (e) {
-            throw new Error('Erreur lors de l\'envoi de l\'email: ' + errorText.substring(0, 100));
-          }
-        }
-
-        setResendSuccess(true);
-        setTimeout(() => setResendSuccess(false), 3000);
+        console.log('Une demande Yousign existe déjà pour ce contrat. Le salarié a déjà reçu l\'email de signature.');
       }
+
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 3000);
     } catch (error) {
       console.error('Erreur lors du renvoi:', error);
       setResendError(error instanceof Error ? error.message : 'Erreur lors du renvoi de l\'email');
