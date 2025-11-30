@@ -42,8 +42,30 @@ export default function SendMissingDocumentsReminderModal({
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+      // Créer un token unique pour l'upload
+      const token = crypto.randomUUID();
+
+      // Créer le token dans la base de données
+      const { data: tokenData, error: tokenError } = await supabase
+        .from('upload_tokens')
+        .insert({
+          profil_id: profilId,
+          token: token,
+        })
+        .select()
+        .maybeSingle();
+
+      if (tokenError) {
+        throw new Error(`Erreur création token: ${tokenError.message}`);
+      }
+
+      // Générer le lien d'upload
+      const appUrl = window.location.origin;
+      const uploadLink = `${appUrl}/upload-all-documents?profil=${profilId}&token=${token}`;
+
+      // Utiliser send-contract-email qui est déjà déployée
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/send-all-missing-documents-reminder`,
+        `${supabaseUrl}/functions/v1/send-contract-email`,
         {
           method: 'POST',
           headers: {
@@ -51,21 +73,27 @@ export default function SendMissingDocumentsReminderModal({
             'Authorization': `Bearer ${supabaseKey}`,
           },
           body: JSON.stringify({
-            profilId,
             employeeEmail,
             employeeName,
-            missingDocuments,
+            contractId: `reminder-${profilId}`,
+            variables: {
+              poste: 'Documents manquants',
+              salaire: missingDocuments.map(doc => DOCUMENT_LABELS[doc] || doc).join(', '),
+              type_email: 'rappel_documents',
+              missing_documents: missingDocuments,
+              profil_id: profilId,
+              upload_link: uploadLink
+            }
           }),
         }
       );
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Erreur lors de l\'envoi de l\'email');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erreur ${response.status}: ${errorText}`);
       }
 
-      setUploadLink(result.uploadLink);
+      setUploadLink(uploadLink);
       setSuccess(true);
       setTimeout(() => {
         onSuccess();

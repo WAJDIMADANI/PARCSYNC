@@ -8,6 +8,7 @@ import ContractSendModal from './ContractSendModal';
 import ContractValidationPanel from './ContractValidationPanel';
 import { resolveDocUrl } from '../lib/documentStorage';
 import ImportantDocumentUpload from './ImportantDocumentUpload';
+import SendMissingDocumentsReminderModal from './SendMissingDocumentsReminderModal';
 
 interface Document {
   id: string;
@@ -717,6 +718,10 @@ function EmployeeDetailModal({
   const [savingDates, setSavingDates] = useState(false);
   const [candidatTypePiece, setCandidatTypePiece] = useState<string | null>(null);
   const [candidatDateFinValidite, setCandidatDateFinValidite] = useState<string | null>(null);
+
+  // États pour documents manquants
+  const [selectedMissingDocs, setSelectedMissingDocs] = useState<Set<string>>(new Set());
+  const [showMissingDocsReminderModal, setShowMissingDocsReminderModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
   // Tab system
@@ -886,6 +891,51 @@ function EmployeeDetailModal({
       }
       return newSet;
     });
+  };
+
+  // Logique pour identifier les documents manquants
+  const REQUIRED_DOCUMENTS = ['permis_recto', 'certificat_medical', 'cni_recto', 'carte_vitale', 'rib'];
+  const DOCUMENT_LABELS: Record<string, string> = {
+    'permis_recto': 'Permis de conduire (Recto)',
+    'permis_verso': 'Permis de conduire (Verso)',
+    'cni_recto': 'Carte d\'identité (Recto)',
+    'cni_verso': 'Carte d\'identité (Verso)',
+    'carte_vitale': 'Carte vitale',
+    'certificat_medical': 'Certificat médical',
+    'rib': 'RIB',
+  };
+
+  const getMissingDocuments = () => {
+    const existingDocTypes = documents.map(d => d.type_document?.toLowerCase()).filter(Boolean);
+    return REQUIRED_DOCUMENTS.filter(req => {
+      return !existingDocTypes.some(existing =>
+        existing === req ||
+        existing === req.replace('_recto', '') ||
+        existing === req.replace('_verso', '')
+      );
+    });
+  };
+
+  const missingDocuments = getMissingDocuments();
+
+  const toggleMissingDocSelection = (docType: string) => {
+    setSelectedMissingDocs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(docType)) {
+        newSet.delete(docType);
+      } else {
+        newSet.add(docType);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAllMissing = () => {
+    if (selectedMissingDocs.size === missingDocuments.length) {
+      setSelectedMissingDocs(new Set());
+    } else {
+      setSelectedMissingDocs(new Set(missingDocuments));
+    }
   };
 
   const toggleSelectAll = () => {
@@ -1740,6 +1790,71 @@ function EmployeeDetailModal({
               </div>
             )}
           </div>
+
+          {/* Section Documents manquants */}
+          {missingDocuments.length > 0 && (
+            <div className="bg-gradient-to-br from-red-50 to-red-100/30 rounded-xl p-5 border border-red-200">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                    <AlertCircle className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-lg">Documents manquants à télécharger</h3>
+                  <span className="ml-2 px-2 py-1 bg-red-200 text-red-800 text-xs font-bold rounded-full">
+                    {missingDocuments.length}
+                  </span>
+                </div>
+                {missingDocuments.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={toggleSelectAllMissing}
+                      className="text-sm text-red-700 hover:text-red-800 font-semibold transition-colors"
+                    >
+                      {selectedMissingDocs.size === missingDocuments.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                    </button>
+                    {selectedMissingDocs.size > 0 && (
+                      <button
+                        onClick={() => setShowMissingDocsReminderModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all text-sm font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
+                      >
+                        <Send className="w-4 h-4" />
+                        Envoyer un rappel ({selectedMissingDocs.size})
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded mb-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>💡 Info :</strong> Vous pouvez sélectionner les documents manquants et envoyer un email de rappel au salarié avec un lien sécurisé pour les télécharger.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {missingDocuments.map((docType) => (
+                  <div
+                    key={docType}
+                    className="flex items-center gap-3 px-4 py-3 bg-white rounded-lg hover:shadow-md transition-all border border-red-200 hover:border-red-300"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedMissingDocs.has(docType)}
+                      onChange={() => toggleMissingDocSelection(docType)}
+                      className="w-5 h-5 text-red-600 border-2 border-gray-300 rounded focus:ring-red-500 focus:ring-2 cursor-pointer"
+                    />
+                    <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <AlertCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900">{DOCUMENT_LABELS[docType] || docType}</p>
+                      <p className="text-xs text-red-600 font-semibold">Document obligatoire manquant</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ID Section */}
           <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
@@ -2737,6 +2852,20 @@ function EmployeeDetailModal({
         onSuccess={async () => {
           await fetchDocuments();
           await refreshEmployee();
+        }}
+      />
+    )}
+
+    {showMissingDocsReminderModal && (
+      <SendMissingDocumentsReminderModal
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
+        employeeEmail={currentEmployee.email}
+        missingDocuments={Array.from(selectedMissingDocs)}
+        onClose={() => setShowMissingDocsReminderModal(false)}
+        onSuccess={() => {
+          setShowMissingDocsReminderModal(false);
+          setSelectedMissingDocs(new Set());
         }}
       />
     )}
