@@ -32,6 +32,7 @@ import { DemandesPage } from './DemandesPage';
 import { LetterTemplatesManager } from './LetterTemplatesManager';
 import { GeneratedLettersList } from './GeneratedLettersList';
 import { MissingDocuments } from './MissingDocuments';
+import MissingDocumentsWithReminder from './MissingDocumentsWithReminder';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -63,6 +64,8 @@ export function Dashboard() {
         return <NotificationsList initialTab={viewParams?.tab} />;
       case 'rh/documents-manquants':
         return <MissingDocuments onNavigate={handleViewChange} />;
+      case 'rh/documents-rappels':
+        return <MissingDocumentsWithReminder onNavigate={handleViewChange} />;
       case 'rh/incidents':
         return <IncidentsList />;
       case 'rh/incidents-historique':
