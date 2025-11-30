@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { X, Send, CheckCircle, AlertCircle, Loader, FileText } from 'lucide-react';
 
 interface MissingDocumentsReminderModalProps {
@@ -65,28 +64,10 @@ export default function MissingDocumentsReminderModal({
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      const token = crypto.randomUUID();
-
-      const { data: tokenData, error: tokenError } = await supabase
-        .from('upload_tokens')
-        .insert({
-          profil_id: profilId,
-          token: token,
-        })
-        .select()
-        .maybeSingle();
-
-      if (tokenError) {
-        throw new Error(`Erreur création token: ${tokenError.message}`);
-      }
-
-      const appUrl = window.location.origin;
-      const uploadLinkUrl = `${appUrl}/upload-all-documents?profil=${profilId}&token=${token}`;
-
       const selectedDocsArray = Array.from(selectedDocuments);
 
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/send-contract-email`,
+        `${supabaseUrl}/functions/v1/send-all-missing-documents-reminder`,
         {
           method: 'POST',
           headers: {
@@ -94,17 +75,10 @@ export default function MissingDocumentsReminderModal({
             'Authorization': `Bearer ${supabaseKey}`,
           },
           body: JSON.stringify({
+            profilId,
             employeeEmail,
             employeeName,
-            contractId: `reminder-${profilId}`,
-            variables: {
-              poste: 'Documents manquants',
-              salaire: selectedDocsArray.map(doc => DOCUMENT_LABELS[doc] || doc).join(', '),
-              type_email: 'rappel_documents',
-              missing_documents: selectedDocsArray,
-              profil_id: profilId,
-              upload_link: uploadLinkUrl
-            }
+            missingDocuments: selectedDocsArray
           }),
         }
       );
@@ -114,7 +88,8 @@ export default function MissingDocumentsReminderModal({
         throw new Error(`Erreur ${response.status}: ${errorText}`);
       }
 
-      setUploadLink(uploadLinkUrl);
+      const result = await response.json();
+      setUploadLink(result.uploadLink);
       setSuccess(true);
       setTimeout(() => {
         onSuccess();
