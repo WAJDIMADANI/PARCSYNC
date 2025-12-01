@@ -78,7 +78,8 @@ export default function MissingDocumentsReminderModal({
             profilId,
             employeeEmail,
             employeeName,
-            missingDocuments: selectedDocsArray
+            missingDocuments: selectedDocsArray,
+            createToken: true
           }),
         }
       );
