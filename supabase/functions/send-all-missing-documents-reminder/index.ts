@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,36 +35,13 @@ Deno.serve(async (req: Request) => {
     const { profilId, employeeEmail, employeeName, missingDocuments }: RequestPayload = await req.json();
 
     const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const APP_URL = Deno.env.get("APP_URL") || "http://localhost:5173";
 
     if (!BREVO_API_KEY) {
       throw new Error("BREVO_API_KEY not configured");
     }
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Supabase credentials not configured");
-    }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    const token = crypto.randomUUID();
-
-    const { data: tokenData, error: tokenError } = await supabase
-      .from('upload_tokens')
-      .insert({
-        profil_id: profilId,
-        token: token,
-      })
-      .select()
-      .single();
-
-    if (tokenError) {
-      throw new Error(`Failed to create token: ${tokenError.message}`);
-    }
-
-    const uploadLink = `${APP_URL}/upload-all-documents?profil=${profilId}&token=${token}`;
+    const uploadLink = `${APP_URL}/upload-all-documents?profil=${profilId}`;
 
     const documentsList = missingDocuments
       .map(doc => `<li style="margin: 10px 0; padding: 10px; background-color: #fff; border-left: 4px solid #f97316; border-radius: 4px;"><strong>${documentLabels[doc] || doc}</strong></li>`)
@@ -151,8 +127,6 @@ Deno.serve(async (req: Request) => {
 
                   <p>Une fois tous les documents téléchargés, votre dossier sera complet et nous pourrons finaliser votre embauche.</p>
 
-                  <p>Ce lien est valable pendant <strong>7 jours</strong>.</p>
-
                   <p>Si vous avez des questions ou besoin d'aide, n'hésitez pas à nous contacter.</p>
 
                   <p>Cordialement,<br>
@@ -175,28 +149,8 @@ Deno.serve(async (req: Request) => {
 
     const result = await brevoResponse.json();
 
-    const { error: logError } = await supabase
-      .from('email_logs')
-      .insert({
-        profil_id: profilId,
-        email_type: 'missing_documents_reminder',
-        recipient_email: employeeEmail,
-        documents_list: missingDocuments,
-        brevo_message_id: result.messageId,
-        token_id: tokenData.id,
-      });
-
-    if (logError) {
-      console.error('Failed to log email:', logError);
-    }
-
     return new Response(
-      JSON.stringify({
-        success: true,
-        messageId: result.messageId,
-        token: token,
-        uploadLink: uploadLink
-      }),
+      JSON.stringify({ success: true, messageId: result.messageId }),
       {
         headers: {
           ...corsHeaders,
