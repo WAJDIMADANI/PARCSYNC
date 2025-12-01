@@ -150,7 +150,11 @@ Deno.serve(async (req: Request) => {
     const result = await brevoResponse.json();
 
     return new Response(
-      JSON.stringify({ success: true, messageId: result.messageId }),
+      JSON.stringify({ 
+        success: true, 
+        messageId: result.messageId,
+        uploadLink: uploadLink
+      }),
       {
         headers: {
           ...corsHeaders,
