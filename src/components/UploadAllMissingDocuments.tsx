@@ -77,13 +77,20 @@ export default function UploadAllMissingDocuments() {
   }, [cameraStream]);
 
   const loadData = async () => {
+    console.log('🚀 === DÉBUT DE loadData() ===');
+    console.log('🚀 profilId reçu:', profilId);
+    console.log('🚀 token reçu:', token);
+
     try {
+      console.log('📞 Appel 1: Vérification du token...');
       const { data: tokenData, error: tokenError } = await supabase
         .from('upload_tokens')
         .select('*')
         .eq('token', token)
         .eq('profil_id', profilId)
         .maybeSingle();
+
+      console.log('📞 Réponse token:', { tokenData, tokenError });
 
       if (tokenError) throw tokenError;
       if (!tokenData) throw new Error('Lien invalide ou expiré');
@@ -92,46 +99,67 @@ export default function UploadAllMissingDocuments() {
         throw new Error('Ce lien a expiré');
       }
 
+      console.log('✅ Token valide!');
       setTokenValid(true);
 
+      console.log('📞 Appel 2: Récupération du profil...');
       const { data: profil, error: profilError } = await supabase
         .from('profil')
         .select('id, nom, prenom, email')
         .eq('id', profilId)
         .maybeSingle();
 
+      console.log('📞 Réponse profil:', { profil, profilError });
+
       if (profilError) throw profilError;
       if (!profil) throw new Error('Profil introuvable');
 
+      console.log('✅ Profil trouvé:', profil.prenom, profil.nom);
       setProfilData(profil);
+
+      console.log('📞 Appel 3: Récupération des documents manquants via RPC...');
+      console.log('📞 Paramètres RPC: { p_profil_id:', profilId, '}');
 
       const { data: missingDocsResponse, error: missingError } = await supabase
         .rpc('get_missing_documents_for_profil', { p_profil_id: profilId })
         .single();
+
+      console.log('📞 Réponse RPC brute:', missingDocsResponse);
+      console.log('📞 Erreur RPC:', missingError);
 
       if (missingError) {
         console.error('❌ Erreur lors de la récupération des documents manquants:', missingError);
         throw missingError;
       }
 
-      console.log('📊 === DÉBUT DU DÉBOGAGE ===');
-      console.log('📊 Données brutes reçues de Supabase:', missingDocsResponse);
-      console.log('📊 Type de missingDocsResponse:', typeof missingDocsResponse);
-      console.log('📊 Propriétés de missingDocsResponse:', Object.keys(missingDocsResponse || {}));
-      console.log('📊 Missing documents array:', missingDocsResponse?.missing_documents);
-      console.log('📊 Type de missing_documents:', typeof missingDocsResponse?.missing_documents);
-      console.log('📊 Is Array?', Array.isArray(missingDocsResponse?.missing_documents));
+      console.log('📊 === ANALYSE DE LA RÉPONSE RPC ===');
+      console.log('📊 Type:', typeof missingDocsResponse);
+      console.log('📊 Est un Array?', Array.isArray(missingDocsResponse));
+      console.log('📊 Clés disponibles:', Object.keys(missingDocsResponse || {}));
+      console.log('📊 Contenu complet:', JSON.stringify(missingDocsResponse, null, 2));
+
+      // Essayer différentes structures possibles
+      let missingDocsArray;
+      if (Array.isArray(missingDocsResponse)) {
+        console.log('📊 Structure: Array directement');
+        missingDocsArray = missingDocsResponse;
+      } else if (missingDocsResponse?.missing_documents) {
+        console.log('📊 Structure: Objet avec clé "missing_documents"');
+        missingDocsArray = missingDocsResponse.missing_documents;
+      } else {
+        console.log('📊 Structure: Inconnue, utilisation d\'un tableau vide');
+        missingDocsArray = [];
+      }
+
+      console.log('📊 Array final à traiter:', missingDocsArray);
+      console.log('📊 Longueur:', missingDocsArray.length);
 
       const docsArray: MissingDocument[] = [];
-      const missingDocsArray = missingDocsResponse?.missing_documents || [];
 
-      console.log('📊 Documents manquants parsés:', missingDocsArray);
-      console.log('📊 Longueur du tableau:', Array.isArray(missingDocsArray) ? missingDocsArray.length : 'N/A');
-
-      if (Array.isArray(missingDocsArray)) {
-        console.log('📊 Traitement de chaque document...');
-        missingDocsArray.forEach((docType: string) => {
-          console.log('📊 Traitement du type:', docType);
+      if (Array.isArray(missingDocsArray) && missingDocsArray.length > 0) {
+        console.log('📊 Traitement de', missingDocsArray.length, 'documents...');
+        missingDocsArray.forEach((docType: string, index: number) => {
+          console.log(`📊 [${index + 1}/${missingDocsArray.length}] Traitement du type:`, docType);
           const config = DOCUMENT_CONFIG[docType];
           if (config) {
             docsArray.push({
@@ -139,25 +167,32 @@ export default function UploadAllMissingDocuments() {
               label: config.label,
               icon: config.icon
             });
-            console.log('✅ Document ajouté:', docType);
+            console.log('✅ Document ajouté:', docType, '→', config.label);
           } else {
             console.warn('⚠️ Config non trouvée pour le type de document:', docType);
+            console.warn('⚠️ Types disponibles dans DOCUMENT_CONFIG:', Object.keys(DOCUMENT_CONFIG));
           }
         });
       } else {
-        console.error('❌ missingDocsArray n\'est pas un tableau!', missingDocsArray);
+        console.log('⚠️ Aucun document manquant ou format invalide');
       }
 
-      console.log('📊 Documents à afficher (docsArray):', docsArray);
+      console.log('📊 === RÉSULTAT FINAL ===');
       console.log('📊 Nombre de documents à afficher:', docsArray.length);
-      console.log('📊 === FIN DU DÉBOGAGE ===');
+      console.log('📊 Documents:', docsArray.map(d => `${d.type} (${d.label})`).join(', '));
+      console.log('📊 === FIN DE L\'ANALYSE ===');
 
       setMissingDocuments(docsArray);
+      console.log('✅ setMissingDocuments appelé avec', docsArray.length, 'documents');
 
     } catch (err) {
-      console.error('Erreur chargement:', err);
+      console.error('❌ === ERREUR DANS loadData() ===');
+      console.error('❌ Type:', err);
+      console.error('❌ Message:', err instanceof Error ? err.message : 'Erreur inconnue');
+      console.error('❌ Stack:', err instanceof Error ? err.stack : 'N/A');
       setError(err instanceof Error ? err.message : 'Erreur de chargement');
     } finally {
+      console.log('🏁 === FIN DE loadData() - setLoading(false) ===');
       setLoading(false);
     }
   };
