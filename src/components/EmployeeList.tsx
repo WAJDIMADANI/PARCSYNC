@@ -9,6 +9,7 @@ import ContractValidationPanel from './ContractValidationPanel';
 import { resolveDocUrl } from '../lib/documentStorage';
 import ImportantDocumentUpload from './ImportantDocumentUpload';
 import SendMissingDocumentsReminderModal from './SendMissingDocumentsReminderModal';
+import { REQUIRED_DOCUMENT_TYPES, REQUIRED_DOCUMENTS_MAP } from '../constants/requiredDocuments';
 
 interface Document {
   id: string;
@@ -894,20 +895,9 @@ function EmployeeDetailModal({
   };
 
   // Logique pour identifier les documents manquants
-  const REQUIRED_DOCUMENTS = ['permis_recto', 'certificat_medical', 'cni_recto', 'carte_vitale', 'rib'];
-  const DOCUMENT_LABELS: Record<string, string> = {
-    'permis_recto': 'Permis de conduire (Recto)',
-    'permis_verso': 'Permis de conduire (Verso)',
-    'cni_recto': 'Carte d\'identité (Recto)',
-    'cni_verso': 'Carte d\'identité (Verso)',
-    'carte_vitale': 'Carte vitale',
-    'certificat_medical': 'Certificat médical',
-    'rib': 'RIB',
-  };
-
   const getMissingDocuments = () => {
     const existingDocTypes = documents.map(d => d.type_document?.toLowerCase()).filter(Boolean);
-    return REQUIRED_DOCUMENTS.filter(req => {
+    return REQUIRED_DOCUMENT_TYPES.filter(req => {
       return !existingDocTypes.some(existing =>
         existing === req ||
         existing === req.replace('_recto', '') ||
@@ -1847,7 +1837,7 @@ function EmployeeDetailModal({
                       <AlertCircle className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900">{DOCUMENT_LABELS[docType] || docType}</p>
+                      <p className="font-medium text-gray-900">{REQUIRED_DOCUMENTS_MAP[docType]?.label || docType}</p>
                       <p className="text-xs text-red-600 font-semibold">Document obligatoire manquant</p>
                     </div>
                   </div>

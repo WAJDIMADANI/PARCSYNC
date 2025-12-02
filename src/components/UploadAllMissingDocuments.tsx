@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Upload, Camera, FileText, CheckCircle, AlertCircle, X, Loader } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
-import { DOCUMENT_CONFIG } from '../constants/documentTypes';
+import { REQUIRED_DOCUMENTS_MAP } from '../constants/requiredDocuments';
 
 interface MissingDocument {
   type: string;
@@ -150,7 +150,7 @@ export default function UploadAllMissingDocuments() {
         console.log('📊 Traitement de', missingDocsArray.length, 'documents...');
         missingDocsArray.forEach((docType: string, index: number) => {
           console.log(`📊 [${index + 1}/${missingDocsArray.length}] Traitement du type:`, docType);
-          const config = DOCUMENT_CONFIG[docType];
+          const config = REQUIRED_DOCUMENTS_MAP[docType];
           if (config) {
             docsArray.push({
               type: docType,
@@ -160,7 +160,7 @@ export default function UploadAllMissingDocuments() {
             console.log('✅ Document ajouté:', docType, '→', config.label);
           } else {
             console.warn('⚠️ Config non trouvée pour le type de document:', docType);
-            console.warn('⚠️ Types disponibles dans DOCUMENT_CONFIG:', Object.keys(DOCUMENT_CONFIG));
+            console.warn('⚠️ Types disponibles dans REQUIRED_DOCUMENTS_MAP:', Object.keys(REQUIRED_DOCUMENTS_MAP));
           }
         });
       } else {
@@ -316,8 +316,11 @@ export default function UploadAllMissingDocuments() {
           owner_type: 'profil',
           owner_id: profilData.id,
           type_document: documentType,
-          url: urlData.publicUrl,
-          nom_fichier: file.name,
+          file_url: urlData.publicUrl,
+          file_name: file.name,
+          storage_path: fileName,
+          bucket: 'documents',
+          statut: 'valide'
         }]);
 
       if (insertError) throw insertError;
@@ -380,6 +383,18 @@ export default function UploadAllMissingDocuments() {
           <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-8 py-6">
             <h1 className="text-3xl font-bold text-white mb-2">📋 Documents manquants</h1>
             <p className="text-orange-100">Bonjour {profilData?.prenom} {profilData?.nom}</p>
+            <div className="mt-4 bg-white/20 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-white font-semibold">Progression</span>
+                <span className="text-white font-bold">{uploadedDocs.size} / {missingDocuments.length + uploadedDocs.size}</span>
+              </div>
+              <div className="w-full bg-white/30 rounded-full h-3 overflow-hidden">
+                <div
+                  className="h-full bg-green-400 transition-all duration-500 ease-out"
+                  style={{ width: `${((uploadedDocs.size / (missingDocuments.length + uploadedDocs.size)) * 100)}%` }}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="p-8">

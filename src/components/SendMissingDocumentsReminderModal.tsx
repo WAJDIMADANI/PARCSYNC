@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Send, CheckCircle, AlertCircle, Loader, FileText } from 'lucide-react';
+import { REQUIRED_DOCUMENTS_MAP } from '../constants/requiredDocuments';
 
 interface SendMissingDocumentsReminderModalProps {
   profilId: string;
@@ -11,15 +12,6 @@ interface SendMissingDocumentsReminderModalProps {
   onSuccess: () => void;
 }
 
-const DOCUMENT_LABELS: Record<string, string> = {
-  'permis_recto': 'Permis de conduire (Recto)',
-  'permis_verso': 'Permis de conduire (Verso)',
-  'cni_recto': 'Carte d\'identité (Recto)',
-  'cni_verso': 'Carte d\'identité (Verso)',
-  'carte_vitale': 'Carte vitale',
-  'certificat_medical': 'Certificat médical',
-  'rib': 'RIB',
-};
 
 export default function SendMissingDocumentsReminderModal({
   profilId,
@@ -157,7 +149,7 @@ export default function SendMissingDocumentsReminderModal({
                 {missingDocuments.map((doc, index) => (
                   <li key={index} className="flex items-start gap-2 text-sm">
                     <span className="w-2 h-2 bg-orange-500 rounded-full mt-1.5 flex-shrink-0" />
-                    <span className="text-gray-700">{DOCUMENT_LABELS[doc] || doc}</span>
+                    <span className="text-gray-700">{REQUIRED_DOCUMENTS_MAP[doc]?.label || doc}</span>
                   </li>
                 ))}
               </ul>
