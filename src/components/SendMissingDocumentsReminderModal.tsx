@@ -63,9 +63,9 @@ export default function SendMissingDocumentsReminderModal({
       const appUrl = window.location.origin;
       const uploadLink = `${appUrl}/upload-all-documents?profil=${profilId}&token=${token}`;
 
-      // Utiliser send-contract-email qui est déjà déployée
+      // Appeler la fonction send-missing-documents-email
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/send-contract-email`,
+        `${supabaseUrl}/functions/v1/send-missing-documents-email`,
         {
           method: 'POST',
           headers: {
@@ -73,17 +73,10 @@ export default function SendMissingDocumentsReminderModal({
             'Authorization': `Bearer ${supabaseKey}`,
           },
           body: JSON.stringify({
+            profilId: profilId,
             employeeEmail,
             employeeName,
-            contractId: `reminder-${profilId}`,
-            variables: {
-              poste: 'Documents manquants',
-              salaire: missingDocuments.map(doc => DOCUMENT_LABELS[doc] || doc).join(', '),
-              type_email: 'rappel_documents',
-              missing_documents: missingDocuments,
-              profil_id: profilId,
-              upload_link: uploadLink
-            }
+            missingDocuments
           }),
         }
       );
