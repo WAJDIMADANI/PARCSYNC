@@ -1395,37 +1395,20 @@ function EmployeeDetailModal({
 
   const handleDownloadContract = async (contractId: string) => {
     try {
-      console.log('Téléchargement du contrat:', contractId);
-      console.log('URL Supabase:', import.meta.env.VITE_SUPABASE_URL);
+      const contract = employeeContracts.find((c: any) => c.id === contractId);
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-contract`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({ contractId })
-        }
-      );
-
-      console.log('Réponse status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!contract) {
+        alert('Contrat introuvable');
+        return;
       }
 
-      const data = await response.json();
-      console.log('Données reçues:', data);
-
-      if (data.success && data.url) {
-        window.open(data.url, '_blank');
+      if (contract.fichier_signe_url) {
+        window.open(contract.fichier_signe_url, '_blank');
       } else {
-        alert('Erreur: ' + (data.error || 'Impossible de télécharger le PDF'));
+        alert('PDF non disponible pour ce contrat');
       }
     } catch (error: any) {
-      console.error('Erreur complète:', error);
+      console.error('Erreur lors du téléchargement:', error);
       alert('Erreur lors du téléchargement: ' + error.message);
     }
   };
@@ -2564,13 +2547,6 @@ function EmployeeDetailModal({
                       const dateSignature = contract.date_signature || contract.yousign_signed_at;
                       const dateCreation = contract.created_at;
                       const hasPdf = contract.fichier_signe_url;
-
-                      console.log('Contract détails:', {
-                        id: contract.id,
-                        fichier_signe_url: contract.fichier_signe_url,
-                        hasPdf,
-                        statut
-                      });
 
                       const getTypeColor = (type: string) => {
                         const lowerType = type.toLowerCase();
