@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Download } from 'lucide-react';
+import { X, Download, FileText, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Contract {
@@ -25,6 +25,10 @@ export default function ContractViewModal({
   const [loading, setLoading] = useState(true);
   const [htmlContent, setHtmlContent] = useState('');
   const [downloading, setDownloading] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [showHtml, setShowHtml] = useState(false);
 
   useEffect(() => {
     fetchContractData();
@@ -75,6 +79,11 @@ export default function ContractViewModal({
       console.log('✅ Full data merged:', fullData);
       setContractData(fullData);
 
+      // Si le contrat a un PDF signé, générer l'URL signée
+      if (fullData.fichier_signe_url) {
+        await loadPdfUrl(fullData.fichier_signe_url);
+      }
+
       // Génère le HTML avec les variables
       if (modele && modele.contenu_html && contractData.variables) {
         let html = modele.contenu_html;
@@ -91,6 +100,43 @@ export default function ContractViewModal({
       console.error('Erreur lors du chargement:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPdfUrl = async (storagePath: string) => {
+    try {
+      setLoadingPdf(true);
+      setPdfError(null);
+
+      // Extraire le chemin sans le préfixe 'documents/'
+      const path = storagePath.startsWith('documents/')
+        ? storagePath.substring('documents/'.length)
+        : storagePath;
+
+      console.log('📄 Loading PDF from path:', path);
+
+      // Générer une URL signée valide pour 120 secondes
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(path, 120);
+
+      if (error) {
+        console.error('❌ Error creating signed URL:', error);
+        setPdfError('Impossible de charger le PDF');
+        return;
+      }
+
+      if (data?.signedUrl) {
+        console.log('✅ PDF URL generated:', data.signedUrl);
+        setPdfUrl(data.signedUrl);
+      } else {
+        setPdfError('URL du PDF non disponible');
+      }
+    } catch (error) {
+      console.error('❌ Error loading PDF:', error);
+      setPdfError('Erreur lors du chargement du PDF');
+    } finally {
+      setLoadingPdf(false);
     }
   };
 
@@ -125,9 +171,12 @@ export default function ContractViewModal({
     }
   };
 
+  const hasPdf = contractData?.fichier_signe_url && pdfUrl && !pdfError;
+  const shouldShowPdf = hasPdf && !showHtml;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
           <div>
@@ -135,8 +184,32 @@ export default function ContractViewModal({
             <p className="text-sm text-gray-500 mt-1">
               {contractData?.profil?.prenom} {contractData?.profil?.nom}
             </p>
+            {hasPdf && (
+              <p className="text-xs text-green-600 mt-1 font-medium">
+                Document signé disponible
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {hasPdf && (
+              <>
+                <button
+                  onClick={() => setShowHtml(!showHtml)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  title={showHtml ? 'Voir le PDF' : 'Voir le modèle HTML'}
+                >
+                  <FileText size={20} />
+                  {showHtml ? 'Voir PDF' : 'Voir modèle'}
+                </button>
+                <button
+                  onClick={() => window.open(pdfUrl, '_blank')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                  title="Ouvrir dans un nouvel onglet"
+                >
+                  <ExternalLink size={20} />
+                </button>
+              </>
+            )}
             {contract.statut === 'signe' && (
               <button
                 onClick={handleDownload}
@@ -192,12 +265,46 @@ export default function ContractViewModal({
               </div>
 
               {/* Contract Content */}
-              <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
-                <div
-                  className="prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: htmlContent }}
-                />
-              </div>
+              {shouldShowPdf ? (
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-100">
+                  {loadingPdf ? (
+                    <div className="flex justify-center items-center h-[700px]">
+                      <p className="text-gray-500">Chargement du PDF...</p>
+                    </div>
+                  ) : (
+                    <iframe
+                      src={pdfUrl}
+                      className="w-full h-[700px] border-0"
+                      title="Aperçu du contrat PDF"
+                    />
+                  )}
+                </div>
+              ) : pdfError ? (
+                <div className="border border-red-200 rounded-lg p-6 bg-red-50">
+                  <p className="text-red-600 text-center">{pdfError}</p>
+                  {htmlContent && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-600 text-center mb-4">Aperçu du modèle HTML:</p>
+                      <div
+                        className="prose prose-sm max-w-none bg-white p-4 rounded"
+                        dangerouslySetInnerHTML={{ __html: htmlContent }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
+                  {!hasPdf && (
+                    <p className="text-sm text-amber-600 mb-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                      Aperçu du modèle (contrat non signé)
+                    </p>
+                  )}
+                  <div
+                    className="prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: htmlContent }}
+                  />
+                </div>
+              )}
 
               {/* Contract Info */}
               <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
