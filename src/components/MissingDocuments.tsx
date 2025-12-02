@@ -54,6 +54,14 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
       const { data, error } = await supabase.rpc('get_missing_documents_by_salarie');
 
       if (error) throw error;
+
+      console.log('📊 DEBUG - Données brutes reçues:', data);
+      console.log('📊 DEBUG - Nombre de salariés:', data?.length);
+      if (data && data.length > 0) {
+        console.log('📊 DEBUG - Premier salarié:', data[0]);
+        console.log('📊 DEBUG - Clés du premier salarié:', Object.keys(data[0]));
+      }
+
       setSalaries(data || []);
     } catch (error) {
       console.error('Erreur chargement documents manquants:', error);
@@ -63,6 +71,16 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
   };
 
   const handleSendReminder = (salarie: MissingDocumentData) => {
+    console.log('🔍 DEBUG - Salarié sélectionné:', salarie);
+    console.log('🔍 DEBUG - ID du salarié:', salarie.id);
+    console.log('🔍 DEBUG - Type de l\'ID:', typeof salarie.id);
+    console.log('🔍 DEBUG - Toutes les clés:', Object.keys(salarie));
+
+    if (!salarie.id) {
+      alert('❌ ERREUR: L\'ID du salarié est manquant dans les données SQL!\n\nVérifiez que la fonction SQL get_missing_documents_by_salarie() retourne bien la colonne "id".');
+      return;
+    }
+
     setSelectedSalarie(salarie);
     setShowModal(true);
   };
