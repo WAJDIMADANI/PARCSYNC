@@ -87,8 +87,9 @@ Deno.serve(async (req: Request) => {
 
     console.log("✅ Token inserted into database");
 
-    // 🔗 CRÉER LE LIEN AVEC TOKEN
-    const uploadLink = `${APP_URL}/upload-all-documents?profil=${profilId}&token=${token}`;
+    // 🔗 CRÉER LE LIEN AVEC TOKEN ET DOCUMENTS SPÉCIFIQUES
+    const docsParam = missingDocuments.join(',');
+    const uploadLink = `${APP_URL}/upload-all-documents?profil=${profilId}&token=${token}&docs=${docsParam}`;
     console.log("🔗 Upload link generated:", uploadLink);
 
     const documentsList = missingDocuments

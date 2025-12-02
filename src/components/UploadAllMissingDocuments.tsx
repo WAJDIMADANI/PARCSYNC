@@ -172,8 +172,24 @@ export default function UploadAllMissingDocuments() {
       console.log('📊 Documents:', docsArray.map(d => `${d.type} (${d.label})`).join(', '));
       console.log('📊 === FIN DE L\'ANALYSE ===');
 
-      setMissingDocuments(docsArray);
-      console.log('✅ setMissingDocuments appelé avec', docsArray.length, 'documents');
+      // 🎯 FILTRER LES DOCUMENTS SELON LE PARAMÈTRE 'docs' DE L'URL
+      const requestedDocsParam = params.get('docs');
+      let filteredDocs = docsArray;
+
+      if (requestedDocsParam) {
+        console.log('🎯 Paramètre "docs" détecté dans l\'URL:', requestedDocsParam);
+        const requestedDocsList = requestedDocsParam.split(',');
+        console.log('🎯 Documents demandés:', requestedDocsList);
+
+        filteredDocs = docsArray.filter(doc => requestedDocsList.includes(doc.type));
+        console.log('🎯 Documents filtrés:', filteredDocs.length, '/', docsArray.length);
+        console.log('🎯 Types filtrés:', filteredDocs.map(d => d.type).join(', '));
+      } else {
+        console.log('🎯 Aucun filtre "docs" → Affichage de tous les documents manquants');
+      }
+
+      setMissingDocuments(filteredDocs);
+      console.log('✅ setMissingDocuments appelé avec', filteredDocs.length, 'documents');
 
     } catch (err) {
       console.error('❌ === ERREUR DANS loadData() ===');
@@ -365,23 +381,34 @@ export default function UploadAllMissingDocuments() {
   }
 
   if (missingDocuments.length === 0) {
+    const hasDocsFilter = params.get('docs');
+    const successMessage = hasDocsFilter
+      ? 'Tous les documents demandés ont été téléchargés !'
+      : 'Tous les documents sont complets !';
+    const thankYouMessage = hasDocsFilter
+      ? 'Merci d\'avoir téléchargé les documents demandés. Votre dossier sera examiné prochainement.'
+      : 'Merci d\'avoir téléchargé tous vos documents. Votre dossier est maintenant complet.';
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full text-center">
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Tous les documents sont complets !</h2>
-          <p className="text-gray-600">Merci d'avoir téléchargé tous vos documents. Votre dossier est maintenant complet.</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">{successMessage}</h2>
+          <p className="text-gray-600">{thankYouMessage}</p>
         </div>
       </div>
     );
   }
+
+  const totalDocs = missingDocuments.length + uploadedDocs.size;
+  const documentTitle = totalDocs === 1 ? '📋 Document manquant' : '📋 Documents manquants';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-xl shadow-xl overflow-hidden">
           <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-8 py-6">
-            <h1 className="text-3xl font-bold text-white mb-2">📋 Documents manquants</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">{documentTitle}</h1>
             <p className="text-orange-100">Bonjour {profilData?.prenom} {profilData?.nom}</p>
             <div className="mt-4 bg-white/20 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
