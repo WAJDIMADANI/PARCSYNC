@@ -2,20 +2,13 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Upload, X, FileText, Calendar, AlertCircle } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { DOCUMENT_TYPES, DocumentTypeConfig } from '../constants/documentTypes';
 
 interface ImportantDocumentUploadProps {
   profilId: string;
   onClose: () => void;
   onSuccess: () => void;
 }
-
-const DOCUMENT_TYPES = [
-  { value: 'certificat_medical', label: 'Certificat médical', requiresExpiration: true },
-  { value: 'titre_sejour', label: 'Titre de séjour / Carte de résident', requiresExpiration: true },
-  { value: 'piece_identite', label: 'Pièce d\'identité', requiresExpiration: false },
-  { value: 'permis_conduire', label: 'Permis de conduire', requiresExpiration: false },
-  { value: 'autre', label: 'Autre document', requiresExpiration: false }
-];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
@@ -28,7 +21,7 @@ export default function ImportantDocumentUpload({ profilId, onClose, onSuccess }
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
-  const selectedDocType = DOCUMENT_TYPES.find(dt => dt.value === documentType);
+  const selectedDocType: DocumentTypeConfig | undefined = DOCUMENT_TYPES.find(dt => dt.value === documentType);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,17 +98,10 @@ export default function ImportantDocumentUpload({ profilId, onClose, onSuccess }
       if (insertError) throw insertError;
 
       // Update profil table with expiration dates if applicable
-      if (documentType === 'certificat_medical' && expirationDate) {
+      if (selectedDocType?.expirationField && expirationDate) {
         const { error: updateError } = await supabase
           .from('profil')
-          .update({ date_fin_visite_medicale: expirationDate })
-          .eq('id', profilId);
-
-        if (updateError) throw updateError;
-      } else if (documentType === 'titre_sejour' && expirationDate) {
-        const { error: updateError } = await supabase
-          .from('profil')
-          .update({ titre_sejour_fin_validite: expirationDate })
+          .update({ [selectedDocType.expirationField]: expirationDate })
           .eq('id', profilId);
 
         if (updateError) throw updateError;

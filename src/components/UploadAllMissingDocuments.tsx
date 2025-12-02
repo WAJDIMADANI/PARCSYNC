@@ -1,23 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Upload, Camera, FileText, CheckCircle, AlertCircle, X, Loader, CreditCard, Car, Heart, Briefcase } from 'lucide-react';
+import { Upload, Camera, FileText, CheckCircle, AlertCircle, X, Loader } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { DOCUMENT_CONFIG } from '../constants/documentTypes';
 
 interface MissingDocument {
   type: string;
   label: string;
   icon: any;
 }
-
-const DOCUMENT_CONFIG: Record<string, { label: string; icon: any }> = {
-  'permis_recto': { label: 'Permis de conduire (Recto)', icon: Car },
-  'permis_verso': { label: 'Permis de conduire (Verso)', icon: Car },
-  'cni_recto': { label: 'Carte d\'identité (Recto)', icon: CreditCard },
-  'cni_verso': { label: 'Carte d\'identité (Verso)', icon: CreditCard },
-  'carte_vitale': { label: 'Carte vitale', icon: CreditCard },
-  'certificat_medical': { label: 'Certificat médical', icon: Heart },
-  'rib': { label: 'RIB', icon: Briefcase },
-};
 
 export default function UploadAllMissingDocuments() {
   const params = new URLSearchParams(window.location.search);
