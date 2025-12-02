@@ -45,14 +45,50 @@ Deno.serve(async (req: Request) => {
 
     const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
     const APP_URL = Deno.env.get("APP_URL") || "http://localhost:5173";
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!BREVO_API_KEY) {
       throw new Error("BREVO_API_KEY not configured");
     }
 
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+      throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured");
+    }
+
     console.log("✅ Environment variables OK");
 
-    const uploadLink = `${APP_URL}/upload-all-documents?profil=${profilId}`;
+    // 🔐 GÉNÉRER UN TOKEN SÉCURISÉ
+    const token = crypto.randomUUID();
+    console.log("🔐 Token generated:", token);
+
+    // 📝 INSÉRER LE TOKEN DANS LA BASE DE DONNÉES
+    const tokenResponse = await fetch(`${SUPABASE_URL}/rest/v1/upload_tokens`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        profil_id: profilId,
+        token: token,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      }),
+    });
+
+    // ❌ Échec critique si le token ne peut pas être créé
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      console.error("❌ Failed to insert token:", tokenResponse.status, errorText);
+      throw new Error(`Failed to create upload token: ${errorText}`);
+    }
+
+    console.log("✅ Token inserted into database");
+
+    // 🔗 CRÉER LE LIEN AVEC TOKEN
+    const uploadLink = `${APP_URL}/upload-all-documents?profil=${profilId}&token=${token}`;
     console.log("🔗 Upload link generated:", uploadLink);
 
     const documentsList = missingDocuments
