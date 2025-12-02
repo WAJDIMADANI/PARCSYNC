@@ -103,19 +103,28 @@ export default function UploadAllMissingDocuments() {
         .single();
 
       if (missingError) {
-        console.error('Erreur lors de la récupération des documents manquants:', missingError);
+        console.error('❌ Erreur lors de la récupération des documents manquants:', missingError);
         throw missingError;
       }
 
-      console.log('Données reçues de Supabase:', missingDocsResponse);
+      console.log('📊 === DÉBUT DU DÉBOGAGE ===');
+      console.log('📊 Données brutes reçues de Supabase:', missingDocsResponse);
+      console.log('📊 Type de missingDocsResponse:', typeof missingDocsResponse);
+      console.log('📊 Propriétés de missingDocsResponse:', Object.keys(missingDocsResponse || {}));
+      console.log('📊 Missing documents array:', missingDocsResponse?.missing_documents);
+      console.log('📊 Type de missing_documents:', typeof missingDocsResponse?.missing_documents);
+      console.log('📊 Is Array?', Array.isArray(missingDocsResponse?.missing_documents));
 
       const docsArray: MissingDocument[] = [];
       const missingDocsArray = missingDocsResponse?.missing_documents || [];
 
-      console.log('Documents manquants parsés:', missingDocsArray);
+      console.log('📊 Documents manquants parsés:', missingDocsArray);
+      console.log('📊 Longueur du tableau:', Array.isArray(missingDocsArray) ? missingDocsArray.length : 'N/A');
 
       if (Array.isArray(missingDocsArray)) {
+        console.log('📊 Traitement de chaque document...');
         missingDocsArray.forEach((docType: string) => {
+          console.log('📊 Traitement du type:', docType);
           const config = DOCUMENT_CONFIG[docType];
           if (config) {
             docsArray.push({
@@ -123,9 +132,18 @@ export default function UploadAllMissingDocuments() {
               label: config.label,
               icon: config.icon
             });
+            console.log('✅ Document ajouté:', docType);
+          } else {
+            console.warn('⚠️ Config non trouvée pour le type de document:', docType);
           }
         });
+      } else {
+        console.error('❌ missingDocsArray n\'est pas un tableau!', missingDocsArray);
       }
+
+      console.log('📊 Documents à afficher (docsArray):', docsArray);
+      console.log('📊 Nombre de documents à afficher:', docsArray.length);
+      console.log('📊 === FIN DU DÉBOGAGE ===');
 
       setMissingDocuments(docsArray);
 
