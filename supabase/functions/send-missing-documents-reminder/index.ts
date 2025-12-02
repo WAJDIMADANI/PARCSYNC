@@ -33,6 +33,16 @@ Deno.serve(async (req: Request) => {
   try {
     const { profilId, employeeEmail, employeeName, missingDocuments }: RequestPayload = await req.json();
 
+    console.log("📥 Payload received:", { profilId, employeeEmail, employeeName, docsCount: missingDocuments?.length });
+
+    // ✅ VALIDATION CRITIQUE - AJOUTER CECI !
+    if (!profilId) {
+      console.error("❌ ERROR: profilId is undefined or empty!");
+      throw new Error("profilId is required and cannot be empty");
+    }
+
+    console.log("✅ profilId validated:", profilId);
+
     const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
     const APP_URL = Deno.env.get("APP_URL") || "http://localhost:5173";
 
@@ -40,7 +50,10 @@ Deno.serve(async (req: Request) => {
       throw new Error("BREVO_API_KEY not configured");
     }
 
+    console.log("✅ Environment variables OK");
+
     const uploadLink = `${APP_URL}/upload-all-documents?profil=${profilId}`;
+    console.log("🔗 Upload link generated:", uploadLink);
 
     const documentsList = missingDocuments
       .map(doc => `<li style="margin: 10px 0; padding: 10px; background-color: #fff; border-left: 4px solid #f97316; border-radius: 4px;"><strong>${documentLabels[doc] || doc}</strong></li>`)
@@ -141,12 +154,16 @@ Deno.serve(async (req: Request) => {
       }),
     });
 
+    console.log("📧 Brevo response status:", brevoResponse.status);
+
     if (!brevoResponse.ok) {
       const errorData = await brevoResponse.text();
+      console.error("❌ Brevo error:", errorData);
       throw new Error(`Brevo API error: ${brevoResponse.status} - ${errorData}`);
     }
 
     const result = await brevoResponse.json();
+    console.log("✅ Email sent successfully, messageId:", result.messageId);
 
     return new Response(
       JSON.stringify({
@@ -162,7 +179,7 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
-    console.error("Error sending missing documents reminder email:", error);
+    console.error("❌ Error sending missing documents reminder email:", error);
     return new Response(
       JSON.stringify({
         success: false,
@@ -178,3 +195,17 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
