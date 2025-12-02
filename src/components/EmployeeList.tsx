@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase, getStorageUrl } from '../lib/supabase';
-import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload, Trash2 } from 'lucide-react';
+import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload, Trash2, Download } from 'lucide-react';
 import EmployeeHistory from './EmployeeHistory';
 import EmployeeDeparture from './EmployeeDeparture';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -212,40 +212,6 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     } finally {
       setLoading(false);
       setRefreshing(false);
-    }
-  };
-
-  const fetchEmployeeContracts = async (profilId: string) => {
-    try {
-      setLoadingContracts(true);
-
-      const { data, error } = await supabase
-        .from('contrat')
-        .select(`
-          id,
-          statut,
-          date_signature,
-          yousign_signed_at,
-          fichier_signe_url,
-          created_at,
-          modele:modele_id (
-            id,
-            nom,
-            type_contrat
-          )
-        `)
-        .eq('profil_id', profilId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setEmployeeContracts(data || []);
-      console.log('✅ Contrats chargés pour le salarié:', data?.length);
-    } catch (error) {
-      console.error('Erreur lors du chargement des contrats:', error);
-      setEmployeeContracts([]);
-    } finally {
-      setLoadingContracts(false);
     }
   };
 
@@ -884,6 +850,39 @@ function EmployeeDetailModal({
     }
   };
 
+  const fetchEmployeeContracts = async (profilId: string) => {
+    try {
+      setLoadingContracts(true);
+
+      const { data, error } = await supabase
+        .from('contrat')
+        .select(`
+          id,
+          statut,
+          date_signature,
+          yousign_signed_at,
+          fichier_signe_url,
+          created_at,
+          modele:modele_id (
+            id,
+            nom,
+            type_contrat
+          )
+        `)
+        .eq('profil_id', profilId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setEmployeeContracts(data || []);
+      console.log('✅ Contrats chargés pour le salarié:', data?.length);
+    } catch (error) {
+      console.error('Erreur lors du chargement des contrats:', error);
+      setEmployeeContracts([]);
+    } finally {
+      setLoadingContracts(false);
+    }
+  };
 
   const fetchDocuments = async () => {
     try {
