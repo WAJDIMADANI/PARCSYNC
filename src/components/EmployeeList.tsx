@@ -171,7 +171,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
-    
+
     try {
       const [employeesRes, contractsRes, sitesRes, secteursRes] = await Promise.all([
         supabase
@@ -200,7 +200,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       setContracts(contractsRes.data || []);
       setSites(sitesRes.data || []);
       setSecteurs(secteursRes.data || []);
-      
+
       if (!silent) {
         console.log('✅ Données chargées:', {
           employees: employeesRes.data?.length,
@@ -212,6 +212,40 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const fetchEmployeeContracts = async (profilId: string) => {
+    try {
+      setLoadingContracts(true);
+
+      const { data, error } = await supabase
+        .from('contrat')
+        .select(`
+          id,
+          statut,
+          date_signature,
+          yousign_signed_at,
+          fichier_signe_url,
+          created_at,
+          modele:modele_id (
+            id,
+            nom,
+            type_contrat
+          )
+        `)
+        .eq('profil_id', profilId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setEmployeeContracts(data || []);
+      console.log('✅ Contrats chargés pour le salarié:', data?.length);
+    } catch (error) {
+      console.error('Erreur lors du chargement des contrats:', error);
+      setEmployeeContracts([]);
+    } finally {
+      setLoadingContracts(false);
     }
   };
 
@@ -728,11 +762,15 @@ function EmployeeDetailModal({
   const [showUploadModal, setShowUploadModal] = useState(false);
 
   // Tab system
-  const [activeTab, setActiveTab] = useState<'overview' | 'personal' | 'address' | 'banking'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'personal' | 'address' | 'banking' | 'contracts'>('overview');
 
   // Masking states
   const [showSecuriteSociale, setShowSecuriteSociale] = useState(false);
   const [showIBAN, setShowIBAN] = useState(false);
+
+  // Contracts states
+  const [employeeContracts, setEmployeeContracts] = useState<any[]>([]);
+  const [loadingContracts, setLoadingContracts] = useState(false);
 
   // Edit states for new tabs
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
@@ -769,6 +807,7 @@ function EmployeeDetailModal({
     onOpen();
     fetchDocuments();
     fetchCandidatInfo();
+    fetchEmployeeContracts(currentEmployee.id);
   }, []);
 
   const fetchCandidatInfo = async () => {
@@ -1355,6 +1394,62 @@ function EmployeeDetailModal({
     setIsEditingBanking(false);
   };
 
+  const handleDownloadContract = async (contractId: string) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-contract`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({ contractId })
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success && data.url) {
+        window.open(data.url, '_blank');
+      } else {
+        alert('Erreur: ' + (data.error || 'Impossible de télécharger le PDF'));
+      }
+    } catch (error: any) {
+      alert('Erreur lors du téléchargement: ' + error.message);
+    }
+  };
+
+  const handleSendContract = async (contractId: string, employeeEmail: string) => {
+    try {
+      if (!confirm(`Envoyer le contrat à ${employeeEmail}?`)) {
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-contract-email`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({ contractId })
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('Email envoyé avec succès!');
+      } else {
+        alert('Erreur: ' + (data.error || 'Impossible d\'envoyer l\'email'));
+      }
+    } catch (error: any) {
+      alert('Erreur lors de l\'envoi: ' + error.message);
+    }
+  };
+
   // Afficher le vrai statut basé sur le contrat
   const displayStatut = currentContractStatus === 'signe' ? 'Signé' :
                         currentContractStatus === 'en_attente_signature' ? 'Contrat envoyé' :
@@ -1456,6 +1551,24 @@ function EmployeeDetailModal({
                 <div className="flex items-center gap-2">
                   <CreditCard className="w-4 h-4" />
                   <span>Informations bancaires</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('contracts')}
+                className={`px-4 py-3 font-medium text-sm transition-all ${
+                  activeTab === 'contracts'
+                    ? 'text-blue-700 border-b-2 border-blue-700 bg-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  <span>Contrats</span>
+                  {employeeContracts.length > 0 && (
+                    <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
+                      {employeeContracts.length}
+                    </span>
+                  )}
                 </div>
               </button>
             </div>
@@ -2400,6 +2513,124 @@ function EmployeeDetailModal({
                         {currentEmployee.bic || <span className="text-gray-400 italic">Non renseigné</span>}
                       </p>
                     </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'contracts' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100/30 rounded-xl p-5 border border-purple-200">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-lg">Contrats du salarié</h3>
+                  {employeeContracts.length > 0 && (
+                    <span className="ml-2 bg-purple-600 text-white text-xs px-2.5 py-1 rounded-full font-semibold">
+                      {employeeContracts.length} {employeeContracts.length === 1 ? 'contrat' : 'contrats'}
+                    </span>
+                  )}
+                </div>
+
+                {loadingContracts ? (
+                  <div className="flex justify-center items-center py-12">
+                    <LoadingSpinner />
+                    <p className="ml-3 text-gray-500">Chargement des contrats...</p>
+                  </div>
+                ) : employeeContracts.length === 0 ? (
+                  <div className="bg-white rounded-lg p-8 text-center">
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600 font-medium">Aucun contrat trouvé pour ce salarié</p>
+                    <p className="text-sm text-gray-500 mt-1">Les contrats signés apparaîtront ici</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {employeeContracts.map((contract: any) => {
+                      const typeContrat = contract.modele?.type_contrat || 'Autre';
+                      const nomModele = contract.modele?.nom || 'Contrat de travail';
+                      const statut = contract.statut;
+                      const dateSignature = contract.date_signature || contract.yousign_signed_at;
+                      const dateCreation = contract.created_at;
+                      const hasPdf = contract.fichier_signe_url;
+
+                      const getTypeColor = (type: string) => {
+                        const lowerType = type.toLowerCase();
+                        if (lowerType.includes('cdi')) return 'bg-green-100 text-green-800 border-green-300';
+                        if (lowerType.includes('cdd')) return 'bg-blue-100 text-blue-800 border-blue-300';
+                        if (lowerType.includes('ctt')) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+                        if (lowerType.includes('stage')) return 'bg-purple-100 text-purple-800 border-purple-300';
+                        if (lowerType.includes('alternance')) return 'bg-orange-100 text-orange-800 border-orange-300';
+                        return 'bg-gray-100 text-gray-800 border-gray-300';
+                      };
+
+                      const getStatutDisplay = (st: string) => {
+                        if (st === 'signe') return { label: 'Signé', color: 'bg-green-100 text-green-800 border-green-300' };
+                        if (st === 'en_attente_signature') return { label: 'En attente signature', color: 'bg-amber-100 text-amber-800 border-amber-300' };
+                        if (st === 'envoye') return { label: 'Envoyé', color: 'bg-blue-100 text-blue-800 border-blue-300' };
+                        return { label: 'Brouillon', color: 'bg-gray-100 text-gray-800 border-gray-300' };
+                      };
+
+                      const statutDisplay = getStatutDisplay(statut);
+
+                      return (
+                        <div key={contract.id} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                                <FileText className="w-5 h-5 text-purple-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-gray-900 text-base mb-2">{nomModele}</h4>
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                  <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${getTypeColor(typeContrat)}`}>
+                                    {typeContrat}
+                                  </span>
+                                  <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${statutDisplay.color}`}>
+                                    {statutDisplay.label}
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  {dateSignature && (
+                                    <p className="text-sm text-gray-600 flex items-center gap-1.5">
+                                      <CheckCircle className="w-4 h-4 text-green-600" />
+                                      Signé le {new Date(dateSignature).toLocaleDateString('fr-FR')}
+                                    </p>
+                                  )}
+                                  <p className="text-sm text-gray-500 flex items-center gap-1.5">
+                                    <Calendar className="w-4 h-4" />
+                                    Créé le {new Date(dateCreation).toLocaleDateString('fr-FR')}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <button
+                                onClick={() => handleDownloadContract(contract.id)}
+                                disabled={!hasPdf}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  hasPdf
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                }`}
+                                title={!hasPdf ? 'PDF non disponible' : 'Télécharger le PDF'}
+                              >
+                                <Download className="w-4 h-4" />
+                                Télécharger
+                              </button>
+                              <button
+                                onClick={() => handleSendContract(contract.id, currentEmployee.email)}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                              >
+                                <Send className="w-4 h-4" />
+                                Envoyer
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
