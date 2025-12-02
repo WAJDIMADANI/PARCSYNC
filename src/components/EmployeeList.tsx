@@ -1403,7 +1403,8 @@ function EmployeeDetailModal({
       }
 
       if (contract.fichier_signe_url) {
-        window.open(contract.fichier_signe_url, '_blank');
+        const fullUrl = getStorageUrl(contract.fichier_signe_url);
+        window.open(fullUrl, '_blank');
       } else {
         alert('PDF non disponible pour ce contrat');
       }

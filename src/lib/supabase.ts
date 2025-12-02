@@ -9,16 +9,18 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export function getStorageUrl(filePath: string): string {
+export function getStorageUrl(filePath: string, bucket: string = 'documents'): string {
   if (!filePath) return '';
 
   if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
     return filePath;
   }
 
+  const cleanPath = filePath.replace(/^\/+/, '');
+
   const { data } = supabase.storage
-    .from('documents')
-    .getPublicUrl(filePath);
+    .from(bucket)
+    .getPublicUrl(cleanPath);
 
   return data.publicUrl;
 }
