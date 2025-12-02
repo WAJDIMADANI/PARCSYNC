@@ -67,7 +67,7 @@ export default function MissingDocumentsReminderModal({
       const selectedDocsArray = Array.from(selectedDocuments);
 
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/send-all-missing-documents-reminder`,
+        `${supabaseUrl}/functions/v1/send-missing-documents-reminder`,
         {
           method: 'POST',
           headers: {
@@ -78,8 +78,7 @@ export default function MissingDocumentsReminderModal({
             profilId,
             employeeEmail,
             employeeName,
-            missingDocuments: selectedDocsArray,
-            createToken: true
+            missingDocuments: selectedDocsArray
           }),
         }
       );
