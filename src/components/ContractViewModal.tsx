@@ -108,30 +108,15 @@ export default function ContractViewModal({
       setLoadingPdf(true);
       setPdfError(null);
 
-      // Extraire le chemin sans le préfixe 'documents/'
-      const path = storagePath.startsWith('documents/')
-        ? storagePath.substring('documents/'.length)
-        : storagePath;
+      console.log('📄 Loading PDF from path:', storagePath);
 
-      console.log('📄 Loading PDF from path:', path);
+      // Le fichier est dans le bucket public
+      // Construire l'URL publique directement
+      const publicUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${storagePath}`;
 
-      // Générer une URL signée valide pour 120 secondes
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(path, 120);
+      console.log('✅ PDF URL publique:', publicUrl);
+      setPdfUrl(publicUrl);
 
-      if (error) {
-        console.error('❌ Error creating signed URL:', error);
-        setPdfError('Impossible de charger le PDF');
-        return;
-      }
-
-      if (data?.signedUrl) {
-        console.log('✅ PDF URL generated:', data.signedUrl);
-        setPdfUrl(data.signedUrl);
-      } else {
-        setPdfError('URL du PDF non disponible');
-      }
     } catch (error) {
       console.error('❌ Error loading PDF:', error);
       setPdfError('Erreur lors du chargement du PDF');
@@ -145,7 +130,7 @@ export default function ContractViewModal({
     try {
       setDownloading(true);
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-pdf`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-contract`,
         {
           method: 'POST',
           headers: {

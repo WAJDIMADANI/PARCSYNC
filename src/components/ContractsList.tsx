@@ -231,7 +231,7 @@ export function ContractsList() {
   const onDownloadPdf = async (contractId: string) => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-pdf`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-contract`,
         {
           method: 'POST',
           headers: {
