@@ -158,8 +158,13 @@ export default function ContractValidationPanel({
   };
 
   const handleActivate = async () => {
-    if (!contract?.certificat_medical_id || !contract?.dpae_id) {
-      alert('Le certificat médical et la DPAE sont obligatoires pour activer le salarié');
+    if (!contract?.dpae_id) {
+      alert('La DPAE est obligatoire pour activer le salarié');
+      return;
+    }
+
+    if (!contract?.date_signature) {
+      alert('Le contrat doit être signé pour activer le salarié');
       return;
     }
 
@@ -228,7 +233,7 @@ export default function ContractValidationPanel({
   const hasCertificat = !!contract.certificat_medical_id;
   const hasDpae = !!contract.dpae_id;
   const isSigned = !!contract.date_signature;
-  const canActivate = hasCertificat && hasDpae && isSigned;
+  const canActivate = hasDpae && isSigned;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -290,14 +295,17 @@ export default function ContractValidationPanel({
             <div className={`border-2 rounded-xl p-6 transition-all ${
               hasCertificat
                 ? 'border-green-500 bg-green-50'
-                : 'border-orange-300 bg-orange-50'
+                : 'border-blue-300 bg-blue-50'
             }`}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">Certificat médical</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-900">Certificat médical</h3>
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">Optionnel</span>
+                </div>
                 {hasCertificat ? (
                   <CheckCircle className="w-6 h-6 text-green-600" />
                 ) : (
-                  <XCircle className="w-6 h-6 text-orange-500" />
+                  <AlertCircle className="w-6 h-6 text-blue-500" />
                 )}
               </div>
               {hasCertificat && certificatUrl ? (
@@ -311,7 +319,7 @@ export default function ContractValidationPanel({
                   Voir le document
                 </a>
               ) : (
-                <p className="text-sm text-orange-700">Non reçu</p>
+                <p className="text-sm text-blue-700">Non fourni (peut être ajouté plus tard)</p>
               )}
             </div>
 
@@ -371,12 +379,14 @@ export default function ContractValidationPanel({
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h4 className="font-semibold text-yellow-900">Documents manquants</h4>
+                  <h4 className="font-semibold text-yellow-900">Documents obligatoires manquants</h4>
                   <ul className="text-sm text-yellow-800 mt-2 space-y-1">
                     {!isSigned && <li>• Le contrat n'a pas encore été signé par le salarié</li>}
-                    {!hasCertificat && <li>• Le certificat médical n'a pas été uploadé par le salarié</li>}
                     {!hasDpae && <li>• La DPAE doit être uploadée par vos soins</li>}
                   </ul>
+                  {(!isSigned || !hasDpae) && !hasCertificat && (
+                    <p className="text-sm text-blue-700 mt-3 italic">Note : Le certificat médical est optionnel et peut être ajouté ultérieurement</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -387,10 +397,15 @@ export default function ContractValidationPanel({
               <div className="flex items-start gap-3">
                 <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h4 className="font-semibold text-green-900">Tous les documents sont validés</h4>
+                  <h4 className="font-semibold text-green-900">Tous les documents obligatoires sont validés</h4>
                   <p className="text-sm text-green-800 mt-1">
-                    Vous pouvez maintenant activer le salarié pour qu'il devienne opérationnel.
+                    Le contrat est signé et la DPAE est uploadée. Vous pouvez activer le salarié.
                   </p>
+                  {!hasCertificat && (
+                    <p className="text-sm text-blue-700 mt-2 italic">
+                      Note : Le certificat médical pourra être ajouté après l'activation si nécessaire.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
