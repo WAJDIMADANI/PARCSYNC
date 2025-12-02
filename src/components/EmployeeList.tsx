@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase, getStorageUrl } from '../lib/supabase';
 import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload, Trash2 } from 'lucide-react';
 import EmployeeHistory from './EmployeeHistory';
@@ -106,6 +106,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const hasProcessedInitialProfile = useRef(false);
 
   useEffect(() => {
     fetchData();
@@ -140,14 +141,15 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
 
   // Si un profilId initial est fourni, ouvrir automatiquement le profil
   useEffect(() => {
-    if (initialProfilId && employees.length > 0 && !selectedEmployee) {
+    if (initialProfilId && employees.length > 0 && !hasProcessedInitialProfile.current) {
       const employee = employees.find(e => e.id === initialProfilId);
       if (employee) {
         setSelectedEmployee(employee);
         setIsModalOpen(true);
+        hasProcessedInitialProfile.current = true;
       }
     }
-  }, [initialProfilId, employees, selectedEmployee]);
+  }, [initialProfilId, employees]);
 
   // Auto-refresh toutes les 5 secondes si des contrats sont en attente de signature
   // MAIS seulement si aucun modal n'est ouvert
