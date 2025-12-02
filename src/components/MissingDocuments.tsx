@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertTriangle, FileText, Search, User, Send } from 'lucide-react';
+import { AlertTriangle, FileText, Search, User, Send, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import MissingDocumentsReminderModal from './MissingDocumentsReminderModal';
 
@@ -33,6 +33,9 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedSalarie, setSelectedSalarie] = useState<MissingDocumentData | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMissingDocuments();
@@ -99,6 +102,54 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
     );
   });
 
+  const totalPages = Math.ceil(filteredSalaries.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedSalaries = filteredSalaries.slice(startIndex, endIndex);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  const handleItemsPerPageChange = (value: number) => {
+    setItemsPerPage(value);
+    setCurrentPage(1);
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        pages.push(currentPage - 1);
+        pages.push(currentPage);
+        pages.push(currentPage + 1);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -145,6 +196,30 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
           </p>
         </div>
       ) : (
+        <>
+        <div className="bg-white rounded-lg shadow mb-4">
+          <div className="px-6 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600">
+                Affichage de <span className="font-semibold text-gray-900">{startIndex + 1}</span> à <span className="font-semibold text-gray-900">{Math.min(endIndex, filteredSalaries.length)}</span> sur <span className="font-semibold text-gray-900">{filteredSalaries.length}</span> salarié{filteredSalaries.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Afficher:</label>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-gray-600">par page</span>
+            </div>
+          </div>
+        </div>
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -168,8 +243,13 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredSalaries.map((salarie) => (
-                  <tr key={salarie.id} className="hover:bg-gray-50">
+                {paginatedSalaries.map((salarie) => (
+                  <tr
+                    key={salarie.id}
+                    className="hover:bg-blue-50 transition-colors"
+                    onMouseEnter={() => setHoveredRow(salarie.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -189,17 +269,27 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {salarie.nom_site || '-'}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {salarie.documents_manquants.map((doc) => (
-                          <span
-                            key={doc}
-                            className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800"
-                          >
-                            <AlertTriangle className="w-3 h-3 mr-1" />
-                            {DOCUMENT_LABELS[doc] || doc}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="relative group">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-red-100 text-red-800 border border-red-200">
+                            <AlertTriangle className="w-4 h-4" />
+                            {salarie.documents_manquants.length} document{salarie.documents_manquants.length > 1 ? 's' : ''}
                           </span>
-                        ))}
+                        </div>
+                        {hoveredRow === salarie.id && (
+                          <div className="absolute z-10 left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                            <div className="text-xs font-semibold text-gray-700 mb-2">Documents manquants:</div>
+                            <div className="space-y-1">
+                              {salarie.documents_manquants.map((doc) => (
+                                <div key={doc} className="flex items-center gap-1.5 text-xs text-gray-600">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                                  {DOCUMENT_LABELS[doc] || doc}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -225,13 +315,76 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
               </tbody>
             </table>
           </div>
-          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-            <p className="text-sm text-gray-600">
-              <span className="font-bold text-red-700">{filteredSalaries.length}</span> salarié
-              {filteredSalaries.length > 1 ? 's' : ''} avec des documents manquants
-            </p>
-          </div>
+
+          {totalPages > 1 && (
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  Page <span className="font-semibold text-gray-900">{currentPage}</span> sur <span className="font-semibold text-gray-900">{totalPages}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => goToPage(1)}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Première page"
+                  >
+                    <ChevronsLeft className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Page précédente"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    {getPageNumbers().map((page, index) => (
+                      page === '...' ? (
+                        <span key={`ellipsis-${index}`} className="px-3 py-2 text-gray-500">...</span>
+                      ) : (
+                        <button
+                          key={page}
+                          onClick={() => goToPage(page as number)}
+                          className={`min-w-[40px] px-3 py-2 rounded-lg font-medium transition-colors ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white shadow-md'
+                              : 'border border-gray-300 hover:bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      )
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Page suivante"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => goToPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Dernière page"
+                  >
+                    <ChevronsRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+        </>
       )}
 
       {showModal && selectedSalarie && (
