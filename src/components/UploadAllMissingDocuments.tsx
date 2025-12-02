@@ -55,11 +55,18 @@ export default function UploadAllMissingDocuments() {
   }, []);
 
   useEffect(() => {
+    console.log('🔄 useEffect triggered');
+    console.log('🔄 profilId:', profilId);
+    console.log('🔄 token:', token);
+
     if (!profilId || !token) {
+      console.error('❌ Lien invalide ou token manquant');
       setError('Lien invalide');
       setLoading(false);
       return;
     }
+
+    console.log('✅ Paramètres valides, appel de loadData()...');
     loadData();
   }, [profilId, token]);
 
