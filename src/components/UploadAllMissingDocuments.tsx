@@ -98,24 +98,30 @@ export default function UploadAllMissingDocuments() {
 
       setProfilData(profil);
 
-      const { data: missingDocs, error: missingError } = await supabase
-        .rpc('get_missing_documents_by_salarie', { salarie_id: profilId });
+      const { data: missingDocsResponse, error: missingError } = await supabase
+        .rpc('get_missing_documents_for_profil', { p_profil_id: profilId })
+        .single();
 
-      if (missingError) throw missingError;
+      if (missingError) {
+        console.error('Erreur lors de la récupération des documents manquants:', missingError);
+        throw missingError;
+      }
+
+      console.log('Données reçues de Supabase:', missingDocsResponse);
 
       const docsArray: MissingDocument[] = [];
-      if (missingDocs && Array.isArray(missingDocs) && missingDocs.length > 0) {
-        missingDocs.forEach((doc: any) => {
-          if (doc.missing_documents && Array.isArray(doc.missing_documents)) {
-            doc.missing_documents.forEach((docType: string) => {
-              const config = DOCUMENT_CONFIG[docType];
-              if (config) {
-                docsArray.push({
-                  type: docType,
-                  label: config.label,
-                  icon: config.icon
-                });
-              }
+      const missingDocsArray = missingDocsResponse?.missing_documents || [];
+
+      console.log('Documents manquants parsés:', missingDocsArray);
+
+      if (Array.isArray(missingDocsArray)) {
+        missingDocsArray.forEach((docType: string) => {
+          const config = DOCUMENT_CONFIG[docType];
+          if (config) {
+            docsArray.push({
+              type: docType,
+              label: config.label,
+              icon: config.icon
             });
           }
         });
