@@ -138,14 +138,13 @@ export default function UploadAllMissingDocuments() {
       console.log('📊 Clés disponibles:', Object.keys(missingDocsResponse || {}));
       console.log('📊 Contenu complet:', JSON.stringify(missingDocsResponse, null, 2));
 
-      // Essayer différentes structures possibles
       let missingDocsArray;
-      if (Array.isArray(missingDocsResponse)) {
+      if (missingDocsResponse?.missing_documents && Array.isArray(missingDocsResponse.missing_documents)) {
+        console.log('📊 Structure: Objet avec clé "missing_documents" (array)');
+        missingDocsArray = missingDocsResponse.missing_documents;
+      } else if (Array.isArray(missingDocsResponse)) {
         console.log('📊 Structure: Array directement');
         missingDocsArray = missingDocsResponse;
-      } else if (missingDocsResponse?.missing_documents) {
-        console.log('📊 Structure: Objet avec clé "missing_documents"');
-        missingDocsArray = missingDocsResponse.missing_documents;
       } else {
         console.log('📊 Structure: Inconnue, utilisation d\'un tableau vide');
         missingDocsArray = [];

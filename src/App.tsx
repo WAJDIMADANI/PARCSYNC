@@ -98,7 +98,7 @@ function AppContent() {
     return <UploadMedicalCertificate />;
   }
 
-  if (path === '/upload-all-documents' || path.startsWith('/upload-all-documents/')) {
+  if (path === '/upload-all-documents' || path.startsWith('/upload-all-documents')) {
     return <UploadAllMissingDocuments />;
   }
 
