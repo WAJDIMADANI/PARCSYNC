@@ -228,7 +228,11 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           new Date(p.date_sortie) <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
       ).length;
 
-      const { data: missingDocs } = await supabase.rpc('get_missing_documents_by_salarie');
+      const { data: missingDocs, error: missingDocsError } = await supabase.rpc('get_missing_documents_by_salarie');
+      if (missingDocsError) {
+        console.error('❌ Erreur get_missing_documents_by_salarie:', missingDocsError);
+      }
+      console.log('📊 Documents manquants:', missingDocs);
       const documents_manquants = missingDocs?.length || 0;
 
       setStats((prev) => ({
