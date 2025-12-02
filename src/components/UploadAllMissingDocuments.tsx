@@ -25,6 +25,7 @@ export default function UploadAllMissingDocuments() {
   const [uploadingDocs, setUploadingDocs] = useState<Set<string>>(new Set());
   const [uploadedDocs, setUploadedDocs] = useState<Set<string>>(new Set());
   const [isMobile, setIsMobile] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -67,6 +68,15 @@ export default function UploadAllMissingDocuments() {
       videoRef.current.srcObject = cameraStream;
     }
   }, [cameraStream]);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage('');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   const loadData = async () => {
     console.log('🚀 === DÉBUT DE loadData() ===');
@@ -314,21 +324,31 @@ export default function UploadAllMissingDocuments() {
 
     setUploadingDocs(prev => new Set(prev).add(documentType));
     setError('');
+    setSuccessMessage('');
 
     try {
+      console.log('🚀 Début de l\'upload pour:', documentType);
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${profilData.id}/${documentType}-${Date.now()}.${fileExt}`;
 
+      console.log('📤 Upload du fichier vers le storage...');
       const { error: uploadError } = await supabase.storage
         .from('documents')
         .upload(fileName, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('❌ Erreur storage:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('✅ Fichier uploadé avec succès');
 
       const { data: urlData } = supabase.storage
         .from('documents')
         .getPublicUrl(fileName);
 
+      console.log('💾 Insertion dans la base de données...');
       const { error: insertError } = await supabase
         .from('document')
         .insert([{
@@ -342,17 +362,29 @@ export default function UploadAllMissingDocuments() {
           statut: 'valide'
         }]);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('❌ Erreur insertion DB:', insertError);
+        throw insertError;
+      }
+
+      console.log('✅ Document enregistré dans la base de données');
 
       setUploadedDocs(prev => new Set(prev).add(documentType));
-      setMissingDocuments(prev => prev.filter(doc => doc.type !== documentType));
 
       const newSelectedFiles = { ...selectedFiles };
       delete newSelectedFiles[documentType];
       setSelectedFiles(newSelectedFiles);
 
+      const docConfig = REQUIRED_DOCUMENTS_MAP[documentType];
+      const docLabel = docConfig?.label || documentType;
+      setSuccessMessage(`${docLabel} a été envoyé avec succès !`);
+
+      console.log('🔄 Rechargement des données du profil...');
+      await loadData();
+      console.log('✅ Upload terminé avec succès');
+
     } catch (err) {
-      console.error('Erreur upload:', err);
+      console.error('❌ Erreur upload:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors du téléchargement');
     } finally {
       setUploadingDocs(prev => {
@@ -454,6 +486,15 @@ export default function UploadAllMissingDocuments() {
           </div>
 
           <div className="p-8">
+            {successMessage && (
+              <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <p className="text-green-700 font-semibold">{successMessage}</p>
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded">
                 <div className="flex items-center gap-2">
