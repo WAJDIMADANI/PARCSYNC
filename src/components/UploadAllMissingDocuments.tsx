@@ -8,6 +8,7 @@ interface MissingDocument {
   type: string;
   label: string;
   icon: any;
+  alreadyUploaded?: boolean;
 }
 
 export default function UploadAllMissingDocuments() {
@@ -108,88 +109,90 @@ export default function UploadAllMissingDocuments() {
       console.log('✅ Profil trouvé:', profil.prenom, profil.nom);
       setProfilData(profil);
 
-      console.log('📞 Appel 3: Récupération des documents manquants via RPC...');
-      console.log('📞 Paramètres RPC: { p_profil_id:', profilId, '}');
-
-      const { data: missingDocsResponse, error: missingError } = await supabase
-        .rpc('get_missing_documents_for_profil', { p_profil_id: profilId })
-        .single();
-
-      console.log('📞 Réponse RPC brute:', missingDocsResponse);
-      console.log('📞 Erreur RPC:', missingError);
-
-      if (missingError) {
-        console.error('❌ Erreur lors de la récupération des documents manquants:', missingError);
-        throw missingError;
-      }
-
-      console.log('📊 === ANALYSE DE LA RÉPONSE RPC ===');
-      console.log('📊 Type:', typeof missingDocsResponse);
-      console.log('📊 Est un Array?', Array.isArray(missingDocsResponse));
-      console.log('📊 Clés disponibles:', Object.keys(missingDocsResponse || {}));
-      console.log('📊 Contenu complet:', JSON.stringify(missingDocsResponse, null, 2));
-
-      let missingDocsArray;
-      if (missingDocsResponse?.missing_documents && Array.isArray(missingDocsResponse.missing_documents)) {
-        console.log('📊 Structure: Objet avec clé "missing_documents" (array)');
-        missingDocsArray = missingDocsResponse.missing_documents;
-      } else if (Array.isArray(missingDocsResponse)) {
-        console.log('📊 Structure: Array directement');
-        missingDocsArray = missingDocsResponse;
-      } else {
-        console.log('📊 Structure: Inconnue, utilisation d\'un tableau vide');
-        missingDocsArray = [];
-      }
-
-      console.log('📊 Array final à traiter:', missingDocsArray);
-      console.log('📊 Longueur:', missingDocsArray.length);
-
-      const docsArray: MissingDocument[] = [];
-
-      if (Array.isArray(missingDocsArray) && missingDocsArray.length > 0) {
-        console.log('📊 Traitement de', missingDocsArray.length, 'documents...');
-        missingDocsArray.forEach((docType: string, index: number) => {
-          console.log(`📊 [${index + 1}/${missingDocsArray.length}] Traitement du type:`, docType);
-          const config = REQUIRED_DOCUMENTS_MAP[docType];
-          if (config) {
-            docsArray.push({
-              type: docType,
-              label: config.label,
-              icon: config.icon
-            });
-            console.log('✅ Document ajouté:', docType, '→', config.label);
-          } else {
-            console.warn('⚠️ Config non trouvée pour le type de document:', docType);
-            console.warn('⚠️ Types disponibles dans REQUIRED_DOCUMENTS_MAP:', Object.keys(REQUIRED_DOCUMENTS_MAP));
-          }
-        });
-      } else {
-        console.log('⚠️ Aucun document manquant ou format invalide');
-      }
-
-      console.log('📊 === RÉSULTAT FINAL ===');
-      console.log('📊 Nombre de documents à afficher:', docsArray.length);
-      console.log('📊 Documents:', docsArray.map(d => `${d.type} (${d.label})`).join(', '));
-      console.log('📊 === FIN DE L\'ANALYSE ===');
-
-      // 🎯 FILTRER LES DOCUMENTS SELON LE PARAMÈTRE 'docs' DE L'URL
       const requestedDocsParam = params.get('docs');
-      let filteredDocs = docsArray;
+      let docsToDisplay: MissingDocument[] = [];
 
       if (requestedDocsParam) {
         console.log('🎯 Paramètre "docs" détecté dans l\'URL:', requestedDocsParam);
         const requestedDocsList = requestedDocsParam.split(',');
         console.log('🎯 Documents demandés:', requestedDocsList);
 
-        filteredDocs = docsArray.filter(doc => requestedDocsList.includes(doc.type));
-        console.log('🎯 Documents filtrés:', filteredDocs.length, '/', docsArray.length);
-        console.log('🎯 Types filtrés:', filteredDocs.map(d => d.type).join(', '));
+        console.log('📞 Appel 3: Vérification du statut des documents demandés...');
+        const { data: existingDocs, error: docsError } = await supabase
+          .from('document')
+          .select('type_document')
+          .eq('profil_id', profilId)
+          .in('type_document', requestedDocsList);
+
+        if (docsError) {
+          console.error('❌ Erreur lors de la vérification des documents:', docsError);
+        }
+
+        const existingDocTypes = new Set(existingDocs?.map(d => d.type_document) || []);
+        console.log('📊 Documents déjà uploadés:', Array.from(existingDocTypes));
+
+        requestedDocsList.forEach((docType: string) => {
+          const config = REQUIRED_DOCUMENTS_MAP[docType];
+          if (config) {
+            const alreadyExists = existingDocTypes.has(docType);
+            docsToDisplay.push({
+              type: docType,
+              label: config.label,
+              icon: config.icon,
+              alreadyUploaded: alreadyExists
+            });
+            console.log(`✅ Document ajouté: ${docType} → ${config.label} (${alreadyExists ? 'Déjà uploadé' : 'À uploader'})`);
+          } else {
+            console.warn('⚠️ Config non trouvée pour le type de document:', docType);
+          }
+        });
+
+        console.log('🎯 Documents à afficher:', docsToDisplay.length);
       } else {
-        console.log('🎯 Aucun filtre "docs" → Affichage de tous les documents manquants');
+        console.log('📞 Appel 3: Récupération des documents manquants via RPC...');
+        const { data: missingDocsResponse, error: missingError } = await supabase
+          .rpc('get_missing_documents_for_profil', { p_profil_id: profilId })
+          .single();
+
+        console.log('📞 Réponse RPC brute:', missingDocsResponse);
+
+        if (missingError) {
+          console.error('❌ Erreur lors de la récupération des documents manquants:', missingError);
+          throw missingError;
+        }
+
+        let missingDocsArray;
+        if (missingDocsResponse?.missing_documents && Array.isArray(missingDocsResponse.missing_documents)) {
+          missingDocsArray = missingDocsResponse.missing_documents;
+        } else if (Array.isArray(missingDocsResponse)) {
+          missingDocsArray = missingDocsResponse;
+        } else {
+          missingDocsArray = [];
+        }
+
+        console.log('📊 Documents manquants:', missingDocsArray.length);
+
+        if (Array.isArray(missingDocsArray) && missingDocsArray.length > 0) {
+          missingDocsArray.forEach((docType: string) => {
+            const config = REQUIRED_DOCUMENTS_MAP[docType];
+            if (config) {
+              docsToDisplay.push({
+                type: docType,
+                label: config.label,
+                icon: config.icon,
+                alreadyUploaded: false
+              });
+            }
+          });
+        }
       }
 
-      setMissingDocuments(filteredDocs);
-      console.log('✅ setMissingDocuments appelé avec', filteredDocs.length, 'documents');
+      console.log('📊 === RÉSULTAT FINAL ===');
+      console.log('📊 Nombre de documents à afficher:', docsToDisplay.length);
+      console.log('📊 Documents:', docsToDisplay.map(d => `${d.type} (${d.label}) ${d.alreadyUploaded ? '[Déjà uploadé]' : ''}`).join(', '));
+
+      setMissingDocuments(docsToDisplay);
+      console.log('✅ setMissingDocuments appelé avec', docsToDisplay.length, 'documents');
 
     } catch (err) {
       console.error('❌ === ERREUR DANS loadData() ===');
@@ -380,12 +383,23 @@ export default function UploadAllMissingDocuments() {
     );
   }
 
-  if (missingDocuments.length === 0) {
+  const docsNeedingUpload = missingDocuments.filter(doc => !doc.alreadyUploaded);
+  const allDocsCompleted = docsNeedingUpload.length === 0 ||
+                           docsNeedingUpload.every(doc => uploadedDocs.has(doc.type));
+
+  if (allDocsCompleted && missingDocuments.length > 0) {
     const hasDocsFilter = params.get('docs');
-    const successMessage = hasDocsFilter
+    const allAlreadyUploaded = docsNeedingUpload.length === 0;
+
+    const successMessage = allAlreadyUploaded
+      ? 'Tous les documents demandés ont déjà été envoyés !'
+      : hasDocsFilter
       ? 'Tous les documents demandés ont été téléchargés !'
       : 'Tous les documents sont complets !';
-    const thankYouMessage = hasDocsFilter
+
+    const thankYouMessage = allAlreadyUploaded
+      ? 'Les documents que vous avez été invité à envoyer ont déjà été téléchargés précédemment. Aucune action supplémentaire n\'est nécessaire.'
+      : hasDocsFilter
       ? 'Merci d\'avoir téléchargé les documents demandés. Votre dossier sera examiné prochainement.'
       : 'Merci d\'avoir téléchargé tous vos documents. Votre dossier est maintenant complet.';
 
@@ -400,7 +414,22 @@ export default function UploadAllMissingDocuments() {
     );
   }
 
-  const totalDocs = missingDocuments.length + uploadedDocs.size;
+  if (missingDocuments.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full text-center">
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Tous les documents sont complets !</h2>
+          <p className="text-gray-600">Merci d'avoir téléchargé tous vos documents. Votre dossier est maintenant complet.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const alreadyUploadedCount = missingDocuments.filter(doc => doc.alreadyUploaded).length;
+  const docsToUploadCount = missingDocuments.length - alreadyUploadedCount;
+  const totalDocs = missingDocuments.length;
+  const completedDocs = alreadyUploadedCount + uploadedDocs.size;
   const documentTitle = totalDocs === 1 ? '📋 Document manquant' : '📋 Documents manquants';
 
   return (
@@ -413,12 +442,12 @@ export default function UploadAllMissingDocuments() {
             <div className="mt-4 bg-white/20 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-white font-semibold">Progression</span>
-                <span className="text-white font-bold">{uploadedDocs.size} / {missingDocuments.length + uploadedDocs.size}</span>
+                <span className="text-white font-bold">{completedDocs} / {totalDocs}</span>
               </div>
               <div className="w-full bg-white/30 rounded-full h-3 overflow-hidden">
                 <div
                   className="h-full bg-green-400 transition-all duration-500 ease-out"
-                  style={{ width: `${((uploadedDocs.size / (missingDocuments.length + uploadedDocs.size)) * 100)}%` }}
+                  style={{ width: `${totalDocs > 0 ? ((completedDocs / totalDocs) * 100) : 0}%` }}
                 />
               </div>
             </div>
@@ -446,14 +475,35 @@ export default function UploadAllMissingDocuments() {
                 const isUploading = uploadingDocs.has(doc.type);
                 const isUploaded = uploadedDocs.has(doc.type);
                 const hasFile = selectedFiles[doc.type];
+                const alreadyUploaded = doc.alreadyUploaded;
 
                 return (
-                  <div key={doc.type} className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-orange-300 transition-colors">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Icon className="w-6 h-6 text-orange-600" />
-                      <h3 className="text-lg font-bold text-gray-800">{doc.label}</h3>
+                  <div key={doc.type} className={`bg-white border-2 rounded-xl p-6 transition-colors ${alreadyUploaded ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-orange-300'}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <Icon className={`w-6 h-6 ${alreadyUploaded ? 'text-green-600' : 'text-orange-600'}`} />
+                        <h3 className="text-lg font-bold text-gray-800">{doc.label}</h3>
+                      </div>
+                      {alreadyUploaded && (
+                        <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full">
+                          <CheckCircle className="w-5 h-5" />
+                          <span className="font-semibold">Déjà envoyé</span>
+                        </div>
+                      )}
                     </div>
 
+                    {alreadyUploaded ? (
+                      <div className="bg-green-100 border border-green-300 rounded-lg p-6 text-center">
+                        <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                        <p className="text-green-800 font-semibold text-lg">
+                          Ce document a déjà été téléchargé
+                        </p>
+                        <p className="text-green-700 text-sm mt-2">
+                          Vous n'avez pas besoin de l'envoyer à nouveau
+                        </p>
+                      </div>
+                    ) : (
+                      <>
                     {!hasFile && !isUploaded && (
                       <>
                         <div className={`grid gap-3 mb-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
@@ -559,13 +609,15 @@ export default function UploadAllMissingDocuments() {
                       </div>
                     )}
 
-                    {isUploaded && (
+                    {!alreadyUploaded && isUploaded && (
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                         <div className="flex items-center gap-2">
                           <CheckCircle className="w-5 h-5 text-green-600" />
                           <span className="text-green-800 font-medium">Document téléchargé avec succès !</span>
                         </div>
                       </div>
+                    )}
+                      </>
                     )}
                   </div>
                 );
