@@ -756,8 +756,8 @@ export function ImportSalariesBulk() {
           </div>
         )}
 
-        <div className="max-h-96 overflow-y-auto">
-          <table className="w-full">
+        <div className="max-h-96 overflow-x-auto overflow-y-auto">
+          <table className="w-full min-w-max">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -778,19 +778,19 @@ export function ImportSalariesBulk() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Statut
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '30%' }}>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '25%', minWidth: '200px' }}>
                   Message
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Ligne
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ minWidth: '120px' }}>
                   Nom
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ minWidth: '120px' }}>
                   Prénom
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ minWidth: '180px' }}>
                   Email
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -843,10 +843,10 @@ export function ImportSalariesBulk() {
                     {emp.statusMessage}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">{emp.rowNumber}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{emp.data.nom || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{emp.data.prenom || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{emp.data.email || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{emp.data.secteur_nom || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.nom || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.prenom || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.email || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.secteur_nom || '-'}</td>
                 </tr>
               ))}
             </tbody>
