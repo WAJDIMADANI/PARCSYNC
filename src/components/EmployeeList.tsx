@@ -1790,20 +1790,72 @@ function EmployeeDetailModal({
             </div>
 
             {/* Modèle de contrat signé */}
-            {currentEmployee.modele_contrat && (
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-xl p-5 border border-blue-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-white" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 text-lg">Modèle de contrat signé</h3>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-xl p-5 border border-blue-200">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-white" />
                 </div>
-
-                <div className="bg-white rounded-lg p-3 shadow-sm">
-                  <p className="text-gray-900 font-medium">{currentEmployee.modele_contrat}</p>
-                </div>
+                <h3 className="font-bold text-gray-900 text-lg">Modèle de contrat signé</h3>
               </div>
-            )}
+
+              {(() => {
+                const signedContracts = employeeContracts
+                  .filter((c: any) => c.statut === 'signe')
+                  .sort((a: any, b: any) => {
+                    const dateA = new Date(a.date_signature || a.yousign_signed_at || a.created_at).getTime();
+                    const dateB = new Date(b.date_signature || b.yousign_signed_at || b.created_at).getTime();
+                    return dateA - dateB;
+                  });
+
+                if (signedContracts.length === 0) {
+                  return (
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <p className="text-gray-500 text-sm">Aucun contrat signé</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2">
+                    {signedContracts.map((contract: any) => {
+                      const isManual = contract.source === 'manuel' || !contract.modele_id;
+                      const typeContrat = isManual && contract.variables?.type_contrat
+                        ? contract.variables.type_contrat
+                        : contract.modele?.type_contrat || 'Contrat de travail';
+                      const dateSignature = contract.date_signature || contract.yousign_signed_at;
+
+                      const getTypeColor = (type: string) => {
+                        const lowerType = type.toLowerCase();
+                        if (lowerType.includes('cdi')) return 'bg-green-100 text-green-800 border-green-300';
+                        if (lowerType.includes('cdd')) return 'bg-blue-100 text-blue-800 border-blue-300';
+                        if (lowerType.includes('ctt')) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+                        if (lowerType.includes('avenant')) return 'bg-gray-100 text-gray-800 border-gray-300';
+                        if (lowerType.includes('stage')) return 'bg-purple-100 text-purple-800 border-purple-300';
+                        if (lowerType.includes('alternance')) return 'bg-orange-100 text-orange-800 border-orange-300';
+                        return 'bg-gray-100 text-gray-800 border-gray-300';
+                      };
+
+                      return (
+                        <div key={contract.id} className="bg-white rounded-lg p-3 shadow-sm border border-blue-100 hover:shadow-md transition-shadow">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${getTypeColor(typeContrat)}`}>
+                                {typeContrat}
+                              </span>
+                            </div>
+                            {dateSignature && (
+                              <p className="text-sm text-gray-600">
+                                Signé le {new Date(dateSignature).toLocaleDateString('fr-FR')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
 
           {/* Section Documents importants - Dates d'expiration */}
