@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Upload, Download, CheckCircle, AlertCircle, AlertTriangle, FileText, X } from 'lucide-react';
+import { Upload, Download, CheckCircle, AlertCircle, AlertTriangle, FileText, X, ChevronDown, ChevronUp } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
@@ -64,6 +64,8 @@ export function ImportSalariesBulk() {
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [filter, setFilter] = useState<'all' | 'valid' | 'warning' | 'error'>('all');
+  const [reportExpanded, setReportExpanded] = useState(true);
+  const tableRefs = useRef<{ [key: number]: HTMLTableRowElement | null }>({});
 
   const downloadTemplate = () => {
     const headers = [
@@ -209,15 +211,15 @@ export function ImportSalariesBulk() {
 
       if (!nom && !prenom && !email) {
         status = 'error';
-        statusMessage = 'Ligne vide ou données manquantes';
+        statusMessage = 'Champs obligatoires manquants: Nom, Prénom ou Email';
         selected = false;
       } else if (email && existingEmailSet.has(email.toLowerCase())) {
         status = 'error';
-        statusMessage = 'Email déjà existant';
+        statusMessage = `Email "${email}" déjà existant dans la base - Vérifiez le fichier source`;
         selected = false;
       } else if (secteurNom && !secteurMap.has(secteurNom.toLowerCase())) {
         status = 'warning';
-        statusMessage = `Secteur "${secteurNom}" non trouvé - sera créé sans secteur`;
+        statusMessage = `Secteur "${secteurNom}" introuvable - Salarié sera créé sans secteur`;
       }
 
       const secteurId = secteurNom ? secteurMap.get(secteurNom.toLowerCase()) : undefined;
@@ -371,6 +373,56 @@ export function ImportSalariesBulk() {
     setImportProgress({ current: 0, total: 0 });
   };
 
+  const scrollToRow = (rowNumber: number) => {
+    const element = tableRefs.current[rowNumber];
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('bg-blue-100');
+      setTimeout(() => {
+        element.classList.remove('bg-blue-100');
+      }, 2000);
+    }
+  };
+
+  const exportProblemsCSV = (type: 'error' | 'warning') => {
+    const problems = parsedData.filter((emp) => emp.status === type);
+
+    if (problems.length === 0) {
+      alert(`Aucun ${type === 'error' ? 'erreur' : 'avertissement'} à exporter`);
+      return;
+    }
+
+    const headers = [
+      'Numéro de ligne',
+      'Nom',
+      'Prénom',
+      'Email',
+      'Secteur demandé',
+      'Type de problème',
+      'Message détaillé'
+    ];
+
+    const rows = problems.map((emp) => [
+      emp.rowNumber,
+      emp.data.nom || '',
+      emp.data.prenom || '',
+      emp.data.email || '',
+      emp.data.secteur_nom || '',
+      type === 'error' ? 'Erreur' : 'Avertissement',
+      emp.statusMessage
+    ]);
+
+    const csvContent = '\uFEFF' +
+      headers.join(';') + '\n' +
+      rows.map(row => row.join(';')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${type === 'error' ? 'erreurs' : 'avertissements'}_import_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
   const filteredData = parsedData.filter((emp) => {
     if (filter === 'all') return true;
     return emp.status === filter;
@@ -381,6 +433,39 @@ export function ImportSalariesBulk() {
     warning: parsedData.filter((e) => e.status === 'warning').length,
     error: parsedData.filter((e) => e.status === 'error').length,
     selected: parsedData.filter((e) => e.selected).length,
+  };
+
+  const groupProblemsByType = (type: 'error' | 'warning') => {
+    const problems = parsedData.filter((emp) => emp.status === type);
+    const grouped = new Map<string, number[]>();
+
+    problems.forEach((emp) => {
+      let problemType = '';
+
+      if (type === 'error') {
+        if (emp.statusMessage.includes('Champs obligatoires manquants')) {
+          problemType = 'Lignes vides ou données manquantes';
+        } else if (emp.statusMessage.includes('Email')) {
+          problemType = `Email déjà existant - ${emp.data.email}`;
+        }
+      } else {
+        if (emp.statusMessage.includes('Secteur')) {
+          const secteur = emp.data.secteur_nom || 'inconnu';
+          problemType = `Secteur "${secteur}" non trouvé`;
+        }
+      }
+
+      if (!grouped.has(problemType)) {
+        grouped.set(problemType, []);
+      }
+      grouped.get(problemType)?.push(emp.rowNumber);
+    });
+
+    return Array.from(grouped.entries()).map(([type, rows]) => ({
+      type,
+      count: rows.length,
+      rows: rows.sort((a, b) => a - b)
+    }));
   };
 
   if (importResult) {
@@ -543,6 +628,134 @@ export function ImportSalariesBulk() {
           </div>
         </div>
 
+        {(counts.error > 0 || counts.warning > 0) && (
+          <div className="p-6 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-orange-600" />
+                <h3 className="text-lg font-bold text-gray-900">
+                  Rapport de validation
+                </h3>
+                <span className="text-sm text-gray-600">
+                  ({counts.error + counts.warning} problème{counts.error + counts.warning > 1 ? 's' : ''} détecté{counts.error + counts.warning > 1 ? 's' : ''})
+                </span>
+              </div>
+              <button
+                onClick={() => setReportExpanded(!reportExpanded)}
+                className="flex items-center gap-2 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                {reportExpanded ? (
+                  <>
+                    <ChevronUp className="w-4 h-4" />
+                    Masquer
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4" />
+                    Afficher
+                  </>
+                )}
+              </button>
+            </div>
+
+            {reportExpanded && (
+              <div className="space-y-6">
+                {counts.error > 0 && (
+                  <div className="bg-white rounded-lg border border-red-200 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5 text-red-600" />
+                        <h4 className="font-semibold text-red-900">
+                          Erreurs trouvées ({counts.error})
+                        </h4>
+                      </div>
+                      <button
+                        onClick={() => exportProblemsCSV('error')}
+                        className="flex items-center gap-2 px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-700 font-medium rounded transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Exporter (CSV)
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {groupProblemsByType('error').map((group, idx) => (
+                        <div key={idx} className="bg-red-50 rounded p-3">
+                          <div className="font-medium text-red-900 mb-2">
+                            {group.type} ({group.count} ligne{group.count > 1 ? 's' : ''})
+                          </div>
+                          <div className="text-sm text-red-700">
+                            <span className="font-medium">Lignes concernées:</span>{' '}
+                            {group.rows.slice(0, 15).map((row, i) => (
+                              <span key={row}>
+                                <button
+                                  onClick={() => scrollToRow(row)}
+                                  className="hover:underline text-red-600 font-medium"
+                                >
+                                  {row}
+                                </button>
+                                {i < Math.min(14, group.rows.length - 1) && ', '}
+                              </span>
+                            ))}
+                            {group.rows.length > 15 && (
+                              <span className="text-red-600">... et {group.rows.length - 15} autre{group.rows.length - 15 > 1 ? 's' : ''}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {counts.warning > 0 && (
+                  <div className="bg-white rounded-lg border border-orange-200 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-orange-600" />
+                        <h4 className="font-semibold text-orange-900">
+                          Avertissements trouvés ({counts.warning})
+                        </h4>
+                      </div>
+                      <button
+                        onClick={() => exportProblemsCSV('warning')}
+                        className="flex items-center gap-2 px-3 py-1 text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 font-medium rounded transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Exporter (CSV)
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {groupProblemsByType('warning').map((group, idx) => (
+                        <div key={idx} className="bg-orange-50 rounded p-3">
+                          <div className="font-medium text-orange-900 mb-2">
+                            {group.type} ({group.count} ligne{group.count > 1 ? 's' : ''})
+                          </div>
+                          <div className="text-sm text-orange-700">
+                            <span className="font-medium">Lignes concernées:</span>{' '}
+                            {group.rows.slice(0, 15).map((row, i) => (
+                              <span key={row}>
+                                <button
+                                  onClick={() => scrollToRow(row)}
+                                  className="hover:underline text-orange-600 font-medium"
+                                >
+                                  {row}
+                                </button>
+                                {i < Math.min(14, group.rows.length - 1) && ', '}
+                              </span>
+                            ))}
+                            {group.rows.length > 15 && (
+                              <span className="text-orange-600">... et {group.rows.length - 15} autre{group.rows.length - 15 > 1 ? 's' : ''}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="max-h-96 overflow-y-auto">
           <table className="w-full">
             <thead className="bg-gray-50 sticky top-0">
@@ -565,6 +778,9 @@ export function ImportSalariesBulk() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Statut
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '30%' }}>
+                  Message
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Ligne
                 </th>
@@ -584,7 +800,11 @@ export function ImportSalariesBulk() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredData.map((emp) => (
-                <tr key={emp.rowNumber} className="hover:bg-gray-50">
+                <tr
+                  key={emp.rowNumber}
+                  ref={(el) => (tableRefs.current[emp.rowNumber] = el)}
+                  className="hover:bg-gray-50 transition-colors"
+                >
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
@@ -612,6 +832,15 @@ export function ImportSalariesBulk() {
                     {emp.status === 'error' && (
                       <AlertCircle className="w-5 h-5 text-red-600" title={emp.statusMessage} />
                     )}
+                  </td>
+                  <td className={`px-4 py-3 text-sm ${
+                    emp.status === 'error'
+                      ? 'bg-red-50 text-red-900 font-bold'
+                      : emp.status === 'warning'
+                      ? 'bg-orange-50 text-orange-900'
+                      : 'text-gray-700'
+                  }`}>
+                    {emp.statusMessage}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">{emp.rowNumber}</td>
                   <td className="px-4 py-3 text-sm text-gray-900">{emp.data.nom || '-'}</td>
