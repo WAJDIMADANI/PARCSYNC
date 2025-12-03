@@ -13,6 +13,7 @@ import { REQUIRED_DOCUMENT_TYPES, REQUIRED_DOCUMENTS_MAP } from '../constants/re
 import Toast from './Toast';
 import ConfirmSendContractModal from './ConfirmSendContractModal';
 import ManualContractUploadModal from './ManualContractUploadModal';
+import ConfirmDeleteContractModal from './ConfirmDeleteContractModal';
 
 interface Document {
   id: string;
@@ -746,6 +747,8 @@ function EmployeeDetailModal({
   const [employeeContracts, setEmployeeContracts] = useState<any[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
   const [showManualContractModal, setShowManualContractModal] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<any | null>(null);
+  const [deletingContract, setDeletingContract] = useState(false);
 
   // Edit states for new tabs
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
@@ -872,6 +875,9 @@ function EmployeeDetailModal({
           yousign_signed_at,
           fichier_signe_url,
           created_at,
+          source,
+          variables,
+          modele_id,
           modele:modele_id (
             id,
             nom,
@@ -890,6 +896,42 @@ function EmployeeDetailModal({
       setEmployeeContracts([]);
     } finally {
       setLoadingContracts(false);
+    }
+  };
+
+  const deleteManualContract = async () => {
+    if (!contractToDelete) return;
+
+    try {
+      setDeletingContract(true);
+
+      if (contractToDelete.fichier_signe_url) {
+        const { error: storageError } = await supabase.storage
+          .from('documents')
+          .remove([contractToDelete.fichier_signe_url]);
+
+        if (storageError) {
+          console.warn('Erreur suppression fichier (peut-être déjà supprimé):', storageError);
+        }
+      }
+
+      const { error: deleteError } = await supabase
+        .from('contrat')
+        .delete()
+        .eq('id', contractToDelete.id);
+
+      if (deleteError) {
+        throw new Error('Erreur lors de la suppression du contrat');
+      }
+
+      setToast({ type: 'success', message: 'Contrat supprimé avec succès' });
+      await fetchEmployeeContracts(currentEmployee.id);
+      setContractToDelete(null);
+    } catch (err: any) {
+      console.error('Error deleting contract:', err);
+      setToast({ type: 'error', message: err.message || 'Erreur lors de la suppression' });
+    } finally {
+      setDeletingContract(false);
     }
   };
 
@@ -2743,13 +2785,25 @@ function EmployeeDetailModal({
                                 <Download className="w-4 h-4" />
                                 Télécharger
                               </button>
-                              <button
-                                onClick={() => handleSendContract(contract.id, currentEmployee.email)}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                              >
-                                <Send className="w-4 h-4" />
-                                Envoyer
-                              </button>
+                              {!isManual && (
+                                <button
+                                  onClick={() => handleSendContract(contract.id, currentEmployee.email)}
+                                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                                >
+                                  <Send className="w-4 h-4" />
+                                  Envoyer
+                                </button>
+                              )}
+                              {isManual && (
+                                <button
+                                  onClick={() => setContractToDelete(contract)}
+                                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors shadow-sm hover:shadow-md"
+                                  title="Supprimer ce contrat"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  Supprimer
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -3243,9 +3297,21 @@ function EmployeeDetailModal({
         onClose={() => setShowManualContractModal(false)}
         onSuccess={() => {
           setShowManualContractModal(false);
-          fetchEmployeeContracts();
+          fetchEmployeeContracts(currentEmployee.id);
           setToast({ type: 'success', message: 'Contrat ajouté avec succès' });
         }}
+      />
+    )}
+
+    {contractToDelete && (
+      <ConfirmDeleteContractModal
+        contractId={contractToDelete.id}
+        contractName={contractToDelete.variables?.poste || 'Contrat de travail'}
+        contractType={contractToDelete.variables?.type_contrat || 'Non renseigné'}
+        signatureDate={contractToDelete.date_signature || contractToDelete.created_at}
+        onConfirm={deleteManualContract}
+        onClose={() => setContractToDelete(null)}
+        isDeleting={deletingContract}
       />
     )}
     </>
