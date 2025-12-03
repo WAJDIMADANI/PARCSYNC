@@ -1800,7 +1800,7 @@ function EmployeeDetailModal({
 
               {(() => {
                 const signedContracts = employeeContracts
-                  .filter((c: any) => c.statut === 'signe')
+                  .filter((c: any) => c.statut === 'signe' || c.date_signature || c.yousign_signed_at)
                   .sort((a: any, b: any) => {
                     const dateA = new Date(a.date_signature || a.yousign_signed_at || a.created_at).getTime();
                     const dateB = new Date(b.date_signature || b.yousign_signed_at || b.created_at).getTime();
