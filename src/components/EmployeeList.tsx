@@ -12,6 +12,7 @@ import SendMissingDocumentsReminderModal from './SendMissingDocumentsReminderMod
 import { REQUIRED_DOCUMENT_TYPES, REQUIRED_DOCUMENTS_MAP } from '../constants/requiredDocuments';
 import Toast from './Toast';
 import ConfirmSendContractModal from './ConfirmSendContractModal';
+import ManualContractUploadModal from './ManualContractUploadModal';
 
 interface Document {
   id: string;
@@ -744,6 +745,7 @@ function EmployeeDetailModal({
   // Contracts states
   const [employeeContracts, setEmployeeContracts] = useState<any[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
+  const [showManualContractModal, setShowManualContractModal] = useState(false);
 
   // Edit states for new tabs
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
@@ -2623,16 +2625,26 @@ function EmployeeDetailModal({
           {activeTab === 'contracts' && (
             <div className="space-y-6">
               <div className="bg-gradient-to-br from-purple-50 to-purple-100/30 rounded-xl p-5 border border-purple-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-white" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                      <FileText className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg">Contrats du salarié</h3>
+                    {employeeContracts.length > 0 && (
+                      <span className="ml-2 bg-purple-600 text-white text-xs px-2.5 py-1 rounded-full font-semibold">
+                        {employeeContracts.length} {employeeContracts.length === 1 ? 'contrat' : 'contrats'}
+                      </span>
+                    )}
                   </div>
-                  <h3 className="font-bold text-gray-900 text-lg">Contrats du salarié</h3>
-                  {employeeContracts.length > 0 && (
-                    <span className="ml-2 bg-purple-600 text-white text-xs px-2.5 py-1 rounded-full font-semibold">
-                      {employeeContracts.length} {employeeContracts.length === 1 ? 'contrat' : 'contrats'}
-                    </span>
-                  )}
+                  <button
+                    onClick={() => setShowManualContractModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
+                    title="Ajouter un contrat manuel"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Ajouter un contrat
+                  </button>
                 </div>
 
                 {loadingContracts ? (
@@ -2649,8 +2661,13 @@ function EmployeeDetailModal({
                 ) : (
                   <div className="space-y-3">
                     {employeeContracts.map((contract: any) => {
-                      const typeContrat = contract.modele?.type_contrat || 'Autre';
-                      const nomModele = contract.modele?.nom || 'Contrat de travail';
+                      const isManual = contract.source === 'manuel' || !contract.modele_id;
+                      const typeContrat = isManual && contract.variables?.type_contrat
+                        ? contract.variables.type_contrat
+                        : contract.modele?.type_contrat || 'Autre';
+                      const nomModele = isManual && contract.variables?.poste
+                        ? contract.variables.poste
+                        : contract.modele?.nom || 'Contrat de travail';
                       const statut = contract.statut;
                       const dateSignature = contract.date_signature || contract.yousign_signed_at;
                       const dateCreation = contract.created_at;
@@ -2691,6 +2708,12 @@ function EmployeeDetailModal({
                                   <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${statutDisplay.color}`}>
                                     {statutDisplay.label}
                                   </span>
+                                  {isManual && (
+                                    <span className="px-2.5 py-1 rounded-md text-xs font-semibold border bg-slate-100 text-slate-800 border-slate-300 flex items-center gap-1">
+                                      <Upload className="w-3 h-3" />
+                                      Manuel
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="space-y-1">
                                   {dateSignature && (
@@ -3210,6 +3233,19 @@ function EmployeeDetailModal({
         type={toast.type}
         message={toast.message}
         onClose={() => setToast(null)}
+      />
+    )}
+
+    {showManualContractModal && (
+      <ManualContractUploadModal
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
+        onClose={() => setShowManualContractModal(false)}
+        onSuccess={() => {
+          setShowManualContractModal(false);
+          fetchEmployeeContracts();
+          setToast({ type: 'success', message: 'Contrat ajouté avec succès' });
+        }}
       />
     )}
     </>
