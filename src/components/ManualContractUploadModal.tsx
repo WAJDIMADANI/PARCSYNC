@@ -3,7 +3,9 @@ import { X, Upload, FileText, Calendar, Briefcase } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
 
-interface ContractType {
+interface ContractTemplate {
+  id: string;
+  nom: string;
   type_contrat: string;
 }
 
@@ -42,7 +44,7 @@ export default function ManualContractUploadModal({
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState('');
 
-  const [contractTypes, setContractTypes] = useState<string[]>([]);
+  const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>([]);
   const [postes, setPostes] = useState<Poste[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -55,11 +57,11 @@ export default function ManualContractUploadModal({
     try {
       setLoadingData(true);
 
-      const [typesResult, postesResult, secteursResult] = await Promise.all([
+      const [templatesResult, postesResult, secteursResult] = await Promise.all([
         supabase
           .from('modeles_contrats')
-          .select('type_contrat')
-          .order('type_contrat'),
+          .select('id, nom, type_contrat')
+          .order('type_contrat, nom'),
         supabase
           .from('poste')
           .select('id, nom')
@@ -71,12 +73,8 @@ export default function ManualContractUploadModal({
           .order('nom')
       ]);
 
-      if (typesResult.data) {
-        const uniqueTypes = Array.from(new Set(typesResult.data.map((t: ContractType) => t.type_contrat)));
-        setContractTypes(uniqueTypes);
-        if (uniqueTypes.length > 0) {
-          setTypeContrat(uniqueTypes[0]);
-        }
+      if (templatesResult.data) {
+        setContractTemplates(templatesResult.data);
       }
 
       if (postesResult.data) {
@@ -284,11 +282,24 @@ export default function ManualContractUploadModal({
                   disabled={uploading}
                 >
                   <option value="">-- Sélectionner un type --</option>
-                  {contractTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
+                  {(() => {
+                    const groupedTemplates = contractTemplates.reduce((acc, template) => {
+                      const type = template.type_contrat;
+                      if (!acc[type]) acc[type] = [];
+                      acc[type].push(template);
+                      return acc;
+                    }, {} as Record<string, ContractTemplate[]>);
+
+                    return Object.entries(groupedTemplates).map(([type, typeTemplates]) => (
+                      <optgroup key={type} label={type}>
+                        {typeTemplates.map(template => (
+                          <option key={template.id} value={template.nom}>
+                            {template.nom}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ));
+                  })()}
                 </select>
               </div>
 
