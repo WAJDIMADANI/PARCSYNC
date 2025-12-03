@@ -65,6 +65,8 @@ export function ImportSalariesBulk() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [filter, setFilter] = useState<'all' | 'valid' | 'warning' | 'error'>('all');
   const [reportExpanded, setReportExpanded] = useState(true);
+  const [unmappedColumns, setUnmappedColumns] = useState<string[]>([]);
+  const [mappingWarnings, setMappingWarnings] = useState<string[]>([]);
   const tableRefs = useRef<{ [key: number]: HTMLTableRowElement | null }>({});
 
   const downloadTemplate = () => {
@@ -153,46 +155,85 @@ export function ImportSalariesBulk() {
       .replace(/\s+/g, '_');
   };
 
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    const s1 = str1.toLowerCase();
+    const s2 = str2.toLowerCase();
+
+    if (s1 === s2) return 1;
+
+    const len1 = s1.length;
+    const len2 = s2.length;
+    const maxLen = Math.max(len1, len2);
+
+    if (maxLen === 0) return 1;
+
+    let matches = 0;
+    const range = Math.floor(Math.max(len1, len2) / 2) - 1;
+    const s1Matches = new Array(len1).fill(false);
+    const s2Matches = new Array(len2).fill(false);
+
+    for (let i = 0; i < len1; i++) {
+      const start = Math.max(0, i - range);
+      const end = Math.min(i + range + 1, len2);
+
+      for (let j = start; j < end; j++) {
+        if (s2Matches[j] || s1[i] !== s2[j]) continue;
+        s1Matches[i] = true;
+        s2Matches[j] = true;
+        matches++;
+        break;
+      }
+    }
+
+    if (matches === 0) return 0;
+
+    return matches / maxLen;
+  };
+
   const createColumnMapper = (row: any) => {
     const columnMap = new Map<string, string>();
+    const unmappedColumns: string[] = [];
+    const mappingWarnings: string[] = [];
 
     const expectedColumns = {
       'matricule_tca': ['MATRICULE TCA', 'matricule tca', 'matricule'],
       'nom': ['Nom', 'nom', 'NOM'],
-      'prenom': ['Prénom', 'Prenom', 'prénom', 'prenom', 'PRENOM'],
-      'email': ['E-mail', 'Email', 'e-mail', 'email', 'EMAIL'],
-      'date_debut_contrat': ['Date de début du contrat (jj/mm/aaaa)', 'date debut contrat', 'date_debut'],
+      'prenom': ['Prénom', 'Prenom', 'prénom', 'prenom', 'PRENOM', 'Pr�nom', 'Pr�Nom', 'Pr�NOM'],
+      'email': ['E-mail', 'Email', 'e-mail', 'email', 'EMAIL', 'E�mail'],
+      'date_debut_contrat': ['Date de début du contrat (jj/mm/aaaa)', 'date debut contrat', 'date_debut', 'Date de d�but du contrat'],
       'date_fin_contrat': ['Date de fin du contrat (jj/mm/aaaa)', 'date fin contrat', 'date_fin'],
-      'numero_securite_sociale': ['Numéro de sécurité sociale', 'numero securite sociale', 'securite sociale'],
+      'numero_securite_sociale': ['Numéro de sécurité sociale', 'numero securite sociale', 'securite sociale', 'Num�ro de s�curit� sociale'],
       'poste': ['Poste', 'poste', 'POSTE'],
       'date_naissance': ['Date de naissance (jj/mm/aaaa)', 'date naissance', 'date_naissance'],
       'lieu_naissance': ['VILLE DE NAISSANCE', 'lieu naissance', 'ville naissance'],
-      'nationalite': ['Nationalité', 'Nationalite', 'nationalite', 'NATIONALITE'],
+      'nationalite': ['Nationalité', 'Nationalite', 'nationalite', 'NATIONALITE', 'Nationalit�'],
       'genre': ['Genre', 'genre', 'GENRE'],
       'nom_naissance': ['Nom de naissance', 'nom naissance', 'nom_naissance'],
       'adresse': ['Adresse ligne 1', 'adresse', 'ADRESSE'],
-      'complement_adresse': ['Adresse ligne 2', 'complement adresse', 'adresse 2'],
+      'complement_adresse': ['Adresse ligne 2', 'complement adresse', 'adresse 2', 'compl�ment adresse'],
       'pays_naissance': ['Pays de naissance', 'pays naissance', 'pays_naissance'],
       'ville': ['Ville', 'ville', 'VILLE'],
       'code_postal': ['Code postal', 'code postal', 'code_postal'],
-      'tel': ['Téléphone', 'Telephone', 'telephone', 'tel', 'TEL'],
+      'tel': ['Téléphone', 'Telephone', 'telephone', 'tel', 'TEL', 'T�l�phone'],
       'iban': ['IBAN', 'iban'],
       'bic': ['BIC', 'bic'],
-      'modele_contrat': ['Modeles de contrats', 'modele contrat', 'modele_contrat'],
-      'periode_essai': ['Période d\'essai', 'periode essai', 'periode_essai'],
-      'avenant_1_date_debut': ['DATE DE DEBUT - AVEVANT1', 'avenant 1 debut', 'avenant1_debut'],
+      'modele_contrat': ['Modeles de contrats', 'modele contrat', 'modele_contrat', 'Mod�les de contrats'],
+      'periode_essai': ['Période d\'essai', 'periode essai', 'periode_essai', 'P�riode d\'essai'],
+      'avenant_1_date_debut': ['DATE DE DEBUT - AVEVANT1', 'avenant 1 debut', 'avenant1_debut', 'DATE DE D�BUT - AVEVANT1'],
       'avenant_1_date_fin': ['DATE DE FIN - AVENANT1', 'avenant 1 fin', 'avenant1_fin'],
       'avenant_2_date_fin': ['DATE DE FIN - AVENANT2', 'avenant 2 fin', 'avenant2_fin'],
       'secteur': ['SECTEUR', 'Secteur', 'secteur'],
-      'type_piece_identite': ['Type de pièce d\'identité', 'type piece identite', 'piece identite'],
-      'titre_sejour_fin_validite': ['TITRE DE SEJOUR - FIN DE VALIDITE', 'titre sejour validite'],
-      'date_visite_medicale': ['DATE DE DEBUT - VISITE MEDICAL', 'visite medicale debut'],
-      'date_fin_visite_medicale': ['DATE DE FIN - VISITE MEDICAL', 'visite medicale fin'],
+      'type_piece_identite': ['Type de pièce d\'identité', 'type piece identite', 'piece identite', 'Type de pi�ce d\'identit�'],
+      'titre_sejour_fin_validite': ['TITRE DE SEJOUR - FIN DE VALIDITE', 'titre sejour validite', 'TITRE DE S�JOUR - FIN DE VALIDITE'],
+      'date_visite_medicale': ['DATE DE DEBUT - VISITE MEDICAL', 'visite medicale debut', 'DATE DE D�BUT - VISITE MEDICAL'],
+      'date_fin_visite_medicale': ['DATE DE FIN - VISITE MEDICAL', 'visite medicale fin', 'DATE DE FIN - VISITE M�DICAL'],
     };
 
     const actualColumns = Object.keys(row);
 
     for (const [targetColumn, variants] of Object.entries(expectedColumns)) {
+      let found = false;
+
       for (const variant of variants) {
         const normalizedVariant = normalizeColumnName(variant);
 
@@ -201,15 +242,45 @@ export function ImportSalariesBulk() {
 
           if (normalizedActual === normalizedVariant || actualColumn === variant) {
             columnMap.set(targetColumn, actualColumn);
+            found = true;
             break;
           }
         }
 
-        if (columnMap.has(targetColumn)) break;
+        if (found) break;
+      }
+
+      if (!found) {
+        for (const actualColumn of actualColumns) {
+          const similarity = calculateSimilarity(
+            normalizeColumnName(variants[0]),
+            normalizeColumnName(actualColumn)
+          );
+
+          if (similarity > 0.75) {
+            columnMap.set(targetColumn, actualColumn);
+            mappingWarnings.push(`Colonne "${targetColumn}" mappée à "${actualColumn}" (similarité: ${Math.round(similarity * 100)}%)`);
+            found = true;
+            break;
+          }
+        }
+      }
+
+      if (!found && ['nom', 'prenom', 'email', 'matricule_tca'].includes(targetColumn)) {
+        unmappedColumns.push(targetColumn);
       }
     }
 
-    return columnMap;
+    if (unmappedColumns.length > 0) {
+      console.warn('⚠️ Colonnes importantes non mappées:', unmappedColumns);
+      console.warn('📋 Colonnes disponibles dans le fichier:', actualColumns);
+    }
+
+    if (mappingWarnings.length > 0) {
+      console.info('ℹ️ Mappings approximatifs:', mappingWarnings);
+    }
+
+    return { columnMap, unmappedColumns, mappingWarnings };
   };
 
   const getColumnValue = (row: any, columnMap: Map<string, string>, targetColumn: string): string => {
@@ -245,24 +316,45 @@ export function ImportSalariesBulk() {
           header: true,
           delimiter: ';',
           skipEmptyLines: true,
+          encoding: 'UTF-8',
         });
         rows = result.data;
       } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
         const buffer = await uploadedFile.arrayBuffer();
-        const workbook = XLSX.read(buffer);
+        const workbook = XLSX.read(buffer, {
+          type: 'array',
+          codepage: 65001,
+          cellDates: true,
+          cellNF: false,
+          cellText: false
+        });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        rows = XLSX.utils.sheet_to_json(worksheet);
+        rows = XLSX.utils.sheet_to_json(worksheet, {
+          raw: false,
+          dateNF: 'dd/mm/yyyy',
+          defval: ''
+        });
       }
 
       if (rows.length > 0) {
         console.log('🔍 DEBUG: First row keys:', Object.keys(rows[0]));
         console.log('🔍 DEBUG: First row data:', rows[0]);
 
-        const columnMap = createColumnMapper(rows[0]);
+        const { columnMap, unmappedColumns: unmapped, mappingWarnings: warnings } = createColumnMapper(rows[0]);
         console.log('🔍 DEBUG: Column mapping:');
         columnMap.forEach((actualCol, targetCol) => {
           console.log(`  ${targetCol} -> "${actualCol}"`);
         });
+
+        if (unmapped.length > 0) {
+          console.error('❌ COLONNES NON MAPPÉES:', unmapped);
+          setUnmappedColumns(unmapped);
+        }
+
+        if (warnings.length > 0) {
+          console.warn('⚠️ MAPPINGS APPROXIMATIFS:', warnings);
+          setMappingWarnings(warnings);
+        }
       }
 
       await parseAndValidateRows(rows);
@@ -275,7 +367,7 @@ export function ImportSalariesBulk() {
   const parseAndValidateRows = async (rows: any[]) => {
     if (rows.length === 0) return;
 
-    const columnMap = createColumnMapper(rows[0]);
+    const { columnMap, unmappedColumns } = createColumnMapper(rows[0]);
 
     const { data: secteurs } = await supabase.from('secteur').select('id, nom');
     const secteurMap = new Map(secteurs?.map((s) => [s.nom.toLowerCase(), s.id]) || []);
@@ -471,6 +563,8 @@ export function ImportSalariesBulk() {
     setParsedData([]);
     setImportResult(null);
     setImportProgress({ current: 0, total: 0 });
+    setUnmappedColumns([]);
+    setMappingWarnings([]);
   };
 
   const scrollToRow = (rowNumber: number) => {
@@ -727,6 +821,66 @@ export function ImportSalariesBulk() {
             </button>
           </div>
         </div>
+
+        {unmappedColumns.length > 0 && (
+          <div className="p-6 border-b border-gray-200 bg-red-50">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-red-900 mb-2">
+                  Colonnes importantes non détectées
+                </h3>
+                <p className="text-red-800 mb-3">
+                  Les colonnes suivantes n'ont pas pu être détectées dans votre fichier. Cela peut être dû à un problème d'encodage des caractères (ex: "é" devient "�").
+                </p>
+                <div className="bg-white rounded-lg border border-red-200 p-4">
+                  <ul className="list-disc list-inside space-y-1 text-red-900">
+                    {unmappedColumns.map((col) => (
+                      <li key={col} className="font-medium">
+                        {col === 'prenom' && 'Prénom'}
+                        {col === 'nom' && 'Nom'}
+                        {col === 'email' && 'Email'}
+                        {col === 'matricule_tca' && 'Matricule TCA'}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="mt-4 bg-red-100 rounded-lg p-3">
+                  <p className="text-sm font-semibold text-red-900 mb-2">Solutions possibles :</p>
+                  <ol className="list-decimal list-inside space-y-1 text-sm text-red-800">
+                    <li>Téléchargez et utilisez le modèle CSV fourni (recommandé)</li>
+                    <li>Vérifiez que votre fichier Excel est bien encodé en UTF-8</li>
+                    <li>Réenregistrez votre fichier Excel en format "CSV UTF-8"</li>
+                    <li>Vérifiez que les noms de colonnes sont exactement comme dans le modèle</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {mappingWarnings.length > 0 && (
+          <div className="p-6 border-b border-gray-200 bg-orange-50">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-orange-600 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-orange-900 mb-2">
+                  Mappings approximatifs détectés
+                </h3>
+                <p className="text-orange-800 mb-3">
+                  Certaines colonnes ont été détectées par similarité. Veuillez vérifier que les données sont correctes.
+                </p>
+                <div className="bg-white rounded-lg border border-orange-200 p-4">
+                  <ul className="list-disc list-inside space-y-1 text-orange-900 text-sm">
+                    {mappingWarnings.map((warning, idx) => (
+                      <li key={idx}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {(counts.error > 0 || counts.warning > 0) && (
           <div className="p-6 border-b border-gray-200 bg-gray-50">
