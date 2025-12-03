@@ -1487,12 +1487,11 @@ function EmployeeDetailModal({
         throw new Error('Impossible de récupérer les données du contrat');
       }
 
-      const variables = contractData.variables || {};
       const employeeName = `${contractData.profil.prenom} ${contractData.profil.nom}`;
       const employeeEmail = contractData.profil.email;
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-contract-email`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-contract-pdf-simple`,
         {
           method: 'POST',
           headers: {
@@ -1502,8 +1501,7 @@ function EmployeeDetailModal({
           body: JSON.stringify({
             contractId: confirmSendModal.contractId,
             employeeEmail,
-            employeeName,
-            variables
+            employeeName
           })
         }
       );
