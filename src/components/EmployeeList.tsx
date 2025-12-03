@@ -10,6 +10,8 @@ import { resolveDocUrl } from '../lib/documentStorage';
 import ImportantDocumentUpload from './ImportantDocumentUpload';
 import SendMissingDocumentsReminderModal from './SendMissingDocumentsReminderModal';
 import { REQUIRED_DOCUMENT_TYPES, REQUIRED_DOCUMENTS_MAP } from '../constants/requiredDocuments';
+import Toast from './Toast';
+import ConfirmSendContractModal from './ConfirmSendContractModal';
 
 interface Document {
   id: string;
@@ -107,6 +109,9 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const hasProcessedInitialProfile = useRef(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [confirmSendModal, setConfirmSendModal] = useState<{ contractId: string; employeeName: string; employeeEmail: string; contractType: string } | null>(null);
+  const [isSendingContract, setIsSendingContract] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -1416,9 +1421,73 @@ function EmployeeDetailModal({
 
   const handleSendContract = async (contractId: string, employeeEmail: string) => {
     try {
-      if (!confirm(`Envoyer le contrat à ${employeeEmail}?`)) {
-        return;
+      const { data: contractData, error: contractError } = await supabase
+        .from('contrat')
+        .select(`
+          id,
+          variables,
+          profil:profil_id (
+            id,
+            prenom,
+            nom,
+            email
+          ),
+          modele:modele_id (
+            type_contrat
+          )
+        `)
+        .eq('id', contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error('Impossible de récupérer les données du contrat');
       }
+
+      const employeeName = `${contractData.profil.prenom} ${contractData.profil.nom}`;
+      const contractType = contractData.modele?.type_contrat || 'Contrat';
+
+      setConfirmSendModal({
+        contractId,
+        employeeName,
+        employeeEmail: contractData.profil.email,
+        contractType
+      });
+    } catch (error: any) {
+      console.error('Erreur lors de la préparation:', error);
+      setToast({
+        type: 'error',
+        message: 'Erreur lors de la préparation de l\'envoi: ' + error.message
+      });
+    }
+  };
+
+  const confirmSendContract = async () => {
+    if (!confirmSendModal) return;
+
+    setIsSendingContract(true);
+    try {
+      const { data: contractData, error: contractError } = await supabase
+        .from('contrat')
+        .select(`
+          id,
+          variables,
+          profil:profil_id (
+            id,
+            prenom,
+            nom,
+            email
+          )
+        `)
+        .eq('id', confirmSendModal.contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error('Impossible de récupérer les données du contrat');
+      }
+
+      const variables = contractData.variables || {};
+      const employeeName = `${contractData.profil.prenom} ${contractData.profil.nom}`;
+      const employeeEmail = contractData.profil.email;
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-contract-email`,
@@ -1428,19 +1497,40 @@ function EmployeeDetailModal({
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
           },
-          body: JSON.stringify({ contractId })
+          body: JSON.stringify({
+            contractId: confirmSendModal.contractId,
+            employeeEmail,
+            employeeName,
+            variables
+          })
         }
       );
 
       const data = await response.json();
 
       if (data.success) {
-        alert('Email envoyé avec succès!');
+        await supabase
+          .from('contrat')
+          .update({ date_envoi: new Date().toISOString() })
+          .eq('id', confirmSendModal.contractId);
+
+        setToast({
+          type: 'success',
+          message: `Contrat envoyé avec succès à ${employeeEmail}`
+        });
+        setConfirmSendModal(null);
+        fetchData();
       } else {
-        alert('Erreur: ' + (data.error || 'Impossible d\'envoyer l\'email'));
+        throw new Error(data.error || 'Impossible d\'envoyer l\'email');
       }
     } catch (error: any) {
-      alert('Erreur lors de l\'envoi: ' + error.message);
+      console.error('Erreur lors de l\'envoi:', error);
+      setToast({
+        type: 'error',
+        message: 'Erreur lors de l\'envoi: ' + error.message
+      });
+    } finally {
+      setIsSendingContract(false);
     }
   };
 
@@ -3084,6 +3174,25 @@ function EmployeeDetailModal({
           setShowMissingDocsReminderModal(false);
           setSelectedMissingDocs(new Set());
         }}
+      />
+    )}
+
+    {confirmSendModal && (
+      <ConfirmSendContractModal
+        employeeName={confirmSendModal.employeeName}
+        employeeEmail={confirmSendModal.employeeEmail}
+        contractType={confirmSendModal.contractType}
+        onConfirm={confirmSendContract}
+        onCancel={() => setConfirmSendModal(null)}
+        isSending={isSendingContract}
+      />
+    )}
+
+    {toast && (
+      <Toast
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast(null)}
       />
     )}
     </>
