@@ -181,6 +181,9 @@ export function ImportSalariesBulk() {
         rows = XLSX.utils.sheet_to_json(worksheet);
       }
 
+      console.log('🔍 DEBUG: First row keys:', rows[0] ? Object.keys(rows[0]) : 'No rows');
+      console.log('🔍 DEBUG: First row data:', rows[0]);
+
       await parseAndValidateRows(rows);
     } catch (error) {
       console.error('Error parsing file:', error);
@@ -204,6 +207,11 @@ export function ImportSalariesBulk() {
       const prenom = row['Prénom']?.trim() || '';
       const email = row['E-mail']?.trim() || '';
       const secteurNom = row['SECTEUR']?.trim() || '';
+
+      if (index === 0) {
+        console.log('🔍 DEBUG Row data:', { nom, prenom, email, secteurNom });
+        console.log('🔍 DEBUG Raw row:', row);
+      }
 
       let status: 'valid' | 'warning' | 'error' = 'valid';
       let statusMessage = 'Prêt à importer';
@@ -265,6 +273,9 @@ export function ImportSalariesBulk() {
         },
       };
     });
+
+    console.log('🔍 DEBUG Parsed data (first 3):', parsed.slice(0, 3));
+    console.log('🔍 DEBUG First employee prenom:', parsed[0]?.data?.prenom);
 
     setParsedData(parsed);
   };
