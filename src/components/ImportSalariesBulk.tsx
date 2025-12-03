@@ -144,6 +144,79 @@ export function ImportSalariesBulk() {
     link.click();
   };
 
+  const normalizeColumnName = (name: string): string => {
+    return name
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '_');
+  };
+
+  const createColumnMapper = (row: any) => {
+    const columnMap = new Map<string, string>();
+
+    const expectedColumns = {
+      'matricule_tca': ['MATRICULE TCA', 'matricule tca', 'matricule'],
+      'nom': ['Nom', 'nom', 'NOM'],
+      'prenom': ['Prénom', 'Prenom', 'prénom', 'prenom', 'PRENOM'],
+      'email': ['E-mail', 'Email', 'e-mail', 'email', 'EMAIL'],
+      'date_debut_contrat': ['Date de début du contrat (jj/mm/aaaa)', 'date debut contrat', 'date_debut'],
+      'date_fin_contrat': ['Date de fin du contrat (jj/mm/aaaa)', 'date fin contrat', 'date_fin'],
+      'numero_securite_sociale': ['Numéro de sécurité sociale', 'numero securite sociale', 'securite sociale'],
+      'poste': ['Poste', 'poste', 'POSTE'],
+      'date_naissance': ['Date de naissance (jj/mm/aaaa)', 'date naissance', 'date_naissance'],
+      'lieu_naissance': ['VILLE DE NAISSANCE', 'lieu naissance', 'ville naissance'],
+      'nationalite': ['Nationalité', 'Nationalite', 'nationalite', 'NATIONALITE'],
+      'genre': ['Genre', 'genre', 'GENRE'],
+      'nom_naissance': ['Nom de naissance', 'nom naissance', 'nom_naissance'],
+      'adresse': ['Adresse ligne 1', 'adresse', 'ADRESSE'],
+      'complement_adresse': ['Adresse ligne 2', 'complement adresse', 'adresse 2'],
+      'pays_naissance': ['Pays de naissance', 'pays naissance', 'pays_naissance'],
+      'ville': ['Ville', 'ville', 'VILLE'],
+      'code_postal': ['Code postal', 'code postal', 'code_postal'],
+      'tel': ['Téléphone', 'Telephone', 'telephone', 'tel', 'TEL'],
+      'iban': ['IBAN', 'iban'],
+      'bic': ['BIC', 'bic'],
+      'modele_contrat': ['Modeles de contrats', 'modele contrat', 'modele_contrat'],
+      'periode_essai': ['Période d\'essai', 'periode essai', 'periode_essai'],
+      'avenant_1_date_debut': ['DATE DE DEBUT - AVEVANT1', 'avenant 1 debut', 'avenant1_debut'],
+      'avenant_1_date_fin': ['DATE DE FIN - AVENANT1', 'avenant 1 fin', 'avenant1_fin'],
+      'avenant_2_date_fin': ['DATE DE FIN - AVENANT2', 'avenant 2 fin', 'avenant2_fin'],
+      'secteur': ['SECTEUR', 'Secteur', 'secteur'],
+      'type_piece_identite': ['Type de pièce d\'identité', 'type piece identite', 'piece identite'],
+      'titre_sejour_fin_validite': ['TITRE DE SEJOUR - FIN DE VALIDITE', 'titre sejour validite'],
+      'date_visite_medicale': ['DATE DE DEBUT - VISITE MEDICAL', 'visite medicale debut'],
+      'date_fin_visite_medicale': ['DATE DE FIN - VISITE MEDICAL', 'visite medicale fin'],
+    };
+
+    const actualColumns = Object.keys(row);
+
+    for (const [targetColumn, variants] of Object.entries(expectedColumns)) {
+      for (const variant of variants) {
+        const normalizedVariant = normalizeColumnName(variant);
+
+        for (const actualColumn of actualColumns) {
+          const normalizedActual = normalizeColumnName(actualColumn);
+
+          if (normalizedActual === normalizedVariant || actualColumn === variant) {
+            columnMap.set(targetColumn, actualColumn);
+            break;
+          }
+        }
+
+        if (columnMap.has(targetColumn)) break;
+      }
+    }
+
+    return columnMap;
+  };
+
+  const getColumnValue = (row: any, columnMap: Map<string, string>, targetColumn: string): string => {
+    const actualColumn = columnMap.get(targetColumn);
+    return actualColumn ? (row[actualColumn]?.toString().trim() || '') : '';
+  };
+
   const parseDate = (dateStr: string): string | undefined => {
     if (!dateStr || dateStr.trim() === '') return undefined;
 
@@ -181,8 +254,16 @@ export function ImportSalariesBulk() {
         rows = XLSX.utils.sheet_to_json(worksheet);
       }
 
-      console.log('🔍 DEBUG: First row keys:', rows[0] ? Object.keys(rows[0]) : 'No rows');
-      console.log('🔍 DEBUG: First row data:', rows[0]);
+      if (rows.length > 0) {
+        console.log('🔍 DEBUG: First row keys:', Object.keys(rows[0]));
+        console.log('🔍 DEBUG: First row data:', rows[0]);
+
+        const columnMap = createColumnMapper(rows[0]);
+        console.log('🔍 DEBUG: Column mapping:');
+        columnMap.forEach((actualCol, targetCol) => {
+          console.log(`  ${targetCol} -> "${actualCol}"`);
+        });
+      }
 
       await parseAndValidateRows(rows);
     } catch (error) {
@@ -192,21 +273,29 @@ export function ImportSalariesBulk() {
   };
 
   const parseAndValidateRows = async (rows: any[]) => {
+    if (rows.length === 0) return;
+
+    const columnMap = createColumnMapper(rows[0]);
+
     const { data: secteurs } = await supabase.from('secteur').select('id, nom');
     const secteurMap = new Map(secteurs?.map((s) => [s.nom.toLowerCase(), s.id]) || []);
+
+    const emailsToCheck = rows
+      .map((r) => getColumnValue(r, columnMap, 'email'))
+      .filter((e) => e);
 
     const { data: existingEmails } = await supabase
       .from('profil')
       .select('email')
-      .in('email', rows.map((r) => r['E-mail'] || '').filter((e) => e));
+      .in('email', emailsToCheck);
 
     const existingEmailSet = new Set(existingEmails?.map((e) => e.email.toLowerCase()) || []);
 
     const parsed: ParsedEmployee[] = rows.map((row, index) => {
-      const nom = row['Nom']?.trim() || '';
-      const prenom = row['Prénom']?.trim() || '';
-      const email = row['E-mail']?.trim() || '';
-      const secteurNom = row['SECTEUR']?.trim() || '';
+      const nom = getColumnValue(row, columnMap, 'nom');
+      const prenom = getColumnValue(row, columnMap, 'prenom');
+      const email = getColumnValue(row, columnMap, 'email');
+      const secteurNom = getColumnValue(row, columnMap, 'secteur');
 
       if (index === 0) {
         console.log('🔍 DEBUG Row data:', { nom, prenom, email, secteurNom });
@@ -238,38 +327,38 @@ export function ImportSalariesBulk() {
         statusMessage,
         selected,
         data: {
-          matricule_tca: row['MATRICULE TCA']?.trim() || undefined,
+          matricule_tca: getColumnValue(row, columnMap, 'matricule_tca') || undefined,
           nom,
           prenom,
           email: email || undefined,
-          date_debut_contrat: parseDate(row['Date de début du contrat (jj/mm/aaaa)']),
-          date_fin_contrat: parseDate(row['Date de fin du contrat (jj/mm/aaaa)']),
-          numero_securite_sociale: row['Numéro de sécurité sociale']?.trim() || undefined,
-          poste: row['Poste']?.trim() || undefined,
-          date_naissance: parseDate(row['Date de naissance (jj/mm/aaaa)']),
-          lieu_naissance: row['VILLE DE NAISSANCE']?.trim() || undefined,
-          nationalite: row['Nationalité']?.trim() || undefined,
-          genre: row['Genre']?.trim() || undefined,
-          nom_naissance: row['Nom de naissance']?.trim() || undefined,
-          adresse: row['Adresse ligne 1']?.trim() || undefined,
-          complement_adresse: row['Adresse ligne 2']?.trim() || undefined,
-          pays_naissance: row['Pays de naissance']?.trim() || undefined,
-          ville: row['Ville']?.trim() || undefined,
-          code_postal: row['Code postal']?.trim() || undefined,
-          tel: row['Téléphone']?.trim() || undefined,
-          iban: row['IBAN']?.trim() || undefined,
-          bic: row['BIC']?.trim() || undefined,
-          modele_contrat: row['Modeles de contrats']?.trim() || undefined,
-          periode_essai: row['Période d\'essai']?.trim() || undefined,
-          avenant_1_date_debut: parseDate(row['DATE DE DEBUT - AVEVANT1']),
-          avenant_1_date_fin: parseDate(row['DATE DE FIN - AVENANT1']),
-          avenant_2_date_fin: parseDate(row['DATE DE FIN - AVENANT2']),
+          date_debut_contrat: parseDate(getColumnValue(row, columnMap, 'date_debut_contrat')),
+          date_fin_contrat: parseDate(getColumnValue(row, columnMap, 'date_fin_contrat')),
+          numero_securite_sociale: getColumnValue(row, columnMap, 'numero_securite_sociale') || undefined,
+          poste: getColumnValue(row, columnMap, 'poste') || undefined,
+          date_naissance: parseDate(getColumnValue(row, columnMap, 'date_naissance')),
+          lieu_naissance: getColumnValue(row, columnMap, 'lieu_naissance') || undefined,
+          nationalite: getColumnValue(row, columnMap, 'nationalite') || undefined,
+          genre: getColumnValue(row, columnMap, 'genre') || undefined,
+          nom_naissance: getColumnValue(row, columnMap, 'nom_naissance') || undefined,
+          adresse: getColumnValue(row, columnMap, 'adresse') || undefined,
+          complement_adresse: getColumnValue(row, columnMap, 'complement_adresse') || undefined,
+          pays_naissance: getColumnValue(row, columnMap, 'pays_naissance') || undefined,
+          ville: getColumnValue(row, columnMap, 'ville') || undefined,
+          code_postal: getColumnValue(row, columnMap, 'code_postal') || undefined,
+          tel: getColumnValue(row, columnMap, 'tel') || undefined,
+          iban: getColumnValue(row, columnMap, 'iban') || undefined,
+          bic: getColumnValue(row, columnMap, 'bic') || undefined,
+          modele_contrat: getColumnValue(row, columnMap, 'modele_contrat') || undefined,
+          periode_essai: getColumnValue(row, columnMap, 'periode_essai') || undefined,
+          avenant_1_date_debut: parseDate(getColumnValue(row, columnMap, 'avenant_1_date_debut')),
+          avenant_1_date_fin: parseDate(getColumnValue(row, columnMap, 'avenant_1_date_fin')),
+          avenant_2_date_fin: parseDate(getColumnValue(row, columnMap, 'avenant_2_date_fin')),
           secteur_nom: secteurNom || undefined,
           secteur_id: secteurId,
-          type_piece_identite: row['Type de pièce d\'identité']?.trim() || undefined,
-          titre_sejour_fin_validite: parseDate(row['TITRE DE SEJOUR - FIN DE VALIDITE']),
-          date_visite_medicale: parseDate(row['DATE DE DEBUT - VISITE MEDICAL']),
-          date_fin_visite_medicale: parseDate(row['DATE DE FIN - VISITE MEDICAL']),
+          type_piece_identite: getColumnValue(row, columnMap, 'type_piece_identite') || undefined,
+          titre_sejour_fin_validite: parseDate(getColumnValue(row, columnMap, 'titre_sejour_fin_validite')),
+          date_visite_medicale: parseDate(getColumnValue(row, columnMap, 'date_visite_medicale')),
+          date_fin_visite_medicale: parseDate(getColumnValue(row, columnMap, 'date_fin_visite_medicale')),
         },
       };
     });
