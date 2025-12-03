@@ -1501,7 +1501,8 @@ function EmployeeDetailModal({
           body: JSON.stringify({
             contractId: confirmSendModal.contractId,
             employeeEmail,
-            employeeName
+            employeeName,
+            variables: contractData.variables
           })
         }
       );
