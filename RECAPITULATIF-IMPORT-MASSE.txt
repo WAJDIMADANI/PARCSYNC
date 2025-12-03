@@ -1,0 +1,163 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║       ✅ ACTIVATION DE L'IMPORT EN MASSE POUR LES ADMINISTRATEURS        ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+📋 RÉSUMÉ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+La fonctionnalité "Import en Masse" existe déjà dans le code mais n'est
+pas visible car les administrateurs n'ont pas la permission nécessaire.
+
+✅ SOLUTION : Ajouter la permission 'admin/import-bulk' en base de données
+
+
+⚡ ACTION RAPIDE (30 secondes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OPTION 1 - Script Ultra-Rapide :
+  1. Ouvrir Supabase Dashboard > SQL Editor
+  2. Copier-coller le fichier : QUICK-ADD-IMPORT-BULK-PERMISSION.sql
+  3. Cliquer sur "Run"
+  4. Rafraîchir l'app (Ctrl+Shift+R)
+  ✅ Terminé !
+
+OPTION 2 - Script avec Logs Détaillés :
+  1. Ouvrir Supabase Dashboard > SQL Editor
+  2. Copier-coller le fichier : add-import-bulk-permission-to-admins.sql
+  3. Cliquer sur "Run"
+  4. Lire les logs dans la console
+  5. Rafraîchir l'app (Ctrl+Shift+R)
+  ✅ Terminé !
+
+
+📁 FICHIERS CRÉÉS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────┬──────────────────────────┐
+│ Fichier                                     │ Description              │
+├─────────────────────────────────────────────┼──────────────────────────┤
+│ LIRE-MOI-IMPORT-MASSE.md                    │ ⭐ COMMENCER ICI        │
+│ QUICK-ADD-IMPORT-BULK-PERMISSION.sql        │ ⚡ Script SQL rapide     │
+│ add-import-bulk-permission-to-admins.sql    │ 📊 Script SQL détaillé   │
+│ GUIDE-ACTIVATION-IMPORT-MASSE.md            │ 📖 Guide complet         │
+│ RECAPITULATIF-IMPORT-MASSE.txt              │ 📄 Ce fichier            │
+└─────────────────────────────────────────────┴──────────────────────────┘
+
+
+🎯 RÉSULTAT ATTENDU
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Après exécution du script SQL, le menu suivant apparaîtra :
+
+  📁 Administration
+    ├─ 🏢 Sites
+    ├─ 🏷️  Secteurs
+    ├─ 💼 Postes
+    ├─ 📝 Modèles de Courriers
+    ├─ 📄 Modèles Contrats
+    ├─ 👤 Import Salarié Test
+    ├─ 📤 Import en Masse          ← ✨ NOUVEAU MENU VISIBLE
+    └─ 👥 Utilisateurs
+
+
+👥 UTILISATEURS CONCERNÉS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ TOUS les utilisateurs avec role = 'admin'
+✅ Notamment : wajdi@mad-impact.com
+✅ Activation automatique pour tous les admins existants
+
+
+✨ FONCTIONNALITÉS DU MODULE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📥 Téléchargement template CSV
+   • Modèle pré-formaté avec 30+ colonnes
+   • Ligne d'exemple incluse
+
+📂 Import de fichiers
+   • Formats : CSV, XLSX, XLS
+   • Glisser-déposer ou sélection
+
+📊 Prévisualisation intelligente
+   • ✅ Validation automatique
+   • ⚠️ Détection avertissements
+   • ❌ Détection erreurs
+   • 📈 Statistiques en temps réel
+
+☑️  Sélection des lignes
+   • Par ligne ou globale
+   • Exclusion auto des erreurs
+
+⚡ Import en masse
+   • Barre de progression
+   • Gestion des erreurs
+   • Rapport détaillé
+
+
+🔧 DÉTAILS TECHNIQUES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Permission ajoutée :
+  • section_id: 'admin/import-bulk'
+  • actif: true
+
+Tables modifiées :
+  • utilisateur_permissions (INSERT uniquement)
+
+Code existant :
+  • Sidebar.tsx (ligne 151) : Menu déjà défini
+  • ImportSalariesBulk.tsx : Composant déjà implémenté
+  • Dashboard.tsx : Route déjà configurée
+
+⚠️  AUCUNE MODIFICATION DU CODE N'EST NÉCESSAIRE
+    Seule la permission en base de données doit être ajoutée
+
+
+✅ CHECKLIST DE VÉRIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Après exécution du script :
+
+  □ Script SQL exécuté sans erreur
+  □ Cache du navigateur vidé (Ctrl+Shift+R)
+  □ Application rafraîchie
+  □ Connecté en tant qu'admin
+  □ Section "Administration" dépliée
+  □ Menu "Import en Masse" visible 📤
+  □ Clic sur menu ouvre le composant
+  □ Bouton "Télécharger modèle CSV" fonctionne
+
+
+🐛 DÉPANNAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si le menu n'apparaît pas :
+
+  1. Vider COMPLÈTEMENT le cache du navigateur
+  2. Se déconnecter et se reconnecter
+  3. Vérifier dans F12 > Console les permissions
+  4. Exécuter cette requête SQL pour vérifier :
+
+     SELECT u.email, up.section_id, up.actif
+     FROM app_utilisateur u
+     LEFT JOIN utilisateur_permissions up ON u.id = up.utilisateur_id
+     WHERE u.role = 'admin' AND up.section_id = 'admin/import-bulk';
+
+  5. Si aucun résultat : Réexécuter le script SQL
+  6. Si le résultat existe : Problème de cache navigateur
+
+
+📞 BESOIN D'AIDE ?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Consultez :
+  • LIRE-MOI-IMPORT-MASSE.md : Vue d'ensemble
+  • GUIDE-ACTIVATION-IMPORT-MASSE.md : Guide détaillé pas à pas
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    🎉 Bon import en masse ! 📤
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

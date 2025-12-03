@@ -1,0 +1,36 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║          🚀 ACTIVER L'IMPORT EN MASSE - START HERE           ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+
+⚡ 3 ÉTAPES SIMPLES (30 secondes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣  Ouvrez Supabase Dashboard > SQL Editor
+
+2️⃣  Copiez-collez ce fichier :
+    👉 QUICK-ADD-IMPORT-BULK-PERMISSION.sql
+
+    Et cliquez sur "Run"
+
+3️⃣  Rafraîchissez votre application :
+    👉 Ctrl + Shift + R (Windows/Linux)
+    👉 Cmd + Shift + R (Mac)
+
+
+✅ C'EST TOUT !
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Le menu "Import en Masse" apparaîtra dans :
+Administration > Import en Masse 📤
+
+
+📚 Plus d'infos ?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Lisez : LIRE-MOI-IMPORT-MASSE.md
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
