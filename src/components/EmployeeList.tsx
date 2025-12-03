@@ -869,15 +869,7 @@ function EmployeeDetailModal({
       const { data, error } = await supabase
         .from('contrat')
         .select(`
-          id,
-          statut,
-          date_signature,
-          yousign_signed_at,
-          fichier_signe_url,
-          created_at,
-          source,
-          variables,
-          modele_id,
+          *,
           modele:modele_id (
             id,
             nom,
