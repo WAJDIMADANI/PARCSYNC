@@ -109,9 +109,6 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const hasProcessedInitialProfile = useRef(false);
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [confirmSendModal, setConfirmSendModal] = useState<{ contractId: string; employeeName: string; employeeEmail: string; contractType: string } | null>(null);
-  const [isSendingContract, setIsSendingContract] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -731,6 +728,11 @@ function EmployeeDetailModal({
   const [selectedMissingDocs, setSelectedMissingDocs] = useState<Set<string>>(new Set());
   const [showMissingDocsReminderModal, setShowMissingDocsReminderModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+
+  // États pour l'envoi de contrat
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [confirmSendModal, setConfirmSendModal] = useState<{ contractId: string; employeeName: string; employeeEmail: string; contractType: string } | null>(null);
+  const [isSendingContract, setIsSendingContract] = useState(false);
 
   // Tab system
   const [activeTab, setActiveTab] = useState<'overview' | 'personal' | 'address' | 'banking' | 'contracts'>('overview');
