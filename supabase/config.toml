@@ -1,0 +1,8 @@
+# Supabase Edge Functions Configuration
+
+# Configuration for generate-contract-pdf function
+# This function needs to be publicly accessible so employees can download
+# their contract PDFs directly from email links without authentication.
+# Security is provided by the UUID contractId which is virtually impossible to guess.
+[functions.generate-contract-pdf]
+verify_jwt = false

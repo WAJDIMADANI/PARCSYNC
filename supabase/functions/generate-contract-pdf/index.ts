@@ -34,15 +34,18 @@ Deno.serve(async (req: Request) => {
   try {
     // Support both GET (from email links) and POST (from API calls)
     let contractId: string;
+    let returnPdf = false;
 
     if (req.method === "GET") {
       // Extract contractId from query parameters for email links
       const url = new URL(req.url);
       contractId = url.searchParams.get("contractId") || "";
+      returnPdf = true; // Always return PDF for GET requests
     } else {
       // Extract contractId from JSON body for API calls
       const body = await req.json();
       contractId = body.contractId || "";
+      returnPdf = body.returnPdf || false;
     }
 
     if (!contractId) {
@@ -75,7 +78,20 @@ Deno.serve(async (req: Request) => {
     const html = generateContractHTML(contract);
     const pdf = await generatePDF(html);
 
-    // Upload to storage using convention: documents/contrats/{profil_id}/{contrat_id}-draft.pdf
+    // If GET request (from email), return PDF directly
+    if (returnPdf) {
+      const fileName = `${contract.profil?.prenom || 'Contrat'}_${contract.profil?.nom || 'Travail'}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+      return new Response(pdf, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${fileName}"`,
+        },
+      });
+    }
+
+    // For POST requests, upload to storage and return path
     const profilId = contract.profil_id;
     const fileName = `documents/contrats/${profilId}/${contractId}-draft.pdf`;
 
