@@ -28,13 +28,68 @@ Deno.serve(async (req: Request) => {
     const { employeeEmail, employeeName, contractId, variables }: RequestPayload = await req.json();
 
     const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
-    const APP_URL = Deno.env.get("APP_URL") || "http://localhost:5173";
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!BREVO_API_KEY) {
       throw new Error("BREVO_API_KEY not configured");
     }
 
-    const pdfDownloadLink = `${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-contract-pdf?contractId=${contractId}`;
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("Supabase configuration missing");
+    }
+
+    console.log("Step 1: Downloading signed contract from Yousign...");
+
+    const downloadResponse = await fetch(
+      `${SUPABASE_URL}/functions/v1/download-signed-contract`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+        },
+        body: JSON.stringify({ contractId })
+      }
+    );
+
+    if (!downloadResponse.ok) {
+      const errorData = await downloadResponse.text();
+      throw new Error(`Failed to download signed contract: ${errorData}`);
+    }
+
+    const downloadResult = await downloadResponse.json();
+
+    if (!downloadResult.success) {
+      throw new Error(`Failed to download signed contract: ${downloadResult.error}`);
+    }
+
+    console.log("Step 2: Retrieving contract with storage path...");
+
+    const contractResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=fichier_signe_url`,
+      {
+        headers: {
+          "apikey": SUPABASE_SERVICE_ROLE_KEY,
+          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        }
+      }
+    );
+
+    if (!contractResponse.ok) {
+      throw new Error("Failed to retrieve contract");
+    }
+
+    const contracts = await contractResponse.json();
+    const contract = contracts[0];
+
+    if (!contract || !contract.fichier_signe_url) {
+      throw new Error("Contract file not found in storage");
+    }
+
+    console.log("Step 3: Building public storage URL...");
+
+    const pdfDownloadLink = `${SUPABASE_URL}/storage/v1/object/public/documents/${contract.fichier_signe_url}`;
 
     const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
@@ -78,7 +133,7 @@ Deno.serve(async (req: Request) => {
                 <div class="content">
                   <p>Bonjour ${employeeName},</p>
 
-                  <p>Votre contrat de travail est prêt ! Vous trouverez ci-dessous les informations principales :</p>
+                  <p>Votre contrat de travail signé est prêt ! Vous trouverez ci-dessous les informations principales :</p>
 
                   <div class="info-box">
                     <p><strong>📋 Poste :</strong> ${variables.poste}</p>
@@ -87,7 +142,7 @@ Deno.serve(async (req: Request) => {
                   </div>
 
                   <p><strong>Action à faire :</strong></p>
-                  <p>Téléchargez votre contrat en cliquant sur le bouton ci-dessous.</p>
+                  <p>Téléchargez votre contrat signé en cliquant sur le bouton ci-dessous.</p>
 
                   <div style="text-align: center; margin: 30px 0;">
                     <a href="${pdfDownloadLink}" class="button">📄 Télécharger le contrat (PDF)</a>
@@ -115,8 +170,14 @@ Deno.serve(async (req: Request) => {
 
     const result = await brevoResponse.json();
 
+    console.log("Email sent successfully with signed contract PDF link");
+
     return new Response(
-      JSON.stringify({ success: true, messageId: result.messageId }),
+      JSON.stringify({
+        success: true,
+        messageId: result.messageId,
+        pdfUrl: pdfDownloadLink
+      }),
       {
         headers: {
           ...corsHeaders,
