@@ -155,6 +155,45 @@ export function ImportSalariesBulk() {
       .replace(/\s+/g, '_');
   };
 
+  const extractKeywords = (columnName: string): string[] => {
+    return columnName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 2);
+  };
+
+  const verifyKeywords = (targetColumn: string, actualColumn: string): boolean => {
+    const keywordRules: { [key: string]: string[][] } = {
+      'pays_naissance': [['pays'], ['naissance']],
+      'nom_naissance': [['nom'], ['naissance']],
+      'lieu_naissance': [['lieu', 'ville'], ['naissance']],
+      'date_visite_medicale': [['date', 'debut'], ['visite'], ['medical', 'medicale']],
+      'date_fin_visite_medicale': [['date', 'fin'], ['visite'], ['medical', 'medicale']],
+      'titre_sejour_fin_validite': [['titre'], ['sejour']],
+      'date_debut_contrat': [['date'], ['debut'], ['contrat']],
+      'date_fin_contrat': [['date'], ['fin'], ['contrat']],
+    };
+
+    const rules = keywordRules[targetColumn];
+    if (!rules) return true;
+
+    const actualKeywords = extractKeywords(actualColumn);
+
+    for (const ruleGroup of rules) {
+      const hasMatch = ruleGroup.some(keyword =>
+        actualKeywords.some(actualWord => actualWord.includes(keyword) || keyword.includes(actualWord))
+      );
+      if (!hasMatch) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const calculateSimilarity = (str1: string, str2: string): number => {
     const s1 = str1.toLowerCase();
     const s2 = str2.toLowerCase();
@@ -194,6 +233,7 @@ export function ImportSalariesBulk() {
     const columnMap = new Map<string, string>();
     const unmappedColumns: string[] = [];
     const mappingWarnings: string[] = [];
+    const usedActualColumns = new Set<string>();
 
     const expectedColumns = {
       'matricule_tca': ['MATRICULE TCA', 'matricule tca', 'matricule'],
@@ -230,6 +270,8 @@ export function ImportSalariesBulk() {
     };
 
     const actualColumns = Object.keys(row);
+    console.log('🔍 Starting column mapping process...');
+    console.log('📋 Available columns in file:', actualColumns);
 
     for (const [targetColumn, variants] of Object.entries(expectedColumns)) {
       let found = false;
@@ -238,10 +280,14 @@ export function ImportSalariesBulk() {
         const normalizedVariant = normalizeColumnName(variant);
 
         for (const actualColumn of actualColumns) {
+          if (usedActualColumns.has(actualColumn)) continue;
+
           const normalizedActual = normalizeColumnName(actualColumn);
 
           if (normalizedActual === normalizedVariant || actualColumn === variant) {
             columnMap.set(targetColumn, actualColumn);
+            usedActualColumns.add(actualColumn);
+            console.log(`✅ Exact match: "${targetColumn}" -> "${actualColumn}"`);
             found = true;
             break;
           }
@@ -251,23 +297,39 @@ export function ImportSalariesBulk() {
       }
 
       if (!found) {
+        let bestMatch: { column: string; similarity: number } | null = null;
+
         for (const actualColumn of actualColumns) {
+          if (usedActualColumns.has(actualColumn)) continue;
+
           const similarity = calculateSimilarity(
             normalizeColumnName(variants[0]),
             normalizeColumnName(actualColumn)
           );
 
-          if (similarity > 0.75) {
-            columnMap.set(targetColumn, actualColumn);
-            mappingWarnings.push(`Colonne "${targetColumn}" mappée à "${actualColumn}" (similarité: ${Math.round(similarity * 100)}%)`);
-            found = true;
-            break;
+          const keywordsValid = verifyKeywords(targetColumn, actualColumn);
+
+          console.log(`🔍 Checking "${targetColumn}" vs "${actualColumn}": similarity=${Math.round(similarity * 100)}%, keywords=${keywordsValid}`);
+
+          if (similarity > 0.85 && keywordsValid) {
+            if (!bestMatch || similarity > bestMatch.similarity) {
+              bestMatch = { column: actualColumn, similarity };
+            }
           }
+        }
+
+        if (bestMatch) {
+          columnMap.set(targetColumn, bestMatch.column);
+          usedActualColumns.add(bestMatch.column);
+          mappingWarnings.push(`Colonne "${targetColumn}" mappée à "${bestMatch.column}" (similarité: ${Math.round(bestMatch.similarity * 100)}%)`);
+          console.log(`⚠️ Approximate match: "${targetColumn}" -> "${bestMatch.column}" (${Math.round(bestMatch.similarity * 100)}%)`);
+          found = true;
         }
       }
 
       if (!found && ['nom', 'prenom', 'email', 'matricule_tca'].includes(targetColumn)) {
         unmappedColumns.push(targetColumn);
+        console.error(`❌ Failed to map critical column: "${targetColumn}"`);
       }
     }
 
@@ -279,6 +341,8 @@ export function ImportSalariesBulk() {
     if (mappingWarnings.length > 0) {
       console.info('ℹ️ Mappings approximatifs:', mappingWarnings);
     }
+
+    console.log('✅ Mapping complete. Used columns:', Array.from(usedActualColumns));
 
     return { columnMap, unmappedColumns, mappingWarnings };
   };
