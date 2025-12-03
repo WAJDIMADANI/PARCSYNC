@@ -1,19 +1,12 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface RequestPayload {
-  employeeEmail: string;
-  employeeName: string;
+interface DownloadRequest {
   contractId: string;
-  variables: {
-    poste: string;
-    salaire: string;
-    date_debut?: string;
-    [key: string]: any;
-  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -25,49 +18,21 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { employeeEmail, employeeName, contractId, variables }: RequestPayload = await req.json();
+    const { contractId }: DownloadRequest = await req.json();
 
-    const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
+    console.log("Downloading signed contract for:", contractId);
+
+    const YOUSIGN_API_KEY = Deno.env.get("YOUSIGN_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!BREVO_API_KEY) {
-      throw new Error("BREVO_API_KEY not configured");
+    if (!YOUSIGN_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("Configuration missing");
     }
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Supabase configuration missing");
-    }
-
-    console.log("Step 1: Downloading signed contract from Yousign...");
-
-    const downloadResponse = await fetch(
-      `${SUPABASE_URL}/functions/v1/download-signed-contract`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-        },
-        body: JSON.stringify({ contractId })
-      }
-    );
-
-    if (!downloadResponse.ok) {
-      const errorData = await downloadResponse.text();
-      throw new Error(`Failed to download signed contract: ${errorData}`);
-    }
-
-    const downloadResult = await downloadResponse.json();
-
-    if (!downloadResult.success) {
-      throw new Error(`Failed to download signed contract: ${downloadResult.error}`);
-    }
-
-    console.log("Step 2: Retrieving contract with storage path...");
-
+    // Récupérer les informations du contrat
     const contractResponse = await fetch(
-      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=fichier_signe_url`,
+      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,modele:modele_id(nom)`,
       {
         headers: {
           "apikey": SUPABASE_SERVICE_ROLE_KEY,
@@ -77,106 +42,134 @@ Deno.serve(async (req: Request) => {
     );
 
     if (!contractResponse.ok) {
-      throw new Error("Failed to retrieve contract");
+      throw new Error("Contract not found");
     }
 
     const contracts = await contractResponse.json();
     const contract = contracts[0];
 
-    if (!contract || !contract.fichier_signe_url) {
-      throw new Error("Contract file not found in storage");
+    if (!contract || !contract.yousign_signature_request_id) {
+      throw new Error("No Yousign signature request ID found");
     }
 
-    console.log("Step 3: Building public storage URL...");
+    const signatureRequestId = contract.yousign_signature_request_id;
 
-    const pdfDownloadLink = `${SUPABASE_URL}/storage/v1/object/public/documents/${contract.fichier_signe_url}`;
+    // Récupérer les détails de la signature request pour obtenir le document ID
+    console.log("Fetching signature request details...");
+    const signatureRequestResponse = await fetch(
+      `https://api-sandbox.yousign.app/v3/signature_requests/${signatureRequestId}`,
+      {
+        headers: {
+          "Authorization": `Bearer ${YOUSIGN_API_KEY}`,
+        }
+      }
+    );
 
-    const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
+    if (!signatureRequestResponse.ok) {
+      throw new Error("Failed to fetch signature request details");
+    }
+
+    const signatureRequestData = await signatureRequestResponse.json();
+    const documentId = signatureRequestData.documents?.[0]?.id;
+
+    if (!documentId) {
+      throw new Error("No document found in signature request");
+    }
+
+    console.log("Document ID:", documentId);
+
+    // Télécharger le document signé
+    console.log("Downloading signed document...");
+    const downloadUrl = `https://api-sandbox.yousign.app/v3/signature_requests/${signatureRequestId}/documents/${documentId}/download`;
+
+    const downloadResponse = await fetch(downloadUrl, {
       headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "api-key": BREVO_API_KEY,
+        "Authorization": `Bearer ${YOUSIGN_API_KEY}`,
       },
-      body: JSON.stringify({
-        sender: {
-          name: "PARC SYNC",
-          email: "pierre.chopar12@gmail.com",
-        },
-        to: [
-          {
-            email: employeeEmail,
-            name: employeeName,
-          },
-        ],
-        subject: "Votre contrat de travail",
-        htmlContent: `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-              <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background-color: #2563eb; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-                .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
-                .button { display: inline-block; background-color: #dc2626; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
-                .info-box { background-color: #e0f2fe; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px; }
-                .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <div class="header">
-                  <h1>📄 Votre contrat de travail</h1>
-                </div>
-                <div class="content">
-                  <p>Bonjour ${employeeName},</p>
-
-                  <p>Votre contrat de travail signé est prêt ! Vous trouverez ci-dessous les informations principales :</p>
-
-                  <div class="info-box">
-                    <p><strong>📋 Poste :</strong> ${variables.poste}</p>
-                    <p><strong>💰 Salaire brut mensuel :</strong> ${variables.salaire}</p>
-                    ${variables.date_debut ? `<p><strong>📅 Date de début :</strong> ${new Date(variables.date_debut).toLocaleDateString('fr-FR')}</p>` : ''}
-                  </div>
-
-                  <p><strong>Action à faire :</strong></p>
-                  <p>Téléchargez votre contrat signé en cliquant sur le bouton ci-dessous.</p>
-
-                  <div style="text-align: center; margin: 30px 0;">
-                    <a href="${pdfDownloadLink}" class="button">📄 Télécharger le contrat (PDF)</a>
-                  </div>
-
-                  <p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
-
-                  <p>Cordialement,<br>
-                  <strong>L'équipe PARC SYNC</strong></p>
-                </div>
-                <div class="footer">
-                  <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
-                </div>
-              </div>
-            </body>
-          </html>
-        `,
-      }),
     });
 
-    if (!brevoResponse.ok) {
-      const errorData = await brevoResponse.text();
-      throw new Error(`Brevo API error: ${brevoResponse.status} - ${errorData}`);
+    if (!downloadResponse.ok) {
+      const errorText = await downloadResponse.text();
+      console.error("Download error:", errorText);
+      throw new Error(`Failed to download signed document: ${downloadResponse.statusText}`);
     }
 
-    const result = await brevoResponse.json();
+    const pdfBlob = await downloadResponse.blob();
+    const pdfBuffer = await pdfBlob.arrayBuffer();
+    console.log("PDF downloaded, size:", pdfBuffer.byteLength, "bytes");
 
-    console.log("Email sent successfully with signed contract PDF link");
+    // Uploader vers Supabase Storage using convention: documents/contrats/{profil_id}/{contrat_id}-signed.pdf
+    const profilId = contract.profil_id;
+    const fileName = `documents/contrats/${profilId}/${contractId}-signed.pdf`;
+    console.log("Uploading to storage:", fileName);
+
+    const uploadResponse = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/documents/${fileName}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/pdf',
+        },
+        body: pdfBuffer,
+      }
+    );
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error("Upload error:", errorText);
+      throw new Error(`Failed to upload to storage: ${errorText}`);
+    }
+
+    console.log("Uploaded to storage path:", fileName);
+
+    // Mettre à jour le contrat avec le chemin storage (pas l'URL complète)
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          fichier_signe_url: fileName,
+        })
+      }
+    );
+
+    // Créer une entrée dans la table document
+    const modeleName = contract.modele?.nom || 'Contrat de travail';
+
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/document`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          proprietaire_type: 'profil',
+          proprietaire_id: contract.profil_id,
+          type: 'contrat',
+          fichier_url: fileName,
+          statut: 'valide',
+        })
+      }
+    );
+
+    console.log("Document entry created successfully");
 
     return new Response(
       JSON.stringify({
         success: true,
-        messageId: result.messageId,
-        pdfUrl: pdfDownloadLink
+        fileUrl: fileName,
+        message: "Document signé téléchargé et ajouté aux documents"
       }),
       {
         headers: {
@@ -186,11 +179,11 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
-    console.error("Error sending contract PDF email:", error);
+    console.error("Error in download-signed-contract:", error);
     return new Response(
       JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: error.message,
+        success: false
       }),
       {
         status: 500,
