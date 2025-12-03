@@ -1484,11 +1484,14 @@ function EmployeeDetailModal({
         .single();
 
       if (contractError || !contractData) {
+        console.error('Contract fetch error:', contractError);
         throw new Error('Impossible de récupérer les données du contrat');
       }
 
       const employeeName = `${contractData.profil.prenom} ${contractData.profil.nom}`;
       const employeeEmail = contractData.profil.email;
+
+      console.log('Sending contract email to:', employeeEmail);
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-contract-pdf-simple`,
@@ -1507,6 +1510,12 @@ function EmployeeDetailModal({
         }
       );
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Edge Function response error:', response.status, errorText);
+        throw new Error(`Erreur serveur: ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -1520,7 +1529,14 @@ function EmployeeDetailModal({
           message: `Contrat envoyé avec succès à ${employeeEmail}`
         });
         setConfirmSendModal(null);
-        fetchData();
+
+        // Refresh data after successful send
+        try {
+          await fetchData(true);
+        } catch (refreshError) {
+          console.error('Error refreshing data:', refreshError);
+          // Non-critical error, just log it
+        }
       } else {
         throw new Error(data.error || 'Impossible d\'envoyer l\'email');
       }

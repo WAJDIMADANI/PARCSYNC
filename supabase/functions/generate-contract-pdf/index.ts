@@ -3,7 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
 interface ContractData {
@@ -31,7 +32,18 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { contractId } = await req.json();
+    // Support both GET (from email links) and POST (from API calls)
+    let contractId: string;
+
+    if (req.method === "GET") {
+      // Extract contractId from query parameters for email links
+      const url = new URL(req.url);
+      contractId = url.searchParams.get("contractId") || "";
+    } else {
+      // Extract contractId from JSON body for API calls
+      const body = await req.json();
+      contractId = body.contractId || "";
+    }
 
     if (!contractId) {
       throw new Error("Contract ID is required");
