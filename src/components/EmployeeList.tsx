@@ -784,6 +784,13 @@ function EmployeeDetailModal({
   const [editedTel, setEditedTel] = useState(currentEmployee.tel || '');
   const [editedMatriculeTCA, setEditedMatriculeTCA] = useState(currentEmployee.matricule_tca || '');
 
+  // Edit states for contract info
+  const [isEditingContract, setIsEditingContract] = useState(false);
+  const [savingContract, setSavingContract] = useState(false);
+  const [editedDateEntree, setEditedDateEntree] = useState(currentEmployee.date_entree || '');
+  const [editedRole, setEditedRole] = useState(currentEmployee.role || '');
+  const [editedSecteurId, setEditedSecteurId] = useState(currentEmployee.secteur_id || '');
+
   // NE PAS synchroniser automatiquement avec employee pour éviter les rechargements
   // Le modal garde son état local stable pendant toute sa durée de vie
 
@@ -1350,6 +1357,7 @@ function EmployeeDetailModal({
       });
 
       setIsEditingPersonal(false);
+      onUpdate();
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde des informations personnelles');
@@ -1382,6 +1390,7 @@ function EmployeeDetailModal({
       });
 
       setIsEditingAddress(false);
+      onUpdate();
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde de l\'adresse');
@@ -1410,6 +1419,7 @@ function EmployeeDetailModal({
       });
 
       setIsEditingBanking(false);
+      onUpdate();
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde des informations bancaires');
@@ -1441,6 +1451,47 @@ function EmployeeDetailModal({
     setEditedIBAN(currentEmployee.iban || '');
     setEditedBIC(currentEmployee.bic || '');
     setIsEditingBanking(false);
+  };
+
+  const handleSaveContract = async () => {
+    setSavingContract(true);
+    try {
+      const { error } = await supabase
+        .from('profil')
+        .update({
+          date_entree: editedDateEntree || null,
+          role: editedRole || null,
+          secteur_id: editedSecteurId || null
+        })
+        .eq('id', currentEmployee.id);
+
+      if (error) throw error;
+
+      const selectedSecteur = secteurs.find(s => s.id === editedSecteurId);
+
+      setCurrentEmployee({
+        ...currentEmployee,
+        date_entree: editedDateEntree || null,
+        role: editedRole || null,
+        secteur_id: editedSecteurId || null,
+        secteur: selectedSecteur || currentEmployee.secteur
+      });
+
+      setIsEditingContract(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde des informations de contrat');
+    } finally {
+      setSavingContract(false);
+    }
+  };
+
+  const handleCancelContractEdit = () => {
+    setEditedDateEntree(currentEmployee.date_entree || '');
+    setEditedRole(currentEmployee.role || '');
+    setEditedSecteurId(currentEmployee.secteur_id || '');
+    setIsEditingContract(false);
   };
 
   const handleSaveIdentity = async () => {
@@ -1834,45 +1885,204 @@ function EmployeeDetailModal({
                   />
                 )}
               </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Genre</label>
-                <p className="text-sm text-gray-900">{currentEmployee.genre || '-'}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Date de naissance</label>
-                <p className="text-sm text-gray-900">{formatDate(currentEmployee.date_naissance)}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Lieu de naissance</label>
-                <p className="text-sm text-gray-900">{currentEmployee.lieu_naissance || '-'}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Pays de naissance</label>
-                <p className="text-sm text-gray-900">{currentEmployee.pays_naissance || '-'}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Nationalité</label>
-                <p className="text-sm text-gray-900">{currentEmployee.nationalite || '-'}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Nom de naissance</label>
-                <p className="text-sm text-gray-900">{currentEmployee.nom_naissance || '-'}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Numéro de sécurité sociale</label>
-                <p className="text-sm text-gray-900">{currentEmployee.numero_securite_sociale || '-'}</p>
-              </div>
             </div>
             {isEditingIdentity && (
               <p className="text-xs text-gray-600 mt-3">* Champs obligatoires</p>
             )}
           </div>
 
+          {/* Section Informations personnelles */}
+          <div className={`border rounded-lg p-4 transition-colors ${isEditingPersonal ? 'bg-orange-100 border-orange-300' : 'bg-orange-50 border-orange-200'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-orange-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Informations personnelles</h3>
+              </div>
+              {!isEditingPersonal ? (
+                <button
+                  onClick={() => setIsEditingPersonal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-orange-700 bg-white border border-orange-300 rounded-lg hover:bg-orange-50 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Modifier
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCancelPersonalEdit}
+                    disabled={savingPersonal}
+                    className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSavePersonal}
+                    disabled={savingPersonal}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+                  >
+                    {savingPersonal ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Enregistrement...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Enregistrer
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Date de naissance</label>
+                {!isEditingPersonal ? (
+                  <p className="text-sm text-gray-900">{formatDate(currentEmployee.date_naissance)}</p>
+                ) : (
+                  <input
+                    type="date"
+                    value={editedDateNaissance}
+                    onChange={(e) => setEditedDateNaissance(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Lieu de naissance</label>
+                {!isEditingPersonal ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.lieu_naissance || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedLieuNaissance}
+                    onChange={(e) => setEditedLieuNaissance(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="Ville de naissance"
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Pays de naissance</label>
+                {!isEditingPersonal ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.pays_naissance || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedPaysNaissance}
+                    onChange={(e) => setEditedPaysNaissance(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="Pays de naissance"
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Nationalité</label>
+                {!isEditingPersonal ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.nationalite || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedNationalite}
+                    onChange={(e) => setEditedNationalite(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="Nationalité"
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Genre</label>
+                {!isEditingPersonal ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.genre || '-'}</p>
+                ) : (
+                  <select
+                    value={editedGenre}
+                    onChange={(e) => setEditedGenre(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="Masculin">Masculin</option>
+                    <option value="Féminin">Féminin</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Nom de naissance</label>
+                {!isEditingPersonal ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.nom_naissance || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedNomNaissance}
+                    onChange={(e) => setEditedNomNaissance(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="Nom de naissance"
+                  />
+                )}
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Numéro de sécurité sociale</label>
+                {!isEditingPersonal ? (
+                  <p className="text-sm text-gray-900 font-mono">{currentEmployee.numero_securite_sociale || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedNumeroSS}
+                    onChange={(e) => setEditedNumeroSS(e.target.value)}
+                    className="w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="1 23 45 67 890 123 45"
+                    maxLength={15}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Section Contrat Principal */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="w-5 h-5 text-green-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Contrat Principal</h3>
+          <div className={`border rounded-lg p-4 transition-colors ${isEditingContract ? 'bg-green-100 border-green-300' : 'bg-green-50 border-green-200'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Contrat Principal</h3>
+              </div>
+              {!isEditingContract ? (
+                <button
+                  onClick={() => setIsEditingContract(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-50 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Modifier
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCancelContractEdit}
+                    disabled={savingContract}
+                    className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveContract}
+                    disabled={savingContract}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
+                    {savingContract ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Enregistrement...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Enregistrer
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
 
             {currentEmployee.modele_contrat && (
@@ -1908,51 +2118,231 @@ function EmployeeDetailModal({
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Date d'entrée</label>
-                <p className="text-sm text-gray-900">{formatDate(currentEmployee.date_entree)}</p>
+                {!isEditingContract ? (
+                  <p className="text-sm text-gray-900">{formatDate(currentEmployee.date_entree)}</p>
+                ) : (
+                  <input
+                    type="date"
+                    value={editedDateEntree}
+                    onChange={(e) => setEditedDateEntree(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Secteur</label>
-                <p className="text-sm text-gray-900">{currentEmployee.secteur?.nom || '-'}</p>
+                {!isEditingContract ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.secteur?.nom || '-'}</p>
+                ) : (
+                  <select
+                    value={editedSecteurId}
+                    onChange={(e) => setEditedSecteurId(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="">Sélectionner un secteur</option>
+                    {secteurs.map((secteur) => (
+                      <option key={secteur.id} value={secteur.id}>
+                        {secteur.nom}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Role</label>
-                <p className="text-sm text-gray-900">{currentEmployee.role || '-'}</p>
+                {!isEditingContract ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.role || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedRole}
+                    onChange={(e) => setEditedRole(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Ex: Opérateur, Manager..."
+                  />
+                )}
               </div>
             </div>
           </div>
 
-          {/* Section Coordonnées */}
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin className="w-5 h-5 text-purple-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Coordonnées</h3>
+          {/* Section Adresse */}
+          <div className={`border rounded-lg p-4 transition-colors ${isEditingAddress ? 'bg-purple-100 border-purple-300' : 'bg-purple-50 border-purple-200'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-purple-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Adresse</h3>
+              </div>
+              {!isEditingAddress ? (
+                <button
+                  onClick={() => setIsEditingAddress(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-purple-700 bg-white border border-purple-300 rounded-lg hover:bg-purple-50 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Modifier
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCancelAddressEdit}
+                    disabled={savingAddress}
+                    className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveAddress}
+                    disabled={savingAddress}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  >
+                    {savingAddress ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Enregistrement...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Enregistrer
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="text-xs font-medium text-gray-500 uppercase">Adresse</label>
-                <p className="text-sm text-gray-900">{currentEmployee.adresse || '-'}</p>
+                {!isEditingAddress ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.adresse || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedAdresse}
+                    onChange={(e) => setEditedAdresse(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Numéro et nom de rue"
+                  />
+                )}
               </div>
-              {currentEmployee.complement_adresse && (
-                <div className="md:col-span-2">
-                  <label className="text-xs font-medium text-gray-500 uppercase">Complément d'adresse</label>
-                  <p className="text-sm text-gray-900">{currentEmployee.complement_adresse}</p>
-                </div>
-              )}
+              <div className="md:col-span-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Complément d'adresse</label>
+                {!isEditingAddress ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.complement_adresse || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedComplementAdresse}
+                    onChange={(e) => setEditedComplementAdresse(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Bâtiment, étage, appartement..."
+                  />
+                )}
+              </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Ville</label>
-                <p className="text-sm text-gray-900">{currentEmployee.ville || '-'}</p>
+                {!isEditingAddress ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.ville || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedVille}
+                    onChange={(e) => setEditedVille(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Ville"
+                  />
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Code postal</label>
-                <p className="text-sm text-gray-900">{currentEmployee.code_postal || '-'}</p>
+                {!isEditingAddress ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.code_postal || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedCodePostal}
+                    onChange={(e) => setEditedCodePostal(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Code postal"
+                    maxLength={5}
+                  />
+                )}
               </div>
+            </div>
+          </div>
+
+          {/* Section Informations bancaires */}
+          <div className={`border rounded-lg p-4 transition-colors ${isEditingBanking ? 'bg-purple-100 border-purple-300' : 'bg-purple-50 border-purple-200'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-purple-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Informations bancaires</h3>
+              </div>
+              {!isEditingBanking ? (
+                <button
+                  onClick={() => setIsEditingBanking(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-purple-700 bg-white border border-purple-300 rounded-lg hover:bg-purple-50 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Modifier
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCancelBankingEdit}
+                    disabled={savingBanking}
+                    className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveBanking}
+                    disabled={savingBanking}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  >
+                    {savingBanking ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Enregistrement...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Enregistrer
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">IBAN</label>
-                <p className="text-sm text-gray-900 font-mono">{currentEmployee.iban || '-'}</p>
+                {!isEditingBanking ? (
+                  <p className="text-sm text-gray-900 font-mono">{currentEmployee.iban || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedIBAN}
+                    onChange={(e) => setEditedIBAN(e.target.value.toUpperCase())}
+                    className="w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="FR76 1234 5678 9012 3456 7890 123"
+                  />
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">BIC</label>
-                <p className="text-sm text-gray-900 font-mono">{currentEmployee.bic || '-'}</p>
+                {!isEditingBanking ? (
+                  <p className="text-sm text-gray-900 font-mono">{currentEmployee.bic || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedBIC}
+                    onChange={(e) => setEditedBIC(e.target.value.toUpperCase())}
+                    className="w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="BNPAFRPPXXX"
+                    maxLength={11}
+                  />
+                )}
               </div>
             </div>
           </div>
