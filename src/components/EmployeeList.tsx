@@ -752,9 +752,11 @@ function EmployeeDetailModal({
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [isEditingBanking, setIsEditingBanking] = useState(false);
+  const [isEditingIdentity, setIsEditingIdentity] = useState(false);
   const [savingPersonal, setSavingPersonal] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   const [savingBanking, setSavingBanking] = useState(false);
+  const [savingIdentity, setSavingIdentity] = useState(false);
 
   // Edited fields for personal info
   const [editedDateNaissance, setEditedDateNaissance] = useState(currentEmployee.date_naissance || '');
@@ -774,6 +776,13 @@ function EmployeeDetailModal({
   // Edited fields for banking
   const [editedIBAN, setEditedIBAN] = useState(currentEmployee.iban || '');
   const [editedBIC, setEditedBIC] = useState(currentEmployee.bic || '');
+
+  // Edited fields for identity
+  const [editedNom, setEditedNom] = useState(currentEmployee.nom || '');
+  const [editedPrenom, setEditedPrenom] = useState(currentEmployee.prenom || '');
+  const [editedEmail, setEditedEmail] = useState(currentEmployee.email || '');
+  const [editedTel, setEditedTel] = useState(currentEmployee.tel || '');
+  const [editedMatriculeTCA, setEditedMatriculeTCA] = useState(currentEmployee.matricule_tca || '');
 
   // NE PAS synchroniser automatiquement avec employee pour éviter les rechargements
   // Le modal garde son état local stable pendant toute sa durée de vie
@@ -1434,6 +1443,73 @@ function EmployeeDetailModal({
     setIsEditingBanking(false);
   };
 
+  const handleSaveIdentity = async () => {
+    if (!editedNom.trim() || !editedPrenom.trim() || !editedEmail.trim()) {
+      alert('Le nom, le prénom et l\'email sont obligatoires');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editedEmail)) {
+      alert('Format d\'email invalide');
+      return;
+    }
+
+    setSavingIdentity(true);
+    try {
+      const { data, error } = await supabase
+        .from('profil')
+        .update({
+          nom: editedNom.trim(),
+          prenom: editedPrenom.trim(),
+          email: editedEmail.trim(),
+          tel: editedTel.trim() || null,
+          matricule_tca: editedMatriculeTCA.trim() || null
+        })
+        .eq('id', currentEmployee.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCurrentEmployee({
+        ...currentEmployee,
+        nom: editedNom.trim(),
+        prenom: editedPrenom.trim(),
+        email: editedEmail.trim(),
+        tel: editedTel.trim() || null,
+        matricule_tca: editedMatriculeTCA.trim() || null
+      });
+
+      setIsEditingIdentity(false);
+      onUpdate();
+    } catch (error: any) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        if (error.message?.includes('email')) {
+          alert('Cet email est déjà utilisé');
+        } else if (error.message?.includes('matricule')) {
+          alert('Ce matricule TCA existe déjà');
+        } else {
+          alert('Une valeur existe déjà dans la base de données');
+        }
+      } else {
+        alert('Erreur lors de la sauvegarde des informations');
+      }
+    } finally {
+      setSavingIdentity(false);
+    }
+  };
+
+  const handleCancelIdentityEdit = () => {
+    setEditedNom(currentEmployee.nom || '');
+    setEditedPrenom(currentEmployee.prenom || '');
+    setEditedEmail(currentEmployee.email || '');
+    setEditedTel(currentEmployee.tel || '');
+    setEditedMatriculeTCA(currentEmployee.matricule_tca || '');
+    setIsEditingIdentity(false);
+  };
+
   const handleDownloadContract = async (contractId: string) => {
     try {
       const contract = employeeContracts.find((c: any) => c.id === contractId);
@@ -1645,19 +1721,118 @@ function EmployeeDetailModal({
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Section Identité */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <User className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Identité</h3>
+          <div className={`border rounded-lg p-4 transition-colors ${isEditingIdentity ? 'bg-blue-100 border-blue-300' : 'bg-blue-50 border-blue-200'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Identité</h3>
+              </div>
+              {!isEditingIdentity ? (
+                <button
+                  onClick={() => setIsEditingIdentity(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Modifier
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSaveIdentity}
+                    disabled={savingIdentity || !editedNom.trim() || !editedPrenom.trim() || !editedEmail.trim()}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingIdentity ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    Enregistrer
+                  </button>
+                  <button
+                    onClick={handleCancelIdentityEdit}
+                    disabled={savingIdentity}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    <X className="w-4 h-4" />
+                    Annuler
+                  </button>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Matricule TCA</label>
-                <p className="text-sm text-gray-900">{currentEmployee.matricule_tca || '-'}</p>
+                <label className="text-xs font-medium text-gray-500 uppercase">Nom*</label>
+                {!isEditingIdentity ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.nom}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedNom}
+                    onChange={(e) => setEditedNom(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nom"
+                    required
+                  />
+                )}
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Email</label>
-                <p className="text-sm text-gray-900">{currentEmployee.email}</p>
+                <label className="text-xs font-medium text-gray-500 uppercase">Prénom*</label>
+                {!isEditingIdentity ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.prenom}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedPrenom}
+                    onChange={(e) => setEditedPrenom(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Prénom"
+                    required
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Matricule TCA</label>
+                {!isEditingIdentity ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.matricule_tca || '-'}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={editedMatriculeTCA}
+                    onChange={(e) => setEditedMatriculeTCA(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Matricule TCA"
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Email*</label>
+                {!isEditingIdentity ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.email}</p>
+                ) : (
+                  <input
+                    type="email"
+                    value={editedEmail}
+                    onChange={(e) => setEditedEmail(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="email@exemple.com"
+                    required
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Téléphone</label>
+                {!isEditingIdentity ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.tel || '-'}</p>
+                ) : (
+                  <input
+                    type="tel"
+                    value={editedTel}
+                    onChange={(e) => setEditedTel(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="06 12 34 56 78"
+                  />
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Genre</label>
@@ -1687,11 +1862,10 @@ function EmployeeDetailModal({
                 <label className="text-xs font-medium text-gray-500 uppercase">Numéro de sécurité sociale</label>
                 <p className="text-sm text-gray-900">{currentEmployee.numero_securite_sociale || '-'}</p>
               </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Téléphone</label>
-                <p className="text-sm text-gray-900">{currentEmployee.tel || '-'}</p>
-              </div>
             </div>
+            {isEditingIdentity && (
+              <p className="text-xs text-gray-600 mt-3">* Champs obligatoires</p>
+            )}
           </div>
 
           {/* Section Contrat Principal */}
