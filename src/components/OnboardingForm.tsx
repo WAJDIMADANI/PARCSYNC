@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Sparkles, CheckCircle, Upload, X } from 'lucide-react';
 import { COUNTRIES } from '../lib/countries';
+import { validateIban as validateIbanUtil } from '../utils/ibanValidator';
 
 interface Site {
   id: string;
@@ -65,22 +66,6 @@ export function OnboardingForm() {
     setShowSuggestions(false);
   };
 
-  const getBicFromBankCode = (bankCode: string): string => {
-    const bankCodes: { [key: string]: string } = {
-      '20041': 'BNPAFRPP',
-      '30004': 'SOGEFRPP',
-      '10278': 'CMCIFRPP',
-      '13335': 'CEPAFRPP',
-      '11315': 'AGRIFRPP',
-      '30002': 'CRLYFRPP',
-      '16958': 'CEPAFRPP',
-      '17515': 'CCFRFRPP',
-      '10096': 'CMCIFR2A',
-      '30003': 'SOGEFRPP',
-    };
-    return bankCodes[bankCode] || '';
-  };
-
   const validateIban = async (iban: string) => {
     if (!iban || iban.length < 15) {
       setIbanError('');
@@ -88,25 +73,18 @@ export function OnboardingForm() {
     }
 
     try {
-      const cleanIban = iban.replace(/\s/g, '').toUpperCase();
+      const result = await validateIbanUtil(iban);
 
-      const res = await fetch(`https://openiban.com/validate/${cleanIban}?validateBankCode=true&getBIC=true`);
-      const data = await res.json();
-
-      if (data.valid) {
+      if (result.valid) {
         setIbanError('');
-        setIbanValidationMessage('✅ IBAN valide');
-
-        let bic = data.bankData?.bic || '';
-
-        if (!bic && cleanIban.startsWith('FR')) {
-          const bankCode = cleanIban.substring(4, 9);
-          bic = getBicFromBankCode(bankCode);
-        }
-
-        setFormData(prev => ({ ...prev, bic, iban: cleanIban }));
+        setIbanValidationMessage(
+          result.error
+            ? `✅ IBAN valide (${result.error})`
+            : '✅ IBAN valide'
+        );
+        setFormData(prev => ({ ...prev, bic: result.bic, iban: result.cleanIban }));
       } else {
-        setIbanError('❌ IBAN invalide');
+        setIbanError(result.error || '❌ IBAN invalide');
         setIbanValidationMessage('');
       }
     } catch (e) {

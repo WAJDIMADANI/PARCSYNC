@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase, getStorageUrl } from '../lib/supabase';
-import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload, Trash2, Download } from 'lucide-react';
+import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload, Trash2, Download, Loader2 } from 'lucide-react';
 import EmployeeHistory from './EmployeeHistory';
 import EmployeeDeparture from './EmployeeDeparture';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -15,6 +15,8 @@ import ConfirmSendContractModal from './ConfirmSendContractModal';
 import ManualContractUploadModal from './ManualContractUploadModal';
 import ConfirmDeleteContractModal from './ConfirmDeleteContractModal';
 import { ContractBadge } from './ContractBadge';
+import { ConfirmInvalidIbanModal } from './ConfirmInvalidIbanModal';
+import { validateIban, cleanIban } from '../utils/ibanValidator';
 
 interface Document {
   id: string;
@@ -777,6 +779,14 @@ function EmployeeDetailModal({
   const [editedIBAN, setEditedIBAN] = useState(currentEmployee.iban || '');
   const [editedBIC, setEditedBIC] = useState(currentEmployee.bic || '');
 
+  // IBAN validation states
+  const [ibanError, setIbanError] = useState('');
+  const [ibanValidationMessage, setIbanValidationMessage] = useState('');
+  const [ibanValidating, setIbanValidating] = useState(false);
+  const [bicAutoFilled, setBicAutoFilled] = useState(true);
+  const [showInvalidIbanModal, setShowInvalidIbanModal] = useState(false);
+  const ibanValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Edited fields for identity
   const [editedNom, setEditedNom] = useState(currentEmployee.nom || '');
   const [editedPrenom, setEditedPrenom] = useState(currentEmployee.prenom || '');
@@ -820,6 +830,59 @@ function EmployeeDetailModal({
     } catch (error) {
       console.error('Erreur chargement infos candidat:', error);
     }
+  };
+
+  // Fonction de validation IBAN avec debounce
+  const handleIbanValidation = async (iban: string) => {
+    const cleaned = cleanIban(iban);
+
+    // Reset messages
+    setIbanError('');
+    setIbanValidationMessage('');
+
+    // Annuler le timeout précédent
+    if (ibanValidationTimeoutRef.current) {
+      clearTimeout(ibanValidationTimeoutRef.current);
+    }
+
+    // Vérifier longueur minimale
+    if (!cleaned || cleaned.length < 15) {
+      return;
+    }
+
+    // Debounce de 500ms
+    ibanValidationTimeoutRef.current = setTimeout(async () => {
+      setIbanValidating(true);
+      try {
+        const result = await validateIban(cleaned);
+
+        if (result.valid) {
+          setIbanError('');
+          setIbanValidationMessage(
+            result.error
+              ? `✅ IBAN valide (${result.error})`
+              : '✅ IBAN valide'
+          );
+
+          // Auto-remplir le BIC uniquement si pas modifié manuellement
+          if (bicAutoFilled && result.bic) {
+            setEditedBIC(result.bic);
+          }
+
+          // Nettoyer l'IBAN
+          setEditedIBAN(result.cleanIban);
+        } else {
+          setIbanError(result.error || '❌ IBAN invalide');
+          setIbanValidationMessage('');
+        }
+      } catch (error) {
+        console.error('Erreur validation IBAN:', error);
+        setIbanError('❌ Erreur validation');
+        setIbanValidationMessage('');
+      } finally {
+        setIbanValidating(false);
+      }
+    }, 500);
   };
 
   const refreshEmployee = async () => {
@@ -1399,26 +1462,43 @@ function EmployeeDetailModal({
     }
   };
 
-  const handleSaveBanking = async () => {
+  const handleSaveBanking = async (forceeSave: boolean = false) => {
+    // Vérifier si l'IBAN est invalide et demander confirmation
+    if (!forceeSave && ibanError && editedIBAN) {
+      setShowInvalidIbanModal(true);
+      return;
+    }
+
     setSavingBanking(true);
     try {
+      const cleanedIban = editedIBAN ? cleanIban(editedIBAN) : null;
+
       const { error } = await supabase
         .from('profil')
         .update({
-          iban: editedIBAN || null,
+          iban: cleanedIban,
           bic: editedBIC || null
         })
         .eq('id', currentEmployee.id);
 
       if (error) throw error;
 
+      // Log si IBAN invalide mais forcé
+      if (ibanError && editedIBAN) {
+        console.warn('⚠️ IBAN invalide sauvegardé pour profil:', currentEmployee.id, 'IBAN:', cleanedIban);
+      }
+
       setCurrentEmployee({
         ...currentEmployee,
-        iban: editedIBAN || null,
+        iban: cleanedIban,
         bic: editedBIC || null
       });
 
+      // Reset des états de validation
+      setIbanError('');
+      setIbanValidationMessage('');
       setIsEditingBanking(false);
+      setShowInvalidIbanModal(false);
       onUpdate();
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
@@ -1450,6 +1530,14 @@ function EmployeeDetailModal({
   const handleCancelBankingEdit = () => {
     setEditedIBAN(currentEmployee.iban || '');
     setEditedBIC(currentEmployee.bic || '');
+    setIbanError('');
+    setIbanValidationMessage('');
+    setIbanValidating(false);
+    setBicAutoFilled(true);
+    setShowInvalidIbanModal(false);
+    if (ibanValidationTimeoutRef.current) {
+      clearTimeout(ibanValidationTimeoutRef.current);
+    }
     setIsEditingBanking(false);
   };
 
@@ -2320,13 +2408,43 @@ function EmployeeDetailModal({
                 {!isEditingBanking ? (
                   <p className="text-sm text-gray-900 font-mono">{currentEmployee.iban || '-'}</p>
                 ) : (
-                  <input
-                    type="text"
-                    value={editedIBAN}
-                    onChange={(e) => setEditedIBAN(e.target.value.toUpperCase())}
-                    className="w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="FR76 1234 5678 9012 3456 7890 123"
-                  />
+                  <div className="space-y-1">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={editedIBAN}
+                        onChange={(e) => {
+                          const value = e.target.value.toUpperCase();
+                          setEditedIBAN(value);
+                          handleIbanValidation(value);
+                        }}
+                        onFocus={() => {
+                          if (editedIBAN) {
+                            handleIbanValidation(editedIBAN);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 text-sm font-mono border rounded-lg focus:ring-2 focus:ring-purple-500 transition-colors pr-10 ${
+                          ibanError
+                            ? 'border-red-500 bg-red-50'
+                            : ibanValidationMessage
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-300 bg-white'
+                        }`}
+                        placeholder="FR76 1234 5678 9012 3456 7890 123"
+                      />
+                      {ibanValidating && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    {ibanError && (
+                      <p className="text-xs text-red-600 font-medium">{ibanError}</p>
+                    )}
+                    {ibanValidationMessage && (
+                      <p className="text-xs text-green-600 font-medium">{ibanValidationMessage}</p>
+                    )}
+                  </div>
                 )}
               </div>
               <div>
@@ -2334,14 +2452,31 @@ function EmployeeDetailModal({
                 {!isEditingBanking ? (
                   <p className="text-sm text-gray-900 font-mono">{currentEmployee.bic || '-'}</p>
                 ) : (
-                  <input
-                    type="text"
-                    value={editedBIC}
-                    onChange={(e) => setEditedBIC(e.target.value.toUpperCase())}
-                    className="w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="BNPAFRPPXXX"
-                    maxLength={11}
-                  />
+                  <div className="space-y-1">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={editedBIC}
+                        onChange={(e) => {
+                          setEditedBIC(e.target.value.toUpperCase());
+                          setBicAutoFilled(false);
+                        }}
+                        className={`w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                          bicAutoFilled ? 'bg-blue-50' : 'bg-white'
+                        }`}
+                        placeholder="Auto-rempli après validation IBAN"
+                        maxLength={11}
+                      />
+                      {bicAutoFilled && editedBIC && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-blue-600 font-medium bg-blue-100 px-2 py-0.5 rounded">
+                          Auto
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {bicAutoFilled ? 'Rempli automatiquement (modifiable)' : 'Modifié manuellement'}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
@@ -3527,6 +3662,13 @@ function EmployeeDetailModal({
         isDeleting={deletingContract}
       />
     )}
+
+    <ConfirmInvalidIbanModal
+      isOpen={showInvalidIbanModal}
+      iban={editedIBAN}
+      onConfirm={() => handleSaveBanking(true)}
+      onCancel={() => setShowInvalidIbanModal(false)}
+    />
     </>
   );
 }
