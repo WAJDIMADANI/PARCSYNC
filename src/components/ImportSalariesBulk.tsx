@@ -416,19 +416,69 @@ export function ImportSalariesBulk() {
     return actualColumn ? (row[actualColumn]?.toString().trim() || '') : '';
   };
 
-  const parseDate = (dateStr: string): string | undefined => {
-    if (!dateStr || dateStr.trim() === '') return undefined;
+  const parseDate = (dateStr: string | Date | any): string | undefined => {
+    if (!dateStr) return undefined;
 
-    const cleaned = dateStr.trim();
-    const parts = cleaned.split('/');
-    if (parts.length === 3) {
-      const day = parts[0].padStart(2, '0');
-      const month = parts[1].padStart(2, '0');
-      const year = parts[2];
-      return `${year}-${month}-${day}`;
+    try {
+      if (dateStr instanceof Date) {
+        if (isNaN(dateStr.getTime())) return undefined;
+        const year = dateStr.getFullYear();
+        const month = String(dateStr.getMonth() + 1).padStart(2, '0');
+        const day = String(dateStr.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      const cleaned = String(dateStr).trim();
+      if (cleaned === '') return undefined;
+
+      const parts = cleaned.split('/');
+      if (parts.length !== 3) {
+        console.warn(`⚠️ Date format incorrect: "${dateStr}" - Format attendu: JJ/MM/AAAA`);
+        return undefined;
+      }
+
+      const dayNum = parseInt(parts[0], 10);
+      const monthNum = parseInt(parts[1], 10);
+      const yearNum = parseInt(parts[2], 10);
+
+      if (isNaN(dayNum) || isNaN(monthNum) || isNaN(yearNum)) {
+        console.warn(`⚠️ Date contient des valeurs non-numériques: "${dateStr}"`);
+        return undefined;
+      }
+
+      if (monthNum < 1 || monthNum > 12) {
+        console.error(`❌ Mois invalide: ${monthNum} dans la date "${dateStr}". Le mois doit être entre 1 et 12.`);
+        return undefined;
+      }
+
+      if (dayNum < 1 || dayNum > 31) {
+        console.error(`❌ Jour invalide: ${dayNum} dans la date "${dateStr}". Le jour doit être entre 1 et 31.`);
+        return undefined;
+      }
+
+      const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
+      if (dayNum > daysInMonth) {
+        console.error(`❌ Jour invalide: ${dayNum} pour le mois ${monthNum}/${yearNum}. Ce mois a seulement ${daysInMonth} jours.`);
+        return undefined;
+      }
+
+      const day = String(dayNum).padStart(2, '0');
+      const month = String(monthNum).padStart(2, '0');
+      const year = String(yearNum);
+
+      const isoDate = `${year}-${month}-${day}`;
+
+      const testDate = new Date(isoDate);
+      if (isNaN(testDate.getTime())) {
+        console.error(`❌ Date invalide après conversion: "${dateStr}" → "${isoDate}"`);
+        return undefined;
+      }
+
+      return isoDate;
+    } catch (error) {
+      console.error(`❌ Erreur lors du parsing de la date "${dateStr}":`, error);
+      return undefined;
     }
-
-    return undefined;
   };
 
   const handleFileUpload = async (uploadedFile: File) => {
@@ -533,9 +583,21 @@ export function ImportSalariesBulk() {
       const matricule = getColumnValue(row, columnMap, 'matricule_tca');
       const secteurNom = getColumnValue(row, columnMap, 'secteur');
 
+      const dateDebutRaw = getColumnValue(row, columnMap, 'date_debut_contrat');
+      const dateDebutContrat = parseDate(dateDebutRaw);
+      const dateFinContrat = parseDate(getColumnValue(row, columnMap, 'date_fin_contrat'));
+      const dateNaissance = parseDate(getColumnValue(row, columnMap, 'date_naissance'));
+      const avenant1DateDebut = parseDate(getColumnValue(row, columnMap, 'avenant_1_date_debut'));
+      const avenant1DateFin = parseDate(getColumnValue(row, columnMap, 'avenant_1_date_fin'));
+      const avenant2DateFin = parseDate(getColumnValue(row, columnMap, 'avenant_2_date_fin'));
+
+      const hasDateDebutButInvalid = dateDebutRaw && !dateDebutContrat;
+
       if (index === 0) {
         console.log('🔍 DEBUG Row data:', { nom, prenom, email, matricule, secteurNom });
         console.log('🔍 DEBUG Raw row:', row);
+        console.log('🔍 DEBUG Date début brute:', dateDebutRaw, typeof dateDebutRaw);
+        console.log('🔍 DEBUG Date début parsée:', dateDebutContrat);
       }
 
       let status: 'valid' | 'warning' | 'error' = 'valid';
@@ -545,6 +607,10 @@ export function ImportSalariesBulk() {
       if (!nom && !prenom && !email) {
         status = 'error';
         statusMessage = 'Champs obligatoires manquants: Nom, Prénom ou Email';
+        selected = false;
+      } else if (hasDateDebutButInvalid) {
+        status = 'error';
+        statusMessage = `Date de début de contrat invalide: "${dateDebutRaw}". Format attendu: JJ/MM/AAAA`;
         selected = false;
       } else if (email && existingEmailSet.has(email.toLowerCase())) {
         status = 'warning';
@@ -580,11 +646,11 @@ export function ImportSalariesBulk() {
           nom,
           prenom,
           email: email || undefined,
-          date_debut_contrat: parseDate(getColumnValue(row, columnMap, 'date_debut_contrat')),
-          date_fin_contrat: parseDate(getColumnValue(row, columnMap, 'date_fin_contrat')),
+          date_debut_contrat: dateDebutContrat,
+          date_fin_contrat: dateFinContrat,
           numero_securite_sociale: getColumnValue(row, columnMap, 'numero_securite_sociale') || undefined,
           poste: getColumnValue(row, columnMap, 'poste') || undefined,
-          date_naissance: parseDate(getColumnValue(row, columnMap, 'date_naissance')),
+          date_naissance: dateNaissance,
           lieu_naissance: getColumnValue(row, columnMap, 'lieu_naissance') || undefined,
           nationalite: getColumnValue(row, columnMap, 'nationalite') || undefined,
           genre: getColumnValue(row, columnMap, 'genre') || undefined,
@@ -599,9 +665,10 @@ export function ImportSalariesBulk() {
           bic: getColumnValue(row, columnMap, 'bic') || undefined,
           modele_contrat: getColumnValue(row, columnMap, 'modele_contrat') || undefined,
           periode_essai: getColumnValue(row, columnMap, 'periode_essai') || undefined,
-          avenant_1_date_debut: parseDate(getColumnValue(row, columnMap, 'avenant_1_date_debut')),
-          avenant_1_date_fin: parseDate(getColumnValue(row, columnMap, 'avenant_1_date_fin')),
-          avenant_2_date_fin: parseDate(getColumnValue(row, columnMap, 'avenant_2_date_fin')),
+          statut_contrat: getColumnValue(row, columnMap, 'statut_contrat') || undefined,
+          avenant_1_date_debut: avenant1DateDebut,
+          avenant_1_date_fin: avenant1DateFin,
+          avenant_2_date_fin: avenant2DateFin,
           secteur_nom: secteurNom || undefined,
           secteur_id: secteurId,
           type_piece_identite: getColumnValue(row, columnMap, 'type_piece_identite') || undefined,
@@ -771,12 +838,22 @@ export function ImportSalariesBulk() {
           message: 'Importé avec succès',
         });
       } catch (error: any) {
+        console.error(`❌ Erreur lors de l'import de ${emp.data.prenom} ${emp.data.nom}:`, error);
+
+        let errorMessage = error.message || 'Erreur inconnue';
+
+        if (errorMessage.includes('date/time field value out of range')) {
+          errorMessage = `Date invalide détectée. Vérifiez que toutes les dates sont au format JJ/MM/AAAA (ex: ${emp.data.date_debut_contrat || emp.data.date_naissance || '01/01/2024'})`;
+        } else if (errorMessage.includes('invalid input syntax for type date')) {
+          errorMessage = `Format de date incorrect. Utilisez le format JJ/MM/AAAA (jour/mois/année)`;
+        }
+
         result.errors++;
         result.details.push({
           type: 'error',
           rowNumber: emp.rowNumber,
           name: `${emp.data.prenom} ${emp.data.nom}`,
-          message: error.message || 'Erreur inconnue',
+          message: errorMessage,
         });
       }
     }
