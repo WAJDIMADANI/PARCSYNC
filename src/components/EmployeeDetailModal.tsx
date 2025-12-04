@@ -125,13 +125,13 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
           </div>
 
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-4">
               <FileText className="w-5 h-5 text-green-600" />
               <h3 className="text-lg font-semibold text-gray-900">Contrat Principal</h3>
             </div>
 
             {employee.data.modele_contrat && (
-              <div className="mb-4 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 shadow-sm">
+              <div className="mb-4 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-3 shadow-sm">
                 <div className="flex items-center gap-3">
                   <FileText className="w-5 h-5 text-blue-600" />
                   <div className="flex-1">
@@ -152,7 +152,7 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Statut</label>
                 <div className="mt-1">
@@ -182,10 +182,12 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
             </div>
 
             {(employee.data.avenant_1_date_debut || employee.data.avenant_1_date_fin) && (
-              <div className="mt-4 pt-4 border-t border-green-300">
-                <div className="bg-amber-50 border border-amber-200 border-l-4 border-l-amber-500 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileText className="w-4 h-4 text-amber-600" />
+              <div className="mt-4">
+                <div className="bg-amber-50 border border-amber-300 border-l-4 border-l-orange-500 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex-shrink-0 w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
+                      <FileText className="w-3.5 h-3.5 text-white" />
+                    </div>
                     <span className="text-sm font-semibold text-amber-900">Avenant 1</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -203,10 +205,12 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
             )}
 
             {employee.data.avenant_2_date_fin && (
-              <div className="mt-4 pt-4 border-t border-green-300">
-                <div className="bg-amber-50 border border-amber-200 border-l-4 border-l-amber-500 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileText className="w-4 h-4 text-amber-600" />
+              <div className="mt-3">
+                <div className="bg-amber-50 border border-amber-300 border-l-4 border-l-orange-500 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex-shrink-0 w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
+                      <FileText className="w-3.5 h-3.5 text-white" />
+                    </div>
                     <span className="text-sm font-semibold text-amber-900">Avenant 2</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
