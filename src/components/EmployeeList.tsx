@@ -801,8 +801,32 @@ function EmployeeDetailModal({
   const [editedRole, setEditedRole] = useState(currentEmployee.role || '');
   const [editedSecteurId, setEditedSecteurId] = useState(currentEmployee.secteur_id || '');
 
-  // NE PAS synchroniser automatiquement avec employee pour éviter les rechargements
-  // Le modal garde son état local stable pendant toute sa durée de vie
+  // Synchroniser currentEmployee avec la prop employee quand elle change
+  useEffect(() => {
+    setCurrentEmployee(employee);
+    // Mettre à jour aussi les champs édités pour refléter les nouvelles valeurs
+    setEditedDateNaissance(employee.date_naissance || '');
+    setEditedLieuNaissance(employee.lieu_naissance || '');
+    setEditedPaysNaissance(employee.pays_naissance || '');
+    setEditedNationalite(employee.nationalite || '');
+    setEditedGenre(employee.genre || '');
+    setEditedNomNaissance(employee.nom_naissance || '');
+    setEditedNumeroSS(employee.numero_securite_sociale || '');
+    setEditedAdresse(employee.adresse || '');
+    setEditedComplementAdresse(employee.complement_adresse || '');
+    setEditedVille(employee.ville || '');
+    setEditedCodePostal(employee.code_postal || '');
+    setEditedIBAN(employee.iban || '');
+    setEditedBIC(employee.bic || '');
+    setEditedNom(employee.nom || '');
+    setEditedPrenom(employee.prenom || '');
+    setEditedEmail(employee.email || '');
+    setEditedTel(employee.tel || '');
+    setEditedMatriculeTCA(employee.matricule_tca || '');
+    setEditedDateEntree(employee.date_entree || '');
+    setEditedRole(employee.role || '');
+    setEditedSecteurId(employee.secteur_id || '');
+  }, [employee]);
 
   useEffect(() => {
     // Signaler que le modal est ouvert
