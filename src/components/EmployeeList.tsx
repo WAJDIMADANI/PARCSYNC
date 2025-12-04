@@ -2802,6 +2802,18 @@ function EmployeeDetailModal({
                                   )}
                                 </div>
                                 <div className="space-y-1">
+                                  {contract.date_debut && (
+                                    <p className="text-sm text-gray-700 font-medium flex items-center gap-1.5">
+                                      <Calendar className="w-4 h-4 text-blue-600" />
+                                      Début du contrat: {new Date(contract.date_debut).toLocaleDateString('fr-FR')}
+                                    </p>
+                                  )}
+                                  {contract.date_fin && (
+                                    <p className="text-sm text-orange-700 font-medium flex items-center gap-1.5">
+                                      <Calendar className="w-4 h-4 text-orange-600" />
+                                      Fin du contrat: {new Date(contract.date_fin).toLocaleDateString('fr-FR')}
+                                    </p>
+                                  )}
                                   {dateSignature && (
                                     <p className="text-sm text-gray-600 flex items-center gap-1.5">
                                       <CheckCircle className="w-4 h-4 text-green-600" />
