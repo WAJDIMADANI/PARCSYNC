@@ -756,6 +756,9 @@ function EmployeeDetailModal({
   const [savingAddress, setSavingAddress] = useState(false);
   const [savingBanking, setSavingBanking] = useState(false);
 
+  // Active tab state for the employee detail panel
+  const [activeTab, setActiveTab] = useState<'personal' | 'address' | 'banking' | 'contracts'>('personal');
+
   // Edited fields for personal info
   const [editedDateNaissance, setEditedDateNaissance] = useState(currentEmployee.date_naissance || '');
   const [editedLieuNaissance, setEditedLieuNaissance] = useState(currentEmployee.lieu_naissance || '');
@@ -2537,92 +2540,127 @@ function EmployeeDetailModal({
       />
     )}
 
-    {showSendDocumentsModal && (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-fade-in">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scale-in">
+    {/* Employee Detail Tabs Modal */}
+    {currentEmployee && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scale-in">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
-                <Mail className="w-6 h-6 text-white" />
+          <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 flex items-center justify-between z-10">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+                <User className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white">Envoi de documents</h3>
-                <p className="text-blue-100 text-sm">{selectedDocuments.size} document{selectedDocuments.size > 1 ? 's' : ''} sélectionné{selectedDocuments.size > 1 ? 's' : ''}</p>
+                <h2 className="text-2xl font-bold text-white">
+                  Informations détaillées
+                </h2>
+                <p className="text-blue-100 text-sm mt-1">
+                  {currentEmployee.prenom} {currentEmployee.nom}
+                </p>
               </div>
             </div>
             <button
-              onClick={() => setShowSendDocumentsModal(false)}
-              disabled={sendingDocuments}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={onClose}
+              className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-xl transition-colors"
             >
-              <X className="w-5 h-5 text-white" />
+              <X className="w-6 h-6 text-white" />
             </button>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Destinataire */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Destinataire</label>
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-2 border-blue-200 rounded-xl p-4 flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <User className="w-6 h-6 text-white" />
+          {/* Tab Navigation */}
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 px-6">
+            <div className="flex gap-2 -mb-px">
+              <button
+                onClick={() => setActiveTab('personal')}
+                className={`px-6 py-3 font-semibold text-sm transition-all relative ${
+                  activeTab === 'personal'
+                    ? 'text-blue-600 bg-white border-t-2 border-l border-r border-blue-600 rounded-t-lg'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-t-lg'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Informations Personnelles
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-gray-900 text-lg">{currentEmployee.prenom} {currentEmployee.nom}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Mail className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                    <p className="text-sm text-gray-600 truncate">{currentEmployee.email}</p>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">{new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              </button>
+              <button
+                onClick={() => setActiveTab('address')}
+                className={`px-6 py-3 font-semibold text-sm transition-all relative ${
+                  activeTab === 'address'
+                    ? 'text-cyan-600 bg-white border-t-2 border-l border-r border-cyan-600 rounded-t-lg'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-t-lg'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Home className="w-4 h-4" />
+                  Adresse
                 </div>
-              </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('banking')}
+                className={`px-6 py-3 font-semibold text-sm transition-all relative ${
+                  activeTab === 'banking'
+                    ? 'text-emerald-600 bg-white border-t-2 border-l border-r border-emerald-600 rounded-t-lg'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-t-lg'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  Informations Bancaires
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('contracts')}
+                className={`px-6 py-3 font-semibold text-sm transition-all relative ${
+                  activeTab === 'contracts'
+                    ? 'text-purple-600 bg-white border-t-2 border-l border-r border-purple-600 rounded-t-lg'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-t-lg'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Contrats
+                </div>
+              </button>
             </div>
+          </div>
 
-            {/* Documents à envoyer - Continue from here */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Documents à envoyer</label>
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+
+          {/* Personal Info Tab */}
+          {activeTab === 'personal' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-xl p-5 border border-blue-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg">Informations Personnelles</h3>
+                  </div>
+                  {!isEditingPersonal && (
+                    <button
+                      onClick={() => setIsEditingPersonal(true)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Modifier
+                    </button>
+                  )}
+                </div>
+
+                {isEditingPersonal ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Date de naissance
+                        </label>
                         <input
                           type="date"
                           value={editedDateNaissance}
                           onChange={(e) => setEditedDateNaissance(e.target.value)}
-                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
-                        />
-                      </div>
-
-                      <div className="bg-white rounded-lg p-3 shadow-sm">
-                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
-                          Lieu de naissance
-                        </label>
-                        <input
-                          type="text"
-                          value={editedLieuNaissance}
-                          onChange={(e) => setEditedLieuNaissance(e.target.value)}
-                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
-                        />
-                      </div>
-
-                      <div className="bg-white rounded-lg p-3 shadow-sm">
-                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
-                          Pays de naissance
-                        </label>
-                        <input
-                          type="text"
-                          value={editedPaysNaissance}
-                          onChange={(e) => setEditedPaysNaissance(e.target.value)}
-                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
-                        />
-                      </div>
-
-                      <div className="bg-white rounded-lg p-3 shadow-sm">
-                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
-                          Nationalité
-                        </label>
-                        <input
-                          type="text"
-                          value={editedNationalite}
-                          onChange={(e) => setEditedNationalite(e.target.value)}
                           className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
                         />
                       </div>
@@ -2636,11 +2674,50 @@ function EmployeeDetailModal({
                           onChange={(e) => setEditedGenre(e.target.value)}
                           className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
                         >
-                          <option value="">Sélectionner...</option>
+                          <option value="">Sélectionner</option>
                           <option value="Homme">Homme</option>
                           <option value="Femme">Femme</option>
                           <option value="Autre">Autre</option>
                         </select>
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Lieu de naissance
+                        </label>
+                        <input
+                          type="text"
+                          value={editedLieuNaissance}
+                          onChange={(e) => setEditedLieuNaissance(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                          placeholder="Paris"
+                        />
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Pays de naissance
+                        </label>
+                        <input
+                          type="text"
+                          value={editedPaysNaissance}
+                          onChange={(e) => setEditedPaysNaissance(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                          placeholder="France"
+                        />
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                          Nationalité
+                        </label>
+                        <input
+                          type="text"
+                          value={editedNationalite}
+                          onChange={(e) => setEditedNationalite(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                          placeholder="Française"
+                        />
                       </div>
 
                       <div className="bg-white rounded-lg p-3 shadow-sm">
@@ -2652,6 +2729,7 @@ function EmployeeDetailModal({
                           value={editedNomNaissance}
                           onChange={(e) => setEditedNomNaissance(e.target.value)}
                           className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+                          placeholder="Nom de naissance"
                         />
                       </div>
 
@@ -2664,7 +2742,8 @@ function EmployeeDetailModal({
                           value={editedNumeroSS}
                           onChange={(e) => setEditedNumeroSS(e.target.value)}
                           className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm font-mono"
-                          placeholder="1 89 03 75 123 456 78"
+                          placeholder="1 23 45 67 890 123 45"
+                          maxLength={21}
                         />
                       </div>
                     </div>
@@ -2680,11 +2759,11 @@ function EmployeeDetailModal({
                       <button
                         onClick={handleSavePersonalInfo}
                         disabled={savingPersonal}
-                        className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                       >
                         {savingPersonal ? (
                           <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <LoadingSpinner size="sm" variant="white" />
                             Enregistrement...
                           </>
                         ) : (
@@ -2697,87 +2776,81 @@ function EmployeeDetailModal({
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-white rounded-lg p-3 shadow-sm">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Calendar className="w-4 h-4 text-orange-600" />
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date de naissance</p>
-                      </div>
-                      <p className="text-gray-900 font-medium">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                        Date de naissance
+                      </label>
+                      <p className="text-sm text-gray-900">
                         {currentEmployee.date_naissance
                           ? new Date(currentEmployee.date_naissance).toLocaleDateString('fr-FR')
-                          : <span className="text-gray-400 italic">Non renseigné</span>}
+                          : '-'}
                       </p>
                     </div>
 
                     <div className="bg-white rounded-lg p-3 shadow-sm">
-                      <div className="flex items-center gap-2 mb-1">
-                        <MapPin className="w-4 h-4 text-orange-600" />
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lieu de naissance</p>
-                      </div>
-                      <p className="text-gray-900 font-medium">
-                        {currentEmployee.lieu_naissance || <span className="text-gray-400 italic">Non renseigné</span>}
-                      </p>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                        Genre
+                      </label>
+                      <p className="text-sm text-gray-900">{currentEmployee.genre || '-'}</p>
                     </div>
 
                     <div className="bg-white rounded-lg p-3 shadow-sm">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Globe className="w-4 h-4 text-orange-600" />
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pays de naissance</p>
-                      </div>
-                      <p className="text-gray-900 font-medium">
-                        {currentEmployee.pays_naissance || <span className="text-gray-400 italic">Non renseigné</span>}
-                      </p>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                        Lieu de naissance
+                      </label>
+                      <p className="text-sm text-gray-900">{currentEmployee.lieu_naissance || '-'}</p>
                     </div>
 
                     <div className="bg-white rounded-lg p-3 shadow-sm">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Globe className="w-4 h-4 text-orange-600" />
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nationalité</p>
-                      </div>
-                      <p className="text-gray-900 font-medium">
-                        {currentEmployee.nationalite || <span className="text-gray-400 italic">Non renseigné</span>}
-                      </p>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                        Pays de naissance
+                      </label>
+                      <p className="text-sm text-gray-900">{currentEmployee.pays_naissance || '-'}</p>
                     </div>
 
                     <div className="bg-white rounded-lg p-3 shadow-sm">
-                      <div className="flex items-center gap-2 mb-1">
-                        <User className="w-4 h-4 text-orange-600" />
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Genre</p>
-                      </div>
-                      <p className="text-gray-900 font-medium">
-                        {currentEmployee.genre || <span className="text-gray-400 italic">Non renseigné</span>}
-                      </p>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                        Nationalité
+                      </label>
+                      <p className="text-sm text-gray-900">{currentEmployee.nationalite || '-'}</p>
                     </div>
 
-                    {currentEmployee.nom_naissance && (
-                      <div className="bg-white rounded-lg p-3 shadow-sm">
-                        <div className="flex items-center gap-2 mb-1">
-                          <User className="w-4 h-4 text-orange-600" />
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nom de naissance</p>
-                        </div>
-                        <p className="text-gray-900 font-medium">{currentEmployee.nom_naissance}</p>
-                      </div>
-                    )}
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                        Nom de naissance
+                      </label>
+                      <p className="text-sm text-gray-900">{currentEmployee.nom_naissance || '-'}</p>
+                    </div>
 
                     <div className="bg-white rounded-lg p-3 shadow-sm md:col-span-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-orange-600" />
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Numéro de sécurité sociale</p>
-                        </div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                        Numéro de sécurité sociale
+                      </label>
+                      <div className="flex items-center gap-2">
+                        {showSecuriteSociale ? (
+                          <p className="text-sm text-gray-900 font-mono">
+                            {currentEmployee.numero_securite_sociale || '-'}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-900 font-mono">
+                            {currentEmployee.numero_securite_sociale ? '• • • • • • • • • • • • • • •' : '-'}
+                          </p>
+                        )}
                         {currentEmployee.numero_securite_sociale && (
                           <button
                             onClick={() => setShowSecuriteSociale(!showSecuriteSociale)}
-                            className="text-orange-600 hover:text-orange-700 transition-colors"
+                            className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                            title={showSecuriteSociale ? 'Masquer' : 'Afficher'}
                           >
-                            {showSecuriteSociale ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            {showSecuriteSociale ? (
+                              <EyeOff className="w-4 h-4 text-gray-600" />
+                            ) : (
+                              <Eye className="w-4 h-4 text-gray-600" />
+                            )}
                           </button>
                         )}
                       </div>
-                      <p className="text-gray-900 font-medium font-mono">
-                        {maskSecuriteSociale(currentEmployee.numero_securite_sociale)}
-                      </p>
                     </div>
                   </div>
                 )}
@@ -3204,113 +3277,6 @@ function EmployeeDetailModal({
         </div>
       </div>
     </div>
-
-    {showHistory && (
-      <EmployeeHistory
-        profilId={currentEmployee.id}
-        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
-        onClose={() => setShowHistory(false)}
-      />
-    )}
-
-    {showDeparture && (
-      <EmployeeDeparture
-        profilId={currentEmployee.id}
-        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
-        onClose={() => setShowDeparture(false)}
-        onSuccess={handleDepartureSuccess}
-      />
-    )}
-
-    {showContractSend && (
-      <ContractSendModal
-        profilId={currentEmployee.id}
-        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
-        employeeEmail={currentEmployee.email}
-        onClose={() => setShowContractSend(false)}
-        onSuccess={handleContractSent}
-      />
-    )}
-
-    {showContractValidation && (
-      <ContractValidationPanel
-        profilId={currentEmployee.id}
-        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
-        onClose={() => setShowContractValidation(false)}
-        onActivate={handleContractActivated}
-      />
-    )}
-
-    {showResendConfirm && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Renvoyer le contrat</h3>
-          <p className="text-gray-700 mb-6">
-            Voulez-vous renvoyer l'email de contrat à <strong>{currentEmployee.prenom} {currentEmployee.nom}</strong> ?
-          </p>
-          <div className="flex gap-3 justify-end">
-            <button
-              onClick={() => setShowResendConfirm(false)}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleResendContract}
-              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-            >
-              Renvoyer
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {resendSuccess && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <Check className="w-6 h-6 text-green-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">Email envoyé !</h3>
-          </div>
-          <p className="text-gray-700 mb-6">
-            L'email de contrat a été renvoyé avec succès à <strong>{currentEmployee.prenom} {currentEmployee.nom}</strong>.
-          </p>
-          <div className="flex justify-end">
-            <button
-              onClick={() => setResendSuccess(false)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {resendError && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-              <X className="w-6 h-6 text-red-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">Erreur</h3>
-          </div>
-          <p className="text-gray-700 mb-2">Erreur lors du renvoi de l'email :</p>
-          <p className="text-red-600 font-medium mb-6">{resendError}</p>
-          <div className="flex justify-end">
-            <button
-              onClick={() => setResendError('')}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      </div>
     )}
 
     {showSendDocumentsModal && (
