@@ -9,6 +9,7 @@ interface ParsedEmployee {
   status: 'valid' | 'warning' | 'error';
   statusMessage: string;
   selected: boolean;
+  existing_profile_id?: string;
   data: {
     matricule_tca?: string;
     nom?: string;
@@ -441,6 +442,7 @@ export function ImportSalariesBulk() {
     const { data: secteurs } = await supabase.from('secteur').select('id, nom');
     const secteurMap = new Map(secteurs?.map((s) => [s.nom.toLowerCase(), s.id]) || []);
 
+    // Vérifier les emails existants
     const emailsToCheck = rows
       .map((r) => getColumnValue(r, columnMap, 'email'))
       .filter((e) => e);
@@ -452,14 +454,29 @@ export function ImportSalariesBulk() {
 
     const existingEmailSet = new Set(existingEmails?.map((e) => e.email.toLowerCase()) || []);
 
+    // Vérifier les matricules TCA existants
+    const matriculesToCheck = rows
+      .map((r) => getColumnValue(r, columnMap, 'matricule_tca'))
+      .filter((m) => m);
+
+    const { data: existingMatricules } = await supabase
+      .from('profil')
+      .select('id, matricule_tca, nom, prenom, email')
+      .in('matricule_tca', matriculesToCheck);
+
+    const existingMatriculeMap = new Map(
+      existingMatricules?.map((p) => [p.matricule_tca, { id: p.id, nom: p.nom, prenom: p.prenom, email: p.email }]) || []
+    );
+
     const parsed: ParsedEmployee[] = rows.map((row, index) => {
       const nom = getColumnValue(row, columnMap, 'nom');
       const prenom = getColumnValue(row, columnMap, 'prenom');
       const email = getColumnValue(row, columnMap, 'email');
+      const matricule = getColumnValue(row, columnMap, 'matricule_tca');
       const secteurNom = getColumnValue(row, columnMap, 'secteur');
 
       if (index === 0) {
-        console.log('🔍 DEBUG Row data:', { nom, prenom, email, secteurNom });
+        console.log('🔍 DEBUG Row data:', { nom, prenom, email, matricule, secteurNom });
         console.log('🔍 DEBUG Raw row:', row);
       }
 
@@ -472,9 +489,12 @@ export function ImportSalariesBulk() {
         statusMessage = 'Champs obligatoires manquants: Nom, Prénom ou Email';
         selected = false;
       } else if (email && existingEmailSet.has(email.toLowerCase())) {
-        status = 'error';
-        statusMessage = `Email "${email}" déjà existant dans la base - Vérifiez le fichier source`;
-        selected = false;
+        status = 'warning';
+        statusMessage = `Email "${email}" existe déjà - Sera mis à jour`;
+      } else if (matricule && existingMatriculeMap.has(matricule)) {
+        const existing = existingMatriculeMap.get(matricule);
+        status = 'warning';
+        statusMessage = `Matricule "${matricule}" existe (${existing?.prenom} ${existing?.nom}) - Sera mis à jour`;
       } else if (secteurNom && !secteurMap.has(secteurNom.toLowerCase())) {
         status = 'warning';
         statusMessage = `Secteur "${secteurNom}" introuvable - Salarié sera créé sans secteur`;
@@ -482,11 +502,21 @@ export function ImportSalariesBulk() {
 
       const secteurId = secteurNom ? secteurMap.get(secteurNom.toLowerCase()) : undefined;
 
+      // Déterminer si un profil existant doit être mis à jour
+      let existingProfileId: string | undefined = undefined;
+      if (matricule && existingMatriculeMap.has(matricule)) {
+        existingProfileId = existingMatriculeMap.get(matricule)?.id;
+      } else if (email && existingEmailSet.has(email.toLowerCase())) {
+        // Si doublon par email, on pourrait aussi chercher l'ID ici si nécessaire
+        // Pour l'instant, on laisse undefined et on créera un nouveau profil
+      }
+
       return {
         rowNumber: index + 2,
         status,
         statusMessage,
         selected,
+        existing_profile_id: existingProfileId,
         data: {
           matricule_tca: getColumnValue(row, columnMap, 'matricule_tca') || undefined,
           nom,
@@ -547,43 +577,101 @@ export function ImportSalariesBulk() {
       setImportProgress({ current: i + 1, total: toImport.length });
 
       try {
-        const { data: profil, error: profilError } = await supabase
-          .from('profil')
-          .insert({
-            matricule_tca: emp.data.matricule_tca,
+        let profil: any;
+        let profilError: any;
+
+        // Si un profil existant a été trouvé, le mettre à jour au lieu de créer un nouveau
+        if (emp.existing_profile_id) {
+          const updateData: any = {
+            // Mettre à jour les champs avec les nouvelles valeurs (sauf si elles sont undefined)
             nom: emp.data.nom || 'N/A',
             prenom: emp.data.prenom || 'N/A',
-            email: emp.data.email || `noemail_${Date.now()}_${i}@temp.com`,
-            tel: emp.data.tel,
-            genre: emp.data.genre,
-            date_naissance: emp.data.date_naissance,
-            lieu_naissance: emp.data.lieu_naissance,
-            pays_naissance: emp.data.pays_naissance,
-            nationalite: emp.data.nationalite,
-            nom_naissance: emp.data.nom_naissance,
-            adresse: emp.data.adresse,
-            complement_adresse: emp.data.complement_adresse,
-            ville: emp.data.ville,
-            code_postal: emp.data.code_postal,
-            numero_securite_sociale: emp.data.numero_securite_sociale,
-            iban: emp.data.iban,
-            bic: emp.data.bic,
-            poste: emp.data.poste,
-            type_piece_identite: emp.data.type_piece_identite,
-            titre_sejour_fin_validite: emp.data.titre_sejour_fin_validite,
-            date_visite_medicale: emp.data.date_visite_medicale,
-            date_fin_visite_medicale: emp.data.date_fin_visite_medicale,
-            periode_essai: emp.data.periode_essai,
-            modele_contrat: emp.data.modele_contrat,
-            secteur_id: emp.data.secteur_id,
-            date_entree: emp.data.date_debut_contrat || new Date().toISOString().split('T')[0],
-            statut: 'actif',
-            role: 'salarie',
-          })
-          .select()
-          .single();
+          };
 
-        if (profilError) throw profilError;
+          // Ajouter les champs optionnels seulement s'ils ont une valeur
+          if (emp.data.email) updateData.email = emp.data.email;
+          if (emp.data.tel) updateData.tel = emp.data.tel;
+          if (emp.data.genre) updateData.genre = emp.data.genre;
+          if (emp.data.date_naissance) updateData.date_naissance = emp.data.date_naissance;
+          if (emp.data.lieu_naissance) updateData.lieu_naissance = emp.data.lieu_naissance;
+          if (emp.data.pays_naissance) updateData.pays_naissance = emp.data.pays_naissance;
+          if (emp.data.nationalite) updateData.nationalite = emp.data.nationalite;
+          if (emp.data.nom_naissance) updateData.nom_naissance = emp.data.nom_naissance;
+          if (emp.data.adresse) updateData.adresse = emp.data.adresse;
+          if (emp.data.complement_adresse) updateData.complement_adresse = emp.data.complement_adresse;
+          if (emp.data.ville) updateData.ville = emp.data.ville;
+          if (emp.data.code_postal) updateData.code_postal = emp.data.code_postal;
+          if (emp.data.numero_securite_sociale) updateData.numero_securite_sociale = emp.data.numero_securite_sociale;
+          if (emp.data.iban) updateData.iban = emp.data.iban;
+          if (emp.data.bic) updateData.bic = emp.data.bic;
+          if (emp.data.poste) updateData.poste = emp.data.poste;
+          if (emp.data.type_piece_identite) updateData.type_piece_identite = emp.data.type_piece_identite;
+          if (emp.data.titre_sejour_fin_validite) updateData.titre_sejour_fin_validite = emp.data.titre_sejour_fin_validite;
+          if (emp.data.date_visite_medicale) updateData.date_visite_medicale = emp.data.date_visite_medicale;
+          if (emp.data.date_fin_visite_medicale) updateData.date_fin_visite_medicale = emp.data.date_fin_visite_medicale;
+          if (emp.data.periode_essai) updateData.periode_essai = emp.data.periode_essai;
+          if (emp.data.modele_contrat) updateData.modele_contrat = emp.data.modele_contrat;
+          if (emp.data.secteur_id) updateData.secteur_id = emp.data.secteur_id;
+          if (emp.data.date_debut_contrat) updateData.date_entree = emp.data.date_debut_contrat;
+
+          const result = await supabase
+            .from('profil')
+            .update(updateData)
+            .eq('id', emp.existing_profile_id)
+            .select()
+            .single();
+
+          profil = result.data;
+          profilError = result.error;
+
+          if (profilError) throw profilError;
+
+          console.log(`✅ Profil mis à jour: ${profil.prenom} ${profil.nom} (${profil.matricule_tca})`);
+        } else {
+          // Créer un nouveau profil
+          const insertResult = await supabase
+            .from('profil')
+            .insert({
+              matricule_tca: emp.data.matricule_tca,
+              nom: emp.data.nom || 'N/A',
+              prenom: emp.data.prenom || 'N/A',
+              email: emp.data.email || `noemail_${Date.now()}_${i}@temp.com`,
+              tel: emp.data.tel,
+              genre: emp.data.genre,
+              date_naissance: emp.data.date_naissance,
+              lieu_naissance: emp.data.lieu_naissance,
+              pays_naissance: emp.data.pays_naissance,
+              nationalite: emp.data.nationalite,
+              nom_naissance: emp.data.nom_naissance,
+              adresse: emp.data.adresse,
+              complement_adresse: emp.data.complement_adresse,
+              ville: emp.data.ville,
+              code_postal: emp.data.code_postal,
+              numero_securite_sociale: emp.data.numero_securite_sociale,
+              iban: emp.data.iban,
+              bic: emp.data.bic,
+              poste: emp.data.poste,
+              type_piece_identite: emp.data.type_piece_identite,
+              titre_sejour_fin_validite: emp.data.titre_sejour_fin_validite,
+              date_visite_medicale: emp.data.date_visite_medicale,
+              date_fin_visite_medicale: emp.data.date_fin_visite_medicale,
+              periode_essai: emp.data.periode_essai,
+              modele_contrat: emp.data.modele_contrat,
+              secteur_id: emp.data.secteur_id,
+              date_entree: emp.data.date_debut_contrat || new Date().toISOString().split('T')[0],
+              statut: 'actif',
+              role: 'salarie',
+            })
+            .select()
+            .single();
+
+          profil = insertResult.data;
+          profilError = insertResult.error;
+
+          if (profilError) throw profilError;
+
+          console.log(`✅ Nouveau profil créé: ${profil.prenom} ${profil.nom} (${profil.matricule_tca})`);
+        }
 
         if (emp.data.date_debut_contrat) {
           const isContractSigned = emp.data.statut_contrat?.toLowerCase().includes('sign');
