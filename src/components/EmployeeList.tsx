@@ -845,8 +845,9 @@ function EmployeeDetailModal({
       clearTimeout(ibanValidationTimeoutRef.current);
     }
 
-    // Vérifier longueur minimale
+    // Si l'IBAN est vide ou trop court, ne pas valider (pas d'erreur)
     if (!cleaned || cleaned.length < 15) {
+      setIbanValidating(false);
       return;
     }
 
@@ -1462,16 +1463,18 @@ function EmployeeDetailModal({
     }
   };
 
-  const handleSaveBanking = async (forceeSave: boolean = false) => {
+  const handleSaveBanking = async (forceSave: boolean = false) => {
     // Vérifier si l'IBAN est invalide et demander confirmation
-    if (!forceeSave && ibanError && editedIBAN) {
+    // Ne bloquer que si l'IBAN n'est PAS vide ET il y a une erreur
+    const trimmedIban = editedIBAN?.trim();
+    if (!forceSave && ibanError && trimmedIban) {
       setShowInvalidIbanModal(true);
       return;
     }
 
     setSavingBanking(true);
     try {
-      const cleanedIban = editedIBAN ? cleanIban(editedIBAN) : null;
+      const cleanedIban = trimmedIban ? cleanIban(trimmedIban) : null;
 
       const { error } = await supabase
         .from('profil')
@@ -1484,7 +1487,7 @@ function EmployeeDetailModal({
       if (error) throw error;
 
       // Log si IBAN invalide mais forcé
-      if (ibanError && editedIBAN) {
+      if (ibanError && trimmedIban) {
         console.warn('⚠️ IBAN invalide sauvegardé pour profil:', currentEmployee.id, 'IBAN:', cleanedIban);
       }
 
@@ -2377,20 +2380,25 @@ function EmployeeDetailModal({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleCancelBankingEdit}
-                    disabled={savingBanking}
+                    disabled={savingBanking || ibanValidating}
                     className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                   >
                     Annuler
                   </button>
                   <button
                     onClick={handleSaveBanking}
-                    disabled={savingBanking}
+                    disabled={savingBanking || ibanValidating}
                     className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
                   >
                     {savingBanking ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         Enregistrement...
+                      </>
+                    ) : ibanValidating ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Validation...
                       </>
                     ) : (
                       <>
