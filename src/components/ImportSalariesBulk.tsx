@@ -41,6 +41,7 @@ interface ParsedEmployee {
     statut_contrat?: string;
     avenant_1_date_debut?: string;
     avenant_1_date_fin?: string;
+    avenant_2_date_debut?: string;
     avenant_2_date_fin?: string;
     secteur_nom?: string;
     secteur_id?: string;
@@ -93,6 +94,7 @@ export function ImportSalariesBulk() {
     { key: 'secteur', label: 'Secteur', category: 'Contrat', defaultVisible: true },
     { key: 'avenant_1_debut', label: 'Avenant 1 Début', category: 'Avenants', defaultVisible: false },
     { key: 'avenant_1_fin', label: 'Avenant 1 Fin', category: 'Avenants', defaultVisible: false },
+    { key: 'avenant_2_debut', label: 'Avenant 2 Début', category: 'Avenants', defaultVisible: false },
     { key: 'avenant_2_fin', label: 'Avenant 2 Fin', category: 'Avenants', defaultVisible: false },
     { key: 'tel', label: 'Téléphone', category: 'Coordonnées', defaultVisible: false },
     { key: 'adresse', label: 'Adresse', category: 'Coordonnées', defaultVisible: false },
@@ -148,6 +150,7 @@ export function ImportSalariesBulk() {
       'Statut',
       'DATE DE DEBUT - AVEVANT1',
       'DATE DE FIN - AVENANT1',
+      'DATE DE DEBUT - AVENANT2',
       'DATE DE FIN - AVENANT2',
       'SECTEUR',
       'Type de pièce d\'identité',
@@ -182,6 +185,7 @@ export function ImportSalariesBulk() {
       '',
       'signé',
       '3 mois',
+      '',
       '',
       '',
       '',
@@ -316,6 +320,7 @@ export function ImportSalariesBulk() {
       'statut_contrat': ['Statut', 'statut', 'STATUT', 'Statut contrat', 'statut contrat'],
       'avenant_1_date_debut': ['DATE DE DEBUT - AVEVANT1', 'avenant 1 debut', 'avenant1_debut', 'DATE DE D�BUT - AVEVANT1'],
       'avenant_1_date_fin': ['DATE DE FIN - AVENANT1', 'avenant 1 fin', 'avenant1_fin'],
+      'avenant_2_date_debut': ['DATE DE DEBUT - AVENANT2', 'avenant 2 debut', 'avenant2_debut', 'DATE DE D�BUT - AVENANT2'],
       'avenant_2_date_fin': ['DATE DE FIN - AVENANT2', 'avenant 2 fin', 'avenant2_fin'],
       'secteur': ['SECTEUR', 'Secteur', 'secteur'],
       'type_piece_identite': ['Type de pièce d\'identité', 'type piece identite', 'piece identite', 'Type de pi�ce d\'identit�'],
@@ -623,6 +628,7 @@ export function ImportSalariesBulk() {
       const dateNaissanceRaw = getColumnValue(row, columnMap, 'date_naissance');
       const avenant1DateDebutRaw = getColumnValue(row, columnMap, 'avenant_1_date_debut');
       const avenant1DateFinRaw = getColumnValue(row, columnMap, 'avenant_1_date_fin');
+      const avenant2DateDebutRaw = getColumnValue(row, columnMap, 'avenant_2_date_debut');
       const avenant2DateFinRaw = getColumnValue(row, columnMap, 'avenant_2_date_fin');
       const titreSejourFinRaw = getColumnValue(row, columnMap, 'titre_sejour_fin_validite');
       const dateVisiteMedicaleRaw = getColumnValue(row, columnMap, 'date_visite_medicale');
@@ -633,6 +639,7 @@ export function ImportSalariesBulk() {
       const dateNaissance = parseDate(dateNaissanceRaw);
       const avenant1DateDebut = parseDate(avenant1DateDebutRaw);
       const avenant1DateFin = parseDate(avenant1DateFinRaw);
+      const avenant2DateDebut = parseDate(avenant2DateDebutRaw);
       const avenant2DateFin = parseDate(avenant2DateFinRaw);
       const titreSejourFin = parseDate(titreSejourFinRaw);
       const dateVisiteMedicale = parseDate(dateVisiteMedicaleRaw);
@@ -643,6 +650,7 @@ export function ImportSalariesBulk() {
       const hasDateNaissanceButInvalid = dateNaissanceRaw && !dateNaissance;
       const hasAvenant1DebutButInvalid = avenant1DateDebutRaw && !avenant1DateDebut;
       const hasAvenant1FinButInvalid = avenant1DateFinRaw && !avenant1DateFin;
+      const hasAvenant2DebutButInvalid = avenant2DateDebutRaw && !avenant2DateDebut;
       const hasAvenant2FinButInvalid = avenant2DateFinRaw && !avenant2DateFin;
       const hasTitreSejourFinButInvalid = titreSejourFinRaw && !titreSejourFin;
       const hasVisiteMedicaleButInvalid = dateVisiteMedicaleRaw && !dateVisiteMedicale;
@@ -666,6 +674,7 @@ export function ImportSalariesBulk() {
       if (hasDateNaissanceButInvalid) invalidDates.push(`Naissance: "${dateNaissanceRaw}"`);
       if (hasAvenant1DebutButInvalid) invalidDates.push(`Avenant 1 début: "${avenant1DateDebutRaw}"`);
       if (hasAvenant1FinButInvalid) invalidDates.push(`Avenant 1 fin: "${avenant1DateFinRaw}"`);
+      if (hasAvenant2DebutButInvalid) invalidDates.push(`Avenant 2 début: "${avenant2DateDebutRaw}"`);
       if (hasAvenant2FinButInvalid) invalidDates.push(`Avenant 2 fin: "${avenant2DateFinRaw}"`);
       if (hasTitreSejourFinButInvalid) invalidDates.push(`Titre séjour fin: "${titreSejourFinRaw}"`);
       if (hasVisiteMedicaleButInvalid) invalidDates.push(`Visite médicale: "${dateVisiteMedicaleRaw}"`);
@@ -735,6 +744,7 @@ export function ImportSalariesBulk() {
           statut_contrat: getColumnValue(row, columnMap, 'statut_contrat') || undefined,
           avenant_1_date_debut: avenant1DateDebut,
           avenant_1_date_fin: avenant1DateFin,
+          avenant_2_date_debut: avenant2DateDebut,
           avenant_2_date_fin: avenant2DateFin,
           secteur_nom: secteurNom || undefined,
           secteur_id: secteurId,
@@ -899,12 +909,31 @@ export function ImportSalariesBulk() {
             esign: 'signed',
             statut: isContractSigned ? 'signe' : 'envoye',
             date_signature: isContractSigned ? emp.data.avenant_1_date_debut : null,
-            variables: { type_contrat: 'Avenant' },
+            variables: { type_contrat: 'Avenant 1' },
             source: 'import',
           });
 
-          console.log(`📝 Ligne ${emp.rowNumber}: Insertion avenant avec données:`, avenantData);
+          console.log(`📝 Ligne ${emp.rowNumber}: Insertion avenant 1 avec données:`, avenantData);
           await supabase.from('contrat').insert(avenantData);
+        }
+
+        if (emp.data.avenant_2_date_debut || emp.data.avenant_2_date_fin) {
+          const isContractSigned = emp.data.statut_contrat?.toLowerCase().includes('sign');
+
+          const avenant2Data = cleanDataForInsert({
+            profil_id: profil.id,
+            type: 'avenant',
+            date_debut: emp.data.avenant_2_date_debut,
+            date_fin: emp.data.avenant_2_date_fin,
+            esign: 'signed',
+            statut: isContractSigned ? 'signe' : 'envoye',
+            date_signature: isContractSigned ? emp.data.avenant_2_date_debut : null,
+            variables: { type_contrat: 'Avenant 2' },
+            source: 'import',
+          });
+
+          console.log(`📝 Ligne ${emp.rowNumber}: Insertion avenant 2 avec données:`, avenant2Data);
+          await supabase.from('contrat').insert(avenant2Data);
         }
 
         result.success++;
@@ -934,6 +963,7 @@ export function ImportSalariesBulk() {
             'Entrée': emp.data.date_debut_contrat,
             'Avenant 1 début': emp.data.avenant_1_date_debut,
             'Avenant 1 fin': emp.data.avenant_1_date_fin,
+            'Avenant 2 début': emp.data.avenant_2_date_debut,
             'Avenant 2 fin': emp.data.avenant_2_date_fin,
             'Fin titre séjour': emp.data.titre_sejour_fin_validite,
             'Visite médicale': emp.data.date_visite_medicale,
@@ -1032,7 +1062,7 @@ export function ImportSalariesBulk() {
   };
 
   const getContractType = (emp: ParsedEmployee): 'cdi' | 'cdd' | 'avenant' | 'unknown' => {
-    if (emp.data.avenant_1_date_debut) return 'avenant';
+    if (emp.data.avenant_1_date_debut || emp.data.avenant_2_date_debut) return 'avenant';
     if (emp.data.modele_contrat?.toLowerCase().includes('avenant')) return 'avenant';
     if (emp.data.date_fin_contrat) return 'cdd';
     if (emp.data.modele_contrat?.toLowerCase().includes('cdd')) return 'cdd';
@@ -1600,6 +1630,11 @@ export function ImportSalariesBulk() {
                     Av. 1 Fin
                   </th>
                 )}
+                {visibleColumns.includes('avenant_2_debut') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Av. 2 Début
+                  </th>
+                )}
                 {visibleColumns.includes('avenant_2_fin') && (
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Av. 2 Fin
@@ -1697,6 +1732,9 @@ export function ImportSalariesBulk() {
                   )}
                   {visibleColumns.includes('avenant_1_fin') && (
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatDate(emp.data.avenant_1_date_fin)}</td>
+                  )}
+                  {visibleColumns.includes('avenant_2_debut') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatDate(emp.data.avenant_2_date_debut)}</td>
                   )}
                   {visibleColumns.includes('avenant_2_fin') && (
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatDate(emp.data.avenant_2_date_fin)}</td>

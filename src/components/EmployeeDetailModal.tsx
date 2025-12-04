@@ -32,6 +32,7 @@ interface ParsedEmployee {
     statut_contrat?: string;
     avenant_1_date_debut?: string;
     avenant_1_date_fin?: string;
+    avenant_2_date_debut?: string;
     avenant_2_date_fin?: string;
     secteur_nom?: string;
     type_piece_identite?: string;
@@ -204,7 +205,7 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
               </div>
             )}
 
-            {employee.data.avenant_2_date_fin && (
+            {(employee.data.avenant_2_date_debut || employee.data.avenant_2_date_fin) && (
               <div className="mt-3">
                 <div className="bg-amber-50 border border-amber-300 border-l-4 border-l-orange-500 rounded-lg p-4">
                   <div className="flex items-center gap-3 mb-3">
@@ -216,7 +217,7 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-medium text-gray-500 uppercase">Date de début</label>
-                      <p className="text-sm text-gray-900">-</p>
+                      <p className="text-sm text-gray-900">{formatDate(employee.data.avenant_2_date_debut)}</p>
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
