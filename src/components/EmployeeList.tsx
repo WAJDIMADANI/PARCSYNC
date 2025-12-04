@@ -18,6 +18,7 @@ import ConfirmDeleteContractModal from './ConfirmDeleteContractModal';
 import { ContractBadge } from './ContractBadge';
 import { ConfirmInvalidIbanModal } from './ConfirmInvalidIbanModal';
 import { validateIban, cleanIban } from '../utils/ibanValidator';
+import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 
 interface Document {
   id: string;
@@ -2327,14 +2328,21 @@ function EmployeeDetailModal({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="text-xs font-medium text-gray-500 uppercase">Adresse</label>
                 {!isEditingAddress ? (
-                  <p className="text-sm text-gray-900">{currentEmployee.adresse || '-'}</p>
+                  <>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Adresse</label>
+                    <p className="text-sm text-gray-900">{currentEmployee.adresse || '-'}</p>
+                  </>
                 ) : (
-                  <input
-                    type="text"
+                  <AddressAutocompleteInput
+                    label="Adresse"
                     value={editedAdresse}
-                    onChange={(e) => setEditedAdresse(e.target.value)}
+                    onChange={(value) => setEditedAdresse(value)}
+                    onAddressSelect={(data) => {
+                      setEditedAdresse(data.adresse);
+                      setEditedCodePostal(data.code_postal);
+                      setEditedVille(data.ville);
+                    }}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Numéro et nom de rue"
                   />
