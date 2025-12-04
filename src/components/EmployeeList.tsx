@@ -14,6 +14,7 @@ import Toast from './Toast';
 import ConfirmSendContractModal from './ConfirmSendContractModal';
 import ManualContractUploadModal from './ManualContractUploadModal';
 import ConfirmDeleteContractModal from './ConfirmDeleteContractModal';
+import { ContractBadge } from './ContractBadge';
 
 interface Document {
   id: string;
@@ -735,9 +736,6 @@ function EmployeeDetailModal({
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [confirmSendModal, setConfirmSendModal] = useState<{ contractId: string; employeeName: string; employeeEmail: string; contractType: string } | null>(null);
   const [isSendingContract, setIsSendingContract] = useState(false);
-
-  // Tab system
-  const [activeTab, setActiveTab] = useState<'overview' | 'personal' | 'address' | 'banking' | 'contracts'>('overview');
 
   // Masking states
   const [showSecuriteSociale, setShowSecuriteSociale] = useState(false);
@@ -1601,6 +1599,16 @@ function EmployeeDetailModal({
                             currentEmployee.statut === 'contrat_envoye' ? 'bg-blue-100 text-blue-700' :
                             'bg-red-100 text-red-700';
 
+  // Helper pour formater les dates
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return '-';
+    try {
+      return new Date(dateStr).toLocaleDateString('fr-FR');
+    } catch {
+      return '-';
+    }
+  };
+
   return (
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
@@ -1635,226 +1643,143 @@ function EmployeeDetailModal({
             </button>
           </div>
 
-          {/* Tab Navigation */}
-          <div className="bg-gray-50 border-b border-gray-200">
-            <div className="px-6 flex gap-1">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`px-4 py-3 font-medium text-sm transition-all ${
-                  activeTab === 'overview'
-                    ? 'text-blue-700 border-b-2 border-blue-700 bg-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  <span>Vue d'ensemble</span>
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('personal')}
-                className={`px-4 py-3 font-medium text-sm transition-all ${
-                  activeTab === 'personal'
-                    ? 'text-blue-700 border-b-2 border-blue-700 bg-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  <span>Informations personnelles</span>
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('address')}
-                className={`px-4 py-3 font-medium text-sm transition-all ${
-                  activeTab === 'address'
-                    ? 'text-blue-700 border-b-2 border-blue-700 bg-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Home className="w-4 h-4" />
-                  <span>Adresse</span>
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('banking')}
-                className={`px-4 py-3 font-medium text-sm transition-all ${
-                  activeTab === 'banking'
-                    ? 'text-blue-700 border-b-2 border-blue-700 bg-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4" />
-                  <span>Informations bancaires</span>
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('contracts')}
-                className={`px-4 py-3 font-medium text-sm transition-all ${
-                  activeTab === 'contracts'
-                    ? 'text-blue-700 border-b-2 border-blue-700 bg-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  <span>Contrats</span>
-                  {employeeContracts.length > 0 && (
-                    <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
-                      {employeeContracts.length}
-                    </span>
-                  )}
-                </div>
-              </button>
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Section Identité */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <User className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Identité</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Matricule TCA</label>
+                <p className="text-sm text-gray-900">{currentEmployee.matricule_tca || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Email</label>
+                <p className="text-sm text-gray-900">{currentEmployee.email}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Genre</label>
+                <p className="text-sm text-gray-900">{currentEmployee.genre || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Date de naissance</label>
+                <p className="text-sm text-gray-900">{formatDate(currentEmployee.date_naissance)}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Lieu de naissance</label>
+                <p className="text-sm text-gray-900">{currentEmployee.lieu_naissance || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Pays de naissance</label>
+                <p className="text-sm text-gray-900">{currentEmployee.pays_naissance || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Nationalité</label>
+                <p className="text-sm text-gray-900">{currentEmployee.nationalite || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Nom de naissance</label>
+                <p className="text-sm text-gray-900">{currentEmployee.nom_naissance || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Numéro de sécurité sociale</label>
+                <p className="text-sm text-gray-900">{currentEmployee.numero_securite_sociale || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Téléphone</label>
+                <p className="text-sm text-gray-900">{currentEmployee.tel || '-'}</p>
+              </div>
             </div>
           </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Vue d'ensemble Tab */}
-          {activeTab === 'overview' && (
-          <>
-          {/* Grid des informations */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Informations de contact */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-xl p-5 border border-blue-200">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Mail className="w-4 h-4 text-white" />
-                </div>
-                <h3 className="font-bold text-gray-900 text-lg">Informations de contact</h3>
-              </div>
-
-              <div className="space-y-3">
-                <div className="bg-white rounded-lg p-3 shadow-sm">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Mail className="w-4 h-4 text-blue-600" />
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</p>
-                  </div>
-                  <p className="text-gray-900 font-medium">{currentEmployee.email}</p>
-                </div>
-
-                {currentEmployee.tel && (
-                  <div className="bg-white rounded-lg p-3 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Phone className="w-4 h-4 text-blue-600" />
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Téléphone</p>
-                    </div>
-                    <p className="text-gray-900 font-medium">{currentEmployee.tel}</p>
-                  </div>
-                )}
-              </div>
+          {/* Section Contrat Principal */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="w-5 h-5 text-green-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Contrat Principal</h3>
             </div>
 
-            {/* Affectation */}
-            <div className="bg-gradient-to-br from-green-50 to-green-100/30 rounded-xl p-5 border border-green-200">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                  <Briefcase className="w-4 h-4 text-white" />
+            {currentEmployee.modele_contrat && (
+              <div className="mb-4 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium text-blue-600 uppercase">Modèle de contrat</span>
+                      <span className="text-xs px-2 py-0.5 bg-blue-200 text-blue-800 rounded-full font-medium">
+                        Prévisualisation
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ContractBadge type="type" value={currentEmployee.modele_contrat} />
+                      <span className="text-sm font-medium text-gray-900">
+                        {currentEmployee.modele_contrat}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="font-bold text-gray-900 text-lg">Affectation</h3>
               </div>
+            )}
 
-              <div className="space-y-3">
-                {currentEmployee.matricule_tca && (
-                  <div className="bg-white rounded-lg p-3 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Briefcase className="w-4 h-4 text-green-600" />
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Matricule TCA</p>
-                    </div>
-                    <p className="text-gray-900 font-medium">{currentEmployee.matricule_tca}</p>
-                  </div>
-                )}
-
-                {currentEmployee.secteur && (
-                  <div className="bg-white rounded-lg p-3 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <MapPin className="w-4 h-4 text-green-600" />
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Secteur</p>
-                    </div>
-                    <p className="text-gray-900 font-medium">{currentEmployee.secteur.nom}</p>
-                  </div>
-                )}
-
-                {currentEmployee.date_entree && (
-                  <div className="bg-white rounded-lg p-3 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="w-4 h-4 text-green-600" />
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date d'entrée</p>
-                    </div>
-                    <p className="text-gray-900 font-medium">{new Date(currentEmployee.date_entree).toLocaleDateString('fr-FR')}</p>
-                  </div>
-                )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Statut</label>
+                <div className="mt-1">
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${displayBadgeColor}`}>
+                    {displayStatut}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Date d'entrée</label>
+                <p className="text-sm text-gray-900">{formatDate(currentEmployee.date_entree)}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Secteur</label>
+                <p className="text-sm text-gray-900">{currentEmployee.secteur?.nom || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Role</label>
+                <p className="text-sm text-gray-900">{currentEmployee.role || '-'}</p>
               </div>
             </div>
+          </div>
 
-            {/* Modèle de contrat signé */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-xl p-5 border border-blue-200">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <FileText className="w-4 h-4 text-white" />
-                </div>
-                <h3 className="font-bold text-gray-900 text-lg">Modèle de contrat signé</h3>
+          {/* Section Coordonnées */}
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <MapPin className="w-5 h-5 text-purple-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Coordonnées</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Adresse</label>
+                <p className="text-sm text-gray-900">{currentEmployee.adresse || '-'}</p>
               </div>
-
-              {(() => {
-                const signedContracts = employeeContracts
-                  .filter((c: any) => c.statut === 'signe' || c.date_signature || c.yousign_signed_at)
-                  .sort((a: any, b: any) => {
-                    const dateA = new Date(a.date_signature || a.yousign_signed_at || a.created_at).getTime();
-                    const dateB = new Date(b.date_signature || b.yousign_signed_at || b.created_at).getTime();
-                    return dateA - dateB;
-                  });
-
-                if (signedContracts.length === 0) {
-                  return (
-                    <div className="bg-white rounded-lg p-3 shadow-sm">
-                      <p className="text-gray-500 text-sm">Aucun contrat signé</p>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="space-y-2">
-                    {signedContracts.map((contract: any) => {
-                      const isManual = contract.source === 'manuel' || !contract.modele_id;
-                      const typeContrat = isManual && contract.variables?.type_contrat
-                        ? contract.variables.type_contrat
-                        : contract.modele?.type_contrat || 'Contrat de travail';
-                      const dateSignature = contract.date_signature || contract.yousign_signed_at;
-
-                      const getTypeColor = (type: string) => {
-                        const lowerType = type.toLowerCase();
-                        if (lowerType.includes('cdi')) return 'bg-green-100 text-green-800 border-green-300';
-                        if (lowerType.includes('cdd')) return 'bg-blue-100 text-blue-800 border-blue-300';
-                        if (lowerType.includes('ctt')) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-                        if (lowerType.includes('avenant')) return 'bg-gray-100 text-gray-800 border-gray-300';
-                        if (lowerType.includes('stage')) return 'bg-purple-100 text-purple-800 border-purple-300';
-                        if (lowerType.includes('alternance')) return 'bg-orange-100 text-orange-800 border-orange-300';
-                        return 'bg-gray-100 text-gray-800 border-gray-300';
-                      };
-
-                      return (
-                        <div key={contract.id} className="bg-white rounded-lg p-3 shadow-sm border border-blue-100 hover:shadow-md transition-shadow">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${getTypeColor(typeContrat)}`}>
-                                {typeContrat}
-                              </span>
-                            </div>
-                            {dateSignature && (
-                              <p className="text-sm text-gray-600">
-                                Signé le {new Date(dateSignature).toLocaleDateString('fr-FR')}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
+              {currentEmployee.complement_adresse && (
+                <div className="md:col-span-2">
+                  <label className="text-xs font-medium text-gray-500 uppercase">Complément d'adresse</label>
+                  <p className="text-sm text-gray-900">{currentEmployee.complement_adresse}</p>
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Ville</label>
+                <p className="text-sm text-gray-900">{currentEmployee.ville || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Code postal</label>
+                <p className="text-sm text-gray-900">{currentEmployee.code_postal || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">IBAN</label>
+                <p className="text-sm text-gray-900 font-mono">{currentEmployee.iban || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">BIC</label>
+                <p className="text-sm text-gray-900 font-mono">{currentEmployee.bic || '-'}</p>
+              </div>
             </div>
           </div>
 
@@ -2220,37 +2145,444 @@ function EmployeeDetailModal({
               )}
             </div>
           </div>
-          </>
-          )}
 
-          {/* Informations personnelles Tab */}
-          {activeTab === 'personal' && (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100/30 rounded-xl p-5 border border-orange-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
-                      <User className="w-4 h-4 text-white" />
+
+          {/* Section Contrats signés */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Contrats signés</h3>
+                {employeeContracts.length > 0 && (
+                  <span className="ml-2 bg-blue-600 text-white text-xs px-2.5 py-1 rounded-full font-semibold">
+                    {employeeContracts.length}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowManualContractModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
+                title="Ajouter un contrat manuel"
+              >
+                <Upload className="w-4 h-4" />
+                Ajouter un contrat
+              </button>
+            </div>
+
+            {loadingContracts ? (
+              <div className="flex justify-center items-center py-12">
+                <LoadingSpinner />
+                <p className="ml-3 text-gray-500">Chargement des contrats...</p>
+              </div>
+            ) : employeeContracts.length === 0 ? (
+              <div className="bg-white rounded-lg p-8 text-center">
+                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600 font-medium">Aucun contrat trouvé pour ce salarié</p>
+                <p className="text-sm text-gray-500 mt-1">Les contrats signés apparaîtront ici</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {employeeContracts.map((contract: any) => {
+                  const isManual = contract.source === 'manuel' || !contract.modele_id;
+                  const typeContrat = isManual && contract.variables?.type_contrat
+                    ? contract.variables.type_contrat
+                    : contract.modele?.type_contrat || 'Autre';
+                  const nomModele = isManual && contract.variables?.poste
+                    ? contract.variables.poste
+                    : contract.modele?.nom || 'Contrat de travail';
+                  const statut = contract.statut;
+                  const dateSignature = contract.date_signature || contract.yousign_signed_at;
+                  const dateCreation = contract.created_at;
+                  const hasPdf = contract.fichier_signe_url;
+
+                  const getTypeColor = (type: string) => {
+                    const lowerType = type.toLowerCase();
+                    if (lowerType.includes('cdi')) return 'bg-green-100 text-green-800 border-green-300';
+                    if (lowerType.includes('cdd')) return 'bg-blue-100 text-blue-800 border-blue-300';
+                    if (lowerType.includes('ctt')) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+                    if (lowerType.includes('stage')) return 'bg-purple-100 text-purple-800 border-purple-300';
+                    if (lowerType.includes('alternance')) return 'bg-orange-100 text-orange-800 border-orange-300';
+                    return 'bg-gray-100 text-gray-800 border-gray-300';
+                  };
+
+                  const getStatutDisplay = (st: string) => {
+                    if (st === 'signe') return { label: 'Signé', color: 'bg-green-100 text-green-800 border-green-300' };
+                    if (st === 'en_attente_signature') return { label: 'En attente signature', color: 'bg-amber-100 text-amber-800 border-amber-300' };
+                    if (st === 'envoye') return { label: 'Envoyé', color: 'bg-blue-100 text-blue-800 border-blue-300' };
+                    return { label: 'Brouillon', color: 'bg-gray-100 text-gray-800 border-gray-300' };
+                  };
+
+                  const statutDisplay = getStatutDisplay(statut);
+
+                  return (
+                    <div key={contract.id} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                            <FileText className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-gray-900 text-base mb-2">{nomModele}</h4>
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${getTypeColor(typeContrat)}`}>
+                                {typeContrat}
+                              </span>
+                              <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${statutDisplay.color}`}>
+                                {statutDisplay.label}
+                              </span>
+                              {isManual && (
+                                <span className="px-2.5 py-1 rounded-md text-xs font-semibold border bg-slate-100 text-slate-800 border-slate-300 flex items-center gap-1">
+                                  <Upload className="w-3 h-3" />
+                                  Manuel
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 space-y-1">
+                              {dateSignature && (
+                                <p>✓ Signé le {new Date(dateSignature).toLocaleDateString('fr-FR')}</p>
+                              )}
+                              <p>Créé le {new Date(dateCreation).toLocaleDateString('fr-FR')}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {hasPdf && (
+                            <button
+                              onClick={() => {
+                                const url = resolveDocUrl(contract.fichier_signe_url);
+                                window.open(url, '_blank');
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
+                            >
+                              <Download className="w-4 h-4" />
+                              Télécharger
+                            </button>
+                          )}
+                          {!isManual && (
+                            <button
+                              onClick={() => handleSendContract(contract.id, currentEmployee.email)}
+                              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                            >
+                              <Send className="w-4 h-4" />
+                              Envoyer
+                            </button>
+                          )}
+                          {isManual && (
+                            <button
+                              onClick={() => setContractToDelete(contract)}
+                              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors shadow-sm hover:shadow-md"
+                              title="Supprimer ce contrat"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <h3 className="font-bold text-gray-900 text-lg">Informations personnelles</h3>
-                  </div>
-                  {!isEditingPersonal && (
-                    <button
-                      onClick={() => setIsEditingPersonal(true)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      Modifier
-                    </button>
-                  )}
-                </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-                {isEditingPersonal ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="bg-white rounded-lg p-3 shadow-sm">
-                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
-                          Date de naissance
+          {/* Section Actions */}
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200">
+            <div className="flex flex-wrap gap-3">
+              {currentEmployee.statut === 'en_attente_contrat' && (
+                <button
+                  onClick={() => setShowContractSend(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg font-medium"
+                >
+                  <Send className="w-4 h-4" />
+                  Envoyer le contrat
+                </button>
+              )}
+
+              {(currentEmployee.statut === 'contrat_envoye' || currentContractStatus === 'signe' || currentContractStatus === 'en_attente_signature') && (
+                <>
+                  <button
+                    onClick={() => setShowContractValidation(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg font-medium"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    {currentContractStatus === 'signe' ? 'Activer le salarié' : 'Valider le contrat'}
+                  </button>
+                  <button
+                    onClick={() => setShowResendConfirm(true)}
+                    disabled={resending}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {resending ? (
+                      <LoadingSpinner size="sm" variant="white" text="Envoi..." />
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        Renvoyer le contrat
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
+
+              <button
+                onClick={() => setShowHistory(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg font-medium"
+              >
+                <History className="w-4 h-4" />
+                Historique
+              </button>
+
+              <button
+                onClick={() => setShowDeparture(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-lg font-medium"
+              >
+                <UserX className="w-4 h-4" />
+                Départ salarié
+              </button>
+            </div>
+          </div>
+
+          {/* ID Section */}
+          <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-gray-400 rounded-md flex items-center justify-center">
+                <span className="text-white text-xs font-bold">#</span>
+              </div>
+              <p className="text-sm text-gray-600">
+                <span className="font-semibold text-gray-700">ID:</span> <span className="font-mono text-gray-900">{currentEmployee.id}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {showHistory && (
+      <EmployeeHistory
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
+        onClose={() => setShowHistory(false)}
+      />
+    )}
+
+    {showDeparture && (
+      <EmployeeDeparture
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
+        onClose={() => setShowDeparture(false)}
+        onSuccess={handleDepartureSuccess}
+      />
+    )}
+
+    {showContractSend && (
+      <ContractSendModal
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
+        employeeEmail={currentEmployee.email}
+        onClose={() => setShowContractSend(false)}
+        onSuccess={handleContractSent}
+      />
+    )}
+
+    {showContractValidation && (
+      <ContractValidationPanel
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
+        onClose={() => setShowContractValidation(false)}
+        onActivate={handleContractActivated}
+      />
+    )}
+
+    {showResendConfirm && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Renvoyer le contrat</h3>
+          <p className="text-gray-700 mb-6">
+            Voulez-vous renvoyer l'email de contrat à <strong>{currentEmployee.prenom} {currentEmployee.nom}</strong> ?
+          </p>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => setShowResendConfirm(false)}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleResendContract}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            >
+              Renvoyer
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {resendSuccess && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <Check className="w-6 h-6 text-green-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900">Email envoyé !</h3>
+          </div>
+          <p className="text-gray-700 mb-6">
+            L'email de contrat a été renvoyé avec succès à <strong>{currentEmployee.prenom} {currentEmployee.nom}</strong>.
+          </p>
+          <div className="flex justify-end">
+            <button
+              onClick={() => setResendSuccess(false)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {resendError && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <X className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900">Erreur</h3>
+          </div>
+          <p className="text-gray-700 mb-2">Erreur lors du renvoi de l'email :</p>
+          <p className="text-red-600 font-medium mb-6">{resendError}</p>
+          <div className="flex justify-end">
+            <button
+              onClick={() => setResendError('')}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/************* Tous les autres modals restent ici **************/}
+
+    {/* Upload Modal */}
+    {showUploadModal && (
+      <ImportantDocumentUpload
+        profilId={currentEmployee.id}
+        onClose={() => {
+          setShowUploadModal(false);
+          fetchEmployeeDocuments(currentEmployee.id);
+        }}
+      />
+    )}
+
+    {/* Missing Documents Reminder Modal */}
+    {showMissingDocsReminderModal && (
+      <SendMissingDocumentsReminderModal
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
+        employeeEmail={currentEmployee.email}
+        selectedDocuments={Array.from(selectedMissingDocs)}
+        onClose={() => {
+          setShowMissingDocsReminderModal(false);
+          setSelectedMissingDocs(new Set());
+        }}
+      />
+    )}
+
+    {/* Manual Contract Upload Modal */}
+    {showManualContractModal && (
+      <ManualContractUploadModal
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} {currentEmployee.nom}`}
+        onClose={() => {
+          setShowManualContractModal(false);
+          fetchEmployeeContracts(currentEmployee.id);
+        }}
+      />
+    )}
+
+    {/* Contract Delete Confirmation */}
+    {contractToDelete && (
+      <ConfirmDeleteContractModal
+        contractId={contractToDelete.id}
+        contractName={contractToDelete.modele?.nom || 'ce contrat'}
+        onConfirm={handleDeleteContract}
+        onCancel={() => setContractToDelete(null)}
+        isDeleting={deletingContract}
+      />
+    )}
+
+    {/* Toast */}
+    {toast && (
+      <Toast
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast(null)}
+      />
+    )}
+
+    {/* Contract Send Confirmation Modal */}
+    {confirmSendModal && (
+      <ConfirmSendContractModal
+        contractType={confirmSendModal.contractType}
+        employeeName={confirmSendModal.employeeName}
+        employeeEmail={confirmSendModal.employeeEmail}
+        onConfirm={() => handleConfirmSendContract(confirmSendModal.contractId)}
+        onCancel={() => setConfirmSendModal(null)}
+        isSending={isSendingContract}
+      />
+    )}
+
+    {showSendDocumentsModal && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-fade-in">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scale-in">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+                <Mail className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Envoi de documents</h3>
+                <p className="text-blue-100 text-sm">{selectedDocuments.size} document{selectedDocuments.size > 1 ? 's' : ''} sélectionné{selectedDocuments.size > 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSendDocumentsModal(false)}
+              disabled={sendingDocuments}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Destinataire */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Destinataire</label>
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-2 border-blue-200 rounded-xl p-4 flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-gray-900 text-lg">{currentEmployee.prenom} {currentEmployee.nom}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Mail className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <p className="text-sm text-gray-600 truncate">{currentEmployee.email}</p>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">{new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Documents à envoyer - Continue from here */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Documents à envoyer</label>
                         </label>
                         <input
                           type="date"
