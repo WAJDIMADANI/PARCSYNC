@@ -1,8 +1,12 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Upload, Download, CheckCircle, AlertCircle, AlertTriangle, FileText, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, Download, CheckCircle, AlertCircle, AlertTriangle, FileText, X, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import { ColumnSelector, ColumnConfig } from './ColumnSelector';
+import { EmployeeDetailModal } from './EmployeeDetailModal';
+import { EmployeeCard } from './EmployeeCard';
+import { ContractBadge } from './ContractBadge';
 
 interface ParsedEmployee {
   rowNumber: number;
@@ -66,10 +70,55 @@ export function ImportSalariesBulk() {
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [filter, setFilter] = useState<'all' | 'valid' | 'warning' | 'error'>('all');
+  const [contractFilter, setContractFilter] = useState<'all' | 'cdi' | 'cdd' | 'avenant'>('all');
   const [reportExpanded, setReportExpanded] = useState(true);
   const [unmappedColumns, setUnmappedColumns] = useState<string[]>([]);
   const [mappingWarnings, setMappingWarnings] = useState<string[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<ParsedEmployee | null>(null);
   const tableRefs = useRef<{ [key: number]: HTMLTableRowElement | null }>({});
+
+  const columnConfigs: ColumnConfig[] = [
+    { key: 'nom', label: 'Nom', category: 'Identité', defaultVisible: true },
+    { key: 'prenom', label: 'Prénom', category: 'Identité', defaultVisible: true },
+    { key: 'email', label: 'Email', category: 'Identité', defaultVisible: true },
+    { key: 'matricule', label: 'Matricule TCA', category: 'Identité', defaultVisible: false },
+    { key: 'genre', label: 'Genre', category: 'Identité', defaultVisible: false },
+    { key: 'date_naissance', label: 'Date de naissance', category: 'Identité', defaultVisible: false },
+    { key: 'type_contrat', label: 'Type Contrat', category: 'Contrat', defaultVisible: true },
+    { key: 'date_debut', label: 'Date début', category: 'Contrat', defaultVisible: true },
+    { key: 'date_fin', label: 'Date fin', category: 'Contrat', defaultVisible: false },
+    { key: 'statut_contrat', label: 'Statut', category: 'Contrat', defaultVisible: true },
+    { key: 'periode_essai', label: 'Période d\'essai', category: 'Contrat', defaultVisible: false },
+    { key: 'poste', label: 'Poste', category: 'Contrat', defaultVisible: false },
+    { key: 'secteur', label: 'Secteur', category: 'Contrat', defaultVisible: true },
+    { key: 'avenant_1_debut', label: 'Avenant 1 Début', category: 'Avenants', defaultVisible: false },
+    { key: 'avenant_1_fin', label: 'Avenant 1 Fin', category: 'Avenants', defaultVisible: false },
+    { key: 'avenant_2_fin', label: 'Avenant 2 Fin', category: 'Avenants', defaultVisible: false },
+    { key: 'tel', label: 'Téléphone', category: 'Coordonnées', defaultVisible: false },
+    { key: 'adresse', label: 'Adresse', category: 'Coordonnées', defaultVisible: false },
+    { key: 'ville', label: 'Ville', category: 'Coordonnées', defaultVisible: false },
+    { key: 'code_postal', label: 'Code postal', category: 'Coordonnées', defaultVisible: false },
+    { key: 'type_piece', label: 'Type pièce', category: 'Documents', defaultVisible: false },
+    { key: 'visite_medicale', label: 'Visite médicale', category: 'Documents', defaultVisible: false },
+  ];
+
+  const getDefaultVisibleColumns = () => {
+    const saved = localStorage.getItem('import-visible-columns');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return columnConfigs.filter(c => c.defaultVisible).map(c => c.key);
+      }
+    }
+    return columnConfigs.filter(c => c.defaultVisible).map(c => c.key);
+  };
+
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(getDefaultVisibleColumns());
+
+  useEffect(() => {
+    localStorage.setItem('import-visible-columns', JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
 
   const downloadTemplate = () => {
     const headers = [
@@ -786,16 +835,42 @@ export function ImportSalariesBulk() {
     link.click();
   };
 
+  const getContractType = (emp: ParsedEmployee): 'cdi' | 'cdd' | 'avenant' | 'unknown' => {
+    if (emp.data.avenant_1_date_debut) return 'avenant';
+    if (emp.data.modele_contrat?.toLowerCase().includes('avenant')) return 'avenant';
+    if (emp.data.date_fin_contrat) return 'cdd';
+    if (emp.data.modele_contrat?.toLowerCase().includes('cdd')) return 'cdd';
+    if (emp.data.modele_contrat?.toLowerCase().includes('cdi')) return 'cdi';
+    if (!emp.data.date_fin_contrat && emp.data.date_debut_contrat) return 'cdi';
+    return 'unknown';
+  };
+
   const filteredData = parsedData.filter((emp) => {
-    if (filter === 'all') return true;
-    return emp.status === filter;
+    if (filter !== 'all' && emp.status !== filter) return false;
+    if (contractFilter !== 'all') {
+      const contractType = getContractType(emp);
+      if (contractType !== contractFilter) return false;
+    }
+    return true;
   });
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '-';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  };
 
   const counts = {
     valid: parsedData.filter((e) => e.status === 'valid').length,
     warning: parsedData.filter((e) => e.status === 'warning').length,
     error: parsedData.filter((e) => e.status === 'error').length,
     selected: parsedData.filter((e) => e.selected).length,
+    cdi: parsedData.filter((e) => getContractType(e) === 'cdi').length,
+    cdd: parsedData.filter((e) => getContractType(e) === 'cdd').length,
+    avenant: parsedData.filter((e) => getContractType(e) === 'avenant').length,
   };
 
   const groupProblemsByType = (type: 'error' | 'warning') => {
@@ -928,7 +1003,7 @@ export function ImportSalariesBulk() {
         </div>
 
         <div className="p-6 border-b border-gray-200">
-          <div className="grid grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-green-700">{counts.valid}</div>
               <div className="text-xs text-green-600">Valides</div>
@@ -947,47 +1022,104 @@ export function ImportSalariesBulk() {
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === 'all'
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Tout afficher
-            </button>
-            <button
-              onClick={() => setFilter('valid')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === 'valid'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-green-50 text-green-700 hover:bg-green-100'
-              }`}
-            >
-              Valides
-            </button>
-            <button
-              onClick={() => setFilter('warning')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === 'warning'
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-orange-50 text-orange-700 hover:bg-orange-100'
-              }`}
-            >
-              Avertissements
-            </button>
-            <button
-              onClick={() => setFilter('error')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === 'error'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-red-50 text-red-700 hover:bg-red-100'
-              }`}
-            >
-              Erreurs
-            </button>
+          <div className="mb-4">
+            <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Filtrer par statut</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFilter('all')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filter === 'all'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Tout afficher
+              </button>
+              <button
+                onClick={() => setFilter('valid')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filter === 'valid'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-green-50 text-green-700 hover:bg-green-100'
+                }`}
+              >
+                Valides
+              </button>
+              <button
+                onClick={() => setFilter('warning')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filter === 'warning'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-orange-50 text-orange-700 hover:bg-orange-100'
+                }`}
+              >
+                Avertissements
+              </button>
+              <button
+                onClick={() => setFilter('error')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filter === 'error'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-red-50 text-red-700 hover:bg-red-100'
+                }`}
+              >
+                Erreurs
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Filtrer par type de contrat</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setContractFilter('all')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  contractFilter === 'all'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Tous ({parsedData.length})
+              </button>
+              <button
+                onClick={() => setContractFilter('cdi')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  contractFilter === 'cdi'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-green-50 text-green-700 hover:bg-green-100'
+                }`}
+              >
+                CDI ({counts.cdi})
+              </button>
+              <button
+                onClick={() => setContractFilter('cdd')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  contractFilter === 'cdd'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                }`}
+              >
+                CDD ({counts.cdd})
+              </button>
+              <button
+                onClick={() => setContractFilter('avenant')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  contractFilter === 'avenant'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-orange-50 text-orange-700 hover:bg-orange-100'
+                }`}
+              >
+                Avenants ({counts.avenant})
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <ColumnSelector
+              columns={columnConfigs}
+              visibleColumns={visibleColumns}
+              onColumnsChange={setVisibleColumns}
+            />
           </div>
         </div>
 
@@ -1179,7 +1311,7 @@ export function ImportSalariesBulk() {
           </div>
         )}
 
-        <div className="max-h-96 overflow-x-auto overflow-y-auto">
+        <div className="hidden md:block max-h-96 overflow-x-auto overflow-y-auto">
           <table className="w-full min-w-max">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
@@ -1207,17 +1339,78 @@ export function ImportSalariesBulk() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Ligne
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ minWidth: '120px' }}>
-                  Nom
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ minWidth: '120px' }}>
-                  Prénom
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ minWidth: '180px' }}>
-                  Email
-                </th>
+                {visibleColumns.includes('nom') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ minWidth: '120px' }}>
+                    Nom
+                  </th>
+                )}
+                {visibleColumns.includes('prenom') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ minWidth: '120px' }}>
+                    Prénom
+                  </th>
+                )}
+                {visibleColumns.includes('email') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ minWidth: '180px' }}>
+                    Email
+                  </th>
+                )}
+                {visibleColumns.includes('matricule') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Matricule
+                  </th>
+                )}
+                {visibleColumns.includes('type_contrat') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Type Contrat
+                  </th>
+                )}
+                {visibleColumns.includes('date_debut') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Date Début
+                  </th>
+                )}
+                {visibleColumns.includes('date_fin') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Date Fin
+                  </th>
+                )}
+                {visibleColumns.includes('statut_contrat') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Statut Contrat
+                  </th>
+                )}
+                {visibleColumns.includes('periode_essai') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Période Essai
+                  </th>
+                )}
+                {visibleColumns.includes('poste') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Poste
+                  </th>
+                )}
+                {visibleColumns.includes('secteur') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Secteur
+                  </th>
+                )}
+                {visibleColumns.includes('avenant_1_debut') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Av. 1 Début
+                  </th>
+                )}
+                {visibleColumns.includes('avenant_1_fin') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Av. 1 Fin
+                  </th>
+                )}
+                {visibleColumns.includes('avenant_2_fin') && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Av. 2 Fin
+                  </th>
+                )}
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Secteur
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -1266,15 +1459,90 @@ export function ImportSalariesBulk() {
                     {emp.statusMessage}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">{emp.rowNumber}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.nom || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.prenom || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.email || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.secteur_nom || '-'}</td>
+                  {visibleColumns.includes('nom') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.nom || '-'}</td>
+                  )}
+                  {visibleColumns.includes('prenom') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.prenom || '-'}</td>
+                  )}
+                  {visibleColumns.includes('email') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.email || '-'}</td>
+                  )}
+                  {visibleColumns.includes('matricule') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.matricule_tca || '-'}</td>
+                  )}
+                  {visibleColumns.includes('type_contrat') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      <ContractBadge type="type" value={emp.data.modele_contrat} />
+                    </td>
+                  )}
+                  {visibleColumns.includes('date_debut') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatDate(emp.data.date_debut_contrat)}</td>
+                  )}
+                  {visibleColumns.includes('date_fin') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatDate(emp.data.date_fin_contrat)}</td>
+                  )}
+                  {visibleColumns.includes('statut_contrat') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      <ContractBadge type="status" value={emp.data.statut_contrat} />
+                    </td>
+                  )}
+                  {visibleColumns.includes('periode_essai') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.periode_essai || '-'}</td>
+                  )}
+                  {visibleColumns.includes('poste') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.poste || '-'}</td>
+                  )}
+                  {visibleColumns.includes('secteur') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{emp.data.secteur_nom || '-'}</td>
+                  )}
+                  {visibleColumns.includes('avenant_1_debut') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatDate(emp.data.avenant_1_date_debut)}</td>
+                  )}
+                  {visibleColumns.includes('avenant_1_fin') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatDate(emp.data.avenant_1_date_fin)}</td>
+                  )}
+                  {visibleColumns.includes('avenant_2_fin') && (
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatDate(emp.data.avenant_2_date_fin)}</td>
+                  )}
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => setSelectedEmployee(emp)}
+                      className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded transition-colors"
+                    >
+                      <Eye className="w-3 h-3" />
+                      Détails
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        <div className="md:hidden p-4 max-h-96 overflow-y-auto">
+          {filteredData.map((emp) => (
+            <EmployeeCard
+              key={emp.rowNumber}
+              employee={emp}
+              onSelect={(rowNumber, selected) => {
+                setParsedData(
+                  parsedData.map((p) =>
+                    p.rowNumber === rowNumber ? { ...p, selected } : p
+                  )
+                );
+              }}
+              onViewDetails={(employee) => setSelectedEmployee(employee)}
+            />
+          ))}
+        </div>
+
+        {selectedEmployee && (
+          <EmployeeDetailModal
+            employee={selectedEmployee}
+            onClose={() => setSelectedEmployee(null)}
+          />
+        )}
 
         <div className="p-6 border-t border-gray-200">
           <button
