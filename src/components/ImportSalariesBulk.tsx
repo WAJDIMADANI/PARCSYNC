@@ -33,6 +33,7 @@ interface ParsedEmployee {
     bic?: string;
     modele_contrat?: string;
     periode_essai?: string;
+    statut_contrat?: string;
     avenant_1_date_debut?: string;
     avenant_1_date_fin?: string;
     avenant_2_date_fin?: string;
@@ -94,6 +95,7 @@ export function ImportSalariesBulk() {
       'BIC',
       'Modeles de contrats',
       'Période d\'essai',
+      'Statut',
       'DATE DE DEBUT - AVEVANT1',
       'DATE DE FIN - AVENANT1',
       'DATE DE FIN - AVENANT2',
@@ -127,6 +129,8 @@ export function ImportSalariesBulk() {
       'FR7612345678901234567890123',
       'BNPAFRPPXXX',
       'CDI Standard',
+      '',
+      'signé',
       '3 mois',
       '',
       '',
@@ -259,6 +263,7 @@ export function ImportSalariesBulk() {
       'bic': ['BIC', 'bic'],
       'modele_contrat': ['Modeles de contrats', 'modele contrat', 'modele_contrat', 'Mod�les de contrats'],
       'periode_essai': ['Période d\'essai', 'periode essai', 'periode_essai', 'P�riode d\'essai'],
+      'statut_contrat': ['Statut', 'statut', 'STATUT', 'Statut contrat', 'statut contrat'],
       'avenant_1_date_debut': ['DATE DE DEBUT - AVEVANT1', 'avenant 1 debut', 'avenant1_debut', 'DATE DE D�BUT - AVEVANT1'],
       'avenant_1_date_fin': ['DATE DE FIN - AVENANT1', 'avenant 1 fin', 'avenant1_fin'],
       'avenant_2_date_fin': ['DATE DE FIN - AVENANT2', 'avenant 2 fin', 'avenant2_fin'],
@@ -581,22 +586,34 @@ export function ImportSalariesBulk() {
         if (profilError) throw profilError;
 
         if (emp.data.date_debut_contrat) {
+          const isContractSigned = emp.data.statut_contrat?.toLowerCase().includes('sign');
+
           await supabase.from('contrat').insert({
             profil_id: profil.id,
             type: emp.data.date_fin_contrat ? 'cdd' : 'cdi',
             date_debut: emp.data.date_debut_contrat,
             date_fin: emp.data.date_fin_contrat,
             esign: 'signed',
+            statut: isContractSigned ? 'signe' : 'envoye',
+            date_signature: isContractSigned ? emp.data.date_debut_contrat : null,
+            variables: emp.data.modele_contrat ? { type_contrat: emp.data.modele_contrat } : {},
+            source: 'import',
           });
         }
 
         if (emp.data.avenant_1_date_debut) {
+          const isContractSigned = emp.data.statut_contrat?.toLowerCase().includes('sign');
+
           await supabase.from('contrat').insert({
             profil_id: profil.id,
             type: 'avenant',
             date_debut: emp.data.avenant_1_date_debut,
             date_fin: emp.data.avenant_1_date_fin,
             esign: 'signed',
+            statut: isContractSigned ? 'signe' : 'envoye',
+            date_signature: isContractSigned ? emp.data.avenant_1_date_debut : null,
+            variables: { type_contrat: 'Avenant' },
+            source: 'import',
           });
         }
 
