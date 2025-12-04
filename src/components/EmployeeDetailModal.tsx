@@ -180,36 +180,49 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
                 <p className="text-sm text-gray-900">{employee.data.secteur_nom || '-'}</p>
               </div>
             </div>
-          </div>
 
-          {(employee.data.avenant_1_date_debut || employee.data.avenant_1_date_fin || employee.data.avenant_2_date_fin) && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-5 h-5 text-orange-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Avenants</h3>
+            {(employee.data.avenant_1_date_debut || employee.data.avenant_1_date_fin) && (
+              <div className="mt-4 pt-4 border-t border-green-300">
+                <div className="bg-amber-50 border border-amber-200 border-l-4 border-l-amber-500 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm font-semibold text-amber-900">Avenant 1</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase">Date de début</label>
+                      <p className="text-sm text-gray-900">{formatDate(employee.data.avenant_1_date_debut)}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
+                      <p className="text-sm text-gray-900">{formatDate(employee.data.avenant_1_date_fin)}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {employee.data.avenant_1_date_debut && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase">Avenant 1 - Date de début</label>
-                    <p className="text-sm text-gray-900">{formatDate(employee.data.avenant_1_date_debut)}</p>
+            )}
+
+            {employee.data.avenant_2_date_fin && (
+              <div className="mt-4 pt-4 border-t border-green-300">
+                <div className="bg-amber-50 border border-amber-200 border-l-4 border-l-amber-500 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm font-semibold text-amber-900">Avenant 2</span>
                   </div>
-                )}
-                {employee.data.avenant_1_date_fin && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase">Avenant 1 - Date de fin</label>
-                    <p className="text-sm text-gray-900">{formatDate(employee.data.avenant_1_date_fin)}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase">Date de début</label>
+                      <p className="text-sm text-gray-900">-</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
+                      <p className="text-sm text-gray-900">{formatDate(employee.data.avenant_2_date_fin)}</p>
+                    </div>
                   </div>
-                )}
-                {employee.data.avenant_2_date_fin && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase">Avenant 2 - Date de fin</label>
-                    <p className="text-sm text-gray-900">{formatDate(employee.data.avenant_2_date_fin)}</p>
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
