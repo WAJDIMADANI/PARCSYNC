@@ -4,6 +4,7 @@ import { UserPlus, CheckCircle, AlertCircle } from 'lucide-react';
 import { COUNTRIES } from '../lib/countries';
 import { useAuth } from '../contexts/AuthContext';
 import { GENRE_OPTIONS } from '../constants/genreOptions';
+import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 
 interface Site {
   id: string;
@@ -393,10 +394,19 @@ export function ImportSalarieTest() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Adresse</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <FormInput
+              <AddressAutocompleteInput
                 label="Adresse complète"
                 value={formData.adresse}
-                onChange={(v) => setFormData({ ...formData, adresse: v })}
+                onChange={(value) => setFormData({ ...formData, adresse: value })}
+                onAddressSelect={(data) => {
+                  setFormData({
+                    ...formData,
+                    adresse: data.adresse,
+                    code_postal: data.code_postal,
+                    ville: data.ville,
+                  });
+                }}
+                placeholder="Tapez votre adresse..."
               />
             </div>
             <div className="md:col-span-2">

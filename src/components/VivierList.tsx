@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ConfirmModal } from './ConfirmModal';
 import { GENRE_OPTIONS } from '../constants/genreOptions';
+import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 
 const STATUT_CANDIDATURE = [
   { value: 'candidature_recue', label: 'Candidature reçue' },
@@ -692,14 +693,33 @@ function CandidateModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
-            <input
-              type="text"
-              disabled={isViewMode}
-              value={formData.adresse}
-              onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-            />
+            {isViewMode ? (
+              <>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                <input
+                  type="text"
+                  disabled={true}
+                  value={formData.adresse}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100"
+                />
+              </>
+            ) : (
+              <AddressAutocompleteInput
+                label="Adresse"
+                value={formData.adresse}
+                onChange={(value) => setFormData({ ...formData, adresse: value })}
+                onAddressSelect={(data) => {
+                  setFormData({
+                    ...formData,
+                    adresse: data.adresse,
+                    code_postal: data.code_postal,
+                    ville: data.ville,
+                  });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Tapez votre adresse..."
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

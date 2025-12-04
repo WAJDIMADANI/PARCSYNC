@@ -7,6 +7,7 @@ import { LoadingSpinner } from './LoadingSpinner';
 import CodeCouleurModal from './CodeCouleurModal';
 import { VivierDisponibiliteModal } from './VivierDisponibiliteModal';
 import { GENRE_OPTIONS } from '../constants/genreOptions';
+import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 
 interface Site {
   id: string;
