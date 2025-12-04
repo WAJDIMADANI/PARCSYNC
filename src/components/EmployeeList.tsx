@@ -303,16 +303,16 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           bValue = b.email.toLowerCase();
           break;
         case 'type_contrat':
-          aValue = (getEmployeeContractType(a.id) || '').toLowerCase();
-          bValue = (getEmployeeContractType(b.id) || '').toLowerCase();
+          aValue = (a.modele_contrat || '').toLowerCase();
+          bValue = (b.modele_contrat || '').toLowerCase();
           break;
         case 'date_entree':
           aValue = new Date(a.date_entree || 0).getTime();
           bValue = new Date(b.date_entree || 0).getTime();
           break;
         case 'statut_contrat':
-          aValue = (getEmployeeContractStatus(a.id) || '').toLowerCase();
-          bValue = (getEmployeeContractStatus(b.id) || '').toLowerCase();
+          aValue = (a.statut || '').toLowerCase();
+          bValue = (b.statut || '').toLowerCase();
           break;
         case 'secteur':
           aValue = (a.secteur?.nom || '').toLowerCase();
@@ -611,13 +611,13 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                       {employee.email}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
-                      <ContractBadge type="type" value={getEmployeeContractType(employee.id) || undefined} />
+                      <ContractBadge type="type" value={employee.modele_contrat || undefined} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                       {formatDate(employee.date_entree)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
-                      <ContractBadge type="status" value={getEmployeeContractStatus(employee.id) || undefined} />
+                      <ContractBadge type="status" value={employee.statut || undefined} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                       {employee.secteur?.nom || '-'}
