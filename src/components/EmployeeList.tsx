@@ -95,7 +95,7 @@ interface Contract {
   } | null;
 }
 
-type SortField = 'prenom' | 'email' | 'secteur' | 'date_entree' | 'type_contrat' | 'statut_contrat';
+type SortField = 'prenom' | 'nom' | 'email' | 'secteur' | 'date_entree' | 'type_contrat' | 'statut_contrat';
 type SortDirection = 'asc' | 'desc';
 
 interface EmployeeListProps {
@@ -293,6 +293,10 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
         case 'prenom':
           aValue = a.prenom.toLowerCase();
           bValue = b.prenom.toLowerCase();
+          break;
+        case 'nom':
+          aValue = a.nom.toLowerCase();
+          bValue = b.nom.toLowerCase();
           break;
         case 'email':
           aValue = a.email.toLowerCase();
@@ -532,6 +536,15 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                     </div>
                   </th>
                   <th
+                    onClick={() => handleSort('nom')}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    <div className="flex items-center gap-2">
+                      Nom
+                      {getSortIcon('nom')}
+                    </div>
+                  </th>
+                  <th
                     onClick={() => handleSort('email')}
                     className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   >
@@ -590,6 +603,9 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                   >
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                       {employee.prenom}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      {employee.nom}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                       {employee.email}
