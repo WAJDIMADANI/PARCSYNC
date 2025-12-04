@@ -843,9 +843,9 @@ export function ImportSalariesBulk() {
         let errorMessage = error.message || 'Erreur inconnue';
 
         if (errorMessage.includes('date/time field value out of range')) {
-          errorMessage = `Date invalide détectée. Vérifiez que toutes les dates sont au format JJ/MM/AAAA (ex: ${emp.data.date_debut_contrat || emp.data.date_naissance || '01/01/2024'})`;
+          errorMessage = `Date invalide détectée. Vérifiez que toutes les dates sont au format JJ/MM/AAAA (ex: 01/01/2024)`;
         } else if (errorMessage.includes('invalid input syntax for type date')) {
-          errorMessage = `Format de date incorrect. Utilisez le format JJ/MM/AAAA (jour/mois/année)`;
+          errorMessage = `Format de date incorrect. Utilisez le format JJ/MM/AAAA (ex: 15/03/2024)`;
         }
 
         result.errors++;
