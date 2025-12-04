@@ -2630,6 +2630,17 @@ function EmployeeDetailModal({
             </div>
 
             <div className="space-y-3">
+              {/* Type de pièce d'identité */}
+              <div className="bg-white rounded-lg p-3 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-4 h-4 text-purple-600" />
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Type de pièce d'identité</p>
+                </div>
+                <p className="text-gray-900 font-medium">
+                  {currentEmployee.type_piece_identite || candidatTypePiece || 'Non renseigné'}
+                </p>
+              </div>
+
               {/* Certificat médical */}
               <div className="bg-white rounded-lg p-3 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
