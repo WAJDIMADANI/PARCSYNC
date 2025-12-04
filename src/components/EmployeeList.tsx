@@ -2031,7 +2031,7 @@ function EmployeeDetailModal({
                     Annuler
                   </button>
                   <button
-                    onClick={handleSavePersonal}
+                    onClick={handleSavePersonalInfo}
                     disabled={savingPersonal}
                     className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
                   >
