@@ -89,9 +89,11 @@ interface Contract {
   date_signature: string | null;
   yousign_signed_at: string | null;
   created_at: string;
+  modele_contrat: string | null;
+  date_debut_contrat: string | null;
 }
 
-type SortField = 'matricule_tca' | 'nom' | 'prenom' | 'role' | 'statut' | 'secteur' | 'created_at';
+type SortField = 'prenom' | 'email' | 'secteur' | 'date_entree' | 'type_contrat' | 'statut_contrat';
 type SortDirection = 'asc' | 'desc';
 
 interface EmployeeListProps {
@@ -107,8 +109,8 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [sortField, setSortField] = useState<SortField>('created_at');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [sortField, setSortField] = useState<SortField>('prenom');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatut, setFilterStatut] = useState<string>('');
   const [filterSecteur, setFilterSecteur] = useState<string>('');
@@ -194,7 +196,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           .order('created_at', { ascending: false }),
         supabase
           .from('contrat')
-          .select('id, profil_id, statut, date_signature, yousign_signed_at, created_at')
+          .select('id, profil_id, statut, date_signature, yousign_signed_at, created_at, modele_contrat, date_debut_contrat')
           .order('created_at', { ascending: false }),
         supabase.from('site').select('*').order('nom'),
         supabase.from('secteur').select('*').order('nom')
@@ -233,8 +235,37 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     const contract = contracts
       .filter(c => c.profil_id === employeeId)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-    
+
     return contract?.statut || null;
+  };
+
+  const getEmployeeContractType = (employeeId: string): string | null => {
+    const contract = contracts
+      .filter(c => c.profil_id === employeeId)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+
+    return contract?.modele_contrat || null;
+  };
+
+  const getEmployeeContractDate = (employee: Employee): string | null => {
+    if (employee.date_entree) {
+      return employee.date_entree;
+    }
+    const contract = contracts
+      .filter(c => c.profil_id === employee.id)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+
+    return contract?.date_debut_contrat || null;
+  };
+
+  const formatDate = (dateString: string | null): string => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('fr-FR');
+    } catch {
+      return '-';
+    }
   };
 
   const handleSort = (field: SortField) => {
@@ -268,33 +299,29 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       let bValue: any;
 
       switch (sortField) {
-        case 'matricule_tca':
-          aValue = (a.matricule_tca || '').toLowerCase();
-          bValue = (b.matricule_tca || '').toLowerCase();
-          break;
-        case 'nom':
-          aValue = a.nom.toLowerCase();
-          bValue = b.nom.toLowerCase();
-          break;
         case 'prenom':
           aValue = a.prenom.toLowerCase();
           bValue = b.prenom.toLowerCase();
           break;
-        case 'role':
-          aValue = (a.role || '').toLowerCase();
-          bValue = (b.role || '').toLowerCase();
+        case 'email':
+          aValue = a.email.toLowerCase();
+          bValue = b.email.toLowerCase();
           break;
-        case 'statut':
-          aValue = a.statut.toLowerCase();
-          bValue = b.statut.toLowerCase();
+        case 'type_contrat':
+          aValue = (getEmployeeContractType(a.id) || '').toLowerCase();
+          bValue = (getEmployeeContractType(b.id) || '').toLowerCase();
+          break;
+        case 'date_entree':
+          aValue = new Date(getEmployeeContractDate(a) || 0).getTime();
+          bValue = new Date(getEmployeeContractDate(b) || 0).getTime();
+          break;
+        case 'statut_contrat':
+          aValue = (getEmployeeContractStatus(a.id) || '').toLowerCase();
+          bValue = (getEmployeeContractStatus(b.id) || '').toLowerCase();
           break;
         case 'secteur':
           aValue = (a.secteur?.nom || '').toLowerCase();
           bValue = (b.secteur?.nom || '').toLowerCase();
-          break;
-        case 'created_at':
-          aValue = new Date(a.created_at).getTime();
-          bValue = new Date(b.created_at).getTime();
           break;
         default:
           return 0;
@@ -505,26 +532,8 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
               <thead className="bg-gray-50">
                 <tr>
                   <th
-                    onClick={() => handleSort('matricule_tca')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Matricule
-                      {getSortIcon('matricule_tca')}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort('nom')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Nom
-                      {getSortIcon('nom')}
-                    </div>
-                  </th>
-                  <th
                     onClick={() => handleSort('prenom')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   >
                     <div className="flex items-center gap-2">
                       Prénom
@@ -532,43 +541,52 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                     </div>
                   </th>
                   <th
-                    onClick={() => handleSort('role')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('email')}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   >
                     <div className="flex items-center gap-2">
-                      Poste
-                      {getSortIcon('role')}
+                      Email
+                      {getSortIcon('email')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('type_contrat')}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    <div className="flex items-center gap-2">
+                      Type Contrat
+                      {getSortIcon('type_contrat')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('date_entree')}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    <div className="flex items-center gap-2">
+                      Date Début
+                      {getSortIcon('date_entree')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('statut_contrat')}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    <div className="flex items-center gap-2">
+                      Statut Contrat
+                      {getSortIcon('statut_contrat')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('secteur')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   >
                     <div className="flex items-center gap-2">
                       Secteur
                       {getSortIcon('secteur')}
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contact
-                  </th>
-                  <th
-                    onClick={() => handleSort('statut')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Statut
-                      {getSortIcon('statut')}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort('created_at')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Date création
-                      {getSortIcon('created_at')}
-                    </div>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -579,34 +597,35 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                     onClick={() => setSelectedEmployee(employee)}
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{employee.matricule_tca || '-'}</div>
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      {employee.prenom}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{employee.nom}</div>
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      {employee.email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{employee.prenom}</div>
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      <ContractBadge type="type" value={getEmployeeContractType(employee.id) || undefined} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{employee.role || '-'}</div>
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      {formatDate(getEmployeeContractDate(employee))}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{employee.secteur?.nom || '-'}</div>
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      <ContractBadge type="status" value={getEmployeeContractStatus(employee.id) || undefined} />
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{employee.email}</div>
-                      {employee.tel && (
-                        <div className="text-sm text-gray-500">{employee.tel}</div>
-                      )}
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      {employee.secteur?.nom || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-lg shadow-sm ${getStatutBadge(employee.statut, employee.id)}`}>
-                        {getStatutLabel(employee.statut, employee.id)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(employee.created_at).toLocaleDateString('fr-FR')}
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedEmployee(employee);
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded transition-colors"
+                      >
+                        <Eye className="w-3 h-3" />
+                        Détails
+                      </button>
                     </td>
                   </tr>
                 ))}
