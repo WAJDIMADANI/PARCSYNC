@@ -565,6 +565,18 @@ export function ImportSalariesBulk() {
     }
   };
 
+  // Fonction helper pour nettoyer les données avant insertion
+  // Supprime tous les champs undefined pour éviter les erreurs PostgreSQL
+  const cleanDataForInsert = (data: any): any => {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined && value !== null && value !== '') {
+        cleaned[key] = value;
+      }
+    }
+    return cleaned;
+  };
+
   const parseAndValidateRows = async (rows: any[]) => {
     if (rows.length === 0) return;
 
@@ -809,39 +821,43 @@ export function ImportSalariesBulk() {
           console.log(`✅ Profil mis à jour: ${profil.prenom} ${profil.nom} (${profil.matricule_tca})`);
         } else {
           // Créer un nouveau profil
+          const profilData = cleanDataForInsert({
+            matricule_tca: emp.data.matricule_tca,
+            nom: emp.data.nom || 'N/A',
+            prenom: emp.data.prenom || 'N/A',
+            email: emp.data.email || `noemail_${Date.now()}_${i}@temp.com`,
+            tel: emp.data.tel,
+            genre: emp.data.genre,
+            date_naissance: emp.data.date_naissance,
+            lieu_naissance: emp.data.lieu_naissance,
+            pays_naissance: emp.data.pays_naissance,
+            nationalite: emp.data.nationalite,
+            nom_naissance: emp.data.nom_naissance,
+            adresse: emp.data.adresse,
+            complement_adresse: emp.data.complement_adresse,
+            ville: emp.data.ville,
+            code_postal: emp.data.code_postal,
+            numero_securite_sociale: emp.data.numero_securite_sociale,
+            iban: emp.data.iban,
+            bic: emp.data.bic,
+            poste: emp.data.poste,
+            type_piece_identite: emp.data.type_piece_identite,
+            titre_sejour_fin_validite: emp.data.titre_sejour_fin_validite,
+            date_visite_medicale: emp.data.date_visite_medicale,
+            date_fin_visite_medicale: emp.data.date_fin_visite_medicale,
+            periode_essai: emp.data.periode_essai,
+            modele_contrat: emp.data.modele_contrat,
+            secteur_id: emp.data.secteur_id,
+            date_entree: emp.data.date_debut_contrat || new Date().toISOString().split('T')[0],
+            statut: 'actif',
+            role: 'salarie',
+          });
+
+          console.log(`📝 Ligne ${emp.rowNumber}: Insertion profil avec données:`, profilData);
+
           const insertResult = await supabase
             .from('profil')
-            .insert({
-              matricule_tca: emp.data.matricule_tca,
-              nom: emp.data.nom || 'N/A',
-              prenom: emp.data.prenom || 'N/A',
-              email: emp.data.email || `noemail_${Date.now()}_${i}@temp.com`,
-              tel: emp.data.tel,
-              genre: emp.data.genre,
-              date_naissance: emp.data.date_naissance,
-              lieu_naissance: emp.data.lieu_naissance,
-              pays_naissance: emp.data.pays_naissance,
-              nationalite: emp.data.nationalite,
-              nom_naissance: emp.data.nom_naissance,
-              adresse: emp.data.adresse,
-              complement_adresse: emp.data.complement_adresse,
-              ville: emp.data.ville,
-              code_postal: emp.data.code_postal,
-              numero_securite_sociale: emp.data.numero_securite_sociale,
-              iban: emp.data.iban,
-              bic: emp.data.bic,
-              poste: emp.data.poste,
-              type_piece_identite: emp.data.type_piece_identite,
-              titre_sejour_fin_validite: emp.data.titre_sejour_fin_validite,
-              date_visite_medicale: emp.data.date_visite_medicale,
-              date_fin_visite_medicale: emp.data.date_fin_visite_medicale,
-              periode_essai: emp.data.periode_essai,
-              modele_contrat: emp.data.modele_contrat,
-              secteur_id: emp.data.secteur_id,
-              date_entree: emp.data.date_debut_contrat || new Date().toISOString().split('T')[0],
-              statut: 'actif',
-              role: 'salarie',
-            })
+            .insert(profilData)
             .select()
             .single();
 
@@ -856,7 +872,7 @@ export function ImportSalariesBulk() {
         if (emp.data.date_debut_contrat) {
           const isContractSigned = emp.data.statut_contrat?.toLowerCase().includes('sign');
 
-          await supabase.from('contrat').insert({
+          const contratData = cleanDataForInsert({
             profil_id: profil.id,
             type: emp.data.date_fin_contrat ? 'cdd' : 'cdi',
             date_debut: emp.data.date_debut_contrat,
@@ -867,12 +883,15 @@ export function ImportSalariesBulk() {
             variables: emp.data.modele_contrat ? { type_contrat: emp.data.modele_contrat } : {},
             source: 'import',
           });
+
+          console.log(`📝 Ligne ${emp.rowNumber}: Insertion contrat avec données:`, contratData);
+          await supabase.from('contrat').insert(contratData);
         }
 
         if (emp.data.avenant_1_date_debut) {
           const isContractSigned = emp.data.statut_contrat?.toLowerCase().includes('sign');
 
-          await supabase.from('contrat').insert({
+          const avenantData = cleanDataForInsert({
             profil_id: profil.id,
             type: 'avenant',
             date_debut: emp.data.avenant_1_date_debut,
@@ -883,6 +902,9 @@ export function ImportSalariesBulk() {
             variables: { type_contrat: 'Avenant' },
             source: 'import',
           });
+
+          console.log(`📝 Ligne ${emp.rowNumber}: Insertion avenant avec données:`, avenantData);
+          await supabase.from('contrat').insert(avenantData);
         }
 
         result.success++;
@@ -894,23 +916,46 @@ export function ImportSalariesBulk() {
         });
       } catch (error: any) {
         console.error(`❌ Erreur lors de l'import de ${emp.data.prenom} ${emp.data.nom}:`, error);
+        console.error(`❌ Détails complets de l'erreur:`, {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
 
         let errorMessage = error.message || 'Erreur inconnue';
 
-        if (errorMessage.includes('date/time field value out of range')) {
+        if (errorMessage.includes('date/time field value out of range') || errorMessage.includes('out of range')) {
           const dateFields = [];
-          if (emp.data.date_debut_contrat) dateFields.push(`Début contrat: ${emp.data.date_debut_contrat}`);
-          if (emp.data.date_fin_contrat) dateFields.push(`Fin contrat: ${emp.data.date_fin_contrat}`);
-          if (emp.data.date_naissance) dateFields.push(`Naissance: ${emp.data.date_naissance}`);
-          if (emp.data.avenant_1_date_debut) dateFields.push(`Avenant 1 début: ${emp.data.avenant_1_date_debut}`);
-          if (emp.data.avenant_1_date_fin) dateFields.push(`Avenant 1 fin: ${emp.data.avenant_1_date_fin}`);
-          if (emp.data.titre_sejour_fin_validite) dateFields.push(`Fin titre séjour: ${emp.data.titre_sejour_fin_validite}`);
-          if (emp.data.date_visite_medicale) dateFields.push(`Visite médicale: ${emp.data.date_visite_medicale}`);
-          if (emp.data.date_fin_visite_medicale) dateFields.push(`Fin visite médicale: ${emp.data.date_fin_visite_medicale}`);
+          const allDates: any = {
+            'Début contrat': emp.data.date_debut_contrat,
+            'Fin contrat': emp.data.date_fin_contrat,
+            'Naissance': emp.data.date_naissance,
+            'Entrée': emp.data.date_debut_contrat,
+            'Avenant 1 début': emp.data.avenant_1_date_debut,
+            'Avenant 1 fin': emp.data.avenant_1_date_fin,
+            'Avenant 2 fin': emp.data.avenant_2_date_fin,
+            'Fin titre séjour': emp.data.titre_sejour_fin_validite,
+            'Visite médicale': emp.data.date_visite_medicale,
+            'Fin visite médicale': emp.data.date_fin_visite_medicale,
+          };
 
-          errorMessage = `Date hors limites PostgreSQL (année doit être entre 1900 et 2100). Dates trouvées: ${dateFields.join(', ')}`;
+          // Afficher toutes les dates avec leur valeur
+          for (const [label, value] of Object.entries(allDates)) {
+            if (value) {
+              dateFields.push(`${label}: ${value}`);
+            }
+          }
+
+          console.error(`❌ Toutes les dates de la ligne ${emp.rowNumber}:`, allDates);
+
+          errorMessage = `Erreur de date PostgreSQL. Dates présentes: ${dateFields.join(', ')}. Vérifiez que toutes les années sont entre 1900-2100 et que les dates sont au format correct (AAAA-MM-JJ après parsing).`;
         } else if (errorMessage.includes('invalid input syntax for type date')) {
-          errorMessage = `Format de date incorrect. Utilisez le format JJ/MM/AAAA (ex: 15/03/2024)`;
+          errorMessage = `Format de date incorrect détecté par PostgreSQL. Le fichier doit utiliser le format JJ/MM/AAAA (ex: 15/03/2024)`;
+        } else if (errorMessage.includes('null value in column')) {
+          const match = errorMessage.match(/null value in column "([^"]+)"/);
+          const columnName = match ? match[1] : 'inconnu';
+          errorMessage = `Le champ obligatoire "${columnName}" est manquant ou vide`;
         }
 
         result.errors++;
