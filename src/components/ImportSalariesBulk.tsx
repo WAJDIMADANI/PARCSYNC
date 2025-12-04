@@ -386,6 +386,11 @@ export function ImportSalariesBulk() {
         unmappedColumns.push(targetColumn);
         console.error(`❌ Failed to map critical column: "${targetColumn}"`);
       }
+
+      if (!found && targetColumn === 'modele_contrat') {
+        console.warn(`⚠️ Column "modele_contrat" not found. Contract type information will not be displayed.`);
+        console.warn('💡 Expected column names: "Modeles de contrats", "modele contrat", "modele_contrat"');
+      }
     }
 
     if (unmappedColumns.length > 0) {
@@ -395,6 +400,10 @@ export function ImportSalariesBulk() {
 
     if (mappingWarnings.length > 0) {
       console.info('ℹ️ Mappings approximatifs:', mappingWarnings);
+    }
+
+    if (!columnMap.has('modele_contrat')) {
+      console.warn('📝 Tip: Make sure your CSV file has a column for contract models (e.g., "Modeles de contrats")');
     }
 
     console.log('✅ Mapping complete. Used columns:', Array.from(usedActualColumns));

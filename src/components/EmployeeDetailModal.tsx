@@ -129,18 +129,39 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
               <FileText className="w-5 h-5 text-green-600" />
               <h3 className="text-lg font-semibold text-gray-900">Contrat Principal</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Type de contrat</label>
-                <div className="mt-1">
-                  <ContractBadge type="type" value={employee.data.modele_contrat} />
+
+            {employee.data.modele_contrat && (
+              <div className="mb-4 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium text-blue-600 uppercase">Modèle de contrat</span>
+                      <span className="text-xs px-2 py-0.5 bg-blue-200 text-blue-800 rounded-full font-medium">
+                        Prévisualisation
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ContractBadge type="type" value={employee.data.modele_contrat} />
+                      <span className="text-sm font-medium text-gray-900">
+                        {employee.data.modele_contrat}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Statut</label>
                 <div className="mt-1">
                   <ContractBadge type="status" value={employee.data.statut_contrat} />
                 </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Période d'essai</label>
+                <p className="text-sm text-gray-900">{employee.data.periode_essai || '-'}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Date de début</label>
@@ -149,10 +170,6 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
                 <p className="text-sm text-gray-900">{formatDate(employee.data.date_fin_contrat)}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Période d'essai</label>
-                <p className="text-sm text-gray-900">{employee.data.periode_essai || '-'}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Poste</label>
