@@ -423,6 +423,13 @@ export function ImportSalariesBulk() {
       if (dateStr instanceof Date) {
         if (isNaN(dateStr.getTime())) return undefined;
         const year = dateStr.getFullYear();
+
+        // Vérifier que l'année est dans une plage raisonnable
+        if (year < 1900 || year > 2100) {
+          console.error(`❌ Année hors limites: ${year}. L'année doit être entre 1900 et 2100.`);
+          return undefined;
+        }
+
         const month = String(dateStr.getMonth() + 1).padStart(2, '0');
         const day = String(dateStr.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
@@ -439,10 +446,26 @@ export function ImportSalariesBulk() {
 
       const dayNum = parseInt(parts[0], 10);
       const monthNum = parseInt(parts[1], 10);
-      const yearNum = parseInt(parts[2], 10);
+      let yearNum = parseInt(parts[2], 10);
 
       if (isNaN(dayNum) || isNaN(monthNum) || isNaN(yearNum)) {
         console.warn(`⚠️ Date contient des valeurs non-numériques: "${dateStr}"`);
+        return undefined;
+      }
+
+      // Gérer les années à 2 chiffres
+      if (yearNum < 100) {
+        if (yearNum >= 0 && yearNum <= 50) {
+          yearNum += 2000;
+        } else {
+          yearNum += 1900;
+        }
+        console.log(`ℹ️ Année à 2 chiffres convertie: ${parts[2]} → ${yearNum} pour la date "${dateStr}"`);
+      }
+
+      // Vérifier que l'année est dans une plage raisonnable pour PostgreSQL
+      if (yearNum < 1900 || yearNum > 2100) {
+        console.error(`❌ Année hors limites: ${yearNum} dans la date "${dateStr}". L'année doit être entre 1900 et 2100.`);
         return undefined;
       }
 
@@ -584,14 +607,34 @@ export function ImportSalariesBulk() {
       const secteurNom = getColumnValue(row, columnMap, 'secteur');
 
       const dateDebutRaw = getColumnValue(row, columnMap, 'date_debut_contrat');
+      const dateFinRaw = getColumnValue(row, columnMap, 'date_fin_contrat');
+      const dateNaissanceRaw = getColumnValue(row, columnMap, 'date_naissance');
+      const avenant1DateDebutRaw = getColumnValue(row, columnMap, 'avenant_1_date_debut');
+      const avenant1DateFinRaw = getColumnValue(row, columnMap, 'avenant_1_date_fin');
+      const avenant2DateFinRaw = getColumnValue(row, columnMap, 'avenant_2_date_fin');
+      const titreSejourFinRaw = getColumnValue(row, columnMap, 'titre_sejour_fin_validite');
+      const dateVisiteMedicaleRaw = getColumnValue(row, columnMap, 'date_visite_medicale');
+      const dateFinVisiteMedicaleRaw = getColumnValue(row, columnMap, 'date_fin_visite_medicale');
+
       const dateDebutContrat = parseDate(dateDebutRaw);
-      const dateFinContrat = parseDate(getColumnValue(row, columnMap, 'date_fin_contrat'));
-      const dateNaissance = parseDate(getColumnValue(row, columnMap, 'date_naissance'));
-      const avenant1DateDebut = parseDate(getColumnValue(row, columnMap, 'avenant_1_date_debut'));
-      const avenant1DateFin = parseDate(getColumnValue(row, columnMap, 'avenant_1_date_fin'));
-      const avenant2DateFin = parseDate(getColumnValue(row, columnMap, 'avenant_2_date_fin'));
+      const dateFinContrat = parseDate(dateFinRaw);
+      const dateNaissance = parseDate(dateNaissanceRaw);
+      const avenant1DateDebut = parseDate(avenant1DateDebutRaw);
+      const avenant1DateFin = parseDate(avenant1DateFinRaw);
+      const avenant2DateFin = parseDate(avenant2DateFinRaw);
+      const titreSejourFin = parseDate(titreSejourFinRaw);
+      const dateVisiteMedicale = parseDate(dateVisiteMedicaleRaw);
+      const dateFinVisiteMedicale = parseDate(dateFinVisiteMedicaleRaw);
 
       const hasDateDebutButInvalid = dateDebutRaw && !dateDebutContrat;
+      const hasDateFinButInvalid = dateFinRaw && !dateFinContrat;
+      const hasDateNaissanceButInvalid = dateNaissanceRaw && !dateNaissance;
+      const hasAvenant1DebutButInvalid = avenant1DateDebutRaw && !avenant1DateDebut;
+      const hasAvenant1FinButInvalid = avenant1DateFinRaw && !avenant1DateFin;
+      const hasAvenant2FinButInvalid = avenant2DateFinRaw && !avenant2DateFin;
+      const hasTitreSejourFinButInvalid = titreSejourFinRaw && !titreSejourFin;
+      const hasVisiteMedicaleButInvalid = dateVisiteMedicaleRaw && !dateVisiteMedicale;
+      const hasFinVisiteMedicaleButInvalid = dateFinVisiteMedicaleRaw && !dateFinVisiteMedicale;
 
       if (index === 0) {
         console.log('🔍 DEBUG Row data:', { nom, prenom, email, matricule, secteurNom });
@@ -604,13 +647,25 @@ export function ImportSalariesBulk() {
       let statusMessage = 'Prêt à importer';
       let selected = true;
 
+      // Collecter toutes les dates invalides
+      const invalidDates: string[] = [];
+      if (hasDateDebutButInvalid) invalidDates.push(`Début contrat: "${dateDebutRaw}"`);
+      if (hasDateFinButInvalid) invalidDates.push(`Fin contrat: "${dateFinRaw}"`);
+      if (hasDateNaissanceButInvalid) invalidDates.push(`Naissance: "${dateNaissanceRaw}"`);
+      if (hasAvenant1DebutButInvalid) invalidDates.push(`Avenant 1 début: "${avenant1DateDebutRaw}"`);
+      if (hasAvenant1FinButInvalid) invalidDates.push(`Avenant 1 fin: "${avenant1DateFinRaw}"`);
+      if (hasAvenant2FinButInvalid) invalidDates.push(`Avenant 2 fin: "${avenant2DateFinRaw}"`);
+      if (hasTitreSejourFinButInvalid) invalidDates.push(`Titre séjour fin: "${titreSejourFinRaw}"`);
+      if (hasVisiteMedicaleButInvalid) invalidDates.push(`Visite médicale: "${dateVisiteMedicaleRaw}"`);
+      if (hasFinVisiteMedicaleButInvalid) invalidDates.push(`Fin visite médicale: "${dateFinVisiteMedicaleRaw}"`);
+
       if (!nom && !prenom && !email) {
         status = 'error';
         statusMessage = 'Champs obligatoires manquants: Nom, Prénom ou Email';
         selected = false;
-      } else if (hasDateDebutButInvalid) {
+      } else if (invalidDates.length > 0) {
         status = 'error';
-        statusMessage = `Date de début de contrat invalide: "${dateDebutRaw}". Format attendu: JJ/MM/AAAA`;
+        statusMessage = `Date(s) invalide(s): ${invalidDates.join(', ')}. Format attendu: JJ/MM/AAAA (année entre 1900-2100)`;
         selected = false;
       } else if (email && existingEmailSet.has(email.toLowerCase())) {
         status = 'warning';
@@ -672,9 +727,9 @@ export function ImportSalariesBulk() {
           secteur_nom: secteurNom || undefined,
           secteur_id: secteurId,
           type_piece_identite: getColumnValue(row, columnMap, 'type_piece_identite') || undefined,
-          titre_sejour_fin_validite: parseDate(getColumnValue(row, columnMap, 'titre_sejour_fin_validite')),
-          date_visite_medicale: parseDate(getColumnValue(row, columnMap, 'date_visite_medicale')),
-          date_fin_visite_medicale: parseDate(getColumnValue(row, columnMap, 'date_fin_visite_medicale')),
+          titre_sejour_fin_validite: titreSejourFin,
+          date_visite_medicale: dateVisiteMedicale,
+          date_fin_visite_medicale: dateFinVisiteMedicale,
         },
       };
     });
@@ -843,7 +898,17 @@ export function ImportSalariesBulk() {
         let errorMessage = error.message || 'Erreur inconnue';
 
         if (errorMessage.includes('date/time field value out of range')) {
-          errorMessage = `Date invalide détectée. Vérifiez que toutes les dates sont au format JJ/MM/AAAA (ex: 01/01/2024)`;
+          const dateFields = [];
+          if (emp.data.date_debut_contrat) dateFields.push(`Début contrat: ${emp.data.date_debut_contrat}`);
+          if (emp.data.date_fin_contrat) dateFields.push(`Fin contrat: ${emp.data.date_fin_contrat}`);
+          if (emp.data.date_naissance) dateFields.push(`Naissance: ${emp.data.date_naissance}`);
+          if (emp.data.avenant_1_date_debut) dateFields.push(`Avenant 1 début: ${emp.data.avenant_1_date_debut}`);
+          if (emp.data.avenant_1_date_fin) dateFields.push(`Avenant 1 fin: ${emp.data.avenant_1_date_fin}`);
+          if (emp.data.titre_sejour_fin_validite) dateFields.push(`Fin titre séjour: ${emp.data.titre_sejour_fin_validite}`);
+          if (emp.data.date_visite_medicale) dateFields.push(`Visite médicale: ${emp.data.date_visite_medicale}`);
+          if (emp.data.date_fin_visite_medicale) dateFields.push(`Fin visite médicale: ${emp.data.date_fin_visite_medicale}`);
+
+          errorMessage = `Date hors limites PostgreSQL (année doit être entre 1900 et 2100). Dates trouvées: ${dateFields.join(', ')}`;
         } else if (errorMessage.includes('invalid input syntax for type date')) {
           errorMessage = `Format de date incorrect. Utilisez le format JJ/MM/AAAA (ex: 15/03/2024)`;
         }
