@@ -10,6 +10,7 @@ import { resolveDocUrl } from '../lib/documentStorage';
 import ImportantDocumentUpload from './ImportantDocumentUpload';
 import SendMissingDocumentsReminderModal from './SendMissingDocumentsReminderModal';
 import { REQUIRED_DOCUMENT_TYPES, REQUIRED_DOCUMENTS_MAP } from '../constants/requiredDocuments';
+import { GENRE_OPTIONS } from '../constants/genreOptions';
 import Toast from './Toast';
 import ConfirmSendContractModal from './ConfirmSendContractModal';
 import ManualContractUploadModal from './ManualContractUploadModal';
@@ -2117,9 +2118,9 @@ function EmployeeDetailModal({
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   >
                     <option value="">Sélectionner</option>
-                    <option value="Masculin">Masculin</option>
-                    <option value="Féminin">Féminin</option>
-                    <option value="Autre">Autre</option>
+                    {GENRE_OPTIONS.map(genre => (
+                      <option key={genre} value={genre}>{genre}</option>
+                    ))}
                   </select>
                 )}
               </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Sparkles, CheckCircle, Upload, X } from 'lucide-react';
 import { COUNTRIES } from '../lib/countries';
+import { GENRE_OPTIONS } from '../constants/genreOptions';
 
 interface Site {
   id: string;
@@ -479,7 +480,7 @@ export function Apply() {
                   Genre auquel vous vous identifiez *
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {['Homme', 'Femme', 'Autre'].map((g) => (
+                  {GENRE_OPTIONS.map((g) => (
                     <label
                       key={g}
                       className={`flex items-center justify-center px-4 py-3 border-2 rounded-xl cursor-pointer transition-all ${

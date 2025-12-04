@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { UserPlus, CheckCircle, AlertCircle } from 'lucide-react';
 import { COUNTRIES } from '../lib/countries';
 import { useAuth } from '../contexts/AuthContext';
+import { GENRE_OPTIONS } from '../constants/genreOptions';
 
 interface Site {
   id: string;
@@ -328,9 +329,9 @@ export function ImportSalarieTest() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">Sélectionner</option>
-                <option value="Homme">Homme</option>
-                <option value="Femme">Femme</option>
-                <option value="Autre">Autre</option>
+                {GENRE_OPTIONS.map(genre => (
+                  <option key={genre} value={genre}>{genre}</option>
+                ))}
               </select>
             </div>
             <FormInput

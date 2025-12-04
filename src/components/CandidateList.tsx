@@ -6,6 +6,7 @@ import { OnboardingQRModal } from './OnboardingQRModal';
 import { LoadingSpinner } from './LoadingSpinner';
 import CodeCouleurModal from './CodeCouleurModal';
 import { VivierDisponibiliteModal } from './VivierDisponibiliteModal';
+import { GENRE_OPTIONS } from '../constants/genreOptions';
 
 interface Site {
   id: string;
@@ -1171,8 +1172,9 @@ function CandidateModal({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
               >
                 <option value="">Sélectionner</option>
-                <option value="Homme">Homme</option>
-                <option value="Femme">Femme</option>
+                {GENRE_OPTIONS.map(genre => (
+                  <option key={genre} value={genre}>{genre}</option>
+                ))}
               </select>
             </div>
 
