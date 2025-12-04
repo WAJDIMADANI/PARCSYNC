@@ -842,29 +842,46 @@ function EmployeeDetailModal({
   // Synchroniser currentEmployee avec la prop employee quand elle change
   useEffect(() => {
     setCurrentEmployee(employee);
-    // Mettre à jour aussi les champs édités pour refléter les nouvelles valeurs
-    setEditedDateNaissance(employee.date_naissance || '');
-    setEditedLieuNaissance(employee.lieu_naissance || '');
-    setEditedPaysNaissance(employee.pays_naissance || '');
-    setEditedNationalite(employee.nationalite || '');
-    setEditedGenre(employee.genre || '');
-    setEditedNomNaissance(employee.nom_naissance || '');
-    setEditedNumeroSS(employee.numero_securite_sociale || '');
-    setEditedAdresse(employee.adresse || '');
-    setEditedComplementAdresse(employee.complement_adresse || '');
-    setEditedVille(employee.ville || '');
-    setEditedCodePostal(employee.code_postal || '');
-    setEditedIBAN(employee.iban || '');
-    setEditedBIC(employee.bic || '');
-    setEditedNom(employee.nom || '');
-    setEditedPrenom(employee.prenom || '');
-    setEditedEmail(employee.email || '');
-    setEditedTel(employee.tel || '');
-    setEditedMatriculeTCA(employee.matricule_tca || '');
-    setEditedDateEntree(employee.date_entree || '');
-    setEditedRole(employee.role || '');
-    setEditedSecteurId(employee.secteur_id || '');
-  }, [employee]);
+
+    // Mettre à jour les champs édités UNIQUEMENT si l'utilisateur n'est pas en train d'éditer cette section
+    // Cela préserve les modifications en cours (comme le BIC auto-rempli)
+
+    if (!isEditingPersonal) {
+      setEditedDateNaissance(employee.date_naissance || '');
+      setEditedLieuNaissance(employee.lieu_naissance || '');
+      setEditedPaysNaissance(employee.pays_naissance || '');
+      setEditedNationalite(employee.nationalite || '');
+      setEditedGenre(employee.genre || '');
+      setEditedNomNaissance(employee.nom_naissance || '');
+      setEditedNumeroSS(employee.numero_securite_sociale || '');
+    }
+
+    if (!isEditingAddress) {
+      setEditedAdresse(employee.adresse || '');
+      setEditedComplementAdresse(employee.complement_adresse || '');
+      setEditedVille(employee.ville || '');
+      setEditedCodePostal(employee.code_postal || '');
+    }
+
+    if (!isEditingBanking) {
+      setEditedIBAN(employee.iban || '');
+      setEditedBIC(employee.bic || '');
+    }
+
+    if (!isEditingIdentity) {
+      setEditedNom(employee.nom || '');
+      setEditedPrenom(employee.prenom || '');
+      setEditedEmail(employee.email || '');
+      setEditedTel(employee.tel || '');
+      setEditedMatriculeTCA(employee.matricule_tca || '');
+    }
+
+    if (!isEditingContract) {
+      setEditedDateEntree(employee.date_entree || '');
+      setEditedRole(employee.role || '');
+      setEditedSecteurId(employee.secteur_id || '');
+    }
+  }, [employee, isEditingPersonal, isEditingAddress, isEditingBanking, isEditingIdentity, isEditingContract]);
 
   useEffect(() => {
     // Signaler que le modal est ouvert
