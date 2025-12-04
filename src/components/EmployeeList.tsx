@@ -164,6 +164,16 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     }
   }, [initialProfilId, employees]);
 
+  // Mettre à jour selectedEmployee quand les données sont rechargées
+  useEffect(() => {
+    if (selectedEmployee && employees.length > 0) {
+      const updatedEmployee = employees.find(e => e.id === selectedEmployee.id);
+      if (updatedEmployee) {
+        setSelectedEmployee(updatedEmployee);
+      }
+    }
+  }, [employees]);
+
   // Auto-refresh toutes les 5 secondes si des contrats sont en attente de signature
   // MAIS seulement si aucun modal n'est ouvert
   useEffect(() => {
