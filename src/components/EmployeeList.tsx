@@ -89,8 +89,10 @@ interface Contract {
   date_signature: string | null;
   yousign_signed_at: string | null;
   created_at: string;
-  modele_contrat: string | null;
-  date_debut_contrat: string | null;
+  modele_id: string | null;
+  modeles_contrats?: {
+    nom: string;
+  } | null;
 }
 
 type SortField = 'prenom' | 'email' | 'secteur' | 'date_entree' | 'type_contrat' | 'statut_contrat';
@@ -196,7 +198,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           .order('created_at', { ascending: false }),
         supabase
           .from('contrat')
-          .select('id, profil_id, statut, date_signature, yousign_signed_at, created_at, modele_contrat, date_debut_contrat')
+          .select('id, profil_id, statut, date_signature, yousign_signed_at, created_at, modele_id, modeles_contrats:modele_id(nom)')
           .order('created_at', { ascending: false }),
         supabase.from('site').select('*').order('nom'),
         supabase.from('secteur').select('*').order('nom')
@@ -244,18 +246,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       .filter(c => c.profil_id === employeeId)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-    return contract?.modele_contrat || null;
-  };
-
-  const getEmployeeContractDate = (employee: Employee): string | null => {
-    if (employee.date_entree) {
-      return employee.date_entree;
-    }
-    const contract = contracts
-      .filter(c => c.profil_id === employee.id)
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
-
-    return contract?.date_debut_contrat || null;
+    return contract?.modeles_contrats?.nom || null;
   };
 
   const formatDate = (dateString: string | null): string => {
@@ -312,8 +303,8 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           bValue = (getEmployeeContractType(b.id) || '').toLowerCase();
           break;
         case 'date_entree':
-          aValue = new Date(getEmployeeContractDate(a) || 0).getTime();
-          bValue = new Date(getEmployeeContractDate(b) || 0).getTime();
+          aValue = new Date(a.date_entree || 0).getTime();
+          bValue = new Date(b.date_entree || 0).getTime();
           break;
         case 'statut_contrat':
           aValue = (getEmployeeContractStatus(a.id) || '').toLowerCase();
@@ -607,7 +598,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                       <ContractBadge type="type" value={getEmployeeContractType(employee.id) || undefined} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
-                      {formatDate(getEmployeeContractDate(employee))}
+                      {formatDate(employee.date_entree)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                       <ContractBadge type="status" value={getEmployeeContractStatus(employee.id) || undefined} />
