@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase, getStorageUrl } from '../lib/supabase';
-import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload, Trash2, Download, Loader2 } from 'lucide-react';
+import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload, Trash2, Download, Loader2, File } from 'lucide-react';
 import EmployeeHistory from './EmployeeHistory';
 import EmployeeDeparture from './EmployeeDeparture';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -59,9 +59,15 @@ interface Employee {
   manager_id: string | null;
   candidat_id: string | null;
   date_fin_visite_medicale: string | null;
+  date_visite_medicale: string | null;
   type_piece_identite: string | null;
   titre_sejour_fin_validite: string | null;
   matricule_tca: string | null;
+  poste: string | null;
+  avenant_1_date_debut: string | null;
+  avenant_1_date_fin: string | null;
+  avenant_2_date_debut: string | null;
+  avenant_2_date_fin: string | null;
   created_at: string;
   site?: Site;
   secteur?: Secteur;
@@ -90,6 +96,9 @@ interface Contract {
   yousign_signed_at: string | null;
   created_at: string;
   modele_id: string | null;
+  date_debut: string | null;
+  date_fin: string | null;
+  type: string | null;
   modeles_contrats?: {
     nom: string;
   } | null;
@@ -208,7 +217,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           .order('created_at', { ascending: false }),
         supabase
           .from('contrat')
-          .select('id, profil_id, statut, date_signature, yousign_signed_at, created_at, modele_id, modeles_contrats:modele_id(nom)')
+          .select('id, profil_id, statut, date_signature, yousign_signed_at, created_at, modele_id, date_debut, date_fin, type, modeles_contrats:modele_id(nom)')
           .order('created_at', { ascending: false }),
         supabase.from('site').select('*').order('nom'),
         supabase.from('secteur').select('*').order('nom')
@@ -761,6 +770,11 @@ function EmployeeDetailModal({
   const [isEditingDates, setIsEditingDates] = useState(false);
   const [editedCertificatExpiration, setEditedCertificatExpiration] = useState(employee.date_fin_visite_medicale || '');
   const [editedTitreSejourExpiration, setEditedTitreSejourExpiration] = useState(employee.titre_sejour_fin_validite || '');
+  const [editedDateVisite, setEditedDateVisite] = useState(employee.date_visite_medicale || '');
+  const [editedAvenant1DateDebut, setEditedAvenant1DateDebut] = useState(employee.avenant_1_date_debut || '');
+  const [editedAvenant1DateFin, setEditedAvenant1DateFin] = useState(employee.avenant_1_date_fin || '');
+  const [editedAvenant2DateDebut, setEditedAvenant2DateDebut] = useState(employee.avenant_2_date_debut || '');
+  const [editedAvenant2DateFin, setEditedAvenant2DateFin] = useState(employee.avenant_2_date_fin || '');
   const [currentEmployee, setCurrentEmployee] = useState<Employee>(employee);
   const [currentContractStatus, setCurrentContractStatus] = useState<string | null>(contractStatus);
   const [savingDates, setSavingDates] = useState(false);
@@ -1417,7 +1431,12 @@ function EmployeeDetailModal({
         .from('profil')
         .update({
           date_fin_visite_medicale: editedCertificatExpiration || null,
-          titre_sejour_fin_validite: editedTitreSejourExpiration || null
+          date_visite_medicale: editedDateVisite || null,
+          titre_sejour_fin_validite: editedTitreSejourExpiration || null,
+          avenant_1_date_debut: editedAvenant1DateDebut || null,
+          avenant_1_date_fin: editedAvenant1DateFin || null,
+          avenant_2_date_debut: editedAvenant2DateDebut || null,
+          avenant_2_date_fin: editedAvenant2DateFin || null
         })
         .eq('id', currentEmployee.id);
 
@@ -1430,7 +1449,12 @@ function EmployeeDetailModal({
       setCurrentEmployee({
         ...currentEmployee,
         date_fin_visite_medicale: editedCertificatExpiration || null,
-        titre_sejour_fin_validite: editedTitreSejourExpiration || null
+        date_visite_medicale: editedDateVisite || null,
+        titre_sejour_fin_validite: editedTitreSejourExpiration || null,
+        avenant_1_date_debut: editedAvenant1DateDebut || null,
+        avenant_1_date_fin: editedAvenant1DateFin || null,
+        avenant_2_date_debut: editedAvenant2DateDebut || null,
+        avenant_2_date_fin: editedAvenant2DateFin || null
       });
 
       setIsEditingDates(false);
@@ -1449,6 +1473,11 @@ function EmployeeDetailModal({
   const handleCancelEdit = () => {
     setEditedCertificatExpiration(currentEmployee.date_fin_visite_medicale || '');
     setEditedTitreSejourExpiration(currentEmployee.titre_sejour_fin_validite || '');
+    setEditedDateVisite(currentEmployee.date_visite_medicale || '');
+    setEditedAvenant1DateDebut(currentEmployee.avenant_1_date_debut || '');
+    setEditedAvenant1DateFin(currentEmployee.avenant_1_date_fin || '');
+    setEditedAvenant2DateDebut(currentEmployee.avenant_2_date_debut || '');
+    setEditedAvenant2DateFin(currentEmployee.avenant_2_date_fin || '');
     setIsEditingDates(false);
   };
 
@@ -2576,14 +2605,14 @@ function EmployeeDetailModal({
             </div>
           </div>
 
-          {/* Section Documents importants - Dates d'expiration */}
+          {/* Section Documents et dates importantes */}
           <div className="bg-gradient-to-br from-purple-50 to-purple-100/30 rounded-xl p-5 border border-purple-200">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
                   <Calendar className="w-4 h-4 text-white" />
                 </div>
-                <h3 className="font-bold text-gray-900 text-lg">Documents importants</h3>
+                <h3 className="font-bold text-gray-900 text-lg">Documents et dates importantes</h3>
               </div>
               {!isEditingDates ? (
                 <div className="flex items-center gap-2">
@@ -2629,83 +2658,239 @@ function EmployeeDetailModal({
               )}
             </div>
 
-            <div className="space-y-3">
-              {/* Type de pièce d'identité */}
-              <div className="bg-white rounded-lg p-3 shadow-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <FileText className="w-4 h-4 text-purple-600" />
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Type de pièce d'identité</p>
-                </div>
-                <p className="text-gray-900 font-medium">
-                  {currentEmployee.type_piece_identite || candidatTypePiece || 'Non renseigné'}
-                </p>
+            <div className="space-y-4">
+              {/* Contrat - Dates principales */}
+              {(() => {
+                const activeContract = contracts
+                  .filter(c => c.profil_id === currentEmployee.id)
+                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-                {/* Date d'expiration du titre de séjour - Afficher si type contient séjour/résident */}
-                {(() => {
-                  const typePiece = (currentEmployee.type_piece_identite || candidatTypePiece || '').toLowerCase();
+                if (!activeContract || (!activeContract.date_debut && !activeContract.date_fin && !currentEmployee.date_entree)) {
+                  return null;
+                }
 
-                  // Debug: afficher le type de pièce dans la console
-                  console.log('Type de pièce détecté:', typePiece, 'pour', currentEmployee.prenom, currentEmployee.nom);
-
-                  const hasTitreSejour =
-                    typePiece.includes('sejour') ||
-                    typePiece.includes('séjour') ||
-                    typePiece.includes('resident') ||
-                    typePiece.includes('résident') ||
-                    typePiece.includes('carte_sejour');
-
-                  console.log('A titre de séjour:', hasTitreSejour);
-
-                  if (!hasTitreSejour) return null;
-
-                  // Debug: afficher les dates
-                  console.log('Date titre séjour profil:', currentEmployee.titre_sejour_fin_validite);
-                  console.log('Date titre séjour candidat:', candidatDateFinValidite);
-
-                  return (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <p className="text-xs text-gray-500 mb-1">Date d'expiration</p>
-                      {isEditingDates ? (
-                        <input
-                          type="date"
-                          value={editedTitreSejourExpiration}
-                          onChange={(e) => setEditedTitreSejourExpiration(e.target.value)}
-                          className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
-                        />
-                      ) : (
-                        <p className="text-gray-900 font-medium">
-                          {currentEmployee.titre_sejour_fin_validite
-                            ? new Date(currentEmployee.titre_sejour_fin_validite).toLocaleDateString('fr-FR')
-                            : candidatDateFinValidite
-                            ? new Date(candidatDateFinValidite).toLocaleDateString('fr-FR')
-                            : 'Non renseignée'}
-                        </p>
-                      )}
+                return (
+                  <div className="bg-blue-50 border border-blue-200 border-l-4 border-l-blue-500 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      <h4 className="text-sm font-semibold text-blue-900">Contrat</h4>
                     </div>
-                  );
-                })()}
-              </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                          <label className="text-xs font-medium text-gray-500 uppercase">Date de début</label>
+                        </div>
+                        <p className="text-sm text-gray-900">
+                          {activeContract.date_debut
+                            ? new Date(activeContract.date_debut).toLocaleDateString('fr-FR')
+                            : currentEmployee.date_entree
+                            ? new Date(currentEmployee.date_entree).toLocaleDateString('fr-FR')
+                            : '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                          <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
+                        </div>
+                        <p className="text-sm text-gray-900">
+                          {activeContract.date_fin
+                            ? new Date(activeContract.date_fin).toLocaleDateString('fr-FR')
+                            : '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
-              {/* Certificat médical */}
-              <div className="bg-white rounded-lg p-3 shadow-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <FileText className="w-4 h-4 text-purple-600" />
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Certificat médical - Date d'expiration</p>
+              {/* Avenants */}
+              {(currentEmployee.avenant_1_date_debut || currentEmployee.avenant_1_date_fin ||
+                currentEmployee.avenant_2_date_debut || currentEmployee.avenant_2_date_fin) && (
+                <div className="bg-orange-50 border border-orange-200 border-l-4 border-l-orange-500 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="w-4 h-4 text-orange-600" />
+                    <h4 className="text-sm font-semibold text-orange-900">Avenants</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {(currentEmployee.avenant_1_date_debut || currentEmployee.avenant_1_date_fin) && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-700 mb-2">Avenant 1</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                              <label className="text-xs font-medium text-gray-500 uppercase">Date de début</label>
+                            </div>
+                            {isEditingDates ? (
+                              <input
+                                type="date"
+                                value={editedAvenant1DateDebut}
+                                onChange={(e) => setEditedAvenant1DateDebut(e.target.value)}
+                                className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900"
+                              />
+                            ) : (
+                              <p className="text-sm text-gray-900">
+                                {currentEmployee.avenant_1_date_debut
+                                  ? new Date(currentEmployee.avenant_1_date_debut).toLocaleDateString('fr-FR')
+                                  : '-'}
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                              <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
+                            </div>
+                            {isEditingDates ? (
+                              <input
+                                type="date"
+                                value={editedAvenant1DateFin}
+                                onChange={(e) => setEditedAvenant1DateFin(e.target.value)}
+                                className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900"
+                              />
+                            ) : (
+                              <p className="text-sm text-gray-900">
+                                {currentEmployee.avenant_1_date_fin
+                                  ? new Date(currentEmployee.avenant_1_date_fin).toLocaleDateString('fr-FR')
+                                  : '-'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {(currentEmployee.avenant_2_date_debut || currentEmployee.avenant_2_date_fin) && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-700 mb-2">Avenant 2</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                              <label className="text-xs font-medium text-gray-500 uppercase">Date de début</label>
+                            </div>
+                            {isEditingDates ? (
+                              <input
+                                type="date"
+                                value={editedAvenant2DateDebut}
+                                onChange={(e) => setEditedAvenant2DateDebut(e.target.value)}
+                                className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900"
+                              />
+                            ) : (
+                              <p className="text-sm text-gray-900">
+                                {currentEmployee.avenant_2_date_debut
+                                  ? new Date(currentEmployee.avenant_2_date_debut).toLocaleDateString('fr-FR')
+                                  : '-'}
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                              <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
+                            </div>
+                            {isEditingDates ? (
+                              <input
+                                type="date"
+                                value={editedAvenant2DateFin}
+                                onChange={(e) => setEditedAvenant2DateFin(e.target.value)}
+                                className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900"
+                              />
+                            ) : (
+                              <p className="text-sm text-gray-900">
+                                {currentEmployee.avenant_2_date_fin
+                                  ? new Date(currentEmployee.avenant_2_date_fin).toLocaleDateString('fr-FR')
+                                  : '-'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {isEditingDates ? (
-                  <input
-                    type="date"
-                    value={editedCertificatExpiration}
-                    onChange={(e) => setEditedCertificatExpiration(e.target.value)}
-                    className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
-                  />
-                ) : (
-                  <p className="text-gray-900 font-medium">
-                    {currentEmployee.date_fin_visite_medicale
-                      ? new Date(currentEmployee.date_fin_visite_medicale).toLocaleDateString('fr-FR')
-                      : 'Non renseignée'}
-                  </p>
-                )}
+              )}
+
+              {/* Documents administratifs */}
+              <div className="bg-yellow-50 border border-yellow-200 border-l-4 border-l-yellow-500 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <File className="w-4 h-4 text-yellow-600" />
+                  <h4 className="text-sm font-semibold text-yellow-900">Documents administratifs</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <File className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Type de pièce d'identité</label>
+                    </div>
+                    <p className="text-sm text-gray-900">
+                      {currentEmployee.type_piece_identite || candidatTypePiece || '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Titre de séjour - Fin de validité</label>
+                    </div>
+                    {isEditingDates ? (
+                      <input
+                        type="date"
+                        value={editedTitreSejourExpiration}
+                        onChange={(e) => setEditedTitreSejourExpiration(e.target.value)}
+                        className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-gray-900"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900">
+                        {currentEmployee.titre_sejour_fin_validite
+                          ? new Date(currentEmployee.titre_sejour_fin_validite).toLocaleDateString('fr-FR')
+                          : candidatDateFinValidite
+                          ? new Date(candidatDateFinValidite).toLocaleDateString('fr-FR')
+                          : '-'}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Visite médicale - Date de début</label>
+                    </div>
+                    {isEditingDates ? (
+                      <input
+                        type="date"
+                        value={editedDateVisite}
+                        onChange={(e) => setEditedDateVisite(e.target.value)}
+                        className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-gray-900"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900">
+                        {currentEmployee.date_visite_medicale
+                          ? new Date(currentEmployee.date_visite_medicale).toLocaleDateString('fr-FR')
+                          : '-'}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Visite médicale - Date de fin</label>
+                    </div>
+                    {isEditingDates ? (
+                      <input
+                        type="date"
+                        value={editedCertificatExpiration}
+                        onChange={(e) => setEditedCertificatExpiration(e.target.value)}
+                        className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-gray-900"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900">
+                        {currentEmployee.date_fin_visite_medicale
+                          ? new Date(currentEmployee.date_fin_visite_medicale).toLocaleDateString('fr-FR')
+                          : '-'}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
 
             </div>
