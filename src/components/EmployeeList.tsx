@@ -2661,8 +2661,7 @@ function EmployeeDetailModal({
             <div className="space-y-4">
               {/* Contrat - Dates principales */}
               {(() => {
-                const activeContract = contracts
-                  .filter(c => c.profil_id === currentEmployee.id)
+                const activeContract = employeeContracts
                   .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
                 if (!activeContract || (!activeContract.date_debut && !activeContract.date_fin && !currentEmployee.date_entree)) {
