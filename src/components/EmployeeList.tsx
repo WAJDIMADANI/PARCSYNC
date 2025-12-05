@@ -3231,9 +3231,14 @@ function EmployeeDetailModal({
                         <div className="flex items-center gap-2">
                           {hasPdf && (
                             <button
-                              onClick={() => {
-                                const url = resolveDocUrl(contract.fichier_signe_url);
-                                window.open(url, '_blank');
+                              onClick={async () => {
+                                try {
+                                  const url = await resolveDocUrl(contract.fichier_signe_url);
+                                  window.open(url, '_blank');
+                                } catch (error: any) {
+                                  console.error('Erreur téléchargement contrat:', error);
+                                  alert('Erreur lors du téléchargement: ' + (error.message || 'Erreur inconnue'));
+                                }
                               }}
                               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
                             >
