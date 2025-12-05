@@ -38,6 +38,7 @@ interface ParsedEmployee {
     bic?: string;
     modele_contrat?: string;
     periode_essai?: string;
+    date_fin_periode_essai?: string | null;
     statut_contrat?: string;
     avenant_1_date_debut?: string;
     avenant_1_date_fin?: string;
@@ -646,6 +647,29 @@ export function ImportSalariesBulk() {
       const dateVisiteMedicaleRaw = getColumnValue(row, columnMap, 'date_visite_medicale');
       const dateFinVisiteMedicaleRaw = getColumnValue(row, columnMap, 'date_fin_visite_medicale');
 
+      // Récupérer "Période d'essai" et détecter automatiquement si c'est une date
+      const periodeEssaiRaw = getColumnValue(row, columnMap, 'periode_essai');
+      let periodeEssaiText: string | undefined = undefined;
+      let periodeEssaiDate: string | null = null;
+
+      if (periodeEssaiRaw) {
+        // Détecter si la valeur ressemble à une date (format JJ/MM/AAAA ou DD/MM/YYYY)
+        const datePattern = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+        if (datePattern.test(periodeEssaiRaw.trim())) {
+          // C'est une date, on la parse
+          periodeEssaiDate = parseDate(periodeEssaiRaw, 'Fin période d\'essai');
+          if (index === 0) {
+            console.log('🔍 DEBUG Période d\'essai détectée comme DATE:', periodeEssaiRaw, '→', periodeEssaiDate);
+          }
+        } else {
+          // C'est du texte (ex: "3 mois", "6 mois")
+          periodeEssaiText = periodeEssaiRaw;
+          if (index === 0) {
+            console.log('🔍 DEBUG Période d\'essai détectée comme TEXTE:', periodeEssaiRaw);
+          }
+        }
+      }
+
       const dateDebutContrat = parseDate(dateDebutRaw, 'Date début contrat');
       const dateFinContrat = parseDate(dateFinRaw, 'Date fin contrat');
       const dateNaissance = parseDate(dateNaissanceRaw, 'Date de naissance');
@@ -667,6 +691,7 @@ export function ImportSalariesBulk() {
       const hasTitreSejourFinButInvalid = titreSejourFinRaw && !titreSejourFin;
       const hasVisiteMedicaleButInvalid = dateVisiteMedicaleRaw && !dateVisiteMedicale;
       const hasFinVisiteMedicaleButInvalid = dateFinVisiteMedicaleRaw && !dateFinVisiteMedicale;
+      const hasPeriodeEssaiDateButInvalid = periodeEssaiRaw && datePattern.test(periodeEssaiRaw.trim()) && !periodeEssaiDate;
 
       if (index === 0) {
         console.log('🔍 DEBUG Row data:', { nom, prenom, email, matricule, secteurNom });
@@ -691,6 +716,7 @@ export function ImportSalariesBulk() {
       if (hasTitreSejourFinButInvalid) invalidDates.push(`Titre séjour fin: "${titreSejourFinRaw}"`);
       if (hasVisiteMedicaleButInvalid) invalidDates.push(`Visite médicale: "${dateVisiteMedicaleRaw}"`);
       if (hasFinVisiteMedicaleButInvalid) invalidDates.push(`Fin visite médicale: "${dateFinVisiteMedicaleRaw}"`);
+      if (hasPeriodeEssaiDateButInvalid) invalidDates.push(`Fin période d'essai: "${periodeEssaiRaw}"`);
 
       if (!nom && !prenom && !email) {
         status = 'error';
@@ -752,7 +778,8 @@ export function ImportSalariesBulk() {
           iban: getColumnValue(row, columnMap, 'iban') || undefined,
           bic: getColumnValue(row, columnMap, 'bic') || undefined,
           modele_contrat: getColumnValue(row, columnMap, 'modele_contrat') || undefined,
-          periode_essai: getColumnValue(row, columnMap, 'periode_essai') || undefined,
+          periode_essai: periodeEssaiText || undefined,
+          date_fin_periode_essai: periodeEssaiDate,
           statut_contrat: getColumnValue(row, columnMap, 'statut_contrat') || undefined,
           avenant_1_date_debut: avenant1DateDebut,
           avenant_1_date_fin: avenant1DateFin,
@@ -824,6 +851,7 @@ export function ImportSalariesBulk() {
           if (emp.data.date_visite_medicale) updateData.date_visite_medicale = emp.data.date_visite_medicale;
           if (emp.data.date_fin_visite_medicale) updateData.date_fin_visite_medicale = emp.data.date_fin_visite_medicale;
           if (emp.data.periode_essai) updateData.periode_essai = emp.data.periode_essai;
+          if (emp.data.date_fin_periode_essai) updateData.date_fin_periode_essai = emp.data.date_fin_periode_essai;
           if (emp.data.modele_contrat) updateData.modele_contrat = emp.data.modele_contrat;
           if (emp.data.secteur_id) updateData.secteur_id = emp.data.secteur_id;
           if (emp.data.date_debut_contrat) updateData.date_entree = emp.data.date_debut_contrat;
@@ -876,6 +904,7 @@ export function ImportSalariesBulk() {
             avenant_2_date_debut: emp.data.avenant_2_date_debut,
             avenant_2_date_fin: emp.data.avenant_2_date_fin,
             periode_essai: emp.data.periode_essai,
+            date_fin_periode_essai: emp.data.date_fin_periode_essai,
             modele_contrat: emp.data.modele_contrat,
             secteur_id: emp.data.secteur_id,
             date_entree: emp.data.date_debut_contrat,
@@ -883,7 +912,21 @@ export function ImportSalariesBulk() {
             role: 'salarie',
           });
 
-          console.log(`📝 Ligne ${emp.rowNumber}: Insertion profil avec données:`, profilData);
+          console.log(`�� Ligne ${emp.rowNumber}: Insertion profil avec données:`, profilData);
+
+          // LOG DÉTAILLÉ : Afficher toutes les dates avec leurs types
+          console.log(`📅 DATES AVANT INSERTION (ligne ${emp.rowNumber}):`);
+          console.log(`  - date_naissance: "${emp.data.date_naissance}" (type: ${typeof emp.data.date_naissance})`);
+          console.log(`  - date_entree: "${emp.data.date_debut_contrat}" (type: ${typeof emp.data.date_debut_contrat})`);
+          console.log(`  - date_visite_medicale: "${emp.data.date_visite_medicale}" (type: ${typeof emp.data.date_visite_medicale})`);
+          console.log(`  - date_fin_visite_medicale: "${emp.data.date_fin_visite_medicale}" (type: ${typeof emp.data.date_fin_visite_medicale})`);
+          console.log(`  - titre_sejour_fin_validite: "${emp.data.titre_sejour_fin_validite}" (type: ${typeof emp.data.titre_sejour_fin_validite})`);
+          console.log(`  - avenant_1_date_debut: "${emp.data.avenant_1_date_debut}" (type: ${typeof emp.data.avenant_1_date_debut})`);
+          console.log(`  - avenant_1_date_fin: "${emp.data.avenant_1_date_fin}" (type: ${typeof emp.data.avenant_1_date_fin})`);
+          console.log(`  - avenant_2_date_debut: "${emp.data.avenant_2_date_debut}" (type: ${typeof emp.data.avenant_2_date_debut})`);
+          console.log(`  - avenant_2_date_fin: "${emp.data.avenant_2_date_fin}" (type: ${typeof emp.data.avenant_2_date_fin})`);
+          console.log(`  - periode_essai (texte): "${emp.data.periode_essai}" (type: ${typeof emp.data.periode_essai})`);
+          console.log(`  - date_fin_periode_essai: "${emp.data.date_fin_periode_essai}" (type: ${typeof emp.data.date_fin_periode_essai})`);
 
           const insertResult = await supabase
             .from('profil')
@@ -980,6 +1023,7 @@ export function ImportSalariesBulk() {
             'Début contrat': emp.data.date_debut_contrat,
             'Fin contrat': emp.data.date_fin_contrat,
             'Naissance': emp.data.date_naissance,
+            'Entrée': emp.data.date_entree,
             'Avenant 1 début': emp.data.avenant_1_date_debut,
             'Avenant 1 fin': emp.data.avenant_1_date_fin,
             'Avenant 2 début': emp.data.avenant_2_date_debut,
@@ -987,24 +1031,63 @@ export function ImportSalariesBulk() {
             'Fin titre séjour': emp.data.titre_sejour_fin_validite,
             'Visite médicale': emp.data.date_visite_medicale,
             'Fin visite médicale': emp.data.date_fin_visite_medicale,
+            'Fin période d\'essai': emp.data.date_fin_periode_essai,
           };
+
+          // Parser error.details et error.hint pour plus d'informations
+          if (error.details) {
+            console.error(`📋 error.details:`, error.details);
+          }
+          if (error.hint) {
+            console.error(`💡 error.hint:`, error.hint);
+          }
 
           // Trouver quelle date pose problème
           let problematicDate = 'inconnue';
+          let problematicDates: string[] = [];
+
           for (const [label, value] of Object.entries(allDates)) {
             if (value) {
-              dateFields.push(`${label}: ${value}`);
-              // Vérifier si c'est une date problématique
-              const year = parseInt(String(value).split('-')[0]);
-              if (year < 1900 || year > 2100 || isNaN(year)) {
-                problematicDate = `${label} (${value})`;
+              // Vérifier le type et le format de la valeur
+              const valueStr = String(value);
+              const valueType = typeof value;
+
+              console.error(`🔍 Vérification ${label}: valeur="${valueStr}", type=${valueType}`);
+
+              dateFields.push(`${label}: ${valueStr}`);
+
+              // Vérifier si c'est une chaîne de caractères au format date
+              if (typeof value === 'string' && value.includes('-')) {
+                const parts = value.split('-');
+                if (parts.length === 3) {
+                  const year = parseInt(parts[0]);
+                  if (year < 1900 || year > 2100 || isNaN(year)) {
+                    problematicDates.push(`${label} (${valueStr}, année ${year})`);
+                    if (problematicDate === 'inconnue') {
+                      problematicDate = `${label} (${valueStr})`;
+                    }
+                  }
+                } else {
+                  problematicDates.push(`${label} (format invalide: ${valueStr})`);
+                }
+              } else if (value instanceof Date) {
+                // Si c'est un objet Date JavaScript
+                problematicDates.push(`${label} (objet Date non converti: ${value.toString()})`);
+              } else if (valueType !== 'string') {
+                // Autre type inattendu
+                problematicDates.push(`${label} (type inattendu: ${valueType})`);
               }
             }
           }
 
           console.error(`❌ Dates de la ligne ${emp.rowNumber}:`, allDates);
+          console.error(`❌ Dates problématiques détectées:`, problematicDates);
 
-          errorMessage = `Date hors limites PostgreSQL: ${problematicDate}. Les années doivent être entre 1900-2100. Dates présentes: ${dateFields.join(', ')}`;
+          if (problematicDates.length > 0) {
+            errorMessage = `Date(s) problématique(s): ${problematicDates.join('; ')}. PostgreSQL accepte les années entre 1900-2100 au format YYYY-MM-DD`;
+          } else {
+            errorMessage = `Date hors limites PostgreSQL: ${problematicDate}. Les années doivent être entre 1900-2100. Dates présentes: ${dateFields.join(', ')}`;
+          }
         } else if (errorMessage.includes('invalid input syntax for type date')) {
           // Extraire le nom de la colonne si possible
           const colMatch = errorMessage.match(/column "([^"]+)"/);
