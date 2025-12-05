@@ -1770,7 +1770,7 @@ function EmployeeDetailModal({
       }
 
       if (contract.fichier_signe_url) {
-        const fullUrl = getStorageUrl(contract.fichier_signe_url);
+        const fullUrl = await resolveDocUrl(contract.fichier_signe_url);
         window.open(fullUrl, '_blank');
       } else {
         alert('PDF non disponible pour ce contrat');
