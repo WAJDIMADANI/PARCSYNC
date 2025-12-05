@@ -815,6 +815,10 @@ export function ImportSalariesBulk() {
           if (emp.data.modele_contrat) updateData.modele_contrat = emp.data.modele_contrat;
           if (emp.data.secteur_id) updateData.secteur_id = emp.data.secteur_id;
           if (emp.data.date_debut_contrat) updateData.date_entree = emp.data.date_debut_contrat;
+          if (emp.data.avenant_1_date_debut) updateData.avenant_1_date_debut = emp.data.avenant_1_date_debut;
+          if (emp.data.avenant_1_date_fin) updateData.avenant_1_date_fin = emp.data.avenant_1_date_fin;
+          if (emp.data.avenant_2_date_debut) updateData.avenant_2_date_debut = emp.data.avenant_2_date_debut;
+          if (emp.data.avenant_2_date_fin) updateData.avenant_2_date_fin = emp.data.avenant_2_date_fin;
 
           const result = await supabase
             .from('profil')
@@ -855,6 +859,10 @@ export function ImportSalariesBulk() {
             titre_sejour_fin_validite: emp.data.titre_sejour_fin_validite,
             date_visite_medicale: emp.data.date_visite_medicale,
             date_fin_visite_medicale: emp.data.date_fin_visite_medicale,
+            avenant_1_date_debut: emp.data.avenant_1_date_debut,
+            avenant_1_date_fin: emp.data.avenant_1_date_fin,
+            avenant_2_date_debut: emp.data.avenant_2_date_debut,
+            avenant_2_date_fin: emp.data.avenant_2_date_fin,
             periode_essai: emp.data.periode_essai,
             modele_contrat: emp.data.modele_contrat,
             secteur_id: emp.data.secteur_id,

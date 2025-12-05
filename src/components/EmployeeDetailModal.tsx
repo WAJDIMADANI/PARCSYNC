@@ -264,27 +264,125 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
             </div>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <File className="w-5 h-5 text-yellow-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Documents</h3>
+          <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Calendar className="w-5 h-5 text-gray-700" />
+              <h3 className="text-lg font-semibold text-gray-900">Documents et dates importantes</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Type de pièce d'identité</label>
-                <p className="text-sm text-gray-900">{employee.data.type_piece_identite || '-'}</p>
+
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 border-l-4 border-l-blue-500 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  <h4 className="text-sm font-semibold text-blue-900">Contrat</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Date de début</label>
+                    </div>
+                    <p className="text-sm text-gray-900">{formatDate(employee.data.date_debut_contrat)}</p>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
+                    </div>
+                    <p className="text-sm text-gray-900">{formatDate(employee.data.date_fin_contrat)}</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Titre de séjour - Fin de validité</label>
-                <p className="text-sm text-gray-900">{formatDate(employee.data.titre_sejour_fin_validite)}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Visite médicale - Date de début</label>
-                <p className="text-sm text-gray-900">{formatDate(employee.data.date_visite_medicale)}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Visite médicale - Date de fin</label>
-                <p className="text-sm text-gray-900">{formatDate(employee.data.date_fin_visite_medicale)}</p>
+
+              {(employee.data.avenant_1_date_debut || employee.data.avenant_1_date_fin ||
+                employee.data.avenant_2_date_debut || employee.data.avenant_2_date_fin) && (
+                <div className="bg-orange-50 border border-orange-200 border-l-4 border-l-orange-500 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="w-4 h-4 text-orange-600" />
+                    <h4 className="text-sm font-semibold text-orange-900">Avenants</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {(employee.data.avenant_1_date_debut || employee.data.avenant_1_date_fin) && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-700 mb-2">Avenant 1</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                              <label className="text-xs font-medium text-gray-500 uppercase">Date de début</label>
+                            </div>
+                            <p className="text-sm text-gray-900">{formatDate(employee.data.avenant_1_date_debut)}</p>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                              <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
+                            </div>
+                            <p className="text-sm text-gray-900">{formatDate(employee.data.avenant_1_date_fin)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {(employee.data.avenant_2_date_debut || employee.data.avenant_2_date_fin) && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-700 mb-2">Avenant 2</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                              <label className="text-xs font-medium text-gray-500 uppercase">Date de début</label>
+                            </div>
+                            <p className="text-sm text-gray-900">{formatDate(employee.data.avenant_2_date_debut)}</p>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                              <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
+                            </div>
+                            <p className="text-sm text-gray-900">{formatDate(employee.data.avenant_2_date_fin)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-yellow-50 border border-yellow-200 border-l-4 border-l-yellow-500 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <File className="w-4 h-4 text-yellow-600" />
+                  <h4 className="text-sm font-semibold text-yellow-900">Documents administratifs</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <File className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Type de pièce d'identité</label>
+                    </div>
+                    <p className="text-sm text-gray-900">{employee.data.type_piece_identite || '-'}</p>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Titre de séjour - Fin de validité</label>
+                    </div>
+                    <p className="text-sm text-gray-900">{formatDate(employee.data.titre_sejour_fin_validite)}</p>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Visite médicale - Date de début</label>
+                    </div>
+                    <p className="text-sm text-gray-900">{formatDate(employee.data.date_visite_medicale)}</p>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Visite médicale - Date de fin</label>
+                    </div>
+                    <p className="text-sm text-gray-900">{formatDate(employee.data.date_fin_visite_medicale)}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
