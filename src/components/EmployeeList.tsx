@@ -2643,13 +2643,24 @@ function EmployeeDetailModal({
                 {/* Date d'expiration du titre de séjour - Afficher si type contient séjour/résident */}
                 {(() => {
                   const typePiece = (currentEmployee.type_piece_identite || candidatTypePiece || '').toLowerCase();
+
+                  // Debug: afficher le type de pièce dans la console
+                  console.log('Type de pièce détecté:', typePiece, 'pour', currentEmployee.prenom, currentEmployee.nom);
+
                   const hasTitreSejour =
                     typePiece.includes('sejour') ||
                     typePiece.includes('séjour') ||
                     typePiece.includes('resident') ||
-                    typePiece.includes('résident');
+                    typePiece.includes('résident') ||
+                    typePiece.includes('carte_sejour');
+
+                  console.log('A titre de séjour:', hasTitreSejour);
 
                   if (!hasTitreSejour) return null;
+
+                  // Debug: afficher les dates
+                  console.log('Date titre séjour profil:', currentEmployee.titre_sejour_fin_validite);
+                  console.log('Date titre séjour candidat:', candidatDateFinValidite);
 
                   return (
                     <div className="mt-3 pt-3 border-t border-gray-200">
