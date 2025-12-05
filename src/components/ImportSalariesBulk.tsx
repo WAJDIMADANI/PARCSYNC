@@ -651,10 +651,10 @@ export function ImportSalariesBulk() {
       const periodeEssaiRaw = getColumnValue(row, columnMap, 'periode_essai');
       let periodeEssaiText: string | undefined = undefined;
       let periodeEssaiDate: string | null = null;
+      const datePattern = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
 
       if (periodeEssaiRaw) {
         // Détecter si la valeur ressemble à une date (format JJ/MM/AAAA ou DD/MM/YYYY)
-        const datePattern = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
         if (datePattern.test(periodeEssaiRaw.trim())) {
           // C'est une date, on la parse
           periodeEssaiDate = parseDate(periodeEssaiRaw, 'Fin période d\'essai');
