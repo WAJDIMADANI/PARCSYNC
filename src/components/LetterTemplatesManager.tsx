@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Plus, Search, Edit, Copy, Trash2, Eye } from 'lucide-react';
+import { FileText, Plus, Search, Edit, Copy, Trash2, Eye, Upload } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { LetterTemplateModal } from './LetterTemplateModal';
 import { ConfirmModal } from './ConfirmModal';
+import mammoth from 'mammoth';
 
 interface LetterTemplate {
   id: string;
@@ -28,6 +29,7 @@ export function LetterTemplatesManager() {
   const [showModal, setShowModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<LetterTemplate | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, template: LetterTemplate | null }>({ show: false, template: null });
+  const [importing, setImporting] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -118,6 +120,86 @@ export function LetterTemplatesManager() {
     }
   };
 
+  const extractVariables = (text: string): { systeme: string[], personnalisees: Record<string, any> } => {
+    const variableRegex = /\{\{([^}]+)\}\}/g;
+    const matches = text.matchAll(variableRegex);
+    const variables = new Set<string>();
+
+    for (const match of matches) {
+      variables.add(match[1].trim());
+    }
+
+    const variablesSysteme = [
+      'nom', 'prenom', 'matricule', 'email', 'telephone',
+      'adresse', 'ville', 'code_postal', 'date_naissance',
+      'lieu_naissance', 'numero_securite_sociale', 'iban',
+      'poste', 'site', 'date_debut', 'date_fin', 'salaire',
+      'type_contrat', 'duree_travail', 'date_jour'
+    ];
+
+    const systeme: string[] = [];
+    const personnalisees: Record<string, any> = {};
+
+    variables.forEach(v => {
+      if (variablesSysteme.includes(v)) {
+        systeme.push(v);
+      } else {
+        personnalisees[v] = {
+          label: v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' '),
+          type: 'text'
+        };
+      }
+    });
+
+    return { systeme, personnalisees };
+  };
+
+  const handleImportWord = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.docx')) {
+      alert('Seuls les fichiers .docx sont acceptés');
+      return;
+    }
+
+    setImporting(true);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const content = result.value;
+
+      const variables = extractVariables(content);
+
+      const fileName = file.name.replace('.docx', '');
+
+      const { error } = await supabase
+        .from('modele_courrier')
+        .insert({
+          nom: fileName,
+          type_courrier: 'Courrier administratif',
+          sujet: fileName,
+          contenu: content,
+          variables_systeme: variables.systeme,
+          variables_personnalisees: variables.personnalisees,
+          actif: true,
+          created_by: user?.id
+        });
+
+      if (error) throw error;
+
+      await fetchTemplates();
+      alert(`Modèle "${fileName}" importé avec succès!\n\n${variables.systeme.length} variables système détectées\n${Object.keys(variables.personnalisees).length} variables personnalisées détectées`);
+    } catch (error) {
+      console.error('Erreur import Word:', error);
+      alert('Erreur lors de l\'import du fichier Word');
+    } finally {
+      setImporting(false);
+      event.target.value = '';
+    }
+  };
+
   const getUniqueTypes = () => {
     const types = templates.map(t => t.type_courrier);
     return [...new Set(types)];
@@ -156,13 +238,35 @@ export function LetterTemplatesManager() {
             <h1 className="text-3xl font-bold text-gray-900">Modèles de Courriers</h1>
             <p className="text-gray-600 mt-1">Créez et gérez vos modèles de courriers personnalisables</p>
           </div>
-          <button
-            onClick={handleCreate}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Nouveau modèle
-          </button>
+          <div className="flex gap-3">
+            <label className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg flex items-center gap-2 cursor-pointer">
+              {importing ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  <span>Import en cours...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-5 h-5" />
+                  <span>Importer Word</span>
+                </>
+              )}
+              <input
+                type="file"
+                accept=".docx"
+                onChange={handleImportWord}
+                disabled={importing}
+                className="hidden"
+              />
+            </label>
+            <button
+              onClick={handleCreate}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Nouveau modèle
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-6">
