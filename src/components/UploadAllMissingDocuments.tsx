@@ -465,8 +465,15 @@ export default function UploadAllMissingDocuments() {
   const documentTitle = totalDocs === 1 ? '📋 Document manquant' : '📋 Documents manquants';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+    <div
+      className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 py-8 px-4 pb-32"
+      style={{
+        paddingBottom: 'max(8rem, calc(8rem + env(safe-area-inset-bottom, 0px)))',
+        WebkitOverflowScrolling: 'touch',
+        overflowY: 'auto'
+      }}
+    >
+      <div className="max-w-4xl mx-auto mb-8">
         <div className="bg-white rounded-xl shadow-xl overflow-hidden">
           <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-8 py-6">
             <h1 className="text-3xl font-bold text-white mb-2">{documentTitle}</h1>
@@ -485,7 +492,7 @@ export default function UploadAllMissingDocuments() {
             </div>
           </div>
 
-          <div className="p-8">
+          <div className="p-8 pb-16">
             {successMessage && (
               <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded animate-fade-in">
                 <div className="flex items-center gap-2">
@@ -510,7 +517,7 @@ export default function UploadAllMissingDocuments() {
               </p>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-8">
               {missingDocuments.map((doc) => {
                 const Icon = doc.icon;
                 const isUploading = uploadingDocs.has(doc.type);
@@ -547,7 +554,7 @@ export default function UploadAllMissingDocuments() {
                       <>
                     {!hasFile && !isUploaded && (
                       <>
-                        <div className={`grid gap-3 mb-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                        <div className={`grid gap-4 mb-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                           {isMobile ? (
                             <>
                               <button
