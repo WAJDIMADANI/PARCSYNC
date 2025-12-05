@@ -517,12 +517,16 @@ export function ImportSalariesBulk() {
       let rows: any[] = [];
 
       if (fileExtension === 'csv') {
-        const text = await uploadedFile.text();
+        const text = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = () => reject(new Error('Erreur de lecture du fichier'));
+          reader.readAsText(uploadedFile, 'UTF-8');
+        });
         const result = Papa.parse(text, {
           header: true,
           delimiter: ';',
           skipEmptyLines: true,
-          encoding: 'UTF-8',
         });
         rows = result.data;
       } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
