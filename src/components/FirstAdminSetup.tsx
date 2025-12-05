@@ -74,7 +74,6 @@ export function FirstAdminSetup({ onComplete }: FirstAdminSetupProps) {
         const allPermissions = [
           'rh/candidats',
           'rh/salaries',
-          'rh/contrats',
           'rh/courriers',
           'rh/alertes',
           'rh/notifications',

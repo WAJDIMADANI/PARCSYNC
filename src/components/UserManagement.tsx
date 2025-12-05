@@ -26,7 +26,6 @@ const AVAILABLE_PERMISSIONS = [
   { section: 'RH', permissions: [
     { id: 'rh/candidats', label: 'Candidats' },
     { id: 'rh/salaries', label: 'Salariés' },
-    { id: 'rh/contrats', label: 'Contrats' },
     { id: 'rh/courriers', label: 'Courriers' },
     { id: 'rh/alertes', label: 'Alertes' },
     { id: 'rh/notifications', label: 'Notifications' },

@@ -10,7 +10,6 @@ export type View =
   | 'setup'
   | 'rh/candidats'
   | 'rh/salaries'
-  | 'rh/contrats'
   | 'rh/courriers'
   | 'rh/courriers-generes'
   | 'rh/alertes'
@@ -101,7 +100,6 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       children: [
         { id: 'rh/candidats', label: 'Candidats', icon: UserPlus, enabled: true },
         { id: 'rh/salaries', label: 'Salariés', icon: Users, enabled: true },
-        { id: 'rh/contrats', label: 'Contrats', icon: FileText, enabled: true },
         { id: 'rh/courriers', label: 'Courriers', icon: Mail, enabled: true },
         { id: 'rh/courriers-generes', label: 'Courriers Générés', icon: FileCheck, enabled: true },
         { id: 'rh/alertes', label: 'Alertes', icon: Bell, enabled: true },

@@ -82,7 +82,6 @@ export function AuthUsersImport() {
       const allPermissions = [
         'rh/candidats',
         'rh/salaries',
-        'rh/contrats',
         'rh/courriers',
         'rh/alertes',
         'rh/notifications',

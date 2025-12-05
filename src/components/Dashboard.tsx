@@ -53,8 +53,6 @@ export function Dashboard() {
         return <EmployeeList initialProfilId={viewParams?.profilId} />;
       case 'rh/documents':
         return <DocumentsManager />;
-      case 'rh/contrats':
-        return <ContractsList />;
       case 'rh/courriers':
         return <GeneratedLettersList />;
       case 'rh/alertes':
@@ -128,7 +126,6 @@ export function Dashboard() {
                 {view === 'rh/candidats' && 'Candidats'}
                 {view === 'rh/salaries' && 'Salariés'}
                 {view === 'rh/documents' && 'Documents'}
-                {view === 'rh/contrats' && 'Contrats'}
                 {view === 'rh/courriers' && 'Courriers Générés'}
                 {view === 'rh/courriers-generes' && 'Courriers Générés'}
                 {view === 'rh/alertes' && 'Alertes'}
