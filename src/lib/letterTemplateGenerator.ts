@@ -2,32 +2,87 @@ import { supabase } from './supabase';
 import jsPDF from 'jspdf';
 
 export const SYSTEM_VARIABLES: Record<string, string> = {
+  // Identité
   'nom': 'Nom du salarié',
   'prenom': 'Prénom du salarié',
   'nom_complet': 'Nom complet',
+  'civilite': 'Civilité (Monsieur/Madame)',
   'matricule_tca': 'Matricule TCA',
+
+  // Contact
   'email': 'Email',
   'tel': 'Téléphone',
   'adresse': 'Adresse',
   'complement_adresse': 'Complément d\'adresse',
   'code_postal': 'Code postal',
   'ville': 'Ville',
+
+  // Professionnel
   'poste': 'Poste',
   'site_nom': 'Site',
   'secteur_nom': 'Secteur',
   'date_entree': 'Date d\'entrée',
   'date_sortie': 'Date de sortie',
+
+  // Personnel
   'date_naissance': 'Date de naissance',
   'lieu_naissance': 'Lieu de naissance',
   'nationalite': 'Nationalité',
   'numero_securite_sociale': 'N° Sécurité Sociale',
+
+  // Dates
   'date_aujourd_hui': 'Date du jour',
+
+  // Entreprise
   'nom_entreprise': 'Nom de l\'entreprise',
   'adresse_entreprise': 'Adresse de l\'entreprise',
+  'ville_entreprise': 'Ville de l\'entreprise',
+  'tel_entreprise': 'Téléphone de l\'entreprise',
   'siret_entreprise': 'SIRET',
+  'rcs_entreprise': 'RCS',
+  'code_naf_entreprise': 'Code NAF',
+  'groupe_entreprise': 'Groupe',
+
+  // Signataire
   'prenom_signataire': 'Prénom du signataire',
   'nom_signataire': 'Nom du signataire',
-  'fonction_signataire': 'Fonction du signataire'
+  'fonction_signataire': 'Fonction du signataire',
+
+  // Courrier disciplinaire
+  'type_courrier': 'Type de courrier',
+  'mode_envoi': 'Mode d\'envoi',
+  'motif_avertissement': 'Motif de l\'avertissement',
+  'periode_concernee': 'Période concernée',
+  'resume_faits': 'Résumé des faits',
+  'details_infractions': 'Détails des infractions',
+  'total_km_non_autorises': 'Total km non autorisés',
+  'nombre_incidents': 'Nombre d\'incidents',
+  'date_avertissement_reference': 'Date avertissement de référence',
+  'historique_avertissements': 'Historique des avertissements',
+  'mesure_disciplinaire': 'Mesure disciplinaire',
+  'risque_en_cas_de_recidive': 'Risque en cas de récidive',
+
+  // Véhicule de service
+  'type_vehicule': 'Type de véhicule',
+  'immatriculation_vehicule': 'Immatriculation du véhicule',
+  'modele_vehicule': 'Modèle du véhicule',
+  'zone_autorisee': 'Zone autorisée',
+
+  // Convocation à entretien
+  'date_entretien': 'Date de l\'entretien',
+  'heure_entretien': 'Heure de l\'entretien',
+  'lieu_entretien': 'Lieu de l\'entretien',
+  'type_entretien': 'Type d\'entretien',
+
+  // Mise à pied conservatoire
+  'date_debut_mise_a_pied': 'Date de début de mise à pied',
+  'date_fin_mise_a_pied': 'Date de fin de mise à pied',
+
+  // Licenciement
+  'date_courrier_convocation_prealable': 'Date courrier convocation préalable',
+  'date_entretien_prealable': 'Date entretien préalable',
+  'lieu_entretien_prealable': 'Lieu entretien préalable',
+  'motif_licenciement': 'Motif du licenciement'
 };
 
 export function extractVariables(template: string): string[] {
@@ -50,33 +105,99 @@ export function classifyVariables(
 export function formatProfileData(profil: any): Record<string, string> {
   const today = new Date();
 
+  // Déterminer la civilité basée sur le genre
+  let civilite = '';
+  if (profil.genre) {
+    const genre = profil.genre.toLowerCase();
+    if (genre === 'masculin' || genre === 'homme' || genre === 'm') {
+      civilite = 'Monsieur';
+    } else if (genre === 'féminin' || genre === 'femme' || genre === 'f') {
+      civilite = 'Madame';
+    }
+  }
+
   return {
+    // Identité
     nom: profil.nom || '',
     prenom: profil.prenom || '',
     nom_complet: `${profil.prenom || ''} ${profil.nom || ''}`.trim(),
+    civilite: civilite,
     matricule_tca: profil.matricule_tca || '',
+
+    // Contact
     email: profil.email || '',
     tel: profil.tel || '',
     adresse: profil.adresse || '',
     complement_adresse: profil.complement_adresse || '',
     code_postal: profil.code_postal || '',
     ville: profil.ville || '',
+
+    // Professionnel
     poste: profil.poste || '',
     site_nom: profil.site?.nom || '',
     secteur_nom: profil.secteur?.nom || '',
     date_entree: profil.date_entree ? formatDate(profil.date_entree) : '',
     date_sortie: profil.date_sortie ? formatDate(profil.date_sortie) : '',
+
+    // Personnel
     date_naissance: profil.date_naissance ? formatDate(profil.date_naissance) : '',
     lieu_naissance: profil.lieu_naissance || '',
     nationalite: profil.nationalite || '',
     numero_securite_sociale: profil.numero_securite_sociale || '',
+
+    // Dates
     date_aujourd_hui: formatDate(today.toISOString()),
+
+    // Entreprise
     nom_entreprise: 'TRANSPORT CLASSE AFFAIRE',
     adresse_entreprise: '111 Avenue Victor Hugo, 75116 Paris',
+    ville_entreprise: 'Paris',
+    tel_entreprise: '01.86.22.24.00',
     siret_entreprise: '50426507500029',
+    rcs_entreprise: 'RCS PARIS B 504265075',
+    code_naf_entreprise: '4939B – Autres transports routiers de voyageurs',
+    groupe_entreprise: 'NKM HOLDING',
+
+    // Signataire
     prenom_signataire: '',
     nom_signataire: '',
-    fonction_signataire: 'Direction des Ressources Humaines'
+    fonction_signataire: 'Direction des Ressources Humaines',
+
+    // Courrier disciplinaire (valeurs vides, à remplir par variables personnalisées)
+    type_courrier: '',
+    mode_envoi: '',
+    motif_avertissement: '',
+    periode_concernee: '',
+    resume_faits: '',
+    details_infractions: '',
+    total_km_non_autorises: '',
+    nombre_incidents: '',
+    date_avertissement_reference: '',
+    historique_avertissements: '',
+    mesure_disciplinaire: '',
+    risque_en_cas_de_recidive: '',
+
+    // Véhicule de service
+    type_vehicule: '',
+    immatriculation_vehicule: '',
+    modele_vehicule: '',
+    zone_autorisee: '',
+
+    // Convocation à entretien
+    date_entretien: '',
+    heure_entretien: '',
+    lieu_entretien: '',
+    type_entretien: '',
+
+    // Mise à pied conservatoire
+    date_debut_mise_a_pied: '',
+    date_fin_mise_a_pied: '',
+
+    // Licenciement
+    date_courrier_convocation_prealable: '',
+    date_entretien_prealable: '',
+    lieu_entretien_prealable: '',
+    motif_licenciement: ''
   };
 }
 
