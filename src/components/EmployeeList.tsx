@@ -99,6 +99,9 @@ interface Contract {
   date_debut: string | null;
   date_fin: string | null;
   type: string | null;
+  source?: string;
+  fichier_signe_url?: string;
+  signed_storage_path?: string;
   modeles_contrats?: {
     nom: string;
   } | null;
@@ -1332,70 +1335,117 @@ function EmployeeDetailModal({
         return;
       }
 
-      let yousignJustCreated = false;
+      // Vérifier si c'est un contrat manuel
+      const isManual = contrat.source === 'manuel' || !contrat.modele_id;
 
-      // Si le contrat n'a pas de demande Yousign, on en crée une
-      if (!contrat.yousign_signature_request_id) {
-        console.log('Pas de demande Yousign existante, création en cours...');
-        console.log('Contract ID:', contrat.id);
-        console.log('API URL:', `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`);
+      if (isManual) {
+        // CONTRAT MANUEL : Envoyer par email simple comme un document
+        console.log('Contrat manuel détecté, envoi par email simple...');
 
-        try {
-          const yousignResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              },
-              body: JSON.stringify({ contractId: contrat.id })
-            }
-          );
-
-          console.log('Yousign Response Status:', yousignResponse.status);
-
-          if (!yousignResponse.ok) {
-            const errorText = await yousignResponse.text();
-            console.error('Erreur Yousign (status ' + yousignResponse.status + '):', errorText);
-            throw new Error('Impossible de créer la demande de signature Yousign: ' + errorText.substring(0, 100));
-          }
-
-          const yousignData = await yousignResponse.json();
-          console.log('Demande Yousign créée avec succès:', yousignData);
-          yousignJustCreated = true;
-        } catch (fetchError) {
-          console.error('FETCH ERROR:', fetchError);
-          throw new Error('Erreur réseau lors de la création Yousign: ' + (fetchError instanceof Error ? fetchError.message : 'Unknown'));
-        }
-      } else {
-        console.log('Demande Yousign déjà existante, envoi d\'un email de rappel...');
-
-        if (!contrat.yousign_signer_id) {
-          throw new Error('ID du signataire Yousign manquant. Impossible de renvoyer l\'email.');
+        if (!contrat.fichier_signe_url && !contrat.signed_storage_path) {
+          throw new Error('Aucun fichier PDF trouvé pour ce contrat manuel');
         }
 
-        const reminderResponse = await fetch(
-          `https://api-sandbox.yousign.app/v3/signature_requests/${contrat.yousign_signature_request_id}/signers/${contrat.yousign_signer_id}/send_reminder`,
+        // Récupérer l'URL signée du contrat
+        const contractUrl = await resolveContractUrl(contrat);
+
+        // Envoyer l'email via la fonction send-documents-email
+        const emailResponse = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-documents-email`,
           {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_YOUSIGN_API_KEY}`,
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             },
+            body: JSON.stringify({
+              employeeEmail: currentEmployee.email,
+              employeeName: `${currentEmployee.prenom} ${currentEmployee.nom}`,
+              documents: [
+                {
+                  type: 'contrat',
+                  label: 'Contrat de travail',
+                  url: contractUrl
+                }
+              ]
+            })
           }
         );
 
-        if (!reminderResponse.ok) {
-          const errorText = await reminderResponse.text();
-          console.error('Erreur lors de l\'envoi du rappel Yousign:', errorText);
-          throw new Error('Impossible de renvoyer l\'email de rappel: ' + errorText.substring(0, 100));
+        if (!emailResponse.ok) {
+          const errorText = await emailResponse.text();
+          console.error('Erreur envoi email:', errorText);
+          throw new Error('Impossible d\'envoyer l\'email: ' + errorText.substring(0, 100));
         }
 
-        console.log('Email de rappel envoyé avec succès par Yousign');
-      }
+        console.log('Email de contrat manuel envoyé avec succès');
+      } else {
+        // CONTRAT GÉNÉRÉ : Utiliser Yousign pour la signature
+        let yousignJustCreated = false;
 
-      console.log('Email envoyé automatiquement par Yousign');
+        // Si le contrat n'a pas de demande Yousign, on en crée une
+        if (!contrat.yousign_signature_request_id) {
+          console.log('Pas de demande Yousign existante, création en cours...');
+          console.log('Contract ID:', contrat.id);
+          console.log('API URL:', `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`);
+
+          try {
+            const yousignResponse = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                },
+                body: JSON.stringify({ contractId: contrat.id })
+              }
+            );
+
+            console.log('Yousign Response Status:', yousignResponse.status);
+
+            if (!yousignResponse.ok) {
+              const errorText = await yousignResponse.text();
+              console.error('Erreur Yousign (status ' + yousignResponse.status + '):', errorText);
+              throw new Error('Impossible de créer la demande de signature Yousign: ' + errorText.substring(0, 100));
+            }
+
+            const yousignData = await yousignResponse.json();
+            console.log('Demande Yousign créée avec succès:', yousignData);
+            yousignJustCreated = true;
+          } catch (fetchError) {
+            console.error('FETCH ERROR:', fetchError);
+            throw new Error('Erreur réseau lors de la création Yousign: ' + (fetchError instanceof Error ? fetchError.message : 'Unknown'));
+          }
+        } else {
+          console.log('Demande Yousign déjà existante, envoi d\'un email de rappel...');
+
+          if (!contrat.yousign_signer_id) {
+            throw new Error('ID du signataire Yousign manquant. Impossible de renvoyer l\'email.');
+          }
+
+          const reminderResponse = await fetch(
+            `https://api-sandbox.yousign.app/v3/signature_requests/${contrat.yousign_signature_request_id}/signers/${contrat.yousign_signer_id}/send_reminder`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_YOUSIGN_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+
+          if (!reminderResponse.ok) {
+            const errorText = await reminderResponse.text();
+            console.error('Erreur lors de l\'envoi du rappel Yousign:', errorText);
+            throw new Error('Impossible de renvoyer l\'email de rappel: ' + errorText.substring(0, 100));
+          }
+
+          console.log('Email de rappel envoyé avec succès par Yousign');
+        }
+
+        console.log('Email envoyé automatiquement par Yousign');
+      }
 
       setResendSuccess(true);
       setTimeout(() => setResendSuccess(false), 3000);
