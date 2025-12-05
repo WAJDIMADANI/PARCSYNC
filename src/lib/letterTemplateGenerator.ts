@@ -62,6 +62,24 @@ export const SYSTEM_VARIABLES: Record<string, string> = {
   'mesure_disciplinaire': 'Mesure disciplinaire',
   'risque_en_cas_de_recidive': 'Risque en cas de récidive',
 
+  // Incident unique
+  'date_incident': 'Date de l\'incident',
+  'heure_debut_incident': 'Heure de début de l\'incident',
+  'heure_fin_incident': 'Heure de fin de l\'incident',
+  'km_non_autorises': 'Km non autorisés',
+
+  // Incident 1
+  'date_incident_1': 'Date de l\'incident 1',
+  'heure_debut_incident_1': 'Heure de début incident 1',
+  'heure_fin_incident_1': 'Heure de fin incident 1',
+  'km_non_autorises_1': 'Km non autorisés incident 1',
+
+  // Incident 2
+  'date_incident_2': 'Date de l\'incident 2',
+  'heure_debut_incident_2': 'Heure de début incident 2',
+  'heure_fin_incident_2': 'Heure de fin incident 2',
+  'km_non_autorises_2': 'Km non autorisés incident 2',
+
   // Véhicule de service
   'type_vehicule': 'Type de véhicule',
   'immatriculation_vehicule': 'Immatriculation du véhicule',
@@ -176,6 +194,24 @@ export function formatProfileData(profil: any): Record<string, string> {
     historique_avertissements: '',
     mesure_disciplinaire: '',
     risque_en_cas_de_recidive: '',
+
+    // Incident unique
+    date_incident: '',
+    heure_debut_incident: '',
+    heure_fin_incident: '',
+    km_non_autorises: '',
+
+    // Incident 1
+    date_incident_1: '',
+    heure_debut_incident_1: '',
+    heure_fin_incident_1: '',
+    km_non_autorises_1: '',
+
+    // Incident 2
+    date_incident_2: '',
+    heure_debut_incident_2: '',
+    heure_fin_incident_2: '',
+    km_non_autorises_2: '',
 
     // Véhicule de service
     type_vehicule: '',

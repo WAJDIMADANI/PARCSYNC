@@ -14,6 +14,7 @@ export function VariableInsertButtons({ onInsert }: VariableInsertButtonsProps) 
     'Entreprise': ['nom_entreprise', 'adresse_entreprise', 'ville_entreprise', 'tel_entreprise', 'siret_entreprise', 'rcs_entreprise', 'code_naf_entreprise', 'groupe_entreprise'],
     'Signataire': ['prenom_signataire', 'nom_signataire', 'fonction_signataire'],
     'Courrier disciplinaire': ['type_courrier', 'mode_envoi', 'motif_avertissement', 'periode_concernee', 'resume_faits', 'details_infractions', 'total_km_non_autorises', 'nombre_incidents', 'date_avertissement_reference', 'historique_avertissements', 'mesure_disciplinaire', 'risque_en_cas_de_recidive'],
+    'Incidents': ['date_incident', 'heure_debut_incident', 'heure_fin_incident', 'km_non_autorises', 'date_incident_1', 'heure_debut_incident_1', 'heure_fin_incident_1', 'km_non_autorises_1', 'date_incident_2', 'heure_debut_incident_2', 'heure_fin_incident_2', 'km_non_autorises_2'],
     'Véhicule': ['type_vehicule', 'immatriculation_vehicule', 'modele_vehicule', 'zone_autorisee'],
     'Entretien': ['date_entretien', 'heure_entretien', 'lieu_entretien', 'type_entretien'],
     'Mise à pied': ['date_debut_mise_a_pied', 'date_fin_mise_a_pied'],
