@@ -421,18 +421,24 @@ export function ImportSalariesBulk() {
     return actualColumn ? (row[actualColumn]?.toString().trim() || '') : '';
   };
 
-  const parseDate = (dateStr: string | Date | any): string | undefined => {
-    if (!dateStr) return undefined;
+  const parseDate = (dateStr: string | Date | any, fieldName?: string): string | null => {
+    // Accepter les dates vides - retourner null au lieu de undefined
+    if (!dateStr || dateStr === '' || dateStr === 'undefined' || dateStr === 'null') {
+      return null;
+    }
 
     try {
       if (dateStr instanceof Date) {
-        if (isNaN(dateStr.getTime())) return undefined;
+        if (isNaN(dateStr.getTime())) {
+          console.warn(`⚠️ Date invalide pour ${fieldName || 'champ inconnu'}: objet Date invalide`);
+          return null;
+        }
         const year = dateStr.getFullYear();
 
         // Vérifier que l'année est dans une plage raisonnable
         if (year < 1900 || year > 2100) {
-          console.error(`❌ Année hors limites: ${year}. L'année doit être entre 1900 et 2100.`);
-          return undefined;
+          console.warn(`⚠️ Année hors limites pour ${fieldName || 'champ inconnu'}: ${year} (doit être entre 1900-2100)`);
+          return null;
         }
 
         const month = String(dateStr.getMonth() + 1).padStart(2, '0');
@@ -441,12 +447,14 @@ export function ImportSalariesBulk() {
       }
 
       const cleaned = String(dateStr).trim();
-      if (cleaned === '') return undefined;
+      if (cleaned === '' || cleaned === 'undefined' || cleaned === 'null') {
+        return null;
+      }
 
       const parts = cleaned.split('/');
       if (parts.length !== 3) {
-        console.warn(`⚠️ Date format incorrect: "${dateStr}" - Format attendu: JJ/MM/AAAA`);
-        return undefined;
+        console.warn(`⚠️ Format de date incorrect pour ${fieldName || 'champ inconnu'}: "${dateStr}" - Format attendu: JJ/MM/AAAA`);
+        return null;
       }
 
       const dayNum = parseInt(parts[0], 10);
@@ -454,8 +462,8 @@ export function ImportSalariesBulk() {
       let yearNum = parseInt(parts[2], 10);
 
       if (isNaN(dayNum) || isNaN(monthNum) || isNaN(yearNum)) {
-        console.warn(`⚠️ Date contient des valeurs non-numériques: "${dateStr}"`);
-        return undefined;
+        console.warn(`⚠️ Date contient des valeurs non-numériques pour ${fieldName || 'champ inconnu'}: "${dateStr}"`);
+        return null;
       }
 
       // Gérer les années à 2 chiffres
@@ -465,29 +473,29 @@ export function ImportSalariesBulk() {
         } else {
           yearNum += 1900;
         }
-        console.log(`ℹ️ Année à 2 chiffres convertie: ${parts[2]} → ${yearNum} pour la date "${dateStr}"`);
+        console.log(`ℹ️ Année à 2 chiffres convertie pour ${fieldName || 'champ inconnu'}: ${parts[2]} → ${yearNum}`);
       }
 
       // Vérifier que l'année est dans une plage raisonnable pour PostgreSQL
       if (yearNum < 1900 || yearNum > 2100) {
-        console.error(`❌ Année hors limites: ${yearNum} dans la date "${dateStr}". L'année doit être entre 1900 et 2100.`);
-        return undefined;
+        console.warn(`⚠️ Année hors limites pour ${fieldName || 'champ inconnu'}: ${yearNum} dans "${dateStr}" (doit être entre 1900-2100)`);
+        return null;
       }
 
       if (monthNum < 1 || monthNum > 12) {
-        console.error(`❌ Mois invalide: ${monthNum} dans la date "${dateStr}". Le mois doit être entre 1 et 12.`);
-        return undefined;
+        console.warn(`⚠️ Mois invalide pour ${fieldName || 'champ inconnu'}: ${monthNum} dans "${dateStr}"`);
+        return null;
       }
 
       if (dayNum < 1 || dayNum > 31) {
-        console.error(`❌ Jour invalide: ${dayNum} dans la date "${dateStr}". Le jour doit être entre 1 et 31.`);
-        return undefined;
+        console.warn(`⚠️ Jour invalide pour ${fieldName || 'champ inconnu'}: ${dayNum} dans "${dateStr}"`);
+        return null;
       }
 
       const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
       if (dayNum > daysInMonth) {
-        console.error(`❌ Jour invalide: ${dayNum} pour le mois ${monthNum}/${yearNum}. Ce mois a seulement ${daysInMonth} jours.`);
-        return undefined;
+        console.warn(`⚠️ Jour invalide pour ${fieldName || 'champ inconnu'}: ${dayNum} pour le mois ${monthNum}/${yearNum} (ce mois a ${daysInMonth} jours)`);
+        return null;
       }
 
       const day = String(dayNum).padStart(2, '0');
@@ -498,14 +506,14 @@ export function ImportSalariesBulk() {
 
       const testDate = new Date(isoDate);
       if (isNaN(testDate.getTime())) {
-        console.error(`❌ Date invalide après conversion: "${dateStr}" → "${isoDate}"`);
-        return undefined;
+        console.warn(`⚠️ Date invalide après conversion pour ${fieldName || 'champ inconnu'}: "${dateStr}" → "${isoDate}"`);
+        return null;
       }
 
       return isoDate;
     } catch (error) {
-      console.error(`❌ Erreur lors du parsing de la date "${dateStr}":`, error);
-      return undefined;
+      console.warn(`⚠️ Erreur lors du parsing de la date pour ${fieldName || 'champ inconnu'}: "${dateStr}"`, error);
+      return null;
     }
   };
 
@@ -638,16 +646,16 @@ export function ImportSalariesBulk() {
       const dateVisiteMedicaleRaw = getColumnValue(row, columnMap, 'date_visite_medicale');
       const dateFinVisiteMedicaleRaw = getColumnValue(row, columnMap, 'date_fin_visite_medicale');
 
-      const dateDebutContrat = parseDate(dateDebutRaw);
-      const dateFinContrat = parseDate(dateFinRaw);
-      const dateNaissance = parseDate(dateNaissanceRaw);
-      const avenant1DateDebut = parseDate(avenant1DateDebutRaw);
-      const avenant1DateFin = parseDate(avenant1DateFinRaw);
-      const avenant2DateDebut = parseDate(avenant2DateDebutRaw);
-      const avenant2DateFin = parseDate(avenant2DateFinRaw);
-      const titreSejourFin = parseDate(titreSejourFinRaw);
-      const dateVisiteMedicale = parseDate(dateVisiteMedicaleRaw);
-      const dateFinVisiteMedicale = parseDate(dateFinVisiteMedicaleRaw);
+      const dateDebutContrat = parseDate(dateDebutRaw, 'Date début contrat');
+      const dateFinContrat = parseDate(dateFinRaw, 'Date fin contrat');
+      const dateNaissance = parseDate(dateNaissanceRaw, 'Date de naissance');
+      const avenant1DateDebut = parseDate(avenant1DateDebutRaw, 'Avenant 1 - Date début');
+      const avenant1DateFin = parseDate(avenant1DateFinRaw, 'Avenant 1 - Date fin');
+      const avenant2DateDebut = parseDate(avenant2DateDebutRaw, 'Avenant 2 - Date début');
+      const avenant2DateFin = parseDate(avenant2DateFinRaw, 'Avenant 2 - Date fin');
+      const titreSejourFin = parseDate(titreSejourFinRaw, 'Titre de séjour - Fin validité');
+      const dateVisiteMedicale = parseDate(dateVisiteMedicaleRaw, 'Date visite médicale');
+      const dateFinVisiteMedicale = parseDate(dateFinVisiteMedicaleRaw, 'Date fin visite médicale');
 
       const hasDateDebutButInvalid = dateDebutRaw && !dateDebutContrat;
       const hasDateFinButInvalid = dateFinRaw && !dateFinContrat;
@@ -689,9 +697,9 @@ export function ImportSalariesBulk() {
         statusMessage = 'Champs obligatoires manquants: Nom, Prénom ou Email';
         selected = false;
       } else if (invalidDates.length > 0) {
-        status = 'error';
-        statusMessage = `Date(s) invalide(s): ${invalidDates.join(', ')}. Format attendu: JJ/MM/AAAA (année entre 1900-2100)`;
-        selected = false;
+        status = 'warning';
+        statusMessage = `Date(s) invalide(s) (seront ignorées): ${invalidDates.join(', ')}. Format attendu: JJ/MM/AAAA (année entre 1900-2100)`;
+        // On garde selected à true pour permettre l'import
       } else if (email && existingEmailSet.has(email.toLowerCase())) {
         status = 'warning';
         statusMessage = `Email "${email}" existe déjà - Sera mis à jour`;
@@ -870,7 +878,7 @@ export function ImportSalariesBulk() {
             periode_essai: emp.data.periode_essai,
             modele_contrat: emp.data.modele_contrat,
             secteur_id: emp.data.secteur_id,
-            date_entree: emp.data.date_debut_contrat || new Date().toISOString().split('T')[0],
+            date_entree: emp.data.date_debut_contrat,
             statut: 'actif',
             role: 'salarie',
           });
@@ -972,7 +980,6 @@ export function ImportSalariesBulk() {
             'Début contrat': emp.data.date_debut_contrat,
             'Fin contrat': emp.data.date_fin_contrat,
             'Naissance': emp.data.date_naissance,
-            'Entrée': emp.data.date_debut_contrat,
             'Avenant 1 début': emp.data.avenant_1_date_debut,
             'Avenant 1 fin': emp.data.avenant_1_date_fin,
             'Avenant 2 début': emp.data.avenant_2_date_debut,
@@ -982,18 +989,27 @@ export function ImportSalariesBulk() {
             'Fin visite médicale': emp.data.date_fin_visite_medicale,
           };
 
-          // Afficher toutes les dates avec leur valeur
+          // Trouver quelle date pose problème
+          let problematicDate = 'inconnue';
           for (const [label, value] of Object.entries(allDates)) {
             if (value) {
               dateFields.push(`${label}: ${value}`);
+              // Vérifier si c'est une date problématique
+              const year = parseInt(String(value).split('-')[0]);
+              if (year < 1900 || year > 2100 || isNaN(year)) {
+                problematicDate = `${label} (${value})`;
+              }
             }
           }
 
-          console.error(`❌ Toutes les dates de la ligne ${emp.rowNumber}:`, allDates);
+          console.error(`❌ Dates de la ligne ${emp.rowNumber}:`, allDates);
 
-          errorMessage = `Erreur de date PostgreSQL. Dates présentes: ${dateFields.join(', ')}. Vérifiez que toutes les années sont entre 1900-2100 et que les dates sont au format correct (AAAA-MM-JJ après parsing).`;
+          errorMessage = `Date hors limites PostgreSQL: ${problematicDate}. Les années doivent être entre 1900-2100. Dates présentes: ${dateFields.join(', ')}`;
         } else if (errorMessage.includes('invalid input syntax for type date')) {
-          errorMessage = `Format de date incorrect détecté par PostgreSQL. Le fichier doit utiliser le format JJ/MM/AAAA (ex: 15/03/2024)`;
+          // Extraire le nom de la colonne si possible
+          const colMatch = errorMessage.match(/column "([^"]+)"/);
+          const columnInfo = colMatch ? ` pour le champ "${colMatch[1]}"` : '';
+          errorMessage = `Format de date incorrect${columnInfo}. Vérifiez que toutes les dates utilisent le format JJ/MM/AAAA`;
         } else if (errorMessage.includes('null value in column')) {
           const match = errorMessage.match(/null value in column "([^"]+)"/);
           const columnName = match ? match[1] : 'inconnu';
@@ -1021,6 +1037,44 @@ export function ImportSalariesBulk() {
     setImportProgress({ current: 0, total: 0 });
     setUnmappedColumns([]);
     setMappingWarnings([]);
+  };
+
+  const exportErrorsToCSV = () => {
+    if (!importResult) return;
+
+    // Filtrer uniquement les erreurs
+    const errors = importResult.details.filter(detail => detail.type === 'error');
+
+    if (errors.length === 0) {
+      alert('Aucune erreur à exporter');
+      return;
+    }
+
+    // Créer le contenu CSV
+    const headers = ['Ligne', 'Nom', 'Message d\'erreur'];
+    const csvRows = [headers.join(',')];
+
+    errors.forEach(error => {
+      const row = [
+        error.rowNumber,
+        `"${error.name}"`,
+        `"${error.message.replace(/"/g, '""')}"` // Échapper les guillemets
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `erreurs_import_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const scrollToRow = (rowNumber: number) => {
@@ -1191,6 +1245,15 @@ export function ImportSalariesBulk() {
         </div>
 
         <div className="flex gap-4">
+          {importResult.errors > 0 && (
+            <button
+              onClick={exportErrorsToCSV}
+              className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2"
+            >
+              <Download className="w-5 h-5" />
+              Exporter les erreurs ({importResult.errors})
+            </button>
+          )}
           <button
             onClick={reset}
             className="flex-1 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white font-semibold py-3 px-6 rounded-lg transition-all"
