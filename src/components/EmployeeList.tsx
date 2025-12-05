@@ -6,7 +6,7 @@ import EmployeeDeparture from './EmployeeDeparture';
 import { LoadingSpinner } from './LoadingSpinner';
 import ContractSendModal from './ContractSendModal';
 import ContractValidationPanel from './ContractValidationPanel';
-import { resolveDocUrl } from '../lib/documentStorage';
+import { resolveDocUrl, isManualContract, resolveContractUrl } from '../lib/documentStorage';
 import ImportantDocumentUpload from './ImportantDocumentUpload';
 import SendMissingDocumentsReminderModal from './SendMissingDocumentsReminderModal';
 import { REQUIRED_DOCUMENT_TYPES, REQUIRED_DOCUMENTS_MAP } from '../constants/requiredDocuments';
@@ -1770,8 +1770,18 @@ function EmployeeDetailModal({
       }
 
       if (contract.fichier_signe_url) {
-        const fullUrl = await resolveDocUrl(contract.fichier_signe_url);
-        window.open(fullUrl, '_blank');
+        // Utiliser le système spécifique pour les contrats manuels
+        if (isManualContract(contract)) {
+          const fullUrl = await resolveContractUrl(contract);
+          window.open(fullUrl, '_blank');
+        } else {
+          // Système existant pour les contrats générés
+          const fullUrl = await resolveDocUrl({
+            fichier_url: contract.fichier_signe_url,
+            storage_path: contract.signed_storage_path
+          });
+          window.open(fullUrl, '_blank');
+        }
       } else {
         alert('PDF non disponible pour ce contrat');
       }
@@ -3233,8 +3243,18 @@ function EmployeeDetailModal({
                             <button
                               onClick={async () => {
                                 try {
-                                  const url = await resolveDocUrl(contract.fichier_signe_url);
-                                  window.open(url, '_blank');
+                                  // Utiliser le système spécifique pour les contrats manuels
+                                  if (isManualContract(contract)) {
+                                    const url = await resolveContractUrl(contract);
+                                    window.open(url, '_blank');
+                                  } else {
+                                    // Système existant pour les contrats générés
+                                    const url = await resolveDocUrl({
+                                      fichier_url: contract.fichier_signe_url,
+                                      storage_path: contract.signed_storage_path
+                                    });
+                                    window.open(url, '_blank');
+                                  }
                                 } catch (error: any) {
                                   console.error('Erreur téléchargement contrat:', error);
                                   alert('Erreur lors du téléchargement: ' + (error.message || 'Erreur inconnue'));

@@ -52,3 +52,52 @@ export async function onVoirDocument(doc: Document): Promise<void> {
     alert('Impossible d\'ouvrir le document : ' + (e.message || ''));
   }
 }
+
+// ===== SYSTÈME SPÉCIFIQUE POUR LES CONTRATS MANUELS =====
+
+export interface Contract {
+  source?: string;
+  modele_id?: string | null;
+  fichier_signe_url?: string;
+  signed_storage_path?: string;
+  [key: string]: any;
+}
+
+export function isManualContract(contract: Contract): boolean {
+  return contract.source === 'manuel' || !contract.modele_id;
+}
+
+export async function resolveContractUrl(contract: Contract): Promise<string> {
+  // 1) Vérifier si c'est une URL HTTP complète (compatibilité descendante)
+  const url = contract.fichier_signe_url || contract.signed_storage_path || '';
+  if (isHttp(url)) {
+    return url;
+  }
+
+  // 2) Sinon, traiter comme un chemin Supabase Storage
+  if (!url) {
+    throw new Error('Fichier de contrat manquant');
+  }
+
+  // 3) Extraire le bucket et le chemin relatif
+  // Format attendu: "contrats/profil_id/fichier.pdf"
+  const segments = url.split('/');
+  if (segments.length < 2) {
+    throw new Error('Format de chemin invalide');
+  }
+
+  const bucket = segments[0]; // "contrats"
+  const relativePath = segments.slice(1).join('/'); // "profil_id/fichier.pdf"
+
+  // 4) Créer une URL signée pour accès sécurisé
+  const { data, error } = await supabase
+    .storage
+    .from(bucket)
+    .createSignedUrl(relativePath, 300); // 5 minutes
+
+  if (error) {
+    throw new Error(`Erreur lors de la génération de l'URL: ${error.message}`);
+  }
+
+  return data.signedUrl;
+}
