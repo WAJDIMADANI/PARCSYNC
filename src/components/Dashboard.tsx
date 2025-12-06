@@ -32,7 +32,7 @@ import { DemandesPage } from './DemandesPage';
 import { LetterTemplatesManager } from './LetterTemplatesManager';
 import { GeneratedLettersList } from './GeneratedLettersList';
 import { MissingDocuments } from './MissingDocuments';
-import { GenerateLetterFromTemplate } from './GenerateLetterFromTemplate';
+import { GenerateLetterPage } from './GenerateLetterPage';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -102,7 +102,7 @@ export function Dashboard() {
       case 'admin/modeles':
         return <LetterTemplatesManager />;
       case 'admin/generer-courrier':
-        return <GenerateLetterFromTemplate />;
+        return <GenerateLetterPage />;
       case 'admin/modeles-contrats':
         return <ContractTemplates />;
       case 'admin/import-salarie':

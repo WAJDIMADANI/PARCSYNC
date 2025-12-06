@@ -130,29 +130,39 @@ export function getSystemVariables(): string[] {
   return [
     'nom',
     'prenom',
-    'matricule',
+    'nom_complet',
+    'civilite',
+    'matricule_tca',
     'email',
-    'telephone',
+    'tel',
     'adresse',
-    'ville',
+    'complement_adresse',
     'code_postal',
-    'pays',
+    'ville',
     'date_naissance',
     'lieu_naissance',
     'pays_naissance',
+    'nationalite',
     'numero_securite_sociale',
     'iban',
     'poste',
-    'site',
-    'secteur',
-    'date_debut',
-    'date_fin',
-    'salaire',
-    'type_contrat',
-    'duree_travail',
-    'date_jour',
+    'site_nom',
+    'secteur_nom',
+    'date_entree',
+    'date_sortie',
+    'date_aujourd_hui',
+    'nom_entreprise',
+    'adresse_entreprise',
+    'ville_entreprise',
+    'tel_entreprise',
+    'siret_entreprise',
+    'rcs_entreprise',
+    'code_naf_entreprise',
+    'groupe_entreprise',
+    'prenom_signataire',
+    'nom_signataire',
+    'fonction_signataire',
     'genre',
-    'civilite',
   ];
 }
 
@@ -179,45 +189,87 @@ export function classifyVariables(variables: string[]): {
 }
 
 /**
+ * Format date for display
+ */
+function formatDate(dateStr: string | Date): string {
+  try {
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    return date.toLocaleDateString('fr-FR');
+  } catch {
+    return String(dateStr);
+  }
+}
+
+/**
  * Prepare template data from a profile/employee record
+ * This matches the formatProfileData function from letterTemplateGenerator.ts
  */
 export function prepareTemplateData(
-  profile: any,
+  profil: any,
   customVariables: Record<string, any> = {}
 ): TemplateVariable {
+  const today = new Date();
+
+  // Déterminer la civilité basée sur le genre
+  let civilite = '';
+  if (profil.genre) {
+    const genre = profil.genre.toLowerCase();
+    if (genre === 'masculin' || genre === 'homme' || genre === 'm') {
+      civilite = 'Monsieur';
+    } else if (genre === 'féminin' || genre === 'femme' || genre === 'f') {
+      civilite = 'Madame';
+    }
+  }
+
   const data: TemplateVariable = {
-    // Personal information
-    nom: profile.nom || '',
-    prenom: profile.prenom || '',
-    matricule: profile.matricule || '',
-    email: profile.email || '',
-    telephone: profile.telephone || '',
-    adresse: profile.adresse || '',
-    ville: profile.ville || '',
-    code_postal: profile.code_postal || '',
-    pays: profile.pays || '',
-    date_naissance: profile.date_naissance || '',
-    lieu_naissance: profile.lieu_naissance || '',
-    pays_naissance: profile.pays_naissance || '',
-    numero_securite_sociale: profile.numero_securite_sociale || '',
-    iban: profile.iban || '',
-    genre: profile.genre || '',
-    civilite: profile.genre === 'M' ? 'Monsieur' : profile.genre === 'F' ? 'Madame' : '',
+    // Identité
+    nom: profil.nom || '',
+    prenom: profil.prenom || '',
+    nom_complet: `${profil.prenom || ''} ${profil.nom || ''}`.trim(),
+    civilite: civilite,
+    matricule_tca: profil.matricule_tca || '',
 
-    // Work information
-    poste: profile.poste?.nom || '',
-    site: profile.site?.nom || '',
-    secteur: profile.secteur?.nom || '',
-    salaire: profile.salaire || '',
-    type_contrat: profile.type_contrat || '',
-    duree_travail: profile.duree_travail || '',
+    // Contact
+    email: profil.email || '',
+    tel: profil.tel || '',
+    adresse: profil.adresse || '',
+    complement_adresse: profil.complement_adresse || '',
+    code_postal: profil.code_postal || '',
+    ville: profil.ville || '',
 
-    // Contract dates
-    date_debut: profile.date_debut || '',
-    date_fin: profile.date_fin || '',
+    // Professionnel
+    poste: profil.poste || '',
+    site_nom: profil.site?.nom || '',
+    secteur_nom: profil.secteur?.nom || '',
+    date_entree: profil.date_entree ? formatDate(profil.date_entree) : '',
+    date_sortie: profil.date_sortie ? formatDate(profil.date_sortie) : '',
 
-    // Current date
-    date_jour: new Date().toLocaleDateString('fr-FR'),
+    // Personnel
+    date_naissance: profil.date_naissance ? formatDate(profil.date_naissance) : '',
+    lieu_naissance: profil.lieu_naissance || '',
+    pays_naissance: profil.pays_naissance || '',
+    nationalite: profil.nationalite || '',
+    numero_securite_sociale: profil.numero_securite_sociale || '',
+    iban: profil.iban || '',
+    genre: profil.genre || '',
+
+    // Dates
+    date_aujourd_hui: formatDate(today.toISOString()),
+
+    // Entreprise (données fixes)
+    nom_entreprise: 'TRANSPORT CLASSE AFFAIRE',
+    adresse_entreprise: '111 Avenue Victor Hugo, 75116 Paris',
+    ville_entreprise: 'Paris',
+    tel_entreprise: '01.86.22.24.00',
+    siret_entreprise: '50426507500029',
+    rcs_entreprise: 'RCS PARIS B 504265075',
+    code_naf_entreprise: '4939B – Autres transports routiers de voyageurs',
+    groupe_entreprise: 'NKM HOLDING',
+
+    // Signataire (valeurs par défaut)
+    prenom_signataire: '',
+    nom_signataire: '',
+    fonction_signataire: 'Direction des Ressources Humaines',
 
     // Add custom variables
     ...customVariables,
