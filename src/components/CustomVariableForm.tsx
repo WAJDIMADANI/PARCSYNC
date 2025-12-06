@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 interface CustomVariable {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'date' | 'number' | 'select' | 'boolean';
+  type: 'text' | 'textarea' | 'date' | 'time' | 'datetime' | 'number' | 'select' | 'boolean';
   required: boolean;
   default_value?: any;
   options?: string[];
@@ -140,6 +140,8 @@ export function CustomVariableForm({ onAdd, onCancel, existingNames }: CustomVar
                 <option value="text">Texte court</option>
                 <option value="textarea">Texte long (zone de texte)</option>
                 <option value="date">Date</option>
+                <option value="time">Heure</option>
+                <option value="datetime">Date et heure</option>
                 <option value="number">Nombre</option>
                 <option value="select">Liste déroulante</option>
                 <option value="boolean">Oui/Non</option>
