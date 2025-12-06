@@ -123,6 +123,16 @@ export function LetterTemplatesManager() {
     }
   };
 
+  const sanitizeFileName = (fileName: string): string => {
+    return fileName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9.-]/g, '_')
+      .replace(/_{2,}/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .substring(0, 200);
+  };
+
   const extractVariables = (text: string): { systeme: string[], personnalisees: Record<string, any> } => {
     const variableRegex = /\{\{([^}]+)\}\}/g;
     const matches = text.matchAll(variableRegex);
@@ -188,9 +198,10 @@ export function LetterTemplatesManager() {
       const result = await mammoth.extractRawText({ arrayBuffer });
       const content = result.value;
 
-      const fileName = file.name.replace('.docx', '');
+      const originalFileName = file.name.replace('.docx', '');
       const timestamp = Date.now();
-      const storagePath = `${timestamp}_${file.name}`;
+      const sanitizedFileName = sanitizeFileName(file.name);
+      const storagePath = `${timestamp}_${sanitizedFileName}`;
 
       // Upload Word file to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -211,9 +222,9 @@ export function LetterTemplatesManager() {
       const { error: insertError } = await supabase
         .from('modele_courrier')
         .insert({
-          nom: fileName,
+          nom: originalFileName,
           type_courrier: 'Courrier administratif',
-          sujet: fileName,
+          sujet: originalFileName,
           contenu: content,
           variables_systeme: systeme,
           variables_personnalisees: customVarsObject,
@@ -226,7 +237,7 @@ export function LetterTemplatesManager() {
       if (insertError) throw insertError;
 
       await fetchTemplates();
-      alert(`Modèle Word "${fileName}" importé avec succès!\n\n${systeme.length} variables système détectées\n${personnalisees.length} variables personnalisées détectées\n\nLe fichier Word a été sauvegardé avec sa mise en forme complète.`);
+      alert(`Modèle Word "${originalFileName}" importé avec succès!\n\n${systeme.length} variables système détectées\n${personnalisees.length} variables personnalisées détectées\n\nLe fichier Word a été sauvegardé avec sa mise en forme complète.`);
     } catch (error) {
       console.error('Erreur import Word:', error);
       alert('Erreur lors de l\'import du fichier Word: ' + (error as Error).message);
