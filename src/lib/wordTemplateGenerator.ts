@@ -15,11 +15,18 @@ export async function downloadTemplate(templateUrl: string): Promise<ArrayBuffer
     // Extract the file path from the Supabase URL
     // URL format: https://{project}.supabase.co/storage/v1/object/public/letter-templates/{path}
     // or: https://{project}.supabase.co/storage/v1/object/authenticated/letter-templates/{path}
+    // or: https://{project}.supabase.co/storage/v1/object/sign/letter-templates/{path}?token=...
     const urlParts = templateUrl.split('/letter-templates/');
     if (urlParts.length < 2) {
       throw new Error('URL du template invalide');
     }
-    const filePath = urlParts[1];
+
+    // Extract filePath and remove query string if present
+    let filePath = urlParts[1];
+    const queryIndex = filePath.indexOf('?');
+    if (queryIndex > -1) {
+      filePath = filePath.substring(0, queryIndex);
+    }
 
     console.log('Téléchargement du template depuis:', filePath);
 
@@ -55,6 +62,10 @@ export async function generateWordDocument(
   variables: TemplateVariable
 ): Promise<Blob> {
   try {
+    console.log('=== generateWordDocument START ===');
+    console.log('URL:', templateUrl);
+    console.log('Variables:', Object.keys(variables));
+
     // Download the template
     const templateData = await downloadTemplate(templateUrl);
 
@@ -68,11 +79,17 @@ export async function generateWordDocument(
       nullGetter: () => '', // Return empty string for null/undefined values
     });
 
+    console.log('Docxtemplater initialized, setting data...');
+
     // Set the template variables
     doc.setData(variables);
 
+    console.log('Data set, rendering document...');
+
     // Render the document (replace all variables)
     doc.render();
+
+    console.log('Document rendered successfully');
 
     // Generate the output as a blob
     const output = doc.getZip().generate({
@@ -80,6 +97,7 @@ export async function generateWordDocument(
       mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
 
+    console.log('=== generateWordDocument SUCCESS ===');
     return output;
   } catch (error: any) {
     console.error('Erreur génération document Word:', error);
