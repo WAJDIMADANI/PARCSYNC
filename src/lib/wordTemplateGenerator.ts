@@ -11,11 +11,40 @@ export interface TemplateVariable {
  * Download a Word template from Supabase Storage
  */
 export async function downloadTemplate(templateUrl: string): Promise<ArrayBuffer> {
-  const response = await fetch(templateUrl);
-  if (!response.ok) {
-    throw new Error('Erreur lors du téléchargement du modèle');
+  try {
+    // Extract the file path from the Supabase URL
+    // URL format: https://{project}.supabase.co/storage/v1/object/public/letter-templates/{path}
+    // or: https://{project}.supabase.co/storage/v1/object/authenticated/letter-templates/{path}
+    const urlParts = templateUrl.split('/letter-templates/');
+    if (urlParts.length < 2) {
+      throw new Error('URL du template invalide');
+    }
+    const filePath = urlParts[1];
+
+    console.log('Téléchargement du template depuis:', filePath);
+
+    // Use Supabase Storage API with authentication
+    const { data, error } = await supabase.storage
+      .from('letter-templates')
+      .download(filePath);
+
+    if (error) {
+      console.error('Erreur Supabase Storage:', error);
+      throw new Error(`Erreur lors du téléchargement du modèle: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('Le fichier template est vide ou introuvable');
+    }
+
+    console.log('Template téléchargé avec succès, taille:', data.size, 'bytes');
+
+    // Convert Blob to ArrayBuffer
+    return await data.arrayBuffer();
+  } catch (error: any) {
+    console.error('Erreur téléchargement template:', error);
+    throw new Error(`Erreur lors du téléchargement du modèle: ${error.message || 'Erreur inconnue'}`);
   }
-  return response.arrayBuffer();
 }
 
 /**
