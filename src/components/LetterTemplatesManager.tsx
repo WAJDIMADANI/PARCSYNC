@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Plus, Search, Edit, Copy, Trash2, Eye, Upload, FileDown } from 'lucide-react';
+import { FileText, Plus, Search, Edit, Copy, Trash2, Eye, Upload, FileDown, RefreshCw } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { LetterTemplateModal } from './LetterTemplateModal';
 import { ConfirmModal } from './ConfirmModal';
+import { ImportResultModal } from './ImportResultModal';
 import mammoth from 'mammoth';
 import { extractVariablesFromWordTemplate, classifyVariables } from '../lib/wordTemplateGenerator';
 
@@ -33,6 +34,13 @@ export function LetterTemplatesManager() {
   const [editingTemplate, setEditingTemplate] = useState<LetterTemplate | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, template: LetterTemplate | null }>({ show: false, template: null });
   const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    show: boolean;
+    fileName: string;
+    systemVariables: number;
+    customVariables: number;
+  }>({ show: false, fileName: '', systemVariables: 0, customVariables: 0 });
+  const [rescanning, setRescanning] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -237,13 +245,68 @@ export function LetterTemplatesManager() {
       if (insertError) throw insertError;
 
       await fetchTemplates();
-      alert(`Modèle Word "${originalFileName}" importé avec succès!\n\n${systeme.length} variables système détectées\n${personnalisees.length} variables personnalisées détectées\n\nLe fichier Word a été sauvegardé avec sa mise en forme complète.`);
+
+      setImportResult({
+        show: true,
+        fileName: originalFileName,
+        systemVariables: systeme.length,
+        customVariables: personnalisees.length
+      });
     } catch (error) {
       console.error('Erreur import Word:', error);
       alert('Erreur lors de l\'import du fichier Word: ' + (error as Error).message);
     } finally {
       setImporting(false);
       event.target.value = '';
+    }
+  };
+
+  const handleRescan = async (template: LetterTemplate) => {
+    if (!template.fichier_word_url) return;
+
+    setRescanning(template.id);
+
+    try {
+      const response = await fetch(template.fichier_word_url);
+      if (!response.ok) {
+        throw new Error('Impossible de télécharger le fichier Word');
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const variablesArray = await extractVariablesFromWordTemplate(arrayBuffer);
+      const { systeme, personnalisees } = classifyVariables(variablesArray);
+
+      const customVarsObject: Record<string, any> = {};
+      personnalisees.forEach(varName => {
+        customVarsObject[varName] = {
+          label: varName.charAt(0).toUpperCase() + varName.slice(1).replace(/_/g, ' '),
+          type: 'text'
+        };
+      });
+
+      const { error } = await supabase
+        .from('modele_courrier')
+        .update({
+          variables_systeme: systeme,
+          variables_personnalisees: customVarsObject
+        })
+        .eq('id', template.id);
+
+      if (error) throw error;
+
+      await fetchTemplates();
+
+      setImportResult({
+        show: true,
+        fileName: template.nom,
+        systemVariables: systeme.length,
+        customVariables: personnalisees.length
+      });
+    } catch (error) {
+      console.error('Erreur re-scan:', error);
+      alert('Erreur lors du re-scan: ' + (error as Error).message);
+    } finally {
+      setRescanning(null);
     }
   };
 
@@ -457,6 +520,20 @@ export function LetterTemplatesManager() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex gap-2 justify-end">
+                      {template.utilise_template_word && (
+                        <button
+                          onClick={() => handleRescan(template)}
+                          disabled={rescanning === template.id}
+                          className="text-purple-600 hover:text-purple-800 p-1 hover:bg-purple-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Re-scanner les variables"
+                        >
+                          {rescanning === template.id ? (
+                            <LoadingSpinner size="sm" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleEdit(template)}
                         className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded"
@@ -513,6 +590,14 @@ export function LetterTemplatesManager() {
           onCancel={() => setDeleteConfirm({ show: false, template: null })}
         />
       )}
+
+      <ImportResultModal
+        isOpen={importResult.show}
+        fileName={importResult.fileName}
+        systemVariables={importResult.systemVariables}
+        customVariables={importResult.customVariables}
+        onClose={() => setImportResult({ show: false, fileName: '', systemVariables: 0, customVariables: 0 })}
+      />
     </div>
   );
 }

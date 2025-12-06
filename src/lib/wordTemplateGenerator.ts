@@ -99,26 +99,78 @@ export function downloadWordDocument(blob: Blob, filename: string): void {
 }
 
 /**
- * Extract variables from a Word document template
- * This analyzes the XML content to find {{variable}} patterns
+ * Extract variables from a Word document template using XML parsing
+ * This analyzes the raw XML content to find {{variable}} patterns even when fragmented
  */
 export async function extractVariablesFromWordTemplate(
   templateArrayBuffer: ArrayBuffer
 ): Promise<string[]> {
   try {
     const zip = new PizZip(templateArrayBuffer);
+
+    // Method 1: Try to extract from raw XML (more reliable)
+    try {
+      const documentXml = zip.file('word/document.xml')?.asText();
+      if (documentXml) {
+        const variables = extractVariablesFromXML(documentXml);
+        if (variables.length > 0) {
+          console.log('Variables extracted from XML:', variables);
+          return variables;
+        }
+      }
+    } catch (xmlError) {
+      console.warn('XML extraction failed, trying fallback method:', xmlError);
+    }
+
+    // Method 2: Fallback to docxtemplater getFullText
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
     });
 
-    // Get all tags (variables) from the template
-    const tags = doc.getFullText().match(/\{\{([^}]+)\}\}/g) || [];
+    const fullText = doc.getFullText();
+    const tags = fullText.match(/\{\{([^}]+)\}\}/g) || [];
     const uniqueTags = Array.from(new Set(tags.map(tag => tag.replace(/[{}]/g, '').trim())));
 
+    console.log('Variables extracted from getFullText:', uniqueTags);
     return uniqueTags;
   } catch (error) {
     console.error('Erreur extraction variables:', error);
+    return [];
+  }
+}
+
+/**
+ * Extract variables from Word XML content by merging fragmented text runs
+ * Word often splits {{variable}} across multiple <w:t> tags, this function handles that
+ */
+function extractVariablesFromXML(xmlContent: string): string[] {
+  try {
+    // Extract all text content from <w:t> tags
+    const textMatches = xmlContent.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g);
+    const textFragments: string[] = [];
+
+    for (const match of textMatches) {
+      textFragments.push(match[1]);
+    }
+
+    // Merge all text fragments into one string
+    const mergedText = textFragments.join('');
+
+    // Now extract variables from the merged text
+    const variableMatches = mergedText.matchAll(/\{\{([^}]+)\}\}/g);
+    const variables = new Set<string>();
+
+    for (const match of variableMatches) {
+      const varName = match[1].trim();
+      if (varName) {
+        variables.add(varName);
+      }
+    }
+
+    return Array.from(variables);
+  } catch (error) {
+    console.error('Erreur parsing XML:', error);
     return [];
   }
 }
