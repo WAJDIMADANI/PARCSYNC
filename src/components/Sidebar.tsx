@@ -33,6 +33,7 @@ export type View =
   | 'admin/secteurs'
   | 'admin/postes'
   | 'admin/modeles'
+  | 'admin/generer-courrier'
   | 'admin/modeles-contrats'
   | 'admin/import-salarie'
   | 'admin/import-bulk'
@@ -144,6 +145,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'admin/secteurs', label: 'Secteurs', icon: Tag, enabled: true },
         { id: 'admin/postes', label: 'Postes', icon: Briefcase, enabled: true },
         { id: 'admin/modeles', label: 'Modèles de Courriers', icon: FileCode, enabled: true },
+        { id: 'admin/generer-courrier', label: 'Générer Courrier Word', icon: FileCheck, enabled: true },
         { id: 'admin/modeles-contrats', label: 'Modèles Contrats', icon: FileText, enabled: true },
         { id: 'admin/import-salarie', label: 'Import Salarié Test', icon: UserPlus, enabled: true },
         { id: 'admin/import-bulk', label: 'Import en Masse', icon: Upload, enabled: true },

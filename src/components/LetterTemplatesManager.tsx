@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Plus, Search, Edit, Copy, Trash2, Eye, Upload } from 'lucide-react';
+import { FileText, Plus, Search, Edit, Copy, Trash2, Eye, Upload, FileDown } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { LetterTemplateModal } from './LetterTemplateModal';
 import { ConfirmModal } from './ConfirmModal';
 import mammoth from 'mammoth';
+import { extractVariablesFromWordTemplate, classifyVariables } from '../lib/wordTemplateGenerator';
 
 interface LetterTemplate {
   id: string;
@@ -18,6 +19,8 @@ interface LetterTemplate {
   actif: boolean;
   created_at: string;
   updated_at: string;
+  fichier_word_url?: string;
+  utilise_template_word?: boolean;
 }
 
 export function LetterTemplatesManager() {
@@ -167,33 +170,66 @@ export function LetterTemplatesManager() {
 
     try {
       const arrayBuffer = await file.arrayBuffer();
+
+      // Extract variables from Word template
+      const variablesArray = await extractVariablesFromWordTemplate(arrayBuffer);
+      const { systeme, personnalisees } = classifyVariables(variablesArray);
+
+      // Convert custom variables array to object format
+      const customVarsObject: Record<string, any> = {};
+      personnalisees.forEach(varName => {
+        customVarsObject[varName] = {
+          label: varName.charAt(0).toUpperCase() + varName.slice(1).replace(/_/g, ' '),
+          type: 'text'
+        };
+      });
+
+      // Extract text content for preview using mammoth
       const result = await mammoth.extractRawText({ arrayBuffer });
       const content = result.value;
 
-      const variables = extractVariables(content);
-
       const fileName = file.name.replace('.docx', '');
+      const timestamp = Date.now();
+      const storagePath = `${timestamp}_${file.name}`;
 
-      const { error } = await supabase
+      // Upload Word file to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('letter-templates')
+        .upload(storagePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('letter-templates')
+        .getPublicUrl(uploadData.path);
+
+      // Insert template record
+      const { error: insertError } = await supabase
         .from('modele_courrier')
         .insert({
           nom: fileName,
           type_courrier: 'Courrier administratif',
           sujet: fileName,
           contenu: content,
-          variables_systeme: variables.systeme,
-          variables_personnalisees: variables.personnalisees,
+          variables_systeme: systeme,
+          variables_personnalisees: customVarsObject,
+          fichier_word_url: urlData.publicUrl,
+          utilise_template_word: true,
           actif: true,
           created_by: user?.id
         });
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
       await fetchTemplates();
-      alert(`Modèle "${fileName}" importé avec succès!\n\n${variables.systeme.length} variables système détectées\n${Object.keys(variables.personnalisees).length} variables personnalisées détectées`);
+      alert(`Modèle Word "${fileName}" importé avec succès!\n\n${systeme.length} variables système détectées\n${personnalisees.length} variables personnalisées détectées\n\nLe fichier Word a été sauvegardé avec sa mise en forme complète.`);
     } catch (error) {
       console.error('Erreur import Word:', error);
-      alert('Erreur lors de l\'import du fichier Word');
+      alert('Erreur lors de l\'import du fichier Word: ' + (error as Error).message);
     } finally {
       setImporting(false);
       event.target.value = '';
@@ -361,9 +397,20 @@ export function LetterTemplatesManager() {
                 <tr key={template.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div className="flex items-center">
-                      <FileText className="w-5 h-5 text-gray-400 mr-3" />
+                      {template.utilise_template_word ? (
+                        <FileDown className="w-5 h-5 text-green-600 mr-3" />
+                      ) : (
+                        <FileText className="w-5 h-5 text-gray-400 mr-3" />
+                      )}
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{template.nom}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium text-gray-900">{template.nom}</div>
+                          {template.utilise_template_word && (
+                            <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700">
+                              Word
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-gray-500">{template.sujet}</div>
                       </div>
                     </div>

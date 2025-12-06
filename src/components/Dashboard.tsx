@@ -32,6 +32,7 @@ import { DemandesPage } from './DemandesPage';
 import { LetterTemplatesManager } from './LetterTemplatesManager';
 import { GeneratedLettersList } from './GeneratedLettersList';
 import { MissingDocuments } from './MissingDocuments';
+import { GenerateLetterFromTemplate } from './GenerateLetterFromTemplate';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('rh/candidats');
@@ -100,6 +101,8 @@ export function Dashboard() {
         return <PostesList />;
       case 'admin/modeles':
         return <LetterTemplatesManager />;
+      case 'admin/generer-courrier':
+        return <GenerateLetterFromTemplate />;
       case 'admin/modeles-contrats':
         return <ContractTemplates />;
       case 'admin/import-salarie':
@@ -148,6 +151,7 @@ export function Dashboard() {
                 {view === 'admin/secteurs' && 'Secteurs'}
                 {view === 'admin/postes' && 'Postes'}
                 {view === 'admin/modeles' && 'Modèles de Courriers'}
+                {view === 'admin/generer-courrier' && 'Générer un Courrier'}
                 {view === 'admin/modeles-contrats' && 'Modèles de Contrats'}
                 {view === 'admin/import-salarie' && 'Import Salarié Test'}
                 {view === 'admin/import-bulk' && 'Import en Masse'}
