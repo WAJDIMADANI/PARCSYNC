@@ -82,12 +82,40 @@ export function LetterTemplateModal({ template, onClose, onSave }: LetterTemplat
       }
     });
     setShowCustomVarForm(false);
+    setEditingCustomVar(null);
   };
 
   const removeCustomVariable = (name: string) => {
     const newVars = { ...customVariables };
     delete newVars[name];
     setCustomVariables(newVars);
+  };
+
+  const editCustomVariable = (originalName: string) => {
+    setEditingCustomVar(originalName);
+    setShowCustomVarForm(true);
+  };
+
+  const updateCustomVariable = (variable: any) => {
+    const newVars = { ...customVariables };
+
+    // If name changed, remove the old one
+    if (editingCustomVar && editingCustomVar !== variable.name) {
+      delete newVars[editingCustomVar];
+    }
+
+    // Add or update the variable
+    newVars[variable.name] = {
+      label: variable.label,
+      type: variable.type,
+      required: variable.required,
+      options: variable.options,
+      ordre: variable.ordre
+    };
+
+    setCustomVariables(newVars);
+    setShowCustomVarForm(false);
+    setEditingCustomVar(null);
   };
 
   const handleSave = async () => {
@@ -325,7 +353,10 @@ export function LetterTemplateModal({ template, onClose, onSave }: LetterTemplat
                   Par exemple : date des faits, description, montant, etc.
                 </p>
                 <button
-                  onClick={() => setShowCustomVarForm(true)}
+                  onClick={() => {
+                    setEditingCustomVar(null);
+                    setShowCustomVarForm(true);
+                  }}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
@@ -355,12 +386,22 @@ export function LetterTemplateModal({ template, onClose, onSave }: LetterTemplat
                               {config.options && ` (${config.options.length} options)`}
                             </div>
                           </div>
-                          <button
-                            onClick={() => removeCustomVariable(name)}
-                            className="text-red-600 hover:text-red-800 p-1"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => editCustomVariable(name)}
+                              className="text-blue-600 hover:text-blue-800 p-1"
+                              title="Modifier"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => removeCustomVariable(name)}
+                              className="text-red-600 hover:text-red-800 p-1"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -399,9 +440,17 @@ export function LetterTemplateModal({ template, onClose, onSave }: LetterTemplat
 
       {showCustomVarForm && (
         <CustomVariableForm
-          onAdd={addCustomVariable}
-          onCancel={() => setShowCustomVarForm(false)}
+          onAdd={editingCustomVar ? updateCustomVariable : addCustomVariable}
+          onCancel={() => {
+            setShowCustomVarForm(false);
+            setEditingCustomVar(null);
+          }}
           existingNames={Object.keys(customVariables)}
+          editingVariable={editingCustomVar ? {
+            name: editingCustomVar,
+            config: customVariables[editingCustomVar]
+          } : undefined}
+          originalName={editingCustomVar || undefined}
         />
       )}
     </div>

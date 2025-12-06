@@ -15,14 +15,17 @@ interface CustomVariableFormProps {
   onAdd: (variable: CustomVariable) => void;
   onCancel: () => void;
   existingNames: string[];
+  editingVariable?: { name: string; config: any };
+  originalName?: string;
 }
 
-export function CustomVariableForm({ onAdd, onCancel, existingNames }: CustomVariableFormProps) {
-  const [name, setName] = useState('');
-  const [label, setLabel] = useState('');
-  const [type, setType] = useState<CustomVariable['type']>('text');
-  const [required, setRequired] = useState(false);
-  const [options, setOptions] = useState<string[]>([]);
+export function CustomVariableForm({ onAdd, onCancel, existingNames, editingVariable, originalName }: CustomVariableFormProps) {
+  const isEditing = !!editingVariable;
+  const [name, setName] = useState(editingVariable?.name || '');
+  const [label, setLabel] = useState(editingVariable?.config?.label || '');
+  const [type, setType] = useState<CustomVariable['type']>(editingVariable?.config?.type || 'text');
+  const [required, setRequired] = useState(editingVariable?.config?.required || false);
+  const [options, setOptions] = useState<string[]>(editingVariable?.config?.options || []);
   const [newOption, setNewOption] = useState('');
   const [error, setError] = useState('');
 
@@ -35,7 +38,8 @@ export function CustomVariableForm({ onAdd, onCancel, existingNames }: CustomVar
       setError('Le nom ne peut contenir que des lettres minuscules, chiffres et underscores');
       return false;
     }
-    if (existingNames.includes(value)) {
+    // Allow the same name if we're editing and haven't changed the name
+    if (existingNames.includes(value) && value !== originalName) {
       setError('Ce nom de variable existe déjà');
       return false;
     }
@@ -61,7 +65,7 @@ export function CustomVariableForm({ onAdd, onCancel, existingNames }: CustomVar
       type,
       required,
       options: type === 'select' ? options : undefined,
-      ordre: existingNames.length + 1
+      ordre: isEditing ? (editingVariable?.config?.ordre || existingNames.length + 1) : (existingNames.length + 1)
     };
 
     onAdd(variable);
@@ -83,7 +87,9 @@ export function CustomVariableForm({ onAdd, onCancel, existingNames }: CustomVar
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-900">Ajouter une variable personnalisée</h3>
+            <h3 className="text-xl font-semibold text-gray-900">
+              {isEditing ? 'Modifier la variable personnalisée' : 'Ajouter une variable personnalisée'}
+            </h3>
             <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
               <X className="w-6 h-6" />
             </button>
@@ -220,7 +226,7 @@ export function CustomVariableForm({ onAdd, onCancel, existingNames }: CustomVar
               onClick={handleSubmit}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Ajouter la variable
+              {isEditing ? 'Modifier la variable' : 'Ajouter la variable'}
             </button>
           </div>
         </div>
