@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { X, Plus, Edit, Trash2, Eye } from 'lucide-react';
+import { X, Plus, Edit, Trash2, Eye, Bold, Italic, Underline, List, ListOrdered } from 'lucide-react';
 import { extractVariables, classifyVariables } from '../lib/letterTemplateGenerator';
 import { VariableInsertButtons } from './VariableInsertButtons';
 import { CustomVariableForm } from './CustomVariableForm';
@@ -67,6 +67,32 @@ export function LetterTemplateModal({ template, onClose, onSave }: LetterTemplat
     setTimeout(() => {
       textarea.focus();
       textarea.selectionStart = textarea.selectionEnd = start + varText.length;
+    }, 0);
+  };
+
+  const insertHtmlTag = (tag: string, openTag: string, closeTag: string) => {
+    const textarea = contenuRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+    const before = text.substring(0, start);
+    const after = text.substring(end, text.length);
+
+    const newText = selectedText.length > 0
+      ? `${before}${openTag}${selectedText}${closeTag}${after}`
+      : `${before}${openTag}${closeTag}${after}`;
+
+    setContenu(newText);
+
+    setTimeout(() => {
+      textarea.focus();
+      const cursorPos = selectedText.length > 0
+        ? start + openTag.length + selectedText.length + closeTag.length
+        : start + openTag.length;
+      textarea.selectionStart = textarea.selectionEnd = cursorPos;
     }, 0);
   };
 
@@ -286,19 +312,86 @@ export function LetterTemplateModal({ template, onClose, onSave }: LetterTemplat
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Contenu du courrier *
                 </label>
+
+                <div className="bg-gray-50 border border-gray-300 rounded-t-lg p-2 flex flex-wrap gap-2">
+                  <div className="text-xs text-gray-600 font-medium w-full mb-1">Formatage HTML basique:</div>
+                  <button
+                    type="button"
+                    onClick={() => insertHtmlTag('bold', '<b>', '</b>')}
+                    className="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1 text-sm"
+                    title="Gras"
+                  >
+                    <Bold className="w-4 h-4" />
+                    Gras
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertHtmlTag('italic', '<i>', '</i>')}
+                    className="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1 text-sm"
+                    title="Italique"
+                  >
+                    <Italic className="w-4 h-4" />
+                    Italique
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertHtmlTag('underline', '<u>', '</u>')}
+                    className="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1 text-sm"
+                    title="Souligné"
+                  >
+                    <Underline className="w-4 h-4" />
+                    Souligné
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertHtmlTag('h', '<h>', '</h>')}
+                    className="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 text-sm"
+                    title="Titre"
+                  >
+                    Titre
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertHtmlTag('ul', '<ul><li>', '</li></ul>')}
+                    className="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1 text-sm"
+                    title="Liste à puces"
+                  >
+                    <List className="w-4 h-4" />
+                    Liste
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertHtmlTag('ol', '<ol><li>', '</li></ol>')}
+                    className="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1 text-sm"
+                    title="Liste numérotée"
+                  >
+                    <ListOrdered className="w-4 h-4" />
+                    Liste numérotée
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertHtmlTag('br', '<br/>', '')}
+                    className="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 text-sm"
+                    title="Saut de ligne"
+                  >
+                    Saut de ligne
+                  </button>
+                </div>
+
                 <textarea
                   ref={contenuRef}
                   value={contenu}
                   onChange={(e) => setContenu(e.target.value)}
-                  placeholder="Écrivez le contenu de votre courrier ici. Utilisez les boutons ci-dessus pour insérer des variables."
+                  placeholder="Écrivez le contenu de votre courrier ici. Vous pouvez utiliser les balises HTML pour le formatage (ex: <b>texte en gras</b>)"
                   rows={15}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-b-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                 />
-                <div className="mt-2 text-xs text-gray-500">
-                  {contenu.length} caractères
+                <div className="mt-2 text-xs text-gray-500 flex justify-between">
+                  <span>{contenu.length} caractères</span>
+                  <span className="text-blue-600">Supports HTML: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;h&gt;, &lt;ul&gt;, &lt;ol&gt;, &lt;li&gt;, &lt;br/&gt;</span>
                 </div>
               </div>
 

@@ -28,6 +28,9 @@ interface GeneratedLetter {
   created_at: string;
   created_by?: string;
   envoye_par?: string;
+  archived?: boolean;
+  pdf_generation_method?: string;
+  fichier_word_genere_url?: string | null;
   created_by_user?: {
     prenom: string;
     nom: string;
@@ -87,7 +90,7 @@ export function GeneratedLettersList() {
   };
 
   const handleDownload = async (letter: GeneratedLetter) => {
-    if (!letter.fichier_pdf_url) return;
+    if (!letter.fichier_pdf_url && !letter.fichier_word_genere_url) return;
     setDownloadLetter(letter);
   };
 
@@ -410,9 +413,16 @@ export function GeneratedLettersList() {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
-                      {letter.modele_nom}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                        {letter.modele_nom}
+                      </span>
+                      {letter.archived && letter.pdf_generation_method === 'word_legacy' && (
+                        <span className="px-2 py-1 text-xs font-medium rounded bg-amber-100 text-amber-700 flex items-center gap-1">
+                          📄 Archivé (Word)
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {letter.sujet}

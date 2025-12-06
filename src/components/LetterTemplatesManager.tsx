@@ -1,13 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Plus, Search, Edit, Copy, Trash2, Eye, Upload, FileDown, RefreshCw } from 'lucide-react';
+import { FileText, Plus, Search, Edit, Copy, Trash2, Eye } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { LetterTemplateModal } from './LetterTemplateModal';
 import { ConfirmModal } from './ConfirmModal';
-import { ImportResultModal } from './ImportResultModal';
-import mammoth from 'mammoth';
-import { extractVariablesFromWordTemplate, classifyVariables } from '../lib/wordTemplateGenerator';
 
 interface LetterTemplate {
   id: string;
@@ -20,8 +17,6 @@ interface LetterTemplate {
   actif: boolean;
   created_at: string;
   updated_at: string;
-  fichier_word_url?: string;
-  utilise_template_word?: boolean;
 }
 
 export function LetterTemplatesManager() {
@@ -33,14 +28,6 @@ export function LetterTemplatesManager() {
   const [showModal, setShowModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<LetterTemplate | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, template: LetterTemplate | null }>({ show: false, template: null });
-  const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{
-    show: boolean;
-    fileName: string;
-    systemVariables: number;
-    customVariables: number;
-  }>({ show: false, fileName: '', systemVariables: 0, customVariables: 0 });
-  const [rescanning, setRescanning] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -131,184 +118,6 @@ export function LetterTemplatesManager() {
     }
   };
 
-  const sanitizeFileName = (fileName: string): string => {
-    return fileName
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9.-]/g, '_')
-      .replace(/_{2,}/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .substring(0, 200);
-  };
-
-  const extractVariables = (text: string): { systeme: string[], personnalisees: Record<string, any> } => {
-    const variableRegex = /\{\{([^}]+)\}\}/g;
-    const matches = text.matchAll(variableRegex);
-    const variables = new Set<string>();
-
-    for (const match of matches) {
-      variables.add(match[1].trim());
-    }
-
-    const variablesSysteme = [
-      'nom', 'prenom', 'matricule', 'email', 'telephone',
-      'adresse', 'ville', 'code_postal', 'date_naissance',
-      'lieu_naissance', 'numero_securite_sociale', 'iban',
-      'poste', 'site', 'date_debut', 'date_fin', 'salaire',
-      'type_contrat', 'duree_travail', 'date_jour'
-    ];
-
-    const systeme: string[] = [];
-    const personnalisees: Record<string, any> = {};
-
-    variables.forEach(v => {
-      if (variablesSysteme.includes(v)) {
-        systeme.push(v);
-      } else {
-        personnalisees[v] = {
-          label: v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' '),
-          type: 'text'
-        };
-      }
-    });
-
-    return { systeme, personnalisees };
-  };
-
-  const handleImportWord = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.endsWith('.docx')) {
-      alert('Seuls les fichiers .docx sont acceptés');
-      return;
-    }
-
-    setImporting(true);
-
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-
-      // Extract variables from Word template
-      const variablesArray = await extractVariablesFromWordTemplate(arrayBuffer);
-      const { systeme, personnalisees } = classifyVariables(variablesArray);
-
-      // Convert custom variables array to object format
-      const customVarsObject: Record<string, any> = {};
-      personnalisees.forEach(varName => {
-        customVarsObject[varName] = {
-          label: varName.charAt(0).toUpperCase() + varName.slice(1).replace(/_/g, ' '),
-          type: 'text'
-        };
-      });
-
-      // Extract text content for preview using mammoth
-      const result = await mammoth.extractRawText({ arrayBuffer });
-      const content = result.value;
-
-      const originalFileName = file.name.replace('.docx', '');
-      const timestamp = Date.now();
-      const sanitizedFileName = sanitizeFileName(file.name);
-      const storagePath = `${timestamp}_${sanitizedFileName}`;
-
-      // Upload Word file to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('letter-templates')
-        .upload(storagePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('letter-templates')
-        .getPublicUrl(uploadData.path);
-
-      // Insert template record
-      const { error: insertError } = await supabase
-        .from('modele_courrier')
-        .insert({
-          nom: originalFileName,
-          type_courrier: 'Courrier administratif',
-          sujet: originalFileName,
-          contenu: content,
-          variables_systeme: systeme,
-          variables_personnalisees: customVarsObject,
-          fichier_word_url: urlData.publicUrl,
-          utilise_template_word: true,
-          actif: true,
-          created_by: user?.id
-        });
-
-      if (insertError) throw insertError;
-
-      await fetchTemplates();
-
-      setImportResult({
-        show: true,
-        fileName: originalFileName,
-        systemVariables: systeme.length,
-        customVariables: personnalisees.length
-      });
-    } catch (error) {
-      console.error('Erreur import Word:', error);
-      alert('Erreur lors de l\'import du fichier Word: ' + (error as Error).message);
-    } finally {
-      setImporting(false);
-      event.target.value = '';
-    }
-  };
-
-  const handleRescan = async (template: LetterTemplate) => {
-    if (!template.fichier_word_url) return;
-
-    setRescanning(template.id);
-
-    try {
-      const response = await fetch(template.fichier_word_url);
-      if (!response.ok) {
-        throw new Error('Impossible de télécharger le fichier Word');
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      const variablesArray = await extractVariablesFromWordTemplate(arrayBuffer);
-      const { systeme, personnalisees } = classifyVariables(variablesArray);
-
-      const customVarsObject: Record<string, any> = {};
-      personnalisees.forEach(varName => {
-        customVarsObject[varName] = {
-          label: varName.charAt(0).toUpperCase() + varName.slice(1).replace(/_/g, ' '),
-          type: 'text'
-        };
-      });
-
-      const { error } = await supabase
-        .from('modele_courrier')
-        .update({
-          variables_systeme: systeme,
-          variables_personnalisees: customVarsObject
-        })
-        .eq('id', template.id);
-
-      if (error) throw error;
-
-      await fetchTemplates();
-
-      setImportResult({
-        show: true,
-        fileName: template.nom,
-        systemVariables: systeme.length,
-        customVariables: personnalisees.length
-      });
-    } catch (error) {
-      console.error('Erreur re-scan:', error);
-      alert('Erreur lors du re-scan: ' + (error as Error).message);
-    } finally {
-      setRescanning(null);
-    }
-  };
 
   const getUniqueTypes = () => {
     const types = templates.map(t => t.type_courrier);
@@ -348,35 +157,13 @@ export function LetterTemplatesManager() {
             <h1 className="text-3xl font-bold text-gray-900">Modèles de Courriers</h1>
             <p className="text-gray-600 mt-1">Créez et gérez vos modèles de courriers personnalisables</p>
           </div>
-          <div className="flex gap-3">
-            <label className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg flex items-center gap-2 cursor-pointer">
-              {importing ? (
-                <>
-                  <LoadingSpinner size="sm" />
-                  <span>Import en cours...</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="w-5 h-5" />
-                  <span>Importer Word</span>
-                </>
-              )}
-              <input
-                type="file"
-                accept=".docx"
-                onChange={handleImportWord}
-                disabled={importing}
-                className="hidden"
-              />
-            </label>
-            <button
-              onClick={handleCreate}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Nouveau modèle
-            </button>
-          </div>
+          <button
+            onClick={handleCreate}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Nouveau modèle
+          </button>
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-6">
@@ -471,20 +258,9 @@ export function LetterTemplatesManager() {
                 <tr key={template.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div className="flex items-center">
-                      {template.utilise_template_word ? (
-                        <FileDown className="w-5 h-5 text-green-600 mr-3" />
-                      ) : (
-                        <FileText className="w-5 h-5 text-gray-400 mr-3" />
-                      )}
+                      <FileText className="w-5 h-5 text-gray-400 mr-3" />
                       <div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-sm font-medium text-gray-900">{template.nom}</div>
-                          {template.utilise_template_word && (
-                            <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700">
-                              Word
-                            </span>
-                          )}
-                        </div>
+                        <div className="text-sm font-medium text-gray-900">{template.nom}</div>
                         <div className="text-xs text-gray-500">{template.sujet}</div>
                       </div>
                     </div>
@@ -520,20 +296,6 @@ export function LetterTemplatesManager() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex gap-2 justify-end">
-                      {template.utilise_template_word && (
-                        <button
-                          onClick={() => handleRescan(template)}
-                          disabled={rescanning === template.id}
-                          className="text-purple-600 hover:text-purple-800 p-1 hover:bg-purple-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Re-scanner les variables"
-                        >
-                          {rescanning === template.id ? (
-                            <LoadingSpinner size="sm" />
-                          ) : (
-                            <RefreshCw className="w-4 h-4" />
-                          )}
-                        </button>
-                      )}
                       <button
                         onClick={() => handleEdit(template)}
                         className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded"
@@ -590,14 +352,6 @@ export function LetterTemplatesManager() {
           onCancel={() => setDeleteConfirm({ show: false, template: null })}
         />
       )}
-
-      <ImportResultModal
-        isOpen={importResult.show}
-        fileName={importResult.fileName}
-        systemVariables={importResult.systemVariables}
-        customVariables={importResult.customVariables}
-        onClose={() => setImportResult({ show: false, fileName: '', systemVariables: 0, customVariables: 0 })}
-      />
     </div>
   );
 }

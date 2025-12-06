@@ -1,23 +1,17 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { X, Search, ChevronRight, ChevronLeft, FileText, Eye, FileDown } from 'lucide-react';
+import { X, Search, ChevronRight, ChevronLeft, FileText, Eye } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { DatePicker } from './DatePicker';
 import { TimePicker } from './TimePicker';
 import {
   formatProfileData,
   replaceAllVariables,
-  generatePDF,
   uploadLetterPDF,
   saveGeneratedLetter
 } from '../lib/letterTemplateGenerator';
-import {
-  generateWordDocument,
-  uploadGeneratedDocument,
-  downloadWordDocument,
-  prepareTemplateData
-} from '../lib/wordTemplateGenerator';
+import { generateProfessionalPdf } from '../lib/htmlToPdfGenerator';
 
 interface Profile {
   id: string;
@@ -205,110 +199,53 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
 
       console.log('Toutes les variables préparées:', Object.keys(allVariables));
 
-      // Détecter si c'est un template Word ou un template texte
-      const isWordTemplate = selectedTemplate.utilise_template_word && selectedTemplate.fichier_word_url;
+      console.log('=== GÉNÉRATION PDF PROFESSIONNELLE ===');
 
-      if (isWordTemplate) {
-        console.log('=== GÉNÉRATION WORD ===');
-        console.log('URL Template Word:', selectedTemplate.fichier_word_url);
-
-        if (!selectedTemplate.fichier_word_url) {
-          throw new Error('Le modèle ne contient pas de fichier Word. Veuillez configurer le modèle.');
+      const pdfBlob = await generateProfessionalPdf({
+        title: subject,
+        recipient: {
+          name: `${selectedProfile.prenom} ${selectedProfile.nom}`,
+          address: selectedProfile.adresse || undefined,
+          city: selectedProfile.ville || undefined
+        },
+        content: content,
+        metadata: {
+          author: 'Transport Classe Affaire',
+          subject: selectedTemplate.nom
         }
+      });
 
-        // Préparer les données avec la fonction synchronisée
-        const templateData = prepareTemplateData(selectedProfile, customValues);
-        console.log('Données template préparées:', Object.keys(templateData));
+      console.log('PDF professionnel généré, taille:', pdfBlob.size, 'bytes');
 
-        try {
-          // Générer le document Word avec toutes les variables remplies
-          const wordBlob = await generateWordDocument(
-            selectedTemplate.fichier_word_url!,
-            templateData
-          );
-          console.log('Document Word généré, taille:', wordBlob.size, 'bytes');
+      const pdfUrl = await uploadLetterPDF(
+        pdfBlob,
+        selectedProfile.id,
+        selectedTemplate.nom
+      );
 
-          // Uploader le document Word généré dans Storage
-          const fileName = `${selectedTemplate.nom}_${selectedProfile.nom}_${new Date().toLocaleDateString('fr-FR')}.docx`.replace(/\//g, '-');
-          console.log('Upload du fichier:', fileName);
+      await saveGeneratedLetter(
+        selectedProfile.id,
+        selectedTemplate.id,
+        selectedTemplate.nom,
+        subject,
+        content,
+        allVariables,
+        pdfUrl,
+        appUser?.id || null
+      );
 
-          const wordUrl = await uploadGeneratedDocument(wordBlob, fileName);
-          console.log('Document uploadé avec succès:', wordUrl);
+      console.log('Enregistré en base de données');
 
-          // Sauvegarder dans la base de données avec le fichier Word
-          const { error: insertError } = await supabase
-            .from('courrier_genere')
-            .insert({
-              profil_id: selectedProfile.id,
-              modele_courrier_id: selectedTemplate.id,
-              modele_nom: selectedTemplate.nom,
-              sujet: subject,
-              contenu_genere: content,
-              variables_remplies: allVariables,
-              fichier_word_genere_url: wordUrl,
-              created_by: appUser?.id || null
-            });
+      const url = window.URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedTemplate.nom}_${selectedProfile.nom}_${new Date().toLocaleDateString('fr-FR')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
-          if (insertError) {
-            console.error('Erreur insertion BDD:', insertError);
-            throw new Error(`Erreur lors de la sauvegarde en base: ${insertError.message}`);
-          }
-
-          console.log('Enregistrement en base réussi');
-
-          // Télécharger automatiquement le Word généré
-          downloadWordDocument(wordBlob, fileName);
-
-          console.log('=== GÉNÉRATION TERMINÉE AVEC SUCCÈS ===');
-        } catch (wordError: any) {
-          console.error('Erreur lors de la génération Word:', wordError);
-
-          if (wordError.message?.includes('multi_error')) {
-            throw new Error(`Variables manquantes ou incorrectes dans le template Word. Vérifiez que toutes les variables requises sont définies.`);
-          } else if (wordError.message?.includes('Uncaught')) {
-            throw new Error(`Erreur de template: ${wordError.message}. Le fichier Word contient peut-être des variables non définies.`);
-          } else {
-            throw new Error(`Erreur génération Word: ${wordError.message || 'Erreur inconnue'}`);
-          }
-        }
-      } else {
-        console.log('=== GÉNÉRATION PDF ===');
-
-        const pdfBlob = await generatePDF(
-          content,
-          subject,
-          `${selectedProfile.prenom} ${selectedProfile.nom}`
-        );
-
-        const pdfUrl = await uploadLetterPDF(
-          pdfBlob,
-          selectedProfile.id,
-          selectedTemplate.nom
-        );
-
-        await saveGeneratedLetter(
-          selectedProfile.id,
-          selectedTemplate.id,
-          selectedTemplate.nom,
-          subject,
-          content,
-          allVariables,
-          pdfUrl,
-          appUser?.id || null
-        );
-
-        // Télécharger le PDF
-        const url = window.URL.createObjectURL(pdfBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${selectedTemplate.nom}_${selectedProfile.nom}_${new Date().toLocaleDateString('fr-FR')}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-
-        console.log('=== PDF GÉNÉRÉ AVEC SUCCÈS ===');
-      }
+      console.log('=== PDF GÉNÉRÉ AVEC SUCCÈS ===')
 
       onComplete();
     } catch (err: any) {
@@ -466,19 +403,10 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
                         }`}
                     >
                       <div className="flex items-start gap-3">
-                        {template.utilise_template_word ? (
-                          <FileDown className="w-8 h-8 text-green-600 flex-shrink-0" />
-                        ) : (
-                          <FileText className="w-8 h-8 text-blue-600 flex-shrink-0" />
-                        )}
+                        <FileText className="w-8 h-8 text-blue-600 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <div className="font-medium text-gray-900 truncate">{template.nom}</div>
-                            {template.utilise_template_word && (
-                              <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700 flex-shrink-0">
-                                Word
-                              </span>
-                            )}
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
                             <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700">
@@ -701,17 +629,10 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
               {generating ? (
                 <>
                   <LoadingSpinner size="sm" />
-                  Génération...
+                  Génération en cours...
                 </>
               ) : step === 3 ? (
-                selectedTemplate?.utilise_template_word ? (
-                  <>
-                    <FileDown className="w-4 h-4" />
-                    Générer le Document Word
-                  </>
-                ) : (
-                  'Générer et Télécharger PDF'
-                )
+                'Générer le PDF Professionnel'
               ) : (
                 <>
                   Suivant
