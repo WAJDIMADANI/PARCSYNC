@@ -253,6 +253,32 @@ function formatDate(dateStr: string | Date): string {
 }
 
 /**
+ * Format custom variables to ensure proper date/time formatting
+ */
+function formatCustomVariables(customVars: Record<string, any>): Record<string, any> {
+  const formatted: Record<string, any> = {};
+
+  Object.entries(customVars).forEach(([key, value]) => {
+    if (value === null || value === undefined) {
+      formatted[key] = '';
+      return;
+    }
+
+    if (key.toLowerCase().includes('date') && typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
+      formatted[key] = formatDate(value);
+    } else if (key.toLowerCase().includes('heure') && typeof value === 'string' && value.match(/^\d{2}:\d{2}/)) {
+      formatted[key] = value;
+    } else if (typeof value === 'boolean') {
+      formatted[key] = value ? 'Oui' : 'Non';
+    } else {
+      formatted[key] = String(value);
+    }
+  });
+
+  return formatted;
+}
+
+/**
  * Prepare template data from a profile/employee record
  * This matches the formatProfileData function from letterTemplateGenerator.ts
  */
@@ -272,6 +298,8 @@ export function prepareTemplateData(
       civilite = 'Madame';
     }
   }
+
+  const formattedCustomVars = formatCustomVariables(customVariables);
 
   const data: TemplateVariable = {
     // Identité
@@ -323,8 +351,8 @@ export function prepareTemplateData(
     nom_signataire: '',
     fonction_signataire: 'Direction des Ressources Humaines',
 
-    // Add custom variables
-    ...customVariables,
+    // Add formatted custom variables
+    ...formattedCustomVars,
   };
 
   return data;
