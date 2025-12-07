@@ -5,6 +5,7 @@ import { X, Search, ChevronRight, ChevronLeft, FileText, Eye } from 'lucide-reac
 import { LoadingSpinner } from './LoadingSpinner';
 import { DatePicker } from './DatePicker';
 import { TimePicker } from './TimePicker';
+import { SuccessStep } from './SuccessStep';
 import {
   formatProfileData,
   replaceAllVariables,
@@ -44,7 +45,7 @@ interface GenerateLetterWizardProps {
 }
 
 export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWizardProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [templates, setTemplates] = useState<LetterTemplate[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
@@ -57,6 +58,8 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
   const [generating, setGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState('');
+  const [generatedPdfBlob, setGeneratedPdfBlob] = useState<Blob | null>(null);
+  const [generatedFileName, setGeneratedFileName] = useState('');
   const { user } = useAuth();
 
   useEffect(() => {
@@ -134,7 +137,7 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
 
   const handleBack = () => {
     setError('');
-    setStep((step - 1) as 1 | 2 | 3);
+    setStep((step - 1) as 1 | 2 | 3 | 4);
   };
 
   const validateCustomValues = (): boolean => {
@@ -248,18 +251,13 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
 
       console.log('Enregistré en base de données');
 
-      const url = window.URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${selectedTemplate.nom}_${selectedProfile.nom}_${new Date().toLocaleDateString('fr-FR')}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const fileName = `${selectedTemplate.nom}_${selectedProfile.nom}_${new Date().toLocaleDateString('fr-FR')}.pdf`;
+      setGeneratedPdfBlob(pdfBlob);
+      setGeneratedFileName(fileName);
 
       console.log('=== PDF GÉNÉRÉ AVEC SUCCÈS ===')
 
-      onComplete();
+      setStep(4);
     } catch (err: any) {
       console.error('=== ERREUR GÉNÉRATION ===', err);
       const errorMessage = err.message || 'Erreur inconnue lors de la génération du courrier';
@@ -274,7 +272,7 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">Générer un Courrier - Étape {step}/3</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Générer un Courrier - Étape {step}/4</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X className="w-6 h-6" />
             </button>
@@ -291,6 +289,10 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
             <ChevronRight className="w-5 h-5 text-gray-400" />
             <div className={`flex-1 text-center ${step >= 3 ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>
               3. Génération
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+            <div className={`flex-1 text-center ${step >= 4 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
+              4. Succès
             </div>
           </div>
         </div>
@@ -438,6 +440,17 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
                 </div>
               )}
             </div>
+          )}
+
+          {step === 4 && generatedPdfBlob && (
+            <SuccessStep
+              pdfBlob={generatedPdfBlob}
+              fileName={generatedFileName}
+              onClose={() => {
+                onComplete();
+                onClose();
+              }}
+            />
           )}
 
           {step === 3 && selectedProfile && selectedTemplate && (
@@ -612,48 +625,50 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-between">
-          <div>
-            {step > 1 && (
-              <button
-                onClick={handleBack}
-                disabled={generating}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 flex items-center gap-2 disabled:opacity-50"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Précédent
-              </button>
-            )}
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              disabled={generating}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 disabled:opacity-50"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={generating || (step === 1 && !selectedProfile) || (step === 2 && !selectedTemplate)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {generating ? (
-                <>
-                  <LoadingSpinner size="sm" />
-                  Génération en cours...
-                </>
-              ) : step === 3 ? (
-                'Générer le PDF Professionnel'
-              ) : (
-                <>
-                  Suivant
-                  <ChevronRight className="w-4 h-4" />
-                </>
+        {step !== 4 && (
+          <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-between">
+            <div>
+              {step > 1 && (
+                <button
+                  onClick={handleBack}
+                  disabled={generating}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 flex items-center gap-2 disabled:opacity-50"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Précédent
+                </button>
               )}
-            </button>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                disabled={generating}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={generating || (step === 1 && !selectedProfile) || (step === 2 && !selectedTemplate)}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {generating ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    Génération en cours...
+                  </>
+                ) : step === 3 ? (
+                  'Générer le PDF Professionnel'
+                ) : (
+                  <>
+                    Suivant
+                    <ChevronRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
