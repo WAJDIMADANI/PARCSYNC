@@ -170,7 +170,12 @@ export class AdministrativeLetterGenerator {
     const content: Content[] = [];
     const lines: string[] = [];
 
-    const fullName = `${recipient.civilite} ${recipient.prenom} ${recipient.nom.toUpperCase()}`;
+    let fullName: string;
+    if (recipient.civilite === 'Madame' || recipient.civilite === 'Monsieur') {
+      fullName = `${recipient.civilite} ${recipient.prenom} ${recipient.nom.toUpperCase()}`;
+    } else {
+      fullName = `${recipient.prenom} ${recipient.nom.toUpperCase()}`;
+    }
     lines.push(fullName);
 
     if (recipient.adresse) {
