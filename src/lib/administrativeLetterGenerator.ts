@@ -65,6 +65,10 @@ export class AdministrativeLetterGenerator {
     this.doc.setFont(this.config.typography.mainFont);
   }
 
+  private calculateLineHeight(fontSize: number, lineHeightRatio: number = 1.5): number {
+    return (fontSize * lineHeightRatio * 25.4) / 72;
+  }
+
   async generate(data: LetterGenerationData): Promise<Blob> {
     this.addCompanyHeader();
 
@@ -99,20 +103,23 @@ export class AdministrativeLetterGenerator {
     this.doc.setTextColor(typo.companyName.color);
     this.doc.text(company.name, x, this.currentY);
 
-    this.currentY += 5;
+    const nameLineHeight = this.calculateLineHeight(typo.companyName.size, 1.2);
+    this.currentY += nameLineHeight;
 
     this.doc.setFontSize(typo.companyInfo.size);
     this.doc.setFont(this.config.typography.mainFont, typo.companyInfo.weight);
     this.doc.setTextColor(typo.companyInfo.color);
 
+    const infoLineHeight = this.calculateLineHeight(typo.companyInfo.size, 1.2);
+
     this.doc.text(company.address, x, this.currentY);
-    this.currentY += 4;
+    this.currentY += infoLineHeight;
 
     this.doc.text(`${company.postalCode} ${company.city}`, x, this.currentY);
-    this.currentY += 4;
+    this.currentY += infoLineHeight;
 
     this.doc.text(`Téléphone: ${company.phone}`, x, this.currentY);
-    this.currentY += 4;
+    this.currentY += infoLineHeight;
 
     this.doc.text(`SIRET: ${company.siret}`, x, this.currentY);
     this.currentY += this.config.spacing.afterHeader;
@@ -157,25 +164,30 @@ export class AdministrativeLetterGenerator {
     this.doc.setFont(this.config.typography.mainFont, 'bold');
     this.doc.setTextColor(this.config.typography.body.color);
 
+    const lineHeight = this.calculateLineHeight(
+      this.config.typography.body.size,
+      1.2
+    );
+
     const fullName = `${recipient.civilite} ${recipient.prenom} ${recipient.nom.toUpperCase()}`;
     this.doc.text(fullName, x, this.currentY);
-    this.currentY += 5;
+    this.currentY += lineHeight;
 
     this.doc.setFont(this.config.typography.mainFont, 'normal');
 
     if (recipient.adresse) {
       this.doc.text(recipient.adresse, x, this.currentY);
-      this.currentY += 4;
+      this.currentY += lineHeight;
     }
 
     if (recipient.adresse_ligne_2) {
       this.doc.text(recipient.adresse_ligne_2, x, this.currentY);
-      this.currentY += 4;
+      this.currentY += lineHeight;
     }
 
     if (recipient.code_postal && recipient.ville) {
       this.doc.text(`${recipient.code_postal} ${recipient.ville}`, x, this.currentY);
-      this.currentY += 4;
+      this.currentY += lineHeight;
     }
 
     this.currentY += this.config.spacing.afterRecipient;
@@ -188,6 +200,11 @@ export class AdministrativeLetterGenerator {
     this.doc.setFont(this.config.typography.mainFont, this.config.typography.object.weight);
     this.doc.setTextColor(this.config.typography.object.color);
 
+    const lineHeight = this.calculateLineHeight(
+      this.config.typography.object.size,
+      1.3
+    );
+
     const objectText = `Objet: ${object}`;
     const lines = this.doc.splitTextToSize(objectText, this.config.margins.contentWidth);
 
@@ -198,7 +215,7 @@ export class AdministrativeLetterGenerator {
         this.doc.line(x, this.currentY + 0.5, x + lineWidth, this.currentY + 0.5);
       }
       if (index < lines.length - 1) {
-        this.currentY += 5;
+        this.currentY += lineHeight;
       }
     });
 
@@ -396,6 +413,11 @@ export class AdministrativeLetterGenerator {
     this.doc.setFontSize(this.config.typography.body.size);
     this.doc.setTextColor(this.config.typography.body.color);
 
+    const lineHeight = this.calculateLineHeight(
+      this.config.typography.body.size,
+      this.config.typography.body.lineHeight
+    );
+
     const lines = this.wrapTextSegments(segments, maxWidth);
 
     for (const line of lines) {
@@ -413,7 +435,7 @@ export class AdministrativeLetterGenerator {
         this.renderLine(line, x);
       }
 
-      this.currentY += 5;
+      this.currentY += lineHeight;
     }
 
     this.currentY += this.config.spacing.betweenParagraphs;
@@ -517,13 +539,15 @@ export class AdministrativeLetterGenerator {
     this.doc.setFont(this.config.typography.mainFont, config.weight);
     this.doc.setTextColor(this.config.typography.body.color);
 
+    const lineHeight = this.calculateLineHeight(config.size, 1.3);
+
     const text = segments.map(s => s.text).join('');
     const lines = this.doc.splitTextToSize(text, this.config.margins.contentWidth);
 
     lines.forEach((line: string) => {
       this.checkPageBreak(10);
       this.doc.text(line, x, this.currentY);
-      this.currentY += 6;
+      this.currentY += lineHeight;
     });
 
     this.currentY += config.spaceAfter;
@@ -540,6 +564,11 @@ export class AdministrativeLetterGenerator {
     this.doc.setFont(this.config.typography.mainFont, 'normal');
     this.doc.setTextColor(this.config.typography.body.color);
 
+    const lineHeight = this.calculateLineHeight(
+      this.config.typography.body.size,
+      this.config.typography.body.lineHeight
+    );
+
     items.forEach((item, index) => {
       this.checkPageBreak(15);
 
@@ -551,13 +580,13 @@ export class AdministrativeLetterGenerator {
       const lines = this.doc.splitTextToSize(item, maxWidth);
       lines.forEach((line: string, lineIndex: number) => {
         if (lineIndex > 0) {
-          this.currentY += 5;
+          this.currentY += lineHeight;
           this.checkPageBreak(10);
         }
         this.doc.text(line, x + indent, this.currentY);
       });
 
-      this.currentY += 5 + this.config.typography.list.itemSpacing;
+      this.currentY += lineHeight + this.config.typography.list.itemSpacing;
     });
 
     this.currentY += this.config.spacing.betweenParagraphs;
@@ -591,12 +620,17 @@ export class AdministrativeLetterGenerator {
     this.doc.setFont(this.config.typography.mainFont, 'normal');
     this.doc.setTextColor(this.config.typography.body.color);
 
+    const lineHeight = this.calculateLineHeight(
+      this.config.typography.body.size,
+      this.config.typography.body.lineHeight
+    );
+
     const formula = `Veuillez agréer, ${civilite}, l'expression de nos salutations distinguées.`;
     const lines = this.doc.splitTextToSize(formula, this.config.margins.contentWidth);
 
     lines.forEach((line: string) => {
       this.doc.text(line, x, this.currentY);
-      this.currentY += 5;
+      this.currentY += lineHeight;
     });
 
     this.currentY += this.config.spacing.beforeSignature;
