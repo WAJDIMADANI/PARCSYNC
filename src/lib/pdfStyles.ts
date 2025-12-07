@@ -43,11 +43,12 @@ export const PDF_STYLES = {
   },
 
   company: {
-    name: 'Transport Classe Affaire',
-    address: 'Adresse de l\'entreprise',
-    postalCode: 'Code postal',
-    city: 'Ville',
-    phone: 'Téléphone',
+    name: 'TRANSPORT CLASSE AFFAIRE',
+    address: '111 Avenue Victor Hugo',
+    postalCode: '75016',
+    city: 'PARIS',
+    phone: '01.86.22.24.00',
+    siret: '50426507500029',
     email: 'contact@transportclasseaffaire.fr',
     website: 'www.transportclasseaffaire.fr'
   }

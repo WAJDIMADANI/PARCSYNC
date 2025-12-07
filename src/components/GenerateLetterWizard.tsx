@@ -11,7 +11,7 @@ import {
   uploadLetterPDF,
   saveGeneratedLetter
 } from '../lib/letterTemplateGenerator';
-import { generateProfessionalPdf } from '../lib/htmlToPdfGenerator';
+import { generateAdministrativeLetter } from '../lib/administrativeLetterGenerator';
 
 interface Profile {
   id: string;
@@ -199,23 +199,35 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
 
       console.log('Toutes les variables préparées:', Object.keys(allVariables));
 
-      console.log('=== GÉNÉRATION PDF PROFESSIONNELLE ===');
+      console.log('=== GÉNÉRATION COURRIER ADMINISTRATIF ===');
 
-      const pdfBlob = await generateProfessionalPdf({
-        title: subject,
+      const civilite = systemValues.civilite || 'Madame, Monsieur';
+
+      const pdfBlob = await generateAdministrativeLetter({
         recipient: {
-          name: `${selectedProfile.prenom} ${selectedProfile.nom}`,
-          address: selectedProfile.adresse || undefined,
-          city: selectedProfile.ville || undefined
+          civilite: civilite as 'Madame' | 'Monsieur' | 'Madame, Monsieur',
+          nom: selectedProfile.nom,
+          prenom: selectedProfile.prenom,
+          adresse: selectedProfile.adresse || undefined,
+          code_postal: selectedProfile.code_postal || undefined,
+          ville: selectedProfile.ville || undefined
         },
+        object: subject,
         content: content,
-        metadata: {
-          author: 'Transport Classe Affaire',
-          subject: selectedTemplate.nom
+        signature: {
+          nom: user.user_metadata?.nom || 'Direction',
+          prenom: user.user_metadata?.prenom,
+          fonction: 'La Direction des Ressources Humaines'
+        },
+        options: {
+          date: new Date(),
+          lieu: 'Paris',
+          showPageNumbers: true,
+          showFooter: true
         }
       });
 
-      console.log('PDF professionnel généré, taille:', pdfBlob.size, 'bytes');
+      console.log('Courrier administratif généré, taille:', pdfBlob.size, 'bytes');
 
       const pdfUrl = await uploadLetterPDF(
         pdfBlob,
