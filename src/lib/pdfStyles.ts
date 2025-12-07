@@ -32,14 +32,15 @@ export const PDF_STYLES = {
   },
 
   spacing: {
-    pageMarginTop: 80,
-    pageMarginBottom: 60,
-    pageMarginLeft: 40,
-    pageMarginRight: 40,
+    pageMarginTop: 25,
+    pageMarginBottom: 25,
+    pageMarginLeft: 20,
+    pageMarginRight: 20,
     headerHeight: 70,
     footerHeight: 50,
-    sectionSpacing: 15,
-    paragraphSpacing: 8
+    sectionSpacing: 18,
+    paragraphSpacing: 12,
+    safetyMargin: 15
   },
 
   company: {

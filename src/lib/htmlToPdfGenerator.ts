@@ -22,6 +22,10 @@ interface TextSegment {
   underline?: boolean;
 }
 
+function calculateLineHeight(fontSize: number, lineHeightRatio: number): number {
+  return (fontSize * lineHeightRatio * 25.4) / 72;
+}
+
 export async function generateProfessionalPdf(options: GeneratePdfOptions): Promise<Blob> {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -79,11 +83,13 @@ export async function generateProfessionalPdf(options: GeneratePdfOptions): Prom
   };
 
   const checkPageBreak = (neededSpace: number): boolean => {
-    if (currentY + neededSpace > pageHeight - margins.pageMarginBottom) {
+    const safetyMargin = margins.safetyMargin || 15;
+    const maxY = pageHeight - margins.pageMarginBottom - safetyMargin;
+
+    if (currentY + neededSpace > maxY) {
       addFooter(pageNumber);
       doc.addPage();
       pageNumber++;
-      currentY = margins.pageMarginTop;
       addHeader();
       currentY = 50;
       return true;
@@ -95,38 +101,46 @@ export async function generateProfessionalPdf(options: GeneratePdfOptions): Prom
   currentY = 50;
 
   if (options.recipient) {
-    doc.setFontSize(10);
+    const recipientFontSize = 10;
+    const recipientLineHeight = calculateLineHeight(recipientFontSize, 1.5);
+
+    checkPageBreak(recipientLineHeight * 5);
+
+    doc.setFontSize(recipientFontSize);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(31, 41, 55);
 
     doc.text('À l\'attention de:', margins.pageMarginLeft, currentY);
-    currentY += 5;
+    currentY += recipientLineHeight;
     doc.setFont('helvetica', 'bold');
     doc.text(options.recipient.name, margins.pageMarginLeft, currentY);
-    currentY += 5;
+    currentY += recipientLineHeight;
 
     if (options.recipient.address) {
       doc.setFont('helvetica', 'normal');
       doc.text(options.recipient.address, margins.pageMarginLeft, currentY);
-      currentY += 5;
+      currentY += recipientLineHeight;
     }
 
     if (options.recipient.city) {
       doc.text(options.recipient.city, margins.pageMarginLeft, currentY);
-      currentY += 5;
+      currentY += recipientLineHeight;
     }
 
-    currentY += 10;
+    currentY += PDF_STYLES.spacing.sectionSpacing;
   }
 
   if (options.title) {
-    checkPageBreak(15);
-    doc.setFontSize(14);
+    const titleFontSize = PDF_STYLES.fonts.title.size;
+    const titleLineHeight = calculateLineHeight(titleFontSize, PDF_STYLES.fonts.title.lineHeight);
+
+    checkPageBreak(titleLineHeight * 2);
+    doc.setFontSize(titleFontSize);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(31, 41, 55);
     const titleLines = doc.splitTextToSize(options.title, contentWidth);
     doc.text(titleLines, margins.pageMarginLeft, currentY);
-    currentY += titleLines.length * 7 + 10;
+    currentY += titleLines.length * titleLineHeight + PDF_STYLES.spacing.sectionSpacing;
   }
 
   const htmlContent = options.content || '';
@@ -140,14 +154,18 @@ export async function generateProfessionalPdf(options: GeneratePdfOptions): Prom
     } else if (block.type === 'list') {
       await renderList(doc, block.items, margins.pageMarginLeft, contentWidth, block.ordered);
     } else if (block.type === 'break') {
-      currentY += 5;
+      currentY += PDF_STYLES.spacing.paragraphSpacing;
     }
   }
 
   async function renderParagraph(pdf: jsPDF, segments: TextSegment[], x: number, maxWidth: number) {
-    checkPageBreak(20);
+    const fontSize = PDF_STYLES.fonts.body.size;
+    const lineHeightRatio = PDF_STYLES.fonts.body.lineHeight;
+    const lineHeight = calculateLineHeight(fontSize, lineHeightRatio);
 
-    pdf.setFontSize(PDF_STYLES.fonts.body.size);
+    checkPageBreak(lineHeight * 3);
+
+    pdf.setFontSize(fontSize);
     pdf.setTextColor(31, 41, 55);
 
     let lineText = '';
@@ -166,8 +184,8 @@ export async function generateProfessionalPdf(options: GeneratePdfOptions): Prom
 
         if (testWidth > maxWidth && lineText.length > 0) {
           renderLine(pdf, lineSegments, x, currentY);
-          currentY += 6;
-          checkPageBreak(10);
+          currentY += lineHeight;
+          checkPageBreak(lineHeight * 2);
           lineText = word;
           lineSegments = [{ text: word, style }];
         } else {
@@ -183,7 +201,7 @@ export async function generateProfessionalPdf(options: GeneratePdfOptions): Prom
 
     if (lineText.length > 0) {
       renderLine(pdf, lineSegments, x, currentY);
-      currentY += 6;
+      currentY += lineHeight;
     }
 
     currentY += PDF_STYLES.spacing.paragraphSpacing;
@@ -199,26 +217,34 @@ export async function generateProfessionalPdf(options: GeneratePdfOptions): Prom
   }
 
   async function renderHeading(pdf: jsPDF, text: string, x: number, maxWidth: number) {
-    checkPageBreak(15);
+    const fontSize = PDF_STYLES.fonts.heading.size;
+    const lineHeightRatio = PDF_STYLES.fonts.heading.lineHeight;
+    const lineHeight = calculateLineHeight(fontSize, lineHeightRatio);
 
-    pdf.setFontSize(PDF_STYLES.fonts.heading.size);
+    checkPageBreak(lineHeight * 2);
+
+    pdf.setFontSize(fontSize);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(31, 41, 55);
 
     const lines = pdf.splitTextToSize(text, maxWidth);
     pdf.text(lines, x, currentY);
-    currentY += lines.length * 7 + 5;
+    currentY += lines.length * lineHeight + PDF_STYLES.spacing.sectionSpacing;
   }
 
   async function renderList(pdf: jsPDF, items: string[], x: number, maxWidth: number, ordered: boolean) {
-    checkPageBreak(20);
+    const fontSize = PDF_STYLES.fonts.body.size;
+    const lineHeightRatio = PDF_STYLES.fonts.body.lineHeight;
+    const lineHeight = calculateLineHeight(fontSize, lineHeightRatio);
 
-    pdf.setFontSize(PDF_STYLES.fonts.body.size);
+    checkPageBreak(lineHeight * 3);
+
+    pdf.setFontSize(fontSize);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(31, 41, 55);
 
     items.forEach((item, index) => {
-      checkPageBreak(10);
+      checkPageBreak(lineHeight * 2);
       const bullet = ordered ? `${index + 1}.` : '•';
       const bulletWidth = pdf.getTextWidth(bullet + ' ');
 
@@ -227,16 +253,16 @@ export async function generateProfessionalPdf(options: GeneratePdfOptions): Prom
       const itemLines = pdf.splitTextToSize(item, maxWidth - bulletWidth - 5);
       itemLines.forEach((line: string, lineIndex: number) => {
         if (lineIndex > 0) {
-          currentY += 5;
-          checkPageBreak(10);
+          currentY += lineHeight;
+          checkPageBreak(lineHeight * 2);
         }
         pdf.text(line, x + bulletWidth + 2, currentY);
       });
 
-      currentY += 7;
+      currentY += 10;
     });
 
-    currentY += 3;
+    currentY += PDF_STYLES.spacing.paragraphSpacing;
   }
 
   addFooter(pageNumber);
