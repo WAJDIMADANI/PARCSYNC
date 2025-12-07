@@ -106,7 +106,7 @@ export function formatProfileData(profil: any): Record<string, string> {
   const today = new Date();
 
   // Déterminer la civilité basée sur le genre
-  let civilite = '';
+  let civilite = 'Madame, Monsieur'; // Valeur par défaut neutre
   if (profil.genre) {
     const genre = profil.genre.toLowerCase();
     if (genre === 'masculin' || genre === 'homme' || genre === 'm') {
@@ -223,12 +223,24 @@ export function replaceAllVariables(
 
 function formatCustomValue(value: any): string {
   if (value === null || value === undefined || value === '') return '[Non renseigné]';
-  if (value instanceof Date || (typeof value === 'string' && !isNaN(Date.parse(value)))) {
+
+  // Check if it's a Date object
+  if (value instanceof Date) {
     return formatDate(value);
   }
+
+  // Check if it's a date string (must contain -, /, or T for ISO format)
+  if (typeof value === 'string' && (value.includes('-') || value.includes('/') || value.includes('T'))) {
+    const parsed = Date.parse(value);
+    if (!isNaN(parsed)) {
+      return formatDate(value);
+    }
+  }
+
   if (typeof value === 'boolean') {
     return value ? 'Oui' : 'Non';
   }
+
   return String(value);
 }
 
