@@ -1,9 +1,9 @@
 import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
+import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import { TDocumentDefinitions, Content, ContentText, ContentStack, ContentColumns } from 'pdfmake/interfaces';
 import { pdfConfig } from './pdfConfig';
 
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
+pdfMake.vfs = pdfFonts.vfs;
 
 export interface LetterRecipient {
   civilite: 'Madame' | 'Monsieur' | 'Madame, Monsieur';
