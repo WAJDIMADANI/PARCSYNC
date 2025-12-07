@@ -259,7 +259,7 @@ export async function generateProfessionalPdf(options: GeneratePdfOptions): Prom
         pdf.text(line, x + bulletWidth + 2, currentY);
       });
 
-      currentY += 10;
+      currentY += lineHeight;
     });
 
     currentY += PDF_STYLES.spacing.paragraphSpacing;
