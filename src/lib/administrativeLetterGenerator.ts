@@ -1,5 +1,9 @@
-import jsPDF from 'jspdf';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+import { TDocumentDefinitions, Content, ContentText, ContentStack, ContentColumns } from 'pdfmake/interfaces';
 import { pdfConfig } from './pdfConfig';
+
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 export interface LetterRecipient {
   civilite: 'Madame' | 'Monsieur' | 'Madame, Monsieur';
@@ -44,201 +48,179 @@ interface ParsedBlock {
   segments?: TextSegment[];
   items?: string[];
   ordered?: boolean;
-  level?: number;
   align?: 'left' | 'center' | 'right' | 'justify';
 }
 
 export class AdministrativeLetterGenerator {
-  private doc: jsPDF;
-  private currentY: number;
-  private pageNumber: number;
   private config = pdfConfig;
 
-  constructor() {
-    this.doc = new jsPDF({
-      orientation: this.config.page.orientation,
-      unit: this.config.page.unit,
-      format: this.config.page.format
-    });
-    this.currentY = this.config.margins.top;
-    this.pageNumber = 1;
-    this.doc.setFont(this.config.typography.mainFont);
-  }
-
-  private calculateLineHeight(fontSize: number, lineHeightRatio: number = 1.5): number {
-    return (fontSize * lineHeightRatio * 25.4) / 72;
-  }
-
   async generate(data: LetterGenerationData): Promise<Blob> {
-    this.addCompanyHeader();
+    const docDefinition = this.buildDocumentDefinition(data);
 
-    this.addSeparatorLine();
-
-    this.addDateBlock(data.options?.date, data.options?.lieu);
-
-    this.addRecipientBlock(data.recipient);
-
-    this.addObjectBlock(data.object);
-
-    this.addGreeting(data.recipient.civilite);
-
-    await this.addHTMLContent(data.content);
-
-    this.addPoliteFormula(data.recipient.civilite);
-
-    this.addSignatureBlock(data.signature);
-
-    this.addFooterToAllPages(data.options);
-
-    return this.doc.output('blob');
+    return new Promise<Blob>((resolve, reject) => {
+      try {
+        const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+        pdfDocGenerator.getBlob((blob: Blob) => {
+          resolve(blob);
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 
-  private addCompanyHeader(): void {
+  private buildDocumentDefinition(data: LetterGenerationData): TDocumentDefinitions {
+    const content: Content[] = [];
+
+    content.push(...this.buildCompanyHeader());
+    content.push(this.buildSeparatorLine());
+    content.push(this.buildDateBlock(data.options?.date, data.options?.lieu));
+    content.push(...this.buildRecipientBlock(data.recipient));
+    content.push(this.buildObjectBlock(data.object));
+    content.push(this.buildGreeting(data.recipient.civilite));
+    content.push(...this.buildHTMLContent(data.content));
+    content.push(this.buildPoliteFormula(data.recipient.civilite));
+    content.push(this.buildSignatureBlock(data.signature));
+
+    return {
+      pageSize: 'A4',
+      pageOrientation: 'portrait',
+      pageMargins: [
+        this.mmToPt(this.config.margins.left),
+        this.mmToPt(this.config.margins.top),
+        this.mmToPt(this.config.margins.right),
+        this.mmToPt(this.config.margins.bottom)
+      ],
+      content,
+      footer: data.options?.showFooter !== false
+        ? this.buildFooter(data.options)
+        : undefined,
+      styles: this.buildStyles(),
+      defaultStyle: {
+        font: 'Helvetica',
+        fontSize: this.config.typography.body.size,
+        lineHeight: this.config.typography.body.lineHeight,
+        color: this.config.typography.body.color
+      }
+    };
+  }
+
+  private mmToPt(mm: number): number {
+    return mm * 2.83465;
+  }
+
+  private buildCompanyHeader(): Content[] {
     const company = this.config.company;
-    const typo = this.config.typography;
-    const x = this.config.margins.left;
+    const content: Content[] = [];
 
-    this.doc.setFontSize(typo.companyName.size);
-    this.doc.setFont(this.config.typography.mainFont, typo.companyName.weight);
-    this.doc.setTextColor(typo.companyName.color);
-    this.doc.text(company.name, x, this.currentY);
+    content.push({
+      text: company.name,
+      style: 'companyName'
+    });
 
-    const nameLineHeight = this.calculateLineHeight(typo.companyName.size, 1.2);
-    this.currentY += nameLineHeight;
+    content.push({
+      text: [
+        company.address + '\n',
+        `${company.postalCode} ${company.city}\n`,
+        `Téléphone: ${company.phone}\n`,
+        `SIRET: ${company.siret}`
+      ],
+      style: 'companyInfo'
+    });
 
-    this.doc.setFontSize(typo.companyInfo.size);
-    this.doc.setFont(this.config.typography.mainFont, typo.companyInfo.weight);
-    this.doc.setTextColor(typo.companyInfo.color);
+    content.push({
+      text: '',
+      margin: [0, 0, 0, this.mmToPt(this.config.spacing.afterHeader - 10)]
+    });
 
-    const infoLineHeight = this.calculateLineHeight(typo.companyInfo.size, 1.2);
-
-    this.doc.text(company.address, x, this.currentY);
-    this.currentY += infoLineHeight;
-
-    this.doc.text(`${company.postalCode} ${company.city}`, x, this.currentY);
-    this.currentY += infoLineHeight;
-
-    this.doc.text(`Téléphone: ${company.phone}`, x, this.currentY);
-    this.currentY += infoLineHeight;
-
-    this.doc.text(`SIRET: ${company.siret}`, x, this.currentY);
-    this.currentY += this.config.spacing.afterHeader;
+    return content;
   }
 
-  private addSeparatorLine(): void {
-    const pageWidth = this.doc.internal.pageSize.getWidth();
-
-    this.doc.setDrawColor(51, 51, 51);
-    this.doc.setLineWidth(this.config.layout.separator.thickness);
-    this.doc.line(
-      this.config.margins.left,
-      this.currentY,
-      pageWidth - this.config.margins.right,
-      this.currentY
-    );
-
-    this.currentY += 8;
+  private buildSeparatorLine(): Content {
+    return {
+      canvas: [
+        {
+          type: 'line',
+          x1: 0,
+          y1: 0,
+          x2: this.mmToPt(this.config.margins.contentWidth),
+          y2: 0,
+          lineWidth: this.config.layout.separator.thickness,
+          lineColor: '#333333'
+        }
+      ],
+      margin: [0, 0, 0, this.mmToPt(8)]
+    };
   }
 
-  private addDateBlock(date?: Date, lieu?: string): void {
-    const pageWidth = this.doc.internal.pageSize.getWidth();
+  private buildDateBlock(date?: Date, lieu?: string): Content {
     const dateStr = this.formatDateLong(date || new Date());
     const lieuStr = lieu || 'Paris';
     const fullText = `${lieuStr}, le ${dateStr}`;
 
-    this.doc.setFontSize(this.config.typography.body.size);
-    this.doc.setFont(this.config.typography.mainFont, 'normal');
-    this.doc.setTextColor(this.config.typography.body.color);
-
-    const textWidth = this.doc.getTextWidth(fullText);
-    const x = pageWidth - this.config.margins.right - textWidth;
-
-    this.doc.text(fullText, x, this.currentY);
-    this.currentY += this.config.spacing.afterDate;
+    return {
+      text: fullText,
+      alignment: 'right',
+      style: 'date',
+      margin: [0, 0, 0, this.mmToPt(this.config.spacing.afterDate)]
+    };
   }
 
-  private addRecipientBlock(recipient: LetterRecipient): void {
-    const x = this.config.margins.left;
-
-    this.doc.setFontSize(this.config.typography.body.size);
-    this.doc.setFont(this.config.typography.mainFont, 'bold');
-    this.doc.setTextColor(this.config.typography.body.color);
-
-    const lineHeight = this.calculateLineHeight(
-      this.config.typography.body.size,
-      1.2
-    );
+  private buildRecipientBlock(recipient: LetterRecipient): Content[] {
+    const content: Content[] = [];
+    const lines: string[] = [];
 
     const fullName = `${recipient.civilite} ${recipient.prenom} ${recipient.nom.toUpperCase()}`;
-    this.doc.text(fullName, x, this.currentY);
-    this.currentY += lineHeight;
-
-    this.doc.setFont(this.config.typography.mainFont, 'normal');
+    lines.push(fullName);
 
     if (recipient.adresse) {
-      this.doc.text(recipient.adresse, x, this.currentY);
-      this.currentY += lineHeight;
+      lines.push(recipient.adresse);
     }
 
     if (recipient.adresse_ligne_2) {
-      this.doc.text(recipient.adresse_ligne_2, x, this.currentY);
-      this.currentY += lineHeight;
+      lines.push(recipient.adresse_ligne_2);
     }
 
     if (recipient.code_postal && recipient.ville) {
-      this.doc.text(`${recipient.code_postal} ${recipient.ville}`, x, this.currentY);
-      this.currentY += lineHeight;
+      lines.push(`${recipient.code_postal} ${recipient.ville}`);
     }
 
-    this.currentY += this.config.spacing.afterRecipient;
-  }
-
-  private addObjectBlock(object: string): void {
-    const x = this.config.margins.left;
-
-    this.doc.setFontSize(this.config.typography.object.size);
-    this.doc.setFont(this.config.typography.mainFont, this.config.typography.object.weight);
-    this.doc.setTextColor(this.config.typography.object.color);
-
-    const lineHeight = this.calculateLineHeight(
-      this.config.typography.object.size,
-      1.3
-    );
-
-    const objectText = `Objet: ${object}`;
-    const lines = this.doc.splitTextToSize(objectText, this.config.margins.contentWidth);
-
-    lines.forEach((line: string, index: number) => {
-      this.doc.text(line, x, this.currentY);
-      if (this.config.typography.object.underline && index === 0) {
-        const lineWidth = this.doc.getTextWidth(line);
-        this.doc.line(x, this.currentY + 0.5, x + lineWidth, this.currentY + 0.5);
-      }
-      if (index < lines.length - 1) {
-        this.currentY += lineHeight;
-      }
+    content.push({
+      text: lines.join('\n'),
+      style: 'recipient',
+      margin: [0, 0, 0, this.mmToPt(this.config.spacing.afterRecipient)]
     });
 
-    this.currentY += this.config.spacing.afterObject;
+    return content;
   }
 
-  private addGreeting(civilite: string): void {
-    const x = this.config.margins.left;
-
-    this.doc.setFontSize(this.config.typography.body.size);
-    this.doc.setFont(this.config.typography.mainFont, 'normal');
-    this.doc.setTextColor(this.config.typography.body.color);
-
-    this.doc.text(`${civilite},`, x, this.currentY);
-    this.currentY += this.config.spacing.afterGreeting;
+  private buildObjectBlock(object: string): Content {
+    return {
+      text: `Objet: ${object}`,
+      style: 'object',
+      margin: [0, 0, 0, this.mmToPt(this.config.spacing.afterObject)]
+    };
   }
 
-  private async addHTMLContent(html: string): Promise<void> {
+  private buildGreeting(civilite: string): Content {
+    return {
+      text: `${civilite},`,
+      margin: [0, 0, 0, this.mmToPt(this.config.spacing.afterGreeting)]
+    };
+  }
+
+  private buildHTMLContent(html: string): Content[] {
     const blocks = this.parseHTMLToBlocks(html);
+    const content: Content[] = [];
 
     for (const block of blocks) {
-      await this.renderBlock(block);
+      const blockContent = this.renderBlock(block);
+      if (blockContent) {
+        content.push(blockContent);
+      }
     }
+
+    return content;
   }
 
   private parseHTMLToBlocks(html: string): ParsedBlock[] {
@@ -378,348 +360,261 @@ export class AdministrativeLetterGenerator {
       .trim();
   }
 
-  private async renderBlock(block: ParsedBlock): Promise<void> {
+  private renderBlock(block: ParsedBlock): Content | null {
     switch (block.type) {
       case 'paragraph':
-        await this.renderParagraph(block.segments!, block.align || 'justify');
-        break;
+        return this.renderParagraph(block.segments!, block.align || 'justify');
       case 'heading1':
-        await this.renderHeading(block.segments!, 1);
-        break;
+        return this.renderHeading(block.segments!, 1);
       case 'heading2':
-        await this.renderHeading(block.segments!, 2);
-        break;
+        return this.renderHeading(block.segments!, 2);
       case 'heading3':
-        await this.renderHeading(block.segments!, 3);
-        break;
+        return this.renderHeading(block.segments!, 3);
       case 'list':
-        await this.renderList(block.items!, block.ordered!);
-        break;
+        return this.renderList(block.items!, block.ordered!);
       case 'separator':
-        this.renderSeparator();
-        break;
+        return this.renderSeparator();
       case 'break':
-        this.currentY += 5;
-        break;
+        return { text: '', margin: [0, 0, 0, this.mmToPt(5)] };
+      default:
+        return null;
     }
   }
 
-  private async renderParagraph(segments: TextSegment[], align: string = 'justify'): Promise<void> {
-    this.checkPageBreak(20);
+  private renderParagraph(segments: TextSegment[], align: string): Content {
+    const textContent = this.segmentsToText(segments);
 
-    const x = this.config.margins.left;
-    const maxWidth = this.config.margins.contentWidth;
+    return {
+      text: textContent,
+      alignment: align as any,
+      margin: [0, 0, 0, this.mmToPt(this.config.spacing.betweenParagraphs)]
+    };
+  }
 
-    this.doc.setFontSize(this.config.typography.body.size);
-    this.doc.setTextColor(this.config.typography.body.color);
+  private segmentsToText(segments: TextSegment[]): any {
+    if (segments.length === 0) {
+      return '';
+    }
 
-    const lineHeight = this.calculateLineHeight(
-      this.config.typography.body.size,
-      this.config.typography.body.lineHeight
-    );
+    if (segments.length === 1 && !segments[0].bold && !segments[0].italic && !segments[0].underline) {
+      return segments[0].text;
+    }
 
-    const lines = this.wrapTextSegments(segments, maxWidth);
+    return segments.map(segment => {
+      const textObj: any = { text: segment.text };
 
-    for (const line of lines) {
-      this.checkPageBreak(10);
-
-      if (align === 'center') {
-        const lineWidth = this.calculateLineWidth(line);
-        const startX = x + (maxWidth - lineWidth) / 2;
-        this.renderLine(line, startX);
-      } else if (align === 'right') {
-        const lineWidth = this.calculateLineWidth(line);
-        const startX = x + maxWidth - lineWidth;
-        this.renderLine(line, startX);
-      } else {
-        this.renderLine(line, x);
+      if (segment.bold) {
+        textObj.bold = true;
       }
 
-      this.currentY += lineHeight;
-    }
-
-    this.currentY += this.config.spacing.betweenParagraphs;
-  }
-
-  private wrapTextSegments(segments: TextSegment[], maxWidth: number): TextSegment[][] {
-    const lines: TextSegment[][] = [];
-    let currentLine: TextSegment[] = [];
-    let currentWidth = 0;
-
-    for (const segment of segments) {
-      const words = segment.text.split(' ');
-
-      for (let i = 0; i < words.length; i++) {
-        const word = words[i];
-        const spaceAfter = i < words.length - 1 ? ' ' : '';
-        const fullWord = word + spaceAfter;
-
-        this.doc.setFont(
-          this.config.typography.mainFont,
-          segment.bold ? 'bold' : segment.italic ? 'italic' : 'normal'
-        );
-
-        const wordWidth = this.doc.getTextWidth(fullWord);
-
-        if (currentWidth + wordWidth > maxWidth && currentLine.length > 0) {
-          lines.push(currentLine);
-          currentLine = [];
-          currentWidth = 0;
-        }
-
-        const lastSeg = currentLine[currentLine.length - 1];
-        if (lastSeg &&
-            lastSeg.bold === segment.bold &&
-            lastSeg.italic === segment.italic &&
-            lastSeg.underline === segment.underline) {
-          lastSeg.text += fullWord;
-        } else {
-          currentLine.push({
-            text: fullWord,
-            bold: segment.bold,
-            italic: segment.italic,
-            underline: segment.underline
-          });
-        }
-
-        currentWidth += wordWidth;
+      if (segment.italic) {
+        textObj.italics = true;
       }
-    }
-
-    if (currentLine.length > 0) {
-      lines.push(currentLine);
-    }
-
-    return lines;
-  }
-
-  private calculateLineWidth(segments: TextSegment[]): number {
-    let width = 0;
-
-    for (const segment of segments) {
-      this.doc.setFont(
-        this.config.typography.mainFont,
-        segment.bold ? 'bold' : segment.italic ? 'italic' : 'normal'
-      );
-      width += this.doc.getTextWidth(segment.text);
-    }
-
-    return width;
-  }
-
-  private renderLine(segments: TextSegment[], startX: number): void {
-    let currentX = startX;
-
-    for (const segment of segments) {
-      const style = segment.bold ? 'bold' : segment.italic ? 'italic' : 'normal';
-      this.doc.setFont(this.config.typography.mainFont, style);
-
-      this.doc.text(segment.text, currentX, this.currentY);
 
       if (segment.underline) {
-        const textWidth = this.doc.getTextWidth(segment.text);
-        this.doc.line(currentX, this.currentY + 0.5, currentX + textWidth, this.currentY + 0.5);
+        textObj.decoration = 'underline';
       }
 
-      currentX += this.doc.getTextWidth(segment.text);
-    }
+      return textObj;
+    });
   }
 
-  private async renderHeading(segments: TextSegment[], level: number): Promise<void> {
+  private renderHeading(segments: TextSegment[], level: number): Content {
+    const styleName = level === 1 ? 'heading1' : level === 2 ? 'heading2' : 'heading3';
     const config = level === 1 ? this.config.typography.h1 :
                    level === 2 ? this.config.typography.h2 :
                    this.config.typography.h3;
 
-    this.checkPageBreak(20);
-    this.currentY += config.spaceBefore;
-
-    const x = this.config.margins.left;
-
-    this.doc.setFontSize(config.size);
-    this.doc.setFont(this.config.typography.mainFont, config.weight);
-    this.doc.setTextColor(this.config.typography.body.color);
-
-    const lineHeight = this.calculateLineHeight(config.size, 1.3);
-
     const text = segments.map(s => s.text).join('');
-    const lines = this.doc.splitTextToSize(text, this.config.margins.contentWidth);
 
-    lines.forEach((line: string) => {
-      this.checkPageBreak(10);
-      this.doc.text(line, x, this.currentY);
-      this.currentY += lineHeight;
-    });
-
-    this.currentY += config.spaceAfter;
+    return {
+      text,
+      style: styleName,
+      margin: [
+        0,
+        this.mmToPt(config.spaceBefore),
+        0,
+        this.mmToPt(config.spaceAfter)
+      ]
+    };
   }
 
-  private async renderList(items: string[], ordered: boolean): Promise<void> {
-    this.checkPageBreak(20);
+  private renderList(items: string[], ordered: boolean): Content {
+    return {
+      [ordered ? 'ol' : 'ul']: items,
+      margin: [
+        this.mmToPt(this.config.typography.list.indent),
+        0,
+        0,
+        this.mmToPt(this.config.spacing.betweenParagraphs)
+      ]
+    };
+  }
 
-    const x = this.config.margins.left;
-    const indent = this.config.typography.list.indent;
-    const maxWidth = this.config.margins.contentWidth - indent - 5;
-
-    this.doc.setFontSize(this.config.typography.body.size);
-    this.doc.setFont(this.config.typography.mainFont, 'normal');
-    this.doc.setTextColor(this.config.typography.body.color);
-
-    const lineHeight = this.calculateLineHeight(
-      this.config.typography.body.size,
-      this.config.typography.body.lineHeight
-    );
-
-    items.forEach((item, index) => {
-      this.checkPageBreak(15);
-
-      const bullet = ordered ? `${index + 1}.` : '•';
-      const bulletWidth = this.doc.getTextWidth(bullet + ' ');
-
-      this.doc.text(bullet, x, this.currentY);
-
-      const lines = this.doc.splitTextToSize(item, maxWidth);
-      lines.forEach((line: string, lineIndex: number) => {
-        if (lineIndex > 0) {
-          this.currentY += lineHeight;
-          this.checkPageBreak(10);
+  private renderSeparator(): Content {
+    return {
+      canvas: [
+        {
+          type: 'line',
+          x1: 0,
+          y1: 0,
+          x2: this.mmToPt(this.config.margins.contentWidth),
+          y2: 0,
+          lineWidth: 0.5,
+          lineColor: '#999999'
         }
-        this.doc.text(line, x + indent, this.currentY);
-      });
-
-      this.currentY += lineHeight + this.config.typography.list.itemSpacing;
-    });
-
-    this.currentY += this.config.spacing.betweenParagraphs;
+      ],
+      margin: [0, this.mmToPt(4), 0, this.mmToPt(4)]
+    };
   }
 
-  private renderSeparator(): void {
-    this.checkPageBreak(10);
-
-    const pageWidth = this.doc.internal.pageSize.getWidth();
-
-    this.doc.setDrawColor(153, 153, 153);
-    this.doc.setLineWidth(0.5);
-    this.doc.line(
-      this.config.margins.left,
-      this.currentY,
-      pageWidth - this.config.margins.right,
-      this.currentY
-    );
-
-    this.currentY += 8;
-  }
-
-  private addPoliteFormula(civilite: string): void {
-    this.checkPageBreak(20);
-
-    this.currentY += this.config.spacing.beforePoliteFormula;
-
-    const x = this.config.margins.left;
-
-    this.doc.setFontSize(this.config.typography.body.size);
-    this.doc.setFont(this.config.typography.mainFont, 'normal');
-    this.doc.setTextColor(this.config.typography.body.color);
-
-    const lineHeight = this.calculateLineHeight(
-      this.config.typography.body.size,
-      this.config.typography.body.lineHeight
-    );
-
+  private buildPoliteFormula(civilite: string): Content {
     const formula = `Veuillez agréer, ${civilite}, l'expression de nos salutations distinguées.`;
-    const lines = this.doc.splitTextToSize(formula, this.config.margins.contentWidth);
 
-    lines.forEach((line: string) => {
-      this.doc.text(line, x, this.currentY);
-      this.currentY += lineHeight;
-    });
-
-    this.currentY += this.config.spacing.beforeSignature;
+    return {
+      text: formula,
+      margin: [
+        0,
+        this.mmToPt(this.config.spacing.beforePoliteFormula),
+        0,
+        this.mmToPt(this.config.spacing.beforeSignature)
+      ]
+    };
   }
 
-  private addSignatureBlock(signature: LetterSignature): void {
-    this.checkPageBreak(this.config.layout.signature.minSpace);
-
-    const pageWidth = this.doc.internal.pageSize.getWidth();
-    const rightMargin = this.config.margins.right;
-
-    this.doc.setFontSize(this.config.typography.signatureTitle.size);
-    this.doc.setFont(this.config.typography.mainFont, this.config.typography.signatureTitle.weight);
-    this.doc.setTextColor(this.config.typography.signatureTitle.color);
-
-    const functionWidth = this.doc.getTextWidth(signature.fonction);
-    const functionX = pageWidth - rightMargin - functionWidth;
-    this.doc.text(signature.fonction, functionX, this.currentY);
-
-    this.currentY += 15;
-
-    this.doc.setFontSize(this.config.typography.signature.size);
-    this.doc.setFont(this.config.typography.mainFont, this.config.typography.signature.weight);
-    this.doc.setTextColor(this.config.typography.signature.color);
-
+  private buildSignatureBlock(signature: LetterSignature): Content {
     const fullName = signature.prenom
       ? `${signature.prenom} ${signature.nom.toUpperCase()}`
       : signature.nom.toUpperCase();
 
-    const nameWidth = this.doc.getTextWidth(fullName);
-    const nameX = pageWidth - rightMargin - nameWidth;
-    this.doc.text(fullName, nameX, this.currentY);
+    return {
+      stack: [
+        {
+          text: signature.fonction,
+          style: 'signatureTitle'
+        },
+        {
+          text: '',
+          margin: [0, 0, 0, this.mmToPt(15)]
+        },
+        {
+          text: fullName,
+          style: 'signature'
+        }
+      ],
+      alignment: 'right'
+    };
   }
 
-  private addFooterToAllPages(options?: LetterOptions): void {
-    if (options?.showFooter === false) return;
+  private buildFooter(options?: LetterOptions): (currentPage: number, pageCount: number) => Content {
+    return (currentPage: number, pageCount: number): Content => {
+      const footerContent: Content[] = [];
 
-    const totalPages = this.doc.getNumberOfPages();
-    const pageHeight = this.doc.internal.pageSize.getHeight();
-    const pageWidth = this.doc.internal.pageSize.getWidth();
-    const footerY = pageHeight - this.config.spacing.footerHeight;
+      footerContent.push({
+        canvas: [
+          {
+            type: 'line',
+            x1: this.mmToPt(this.config.margins.left),
+            y1: 0,
+            x2: this.mmToPt(210 - this.config.margins.right),
+            y2: 0,
+            lineWidth: 0.3,
+            lineColor: '#999999'
+          }
+        ],
+        margin: [0, 0, 0, this.mmToPt(2)]
+      });
 
-    for (let i = 1; i <= totalPages; i++) {
-      this.doc.setPage(i);
+      const leftText = `${this.config.company.name} - Document confidentiel`;
+      const date = this.formatDateShort(new Date());
+      const rightText = options?.showPageNumbers !== false
+        ? `Page ${currentPage}/${pageCount} | Généré le ${date}`
+        : '';
 
-      this.doc.setDrawColor(153, 153, 153);
-      this.doc.setLineWidth(0.3);
-      this.doc.line(
-        this.config.margins.left,
-        footerY - 5,
-        pageWidth - this.config.margins.right,
-        footerY - 5
-      );
+      footerContent.push({
+        columns: [
+          {
+            text: leftText,
+            style: 'footer',
+            alignment: 'left',
+            width: '*'
+          },
+          {
+            text: rightText,
+            style: 'footer',
+            alignment: 'right',
+            width: '*'
+          }
+        ],
+        margin: [
+          this.mmToPt(this.config.margins.left),
+          0,
+          this.mmToPt(this.config.margins.right),
+          0
+        ]
+      });
 
-      this.doc.setFontSize(this.config.typography.footer.size);
-      this.doc.setFont(this.config.typography.mainFont, this.config.typography.footer.weight);
-      this.doc.setTextColor(this.config.typography.footer.color);
+      return {
+        stack: footerContent,
+        margin: [0, this.mmToPt(5), 0, 0]
+      };
+    };
+  }
 
-      this.doc.text(
-        `${this.config.company.name} - Document confidentiel`,
-        this.config.margins.left,
-        footerY
-      );
-
-      if (options?.showPageNumbers !== false) {
-        const date = this.formatDateShort(new Date());
-        const pageText = `Page ${i}/${totalPages} | Généré le ${date}`;
-        const textWidth = this.doc.getTextWidth(pageText);
-        this.doc.text(
-          pageText,
-          pageWidth - this.config.margins.right - textWidth,
-          footerY
-        );
+  private buildStyles(): any {
+    return {
+      companyName: {
+        fontSize: this.config.typography.companyName.size,
+        bold: this.config.typography.companyName.weight === 'bold',
+        color: this.config.typography.companyName.color,
+        margin: [0, 0, 0, 2]
+      },
+      companyInfo: {
+        fontSize: this.config.typography.companyInfo.size,
+        color: this.config.typography.companyInfo.color,
+        lineHeight: 1.2
+      },
+      date: {
+        fontSize: this.config.typography.body.size
+      },
+      recipient: {
+        fontSize: this.config.typography.body.size,
+        bold: true,
+        lineHeight: 1.2
+      },
+      object: {
+        fontSize: this.config.typography.object.size,
+        bold: this.config.typography.object.weight === 'bold',
+        decoration: this.config.typography.object.underline ? 'underline' : undefined,
+        color: this.config.typography.object.color
+      },
+      heading1: {
+        fontSize: this.config.typography.h1.size,
+        bold: this.config.typography.h1.weight === 'bold'
+      },
+      heading2: {
+        fontSize: this.config.typography.h2.size,
+        bold: this.config.typography.h2.weight === 'bold'
+      },
+      heading3: {
+        fontSize: this.config.typography.h3.size,
+        bold: this.config.typography.h3.weight === 'bold'
+      },
+      signature: {
+        fontSize: this.config.typography.signature.size,
+        bold: this.config.typography.signature.weight === 'bold',
+        color: this.config.typography.signature.color
+      },
+      signatureTitle: {
+        fontSize: this.config.typography.signatureTitle.size,
+        bold: this.config.typography.signatureTitle.weight === 'bold',
+        color: this.config.typography.signatureTitle.color
+      },
+      footer: {
+        fontSize: this.config.typography.footer.size,
+        color: this.config.typography.footer.color
       }
-    }
-  }
-
-  private checkPageBreak(neededSpace: number): boolean {
-    const pageHeight = this.doc.internal.pageSize.getHeight();
-    const maxY = pageHeight - this.config.margins.bottom - this.config.spacing.footerHeight;
-
-    if (this.currentY + neededSpace > maxY) {
-      this.doc.addPage();
-      this.pageNumber++;
-      this.currentY = this.config.margins.top + 10;
-      return true;
-    }
-
-    return false;
+    };
   }
 
   private formatDateLong(date: Date): string {
