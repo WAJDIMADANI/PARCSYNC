@@ -75,7 +75,7 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
     try {
       const { data, error } = await supabase
         .from('profil')
-        .select('*, site:site_id(nom), secteur:secteur_id(nom)')
+        .select('*, site:site_id(nom), secteur:secteur_id(nom), genre')
         .order('nom', { ascending: true });
 
       if (error) throw error;
@@ -203,8 +203,11 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
       console.log('Toutes les variables préparées:', Object.keys(allVariables));
 
       console.log('=== GÉNÉRATION COURRIER ADMINISTRATIF ===');
+      console.log('Genre du profil:', selectedProfile.genre);
+      console.log('Civilité détectée:', systemValues.civilite);
 
       const civilite = systemValues.civilite || 'Madame, Monsieur';
+      console.log('Civilité utilisée pour le PDF:', civilite);
 
       const pdfBlob = await generateAdministrativeLetter({
         recipient: {
