@@ -163,7 +163,7 @@ function generateContractHTML(contract: any): string {
       margin: 2cm;
     }
     body {
-      font-family: Arial, sans-serif;
+      font-family: Helvetica, Arial, sans-serif;
       font-size: 11pt;
       line-height: 1.6;
       color: #000;
