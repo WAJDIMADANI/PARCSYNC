@@ -97,7 +97,7 @@ export class AdministrativeLetterGenerator {
         : undefined,
       styles: this.buildStyles(),
       defaultStyle: {
-        font: 'Roboto',
+        font: 'Helvetica',
         fontSize: this.config.typography.body.size,
         lineHeight: this.config.typography.body.lineHeight,
         color: this.config.typography.body.color
