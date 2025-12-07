@@ -4,6 +4,7 @@ import { FileText, Trash2, UserX } from 'lucide-react';
 import { ConfirmModal } from './ConfirmModal';
 import { onVoirDocument } from '../lib/documentStorage';
 import { LoadingSpinner } from './LoadingSpinner';
+import { sanitizeFileName } from '../utils/fileNameSanitizer';
 
 interface Candidate {
   id: string;
@@ -83,7 +84,8 @@ export function DocumentsManager() {
   const handleUpload = async (candidatId: string, type: string, file: File) => {
     setUploading(true);
     try {
-      const fileName = `candidat_${candidatId}/${type}/${Date.now()}_${file.name}`;
+      const sanitizedFileName = sanitizeFileName(file.name);
+      const fileName = `candidat_${candidatId}/${type}/${Date.now()}_${sanitizedFileName}`;
       const { error: uploadError } = await supabase.storage
         .from('documents')
         .upload(fileName, file);

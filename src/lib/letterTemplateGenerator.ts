@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import jsPDF from 'jspdf';
+import { sanitizeFileName } from '../utils/fileNameSanitizer';
 
 export const SYSTEM_VARIABLES: Record<string, string> = {
   // Identité
@@ -313,7 +314,8 @@ export async function uploadLetterPDF(
   profilId: string,
   modeleName: string
 ): Promise<string> {
-  const fileName = `${Date.now()}_${modeleName.replace(/\s+/g, '_')}.pdf`;
+  const sanitizedModelName = sanitizeFileName(modeleName);
+  const fileName = `${Date.now()}_${sanitizedModelName}.pdf`;
   const year = new Date().getFullYear();
   const month = String(new Date().getMonth() + 1).padStart(2, '0');
   const path = `${year}/${month}/${profilId}/${fileName}`;

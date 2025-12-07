@@ -13,6 +13,7 @@ import {
   saveGeneratedLetter
 } from '../lib/letterTemplateGenerator';
 import { generateAdministrativeLetter } from '../lib/administrativeLetterGenerator';
+import { sanitizeFileName } from '../utils/fileNameSanitizer';
 
 interface Profile {
   id: string;
@@ -254,7 +255,8 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
 
       console.log('Enregistré en base de données');
 
-      const fileName = `${selectedTemplate.nom}_${selectedProfile.nom}_${new Date().toLocaleDateString('fr-FR')}.pdf`;
+      const rawFileName = `${selectedTemplate.nom}_${selectedProfile.nom}_${new Date().toLocaleDateString('fr-FR')}.pdf`;
+      const fileName = sanitizeFileName(rawFileName);
       setGeneratedPdfBlob(pdfBlob);
       setGeneratedFileName(fileName);
 
