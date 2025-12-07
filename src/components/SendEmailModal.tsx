@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Mail, AlertCircle } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { supabase } from '../lib/supabase';
 
 interface SendEmailModalProps {
   letter: {
@@ -59,6 +60,21 @@ export function SendEmailModal({ letter, profil, onClose, onSuccess }: SendEmail
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Erreur lors de l\'envoi de l\'email');
+      }
+
+      // Mettre à jour le statut du courrier dans la base de données
+      const { error: updateError } = await supabase
+        .from('courrier_genere')
+        .update({
+          status: 'envoye',
+          sent_to: profil.email,
+          sent_at: new Date().toISOString(),
+        })
+        .eq('id', letter.id);
+
+      if (updateError) {
+        console.error('Erreur lors de la mise à jour du statut:', updateError);
+        throw new Error('Email envoyé mais erreur lors de la mise à jour du statut');
       }
 
       onSuccess();
