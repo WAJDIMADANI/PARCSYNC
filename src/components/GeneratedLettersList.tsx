@@ -425,7 +425,9 @@ export function GeneratedLettersList() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {letter.sujet}
+                    <div className="max-w-xs truncate" title={letter.sujet}>
+                      {letter.sujet}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col gap-1">
