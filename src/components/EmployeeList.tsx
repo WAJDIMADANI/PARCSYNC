@@ -308,7 +308,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       const matchesSecteur = !filterSecteur || emp.secteur_id === filterSecteur;
 
       const empContract = contracts.find(c => c.profil_id === emp.id);
-      const empTypeContrat = empContract?.modeles_contrats?.nom || '';
+      const empTypeContrat = empContract?.type || '';
       const matchesTypeContrat = !filterTypeContrat || empTypeContrat === filterTypeContrat;
 
       return matchesSearch && matchesStatut && matchesSecteur && matchesTypeContrat;
