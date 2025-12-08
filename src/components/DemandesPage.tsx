@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { PermissionGuard } from './PermissionGuard';
-import { Phone, Search, X, Save, AlertCircle, Clock, CheckCircle, Edit2, Filter, User, History, ArrowRight, Eye } from 'lucide-react';
+import { Phone, Search, X, Save, AlertCircle, Clock, CheckCircle, Edit2, Filter, User, History, ArrowRight, Eye, CheckSquare } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { RequestValidationModal } from './RequestValidationModal';
 
 interface Profil {
   id: string;
@@ -51,6 +52,7 @@ export function DemandesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedDemande, setSelectedDemande] = useState<Demande | null>(null);
+  const [showValidationModal, setShowValidationModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Profil[]>([]);
   const [selectedProfil, setSelectedProfil] = useState<Profil | null>(null);
@@ -928,11 +930,18 @@ export function DemandesPage() {
                 </div>
               </div>
 
-              <div className="p-6 border-t border-slate-200">
+              <div className="p-6 border-t border-slate-200 flex gap-3">
+                <button
+                  onClick={() => setShowValidationModal(true)}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium flex items-center justify-center gap-2"
+                >
+                  <CheckSquare className="w-5 h-5" />
+                  Demander validation
+                </button>
                 <button
                   onClick={saveNotes}
                   disabled={saving}
-                  className="w-full px-4 py-2.5 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {saving ? (
                     <>
@@ -1195,6 +1204,17 @@ export function DemandesPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {showValidationModal && selectedDemande && (
+          <RequestValidationModal
+            demandeId={selectedDemande.id}
+            onClose={() => setShowValidationModal(false)}
+            onSuccess={() => {
+              setShowValidationModal(false);
+              setShowDetailsModal(false);
+            }}
+          />
         )}
       </div>
     </PermissionGuard>

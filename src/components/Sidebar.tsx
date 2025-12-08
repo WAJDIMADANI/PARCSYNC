@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 
@@ -20,6 +20,7 @@ export type View =
   | 'rh/vivier'
   | 'rh/documents'
   | 'rh/demandes'
+  | 'rh/validations'
   | 'parc/vehicules'
   | 'parc/ct-assurance'
   | 'parc/maintenance'
@@ -110,6 +111,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'rh/incidents-historique', label: 'Historique incidents', icon: History, enabled: true },
         { id: 'rh/vivier', label: 'Vivier', icon: Archive, enabled: true },
         { id: 'rh/demandes', label: 'Demandes', icon: Phone, enabled: true },
+        { id: 'rh/validations', label: 'Validations', icon: CheckSquare, enabled: true },
       ]
     },
     {

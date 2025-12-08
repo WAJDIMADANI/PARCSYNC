@@ -16,6 +16,7 @@ import {
   Calendar,
   Bell,
   Phone,
+  CheckSquare,
 } from 'lucide-react';
 
 interface Stats {
@@ -54,6 +55,11 @@ interface Stats {
     top_employes: { nom: string; prenom: string; count: number }[];
   };
   demandes: {
+    total: number;
+    en_attente: number;
+    urgentes: number;
+  };
+  validations: {
     total: number;
     en_attente: number;
     urgentes: number;
@@ -105,6 +111,11 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       en_attente: 0,
       urgentes: 0,
     },
+    validations: {
+      total: 0,
+      en_attente: 0,
+      urgentes: 0,
+    },
   });
   const [loading, setLoading] = useState(true);
 
@@ -139,11 +150,19 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       })
       .subscribe();
 
+    const validationsChannel = supabase
+      .channel('validations-dashboard-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'demande_validation' }, () => {
+        fetchValidationsStats();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(candidatsChannel);
       supabase.removeChannel(profilsChannel);
       supabase.removeChannel(alertesChannel);
       supabase.removeChannel(notificationsChannel);
+      supabase.removeChannel(validationsChannel);
     };
   }, []);
 
@@ -155,6 +174,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       fetchNotificationsStats(),
       fetchIncidentsStats(),
       fetchDemandesStats(),
+      fetchValidationsStats(),
     ]);
     setLoading(false);
   };
@@ -421,6 +441,40 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
     }
   };
 
+  const fetchValidationsStats = async () => {
+    try {
+      const { data: validations } = await supabase
+        .from('demande_validation')
+        .select('statut, priorite');
+
+      if (!validations) {
+        setStats((prev) => ({
+          ...prev,
+          validations: {
+            total: 0,
+            en_attente: 0,
+            urgentes: 0,
+          },
+        }));
+        return;
+      }
+
+      const en_attente = validations.filter((v) => v.statut === 'en_attente').length;
+      const urgentes = validations.filter((v) => v.statut === 'en_attente' && v.priorite === 'urgente').length;
+
+      setStats((prev) => ({
+        ...prev,
+        validations: {
+          total: validations.length,
+          en_attente,
+          urgentes,
+        },
+      }));
+    } catch (error) {
+      console.error('Error fetching validations stats:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -518,6 +572,21 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             trend={stats.incidents.ce_mois > stats.incidents.total / 12 ? 'up' : 'down'}
             trendValue="Voir détails"
             color="red"
+          />
+        </button>
+
+        <button
+          onClick={() => onNavigate?.('rh/validations')}
+          className="text-left hover:scale-105 transition-transform"
+        >
+          <StatCard
+            icon={<CheckSquare className="w-6 h-6" />}
+            title="Validations"
+            value={stats.validations.total}
+            subtitle={`${stats.validations.en_attente} en attente`}
+            trend={stats.validations.urgentes > 0 ? 'up' : 'neutral'}
+            trendValue={`${stats.validations.urgentes} urgentes`}
+            color="purple"
           />
         </button>
       </div>

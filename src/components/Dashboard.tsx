@@ -29,6 +29,7 @@ import { IncidentsList } from './IncidentsList';
 import { IncidentHistory } from './IncidentHistory';
 import { UserManagement } from './UserManagement';
 import { DemandesPage } from './DemandesPage';
+import { ValidationsPage } from './ValidationsPage';
 import { LetterTemplatesManager } from './LetterTemplatesManager';
 import { GeneratedLettersList } from './GeneratedLettersList';
 import { MissingDocuments } from './MissingDocuments';
@@ -70,6 +71,8 @@ export function Dashboard() {
         return <VivierList />;
       case 'rh/demandes':
         return <DemandesPage />;
+      case 'rh/validations':
+        return <ValidationsPage />;
       case 'parc/vehicules':
         return <VehicleList />;
       case 'parc/ct-assurance':
@@ -138,6 +141,7 @@ export function Dashboard() {
                 {view === 'rh/incidents-historique' && 'Historique des Incidents'}
                 {view === 'rh/vivier' && 'Vivier'}
                 {view === 'rh/demandes' && 'Demandes Standardistes'}
+                {view === 'rh/validations' && 'Validations'}
                 {view === 'parc/vehicules' && 'Véhicules'}
                 {view === 'parc/ct-assurance' && 'CT & Assurance'}
                 {view === 'parc/maintenance' && 'Maintenance & Garage'}
