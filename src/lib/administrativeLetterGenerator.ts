@@ -375,8 +375,7 @@ export class AdministrativeLetterGenerator {
       .replace(/&ocirc;/g, 'ô')
       .replace(/&icirc;/g, 'î')
       .replace(/&ugrave;/g, 'ù')
-      .replace(/&ccedil;/g, 'ç')
-      .trim();
+      .replace(/&ccedil;/g, 'ç');
   }
 
   private renderBlock(block: ParsedBlock): Content | null {
