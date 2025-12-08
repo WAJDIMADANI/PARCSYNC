@@ -209,14 +209,20 @@ export function replaceAllVariables(
 ): string {
   let result = template;
 
-  // Fusionner les variables: les valeurs personnalisées écrasent les valeurs système
-  const mergedValues = { ...systemValues, ...customValues };
-
-  // Un seul passage de remplacement avec toutes les variables
-  Object.entries(mergedValues).forEach(([key, value]) => {
+  // D'abord remplacer les variables système (sans formatage spécial)
+  Object.entries(systemValues).forEach(([key, value]) => {
     const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
     const displayValue = formatCustomValue(value);
     result = result.replace(regex, displayValue);
+  });
+
+  // Ensuite remplacer les variables personnalisées (EN GRAS ET EN ROUGE)
+  Object.entries(customValues).forEach(([key, value]) => {
+    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+    const displayValue = formatCustomValue(value);
+    // Wrapper avec HTML pour affichage en gras et rouge
+    const styledValue = `<b style="color: red;">${displayValue}</b>`;
+    result = result.replace(regex, styledValue);
   });
 
   return result;

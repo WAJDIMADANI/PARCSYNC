@@ -41,6 +41,7 @@ interface TextSegment {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  color?: string;
 }
 
 interface ParsedBlock {
@@ -318,15 +319,24 @@ export class AdministrativeLetterGenerator {
       }
 
       const tag = match[1].toLowerCase();
+      const attributes = match[2];
       const content = this.stripHtmlTags(match[3]);
 
       if (content) {
-        segments.push({
+        const segment: TextSegment = {
           text: content,
           bold: tag === 'b' || tag === 'strong',
           italic: tag === 'i' || tag === 'em',
           underline: tag === 'u'
-        });
+        };
+
+        // Extraire la couleur depuis le style si présent
+        const colorMatch = attributes.match(/style=["']?[^"']*color:\s*([^;"']+)/i);
+        if (colorMatch) {
+          segment.color = colorMatch[1].trim();
+        }
+
+        segments.push(segment);
       }
 
       lastIndex = match.index + match[0].length;
@@ -405,7 +415,7 @@ export class AdministrativeLetterGenerator {
       return '';
     }
 
-    if (segments.length === 1 && !segments[0].bold && !segments[0].italic && !segments[0].underline) {
+    if (segments.length === 1 && !segments[0].bold && !segments[0].italic && !segments[0].underline && !segments[0].color) {
       return segments[0].text;
     }
 
@@ -422,6 +432,10 @@ export class AdministrativeLetterGenerator {
 
       if (segment.underline) {
         textObj.decoration = 'underline';
+      }
+
+      if (segment.color) {
+        textObj.color = segment.color;
       }
 
       return textObj;
