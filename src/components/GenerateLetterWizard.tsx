@@ -425,8 +425,18 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
                         <FileText className="w-8 h-8 text-blue-600 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <div className="font-medium text-gray-900 truncate">{template.nom}</div>
+                            <div
+                              className="font-medium text-gray-900 truncate"
+                              title={template.nom}
+                            >
+                              {template.nom}
+                            </div>
                           </div>
+                          {template.sujet && (
+                            <div className="text-xs text-gray-500 mb-2 line-clamp-2" title={template.sujet}>
+                              {template.sujet}
+                            </div>
+                          )}
                           <div className="text-xs text-gray-500 mt-1">
                             <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700">
                               {template.type_courrier}
