@@ -528,6 +528,8 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                 <option value="">Tous les types</option>
                 <option value="CDD">CDD</option>
                 <option value="CDI">CDI</option>
+                <option value="Avenant 1">Avenant 1</option>
+                <option value="Avenant 2">Avenant 2</option>
               </select>
             </div>
           </div>
