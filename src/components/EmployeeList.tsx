@@ -1079,14 +1079,18 @@ function EmployeeDetailModal({
 
       if (error) throw error;
 
-      setEmployeeContracts(data || []);
-      console.log('✅ Contrats chargés pour le salarié:', data?.length);
+      const uniqueContracts = data ? Array.from(
+        new Map(data.map(contract => [contract.id, contract])).values()
+      ) : [];
+
+      setEmployeeContracts(uniqueContracts);
+      console.log('✅ Contrats chargés pour le salarié:', uniqueContracts.length);
 
       // Initialiser les dates de contrat avec le contrat actif
-      if (data && data.length > 0) {
-        const activeContract = data.find((c: any) =>
+      if (uniqueContracts && uniqueContracts.length > 0) {
+        const activeContract = uniqueContracts.find((c: any) =>
           c.statut === 'actif' || c.statut === 'signe' || c.source === 'import'
-        ) || data[0];
+        ) || uniqueContracts[0];
 
         if (activeContract) {
           setEditedDateDebutContrat(activeContract.date_debut || '');
@@ -3609,63 +3613,6 @@ function EmployeeDetailModal({
                 })}
               </div>
             )}
-          </div>
-
-          {/* Section Actions */}
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200">
-            <div className="flex flex-wrap gap-3">
-              {currentEmployee.statut === 'en_attente_contrat' && (
-                <button
-                  onClick={() => setShowContractSend(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg font-medium"
-                >
-                  <Send className="w-4 h-4" />
-                  Envoyer le contrat
-                </button>
-              )}
-
-              {(currentEmployee.statut === 'contrat_envoye' || currentContractStatus === 'signe' || currentContractStatus === 'en_attente_signature') && (
-                <>
-                  <button
-                    onClick={() => setShowContractValidation(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg font-medium"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    {currentContractStatus === 'signe' ? 'Activer le salarié' : 'Valider le contrat'}
-                  </button>
-                  <button
-                    onClick={() => setShowResendConfirm(true)}
-                    disabled={resending}
-                    className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {resending ? (
-                      <LoadingSpinner size="sm" variant="white" text="Envoi..." />
-                    ) : (
-                      <>
-                        <RefreshCw className="w-4 h-4" />
-                        Renvoyer le contrat
-                      </>
-                    )}
-                  </button>
-                </>
-              )}
-
-              <button
-                onClick={() => setShowHistory(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg font-medium"
-              >
-                <History className="w-4 h-4" />
-                Historique
-              </button>
-
-              <button
-                onClick={() => setShowDeparture(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-lg font-medium"
-              >
-                <UserX className="w-4 h-4" />
-                Départ salarié
-              </button>
-            </div>
           </div>
 
           {/* ID Section */}
