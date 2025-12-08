@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase, getStorageUrl } from '../lib/supabase';
-import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload, Trash2, Download, Loader2, File } from 'lucide-react';
+import { Search, X, Mail, Phone, Building, Briefcase, Calendar, User, MapPin, History, UserX, FileText, Send, Check, ChevronUp, ChevronDown, Filter, CheckCircle, RefreshCw, Edit2, Save, AlertCircle, AlertTriangle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, CreditCard, Home, Globe, Upload, Trash2, Download, Loader2, File } from 'lucide-react';
 import EmployeeHistory from './EmployeeHistory';
 import EmployeeDeparture from './EmployeeDeparture';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -856,6 +856,10 @@ function EmployeeDetailModal({
   const [editedRole, setEditedRole] = useState(currentEmployee.role || '');
   const [editedSecteurId, setEditedSecteurId] = useState(currentEmployee.secteur_id || '');
 
+  // États pour les dates de contrat (depuis la table contrat)
+  const [editedDateDebutContrat, setEditedDateDebutContrat] = useState('');
+  const [editedDateFinContrat, setEditedDateFinContrat] = useState('');
+
   // Synchroniser currentEmployee avec la prop employee quand elle change
   useEffect(() => {
     setCurrentEmployee(employee);
@@ -1057,6 +1061,18 @@ function EmployeeDetailModal({
 
       setEmployeeContracts(data || []);
       console.log('✅ Contrats chargés pour le salarié:', data?.length);
+
+      // Initialiser les dates de contrat avec le contrat actif
+      if (data && data.length > 0) {
+        const activeContract = data.find((c: any) =>
+          c.statut === 'actif' || c.statut === 'signe' || c.source === 'import'
+        ) || data[0];
+
+        if (activeContract) {
+          setEditedDateDebutContrat(activeContract.date_debut || '');
+          setEditedDateFinContrat(activeContract.date_fin || '');
+        }
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des contrats:', error);
       setEmployeeContracts([]);
@@ -1098,6 +1114,72 @@ function EmployeeDetailModal({
       setToast({ type: 'error', message: err.message || 'Erreur lors de la suppression' });
     } finally {
       setDeletingContract(false);
+    }
+  };
+
+  // Fonctions utilitaires pour les contrats
+  const calculateDaysRemainingForContract = (dateFinStr?: string): number | null => {
+    if (!dateFinStr) return null;
+    const dateFin = new Date(dateFinStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    dateFin.setHours(0, 0, 0, 0);
+    const diffTime = dateFin.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getContractUrgencyLevel = (daysRemaining: number | null): 'normal' | 'warning' | 'urgent' | 'critical' | 'expired' => {
+    if (daysRemaining === null) return 'normal';
+    if (daysRemaining < 0) return 'expired';
+    if (daysRemaining <= 15) return 'critical';
+    if (daysRemaining <= 30) return 'urgent';
+    if (daysRemaining <= 60) return 'warning';
+    return 'normal';
+  };
+
+  const getContractUrgencyColors = (urgencyLevel: string) => {
+    switch (urgencyLevel) {
+      case 'expired':
+        return {
+          bg: 'bg-red-100',
+          border: 'border-red-300',
+          text: 'text-red-900',
+          badgeBg: 'bg-red-700',
+          badgeText: 'text-white'
+        };
+      case 'critical':
+        return {
+          bg: 'bg-red-50',
+          border: 'border-red-400',
+          text: 'text-red-800',
+          badgeBg: 'bg-red-600',
+          badgeText: 'text-white'
+        };
+      case 'urgent':
+        return {
+          bg: 'bg-orange-50',
+          border: 'border-orange-400',
+          text: 'text-orange-800',
+          badgeBg: 'bg-orange-600',
+          badgeText: 'text-white'
+        };
+      case 'warning':
+        return {
+          bg: 'bg-yellow-50',
+          border: 'border-yellow-400',
+          text: 'text-yellow-800',
+          badgeBg: 'bg-yellow-600',
+          badgeText: 'text-white'
+        };
+      default:
+        return {
+          bg: 'bg-green-50',
+          border: 'border-green-300',
+          text: 'text-green-800',
+          badgeBg: 'bg-green-600',
+          badgeText: 'text-white'
+        };
     }
   };
 
@@ -1705,7 +1787,8 @@ function EmployeeDetailModal({
   const handleSaveContract = async () => {
     setSavingContract(true);
     try {
-      const { error } = await supabase
+      // Mise à jour du profil
+      const { error: profilError } = await supabase
         .from('profil')
         .update({
           date_entree: editedDateEntree || null,
@@ -1714,7 +1797,48 @@ function EmployeeDetailModal({
         })
         .eq('id', currentEmployee.id);
 
-      if (error) throw error;
+      if (profilError) throw profilError;
+
+      // Mise à jour ou création du contrat
+      if (editedDateDebutContrat || editedDateFinContrat) {
+        // Trouver le contrat actif existant
+        const activeContract = employeeContracts.find((c: any) =>
+          c.statut === 'actif' || c.statut === 'signe' || c.source === 'import'
+        ) || employeeContracts[0];
+
+        const contractType = editedDateFinContrat ? 'cdd' : 'cdi';
+
+        if (activeContract) {
+          // Mettre à jour le contrat existant
+          const { error: contratError } = await supabase
+            .from('contrat')
+            .update({
+              date_debut: editedDateDebutContrat || null,
+              date_fin: editedDateFinContrat || null,
+              type: contractType
+            })
+            .eq('id', activeContract.id);
+
+          if (contratError) throw contratError;
+        } else {
+          // Créer un nouveau contrat
+          const { error: contratError } = await supabase
+            .from('contrat')
+            .insert({
+              profil_id: currentEmployee.id,
+              date_debut: editedDateDebutContrat || null,
+              date_fin: editedDateFinContrat || null,
+              type: contractType,
+              statut: 'actif',
+              source: 'manual_edit'
+            });
+
+          if (contratError) throw contratError;
+        }
+
+        // Recharger les contrats
+        await fetchEmployeeContracts(currentEmployee.id);
+      }
 
       const selectedSecteur = secteurs.find(s => s.id === editedSecteurId);
 
@@ -1740,6 +1864,17 @@ function EmployeeDetailModal({
     setEditedDateEntree(currentEmployee.date_entree || '');
     setEditedRole(currentEmployee.role || '');
     setEditedSecteurId(currentEmployee.secteur_id || '');
+
+    // Réinitialiser les dates de contrat
+    const activeContract = employeeContracts.find((c: any) =>
+      c.statut === 'actif' || c.statut === 'signe' || c.source === 'import'
+    ) || employeeContracts[0];
+
+    if (activeContract) {
+      setEditedDateDebutContrat(activeContract.date_debut || '');
+      setEditedDateFinContrat(activeContract.date_fin || '');
+    }
+
     setIsEditingContract(false);
   };
 
@@ -2300,6 +2435,22 @@ function EmployeeDetailModal({
           </div>
 
           {/* Section Contrat Principal */}
+          {(() => {
+            // Récupérer le contrat actif
+            const activeContract = employeeContracts.find((c: any) =>
+              c.statut === 'actif' || c.statut === 'signe' || c.source === 'import'
+            ) || employeeContracts[0];
+
+            // Calculer les informations du contrat
+            const contractDateDebut = editedDateDebutContrat || activeContract?.date_debut;
+            const contractDateFin = editedDateFinContrat || activeContract?.date_fin;
+            const contractType = contractDateFin ? 'CDD' : 'CDI';
+            const isCDD = contractType === 'CDD';
+            const daysRemaining = calculateDaysRemainingForContract(contractDateFin);
+            const urgencyLevel = getContractUrgencyLevel(daysRemaining);
+            const urgencyColors = getContractUrgencyColors(urgencyLevel);
+
+            return (
           <div className={`border rounded-lg p-4 transition-colors ${isEditingContract ? 'bg-green-100 border-green-300' : 'bg-green-50 border-green-200'}`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -2366,6 +2517,54 @@ function EmployeeDetailModal({
               </div>
             )}
 
+            {/* Badge Type de Contrat (CDD/CDI) */}
+            {(contractDateDebut || contractDateFin) && (
+              <div className="mb-4 bg-gradient-to-r from-indigo-50 to-indigo-100 border border-indigo-200 rounded-lg p-3 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-indigo-600" />
+                  <span className={`px-3 py-1 text-sm font-bold rounded-full ${
+                    isCDD ? 'bg-orange-500 text-white' : 'bg-green-500 text-white'
+                  }`}>
+                    {contractType}
+                  </span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {isCDD ? 'Contrat à durée déterminée' : 'Contrat à durée indéterminée'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Alerte CDD - Jours restants */}
+            {isCDD && contractDateFin && daysRemaining !== null && (
+              <div className={`mb-4 border-2 rounded-lg p-4 shadow-md ${urgencyColors.bg} ${urgencyColors.border}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${urgencyLevel === 'expired' ? 'bg-white' : urgencyColors.badgeBg}`}>
+                    <AlertTriangle className={`w-6 h-6 ${urgencyLevel === 'expired' ? 'text-red-900' : 'text-white'}`} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {urgencyLevel === 'expired' ? (
+                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${urgencyColors.badgeBg} ${urgencyColors.badgeText}`}>
+                          EXPIRÉ
+                        </span>
+                      ) : (
+                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${urgencyColors.badgeBg} ${urgencyColors.badgeText}`}>
+                          {daysRemaining} jour{daysRemaining > 1 ? 's' : ''} restant{daysRemaining > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-sm mt-1 ${urgencyColors.text} font-medium`}>
+                      {urgencyLevel === 'expired' ? (
+                        <>Contrat expiré depuis le <span className="font-bold">{formatDate(contractDateFin)}</span></>
+                      ) : (
+                        <>Fin prévue le <span className="font-bold">{formatDate(contractDateFin)}</span></>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Statut</label>
@@ -2384,6 +2583,52 @@ function EmployeeDetailModal({
                     type="date"
                     value={editedDateEntree}
                     onChange={(e) => setEditedDateEntree(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Date début contrat</label>
+                {!isEditingContract ? (
+                  <p className="text-sm text-gray-900">{formatDate(contractDateDebut) || '-'}</p>
+                ) : (
+                  <input
+                    type="date"
+                    value={editedDateDebutContrat}
+                    onChange={(e) => setEditedDateDebutContrat(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase flex items-center gap-1">
+                  Date fin contrat
+                  {isCDD && daysRemaining !== null && urgencyLevel !== 'normal' && (
+                    <AlertTriangle className={`w-3.5 h-3.5 ${
+                      urgencyLevel === 'expired' ? 'text-red-700' :
+                      urgencyLevel === 'critical' ? 'text-red-600' :
+                      urgencyLevel === 'urgent' ? 'text-orange-600' :
+                      'text-yellow-600'
+                    }`} />
+                  )}
+                </label>
+                {!isEditingContract ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className={`text-sm font-semibold ${
+                      urgencyLevel === 'expired' ? 'text-red-900' :
+                      urgencyLevel === 'critical' ? 'text-red-700' :
+                      urgencyLevel === 'urgent' ? 'text-orange-700' :
+                      urgencyLevel === 'warning' ? 'text-yellow-700' :
+                      'text-gray-900'
+                    }`}>
+                      {formatDate(contractDateFin) || '-'}
+                    </p>
+                  </div>
+                ) : (
+                  <input
+                    type="date"
+                    value={editedDateFinContrat}
+                    onChange={(e) => setEditedDateFinContrat(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 )}
@@ -2423,6 +2668,8 @@ function EmployeeDetailModal({
               </div>
             </div>
           </div>
+            );
+          })()}
 
           {/* Section Adresse */}
           <div className={`border rounded-lg p-4 transition-colors ${isEditingAddress ? 'bg-purple-100 border-purple-300' : 'bg-purple-50 border-purple-200'}`}>
