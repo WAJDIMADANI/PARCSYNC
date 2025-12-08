@@ -243,6 +243,8 @@ export class AdministrativeLetterGenerator {
       const attributes = match[2] || '';
       const content = match[3] || '';
 
+      if (!tag) continue;
+
       if (tag === 'p') {
         const align = this.extractAlign(attributes);
         const segments = this.parseTextSegments(content);
@@ -260,7 +262,7 @@ export class AdministrativeLetterGenerator {
         if (items.length > 0) {
           blocks.push({ type: 'list', items, ordered: tag === 'ol' });
         }
-      } else if (tag === 'hr' || tag.startsWith('hr')) {
+      } else if (tag === 'hr' || (tag && tag.startsWith('hr'))) {
         blocks.push({ type: 'separator' });
       } else if (tag && tag.match(/br/i)) {
         blocks.push({ type: 'break' });
