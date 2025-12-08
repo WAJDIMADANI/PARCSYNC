@@ -51,11 +51,24 @@ export function RequestValidationModal({ demandeId, onClose, onSuccess }: Reques
 
       if (error) throw error;
 
-      const superAdmins = (data || []).filter(u =>
-        u.permissions.includes('admin/utilisateurs')
+      // Filtrer les utilisateurs ayant la permission rh/validations
+      const validateurs = (data || []).filter(u =>
+        u.permissions.includes('rh/validations')
       );
 
-      setValidateurs(superAdmins);
+      // Exclure l'utilisateur connecté de la liste des validateurs
+      const filteredValidateurs = validateurs.filter(v =>
+        v.id !== appUser?.id
+      );
+
+      // Trier par ordre alphabétique (prénom puis nom)
+      const sortedValidateurs = filteredValidateurs.sort((a, b) => {
+        const nameA = `${a.prenom} ${a.nom}`.toLowerCase();
+        const nameB = `${b.prenom} ${b.nom}`.toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+
+      setValidateurs(sortedValidateurs);
     } catch (err: any) {
       console.error('Error fetching validateurs:', err);
       setError(err.message);
@@ -154,7 +167,7 @@ export function RequestValidationModal({ demandeId, onClose, onSuccess }: Reques
             ) : validateurs.length === 0 ? (
               <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-sm text-yellow-800">
-                  Aucun validateur disponible. Contactez un administrateur.
+                  Aucun validateur disponible avec la permission "rh/validations". Contactez un administrateur.
                 </p>
               </div>
             ) : (
