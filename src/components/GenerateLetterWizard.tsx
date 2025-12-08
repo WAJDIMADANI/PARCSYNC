@@ -56,6 +56,8 @@ interface WarningsInfo {
   found: number;
   required: number;
   autofilled: string[];
+  type?: string;
+  typeName?: string;
 }
 
 export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWizardProps) {
@@ -131,16 +133,35 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
     return date.toLocaleDateString('fr-FR', options);
   };
 
-  const detectWarningLevel = (templateName: string): number => {
+  const detectWarningType = (templateName: string): { level: number, subType: string | null } => {
     const lowerName = templateName.toLowerCase();
 
+    // Type 4: 3ème + convocation + Mise à pied conservatoire
+    if (lowerName.includes('mise') && lowerName.includes('pied') && lowerName.includes('conservatoire')) {
+      return { level: 4, subType: null };
+    }
+
+    // Type 3
     if (lowerName.includes('3ème') || lowerName.includes('3eme') || lowerName.includes('troisième') || lowerName.includes('troisieme')) {
-      return 3;
+      // Type 3b: avec convocation + annexe
+      if (lowerName.includes('convocation') && lowerName.includes('annexe')) {
+        return { level: 3, subType: 'b' };
+      }
+      // Type 3c: sans convocation avec annexe
+      if (lowerName.includes('sans convocation') && lowerName.includes('annexe')) {
+        return { level: 3, subType: 'c' };
+      }
+      // Type 3a: simple (par défaut)
+      return { level: 3, subType: 'a' };
     }
+
+    // Type 2
     if (lowerName.includes('2ème') || lowerName.includes('2eme') || lowerName.includes('deuxième') || lowerName.includes('deuxieme')) {
-      return 2;
+      return { level: 2, subType: null };
     }
-    return 1;
+
+    // Type 1: par défaut
+    return { level: 1, subType: null };
   };
 
   const fetchPreviousVehicleWarnings = async (employeeId: string): Promise<PreviousWarning[]> => {
@@ -164,41 +185,85 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
     }
   };
 
+  const extractInfractionsDescription = (warning: PreviousWarning): string => {
+    const vars = warning.variables_remplies;
+
+    // Ordre de priorité selon les spécifications
+    if (vars?.liste_infractions_1er) return vars.liste_infractions_1er;
+    if (vars?.liste_infractions_2eme) return vars.liste_infractions_2eme;
+    if (vars?.liste_infractions_3eme) return vars.liste_infractions_3eme;
+    if (vars?.liste_infractions) return vars.liste_infractions;
+    if (vars?.description_1er_infraction) return vars.description_1er_infraction;
+    if (vars?.description_2eme_infraction) return vars.description_2eme_infraction;
+    if (vars?.description_3eme_infraction) return vars.description_3eme_infraction;
+    if (vars?.description_infractions) return vars.description_infractions;
+    if (vars?.description_faits) return vars.description_faits;
+
+    // Fallback
+    return `Infractions relevées le ${formatDateForDisplay(warning.created_at)}`;
+  };
+
   const mapPreviousWarningsToVariables = (
     warnings: PreviousWarning[],
-    currentLevel: number
+    level: number,
+    subType: string | null
   ): Record<string, any> => {
     const mappedValues: Record<string, any> = {};
 
-    if (currentLevel === 2 && warnings.length >= 1) {
-      const first = warnings[0];
-      mappedValues['date_1er_courrier'] = formatDateForDisplay(first.created_at);
-
-      if (first.variables_remplies?.description_faits) {
-        mappedValues['liste_infractions_1er'] = first.variables_remplies.description_faits;
-      } else if (first.variables_remplies?.liste_infractions) {
-        mappedValues['liste_infractions_1er'] = first.variables_remplies.liste_infractions;
-      }
+    // Type 1: pas de pré-remplissage
+    if (level === 1) {
+      return mappedValues;
     }
 
-    if (currentLevel === 3 && warnings.length >= 2) {
+    // Type 2: pré-remplir le 1er avertissement
+    if (level === 2 && warnings.length >= 1) {
+      const first = warnings[0];
+      mappedValues['date_1er_courrier'] = formatDateForDisplay(first.created_at);
+      mappedValues['liste_infractions_1er'] = extractInfractionsDescription(first);
+    }
+
+    // Type 3 (a/b/c): pré-remplir les 2 premiers avertissements
+    if (level === 3 && warnings.length >= 2) {
       const first = warnings[0];
       const second = warnings[1];
 
       mappedValues['date_1er_courrier'] = formatDateForDisplay(first.created_at);
       mappedValues['date_2eme_courrier'] = formatDateForDisplay(second.created_at);
-      mappedValues['date_dernier_avertissement'] = formatDateForDisplay(second.created_at);
+      mappedValues['liste_infractions_1er'] = extractInfractionsDescription(first);
+      mappedValues['liste_infractions_2eme'] = extractInfractionsDescription(second);
 
-      if (first.variables_remplies?.description_faits) {
-        mappedValues['liste_infractions_1er'] = first.variables_remplies.description_faits;
-      } else if (first.variables_remplies?.liste_infractions) {
-        mappedValues['liste_infractions_1er'] = first.variables_remplies.liste_infractions;
+      // Type 3b: ajouter date_dernier_avertissement
+      if (subType === 'b') {
+        mappedValues['date_dernier_avertissement'] = formatDateForDisplay(second.created_at);
       }
 
-      if (second.variables_remplies?.description_faits) {
-        mappedValues['liste_infractions_2eme'] = second.variables_remplies.description_faits;
-      } else if (second.variables_remplies?.liste_infractions) {
-        mappedValues['liste_infractions_2eme'] = second.variables_remplies.liste_infractions;
+      // Type 3c: NE PAS pré-remplir date_3eme_courrier et liste_infractions_3eme
+      // (saisie manuelle uniquement)
+    }
+
+    // Type 4: pré-remplir les 4 avertissements précédents
+    if (level === 4 && warnings.length >= 4) {
+      const [first, second, third, fourth] = warnings;
+
+      // Dates et descriptions des 4 avertissements
+      mappedValues['date_1er_avertissement'] = formatDateForDisplay(first.created_at);
+      mappedValues['description_1er_infraction'] = extractInfractionsDescription(first);
+
+      mappedValues['date_2eme_avertissement'] = formatDateForDisplay(second.created_at);
+      mappedValues['description_2eme_infraction'] = extractInfractionsDescription(second);
+
+      mappedValues['date_3eme_avertissement'] = formatDateForDisplay(third.created_at);
+      mappedValues['description_3eme_infraction'] = extractInfractionsDescription(third);
+
+      mappedValues['date_4eme_avertissement'] = formatDateForDisplay(fourth.created_at);
+      mappedValues['description_4eme_infraction'] = extractInfractionsDescription(fourth);
+
+      // Date et heure d'entretien manqué (du 4ème avertissement)
+      if (fourth.variables_remplies?.date_convocation) {
+        mappedValues['date_entretien_manque'] = fourth.variables_remplies.date_convocation;
+      }
+      if (fourth.variables_remplies?.heure_convocation) {
+        mappedValues['heure_entretien_manque'] = fourth.variables_remplies.heure_convocation;
       }
     }
 
@@ -217,7 +282,7 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
       return;
     }
 
-    const level = detectWarningLevel(template.nom);
+    const { level, subType } = detectWarningType(template.nom);
 
     if (level === 1) {
       return;
@@ -228,11 +293,25 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
     try {
       const warnings = await fetchPreviousVehicleWarnings(selectedProfile.id);
 
-      const requiredWarnings = level - 1;
+      // Déterminer le nombre d'avertissements requis selon le type
+      let requiredWarnings = 0;
+      if (level === 2) requiredWarnings = 1;
+      else if (level === 3) requiredWarnings = 2;
+      else if (level === 4) requiredWarnings = 4;
+
       const autofilledFields: string[] = [];
 
+      // Déterminer le nom du type pour l'affichage
+      let typeName = '';
+      if (level === 1) typeName = 'Type 1: 1er Avertissement';
+      else if (level === 2) typeName = 'Type 2: 2ème Avertissement';
+      else if (level === 3 && subType === 'a') typeName = 'Type 3a: 3ème Avertissement';
+      else if (level === 3 && subType === 'b') typeName = 'Type 3b: 3ème Avertissement + convocation + annexe';
+      else if (level === 3 && subType === 'c') typeName = 'Type 3c: 3ème Avertissement sans convocation avec annexe';
+      else if (level === 4) typeName = 'Type 4: 3ème + convocation + Mise à pied conservatoire';
+
       if (warnings.length >= requiredWarnings) {
-        const mappedValues = mapPreviousWarningsToVariables(warnings, level);
+        const mappedValues = mapPreviousWarningsToVariables(warnings, level, subType);
 
         setCustomValues(prev => ({
           ...prev,
@@ -245,21 +324,27 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
           }
         });
 
+        const typeLabel = subType ? `${level}${subType}` : `${level}`;
         setWarningsInfo({
           found: warnings.length,
           required: requiredWarnings,
-          autofilled: autofilledFields
+          autofilled: autofilledFields,
+          type: typeLabel,
+          typeName: typeName
         });
 
-        console.log(`✓ ${warnings.length} avertissement(s) trouvé(s), ${autofilledFields.length} champ(s) pré-rempli(s)`);
+        console.log(`✓ ${typeName}: ${warnings.length} avertissement(s) trouvé(s), ${autofilledFields.length} champ(s) pré-rempli(s)`);
       } else {
+        const typeLabel = subType ? `${level}${subType}` : `${level}`;
         setWarningsInfo({
           found: warnings.length,
           required: requiredWarnings,
-          autofilled: []
+          autofilled: [],
+          type: typeLabel,
+          typeName: typeName
         });
 
-        console.warn(`Attention: Seulement ${warnings.length} avertissement(s) trouvé(s) sur ${requiredWarnings} requis`);
+        console.warn(`⚠️ Attention: Seulement ${warnings.length} avertissement(s) trouvé(s) sur ${requiredWarnings} requis`);
       }
     } catch (err) {
       console.error('Erreur lors du chargement des avertissements précédents:', err);
@@ -648,6 +733,20 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
                   Modèle: <span className="font-medium">{selectedTemplate.nom}</span> • Salarié: <span className="font-medium">{selectedProfile.prenom} {selectedProfile.nom}</span>
                 </p>
               </div>
+
+              {warningsInfo && warningsInfo.typeName && (
+                <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-indigo-600" />
+                    <div className="font-medium text-indigo-900">
+                      {warningsInfo.typeName}
+                    </div>
+                  </div>
+                  <div className="text-xs text-indigo-700 mt-1">
+                    Détection automatique du type d'avertissement
+                  </div>
+                </div>
+              )}
 
               {warningsInfo && warningsInfo.autofilled.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
