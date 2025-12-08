@@ -198,7 +198,7 @@ export function ValidationsPage() {
   };
 
   return (
-    <PermissionGuard requiredPermission="rh/validations">
+    <PermissionGuard permission="rh/validations">
       <div className="space-y-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-6">
