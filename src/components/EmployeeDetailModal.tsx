@@ -1,4 +1,4 @@
-import { X, User, FileText, MapPin, File, Calendar } from 'lucide-react';
+import { X, User, FileText, MapPin, File, Calendar, AlertTriangle } from 'lucide-react';
 import { ContractBadge } from './ContractBadge';
 
 interface ParsedEmployee {
@@ -56,6 +56,74 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
     }
     return dateStr;
   };
+
+  const calculateDaysRemaining = (dateStr?: string): number | null => {
+    if (!dateStr) return null;
+    const endDate = new Date(dateStr);
+    const today = new Date();
+    const diffTime = endDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getUrgencyLevel = (daysRemaining: number | null): 'expired' | 'critical' | 'urgent' | 'warning' | 'normal' => {
+    if (daysRemaining === null) return 'normal';
+    if (daysRemaining < 0) return 'expired';
+    if (daysRemaining <= 15) return 'critical';
+    if (daysRemaining <= 30) return 'urgent';
+    if (daysRemaining <= 90) return 'warning';
+    return 'normal';
+  };
+
+  const getUrgencyColors = (level: 'expired' | 'critical' | 'urgent' | 'warning' | 'normal') => {
+    switch (level) {
+      case 'expired':
+        return {
+          bg: 'bg-red-900',
+          border: 'border-red-900',
+          text: 'text-white',
+          badgeBg: 'bg-white',
+          badgeText: 'text-red-900'
+        };
+      case 'critical':
+        return {
+          bg: 'bg-red-100',
+          border: 'border-red-400',
+          text: 'text-red-900',
+          badgeBg: 'bg-red-600',
+          badgeText: 'text-white'
+        };
+      case 'urgent':
+        return {
+          bg: 'bg-orange-100',
+          border: 'border-orange-400',
+          text: 'text-orange-900',
+          badgeBg: 'bg-orange-600',
+          badgeText: 'text-white'
+        };
+      case 'warning':
+        return {
+          bg: 'bg-yellow-100',
+          border: 'border-yellow-400',
+          text: 'text-yellow-900',
+          badgeBg: 'bg-yellow-600',
+          badgeText: 'text-white'
+        };
+      default:
+        return {
+          bg: 'bg-green-100',
+          border: 'border-green-400',
+          text: 'text-green-900',
+          badgeBg: 'bg-green-600',
+          badgeText: 'text-white'
+        };
+    }
+  };
+
+  const isCDD = employee.data.modele_contrat?.toUpperCase().includes('CDD');
+  const daysRemaining = calculateDaysRemaining(employee.data.date_fin_contrat);
+  const urgencyLevel = getUrgencyLevel(daysRemaining);
+  const urgencyColors = getUrgencyColors(urgencyLevel);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -153,6 +221,39 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
               </div>
             )}
 
+            {isCDD && employee.data.date_fin_contrat && daysRemaining !== null && (
+              <div className={`mb-4 border-2 rounded-lg p-4 shadow-md ${urgencyColors.bg} ${urgencyColors.border}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${urgencyLevel === 'expired' ? 'bg-white' : urgencyColors.badgeBg}`}>
+                    <AlertTriangle className={`w-6 h-6 ${urgencyLevel === 'expired' ? 'text-red-900' : 'text-white'}`} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className={`font-bold text-base ${urgencyColors.text}`}>
+                        Contrat à durée déterminée
+                      </h4>
+                      {urgencyLevel === 'expired' ? (
+                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${urgencyColors.badgeBg} ${urgencyColors.badgeText}`}>
+                          EXPIRÉ
+                        </span>
+                      ) : (
+                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${urgencyColors.badgeBg} ${urgencyColors.badgeText}`}>
+                          {daysRemaining} jour{daysRemaining > 1 ? 's' : ''} restant{daysRemaining > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-sm mt-1 ${urgencyColors.text}`}>
+                      {urgencyLevel === 'expired' ? (
+                        <>Contrat expiré depuis le <span className="font-bold">{formatDate(employee.data.date_fin_contrat)}</span></>
+                      ) : (
+                        <>Fin prévue le <span className="font-bold">{formatDate(employee.data.date_fin_contrat)}</span></>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Statut</label>
@@ -169,8 +270,42 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
                 <p className="text-sm text-gray-900">{formatDate(employee.data.date_debut_contrat)}</p>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
-                <p className="text-sm text-gray-900">{formatDate(employee.data.date_fin_contrat)}</p>
+                <label className="text-xs font-medium text-gray-500 uppercase flex items-center gap-1">
+                  Date de fin
+                  {employee.data.date_fin_contrat && daysRemaining !== null && urgencyLevel !== 'normal' && (
+                    <AlertTriangle className={`w-3.5 h-3.5 ${
+                      urgencyLevel === 'expired' ? 'text-red-700' :
+                      urgencyLevel === 'critical' ? 'text-red-600' :
+                      urgencyLevel === 'urgent' ? 'text-orange-600' :
+                      'text-yellow-600'
+                    }`} />
+                  )}
+                </label>
+                {employee.data.date_fin_contrat && daysRemaining !== null ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className={`text-sm font-semibold ${
+                      urgencyLevel === 'expired' ? 'text-red-900' :
+                      urgencyLevel === 'critical' ? 'text-red-700' :
+                      urgencyLevel === 'urgent' ? 'text-orange-700' :
+                      urgencyLevel === 'warning' ? 'text-yellow-700' :
+                      'text-gray-900'
+                    }`}>
+                      {formatDate(employee.data.date_fin_contrat)}
+                    </p>
+                    {urgencyLevel !== 'normal' && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        urgencyLevel === 'expired' ? 'bg-red-200 text-red-900' :
+                        urgencyLevel === 'critical' ? 'bg-red-200 text-red-800' :
+                        urgencyLevel === 'urgent' ? 'bg-orange-200 text-orange-800' :
+                        'bg-yellow-200 text-yellow-800'
+                      }`}>
+                        {urgencyLevel === 'expired' ? 'Expiré' : `${daysRemaining}j`}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-900 mt-1">{formatDate(employee.data.date_fin_contrat)}</p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase">Poste</label>
