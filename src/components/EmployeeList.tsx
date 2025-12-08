@@ -307,9 +307,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       const matchesStatut = !filterStatut || emp.statut === filterStatut;
       const matchesSecteur = !filterSecteur || emp.secteur_id === filterSecteur;
 
-      const empContract = contracts.find(c => c.profil_id === emp.id);
-      const empTypeContrat = empContract?.type || '';
-      const matchesTypeContrat = !filterTypeContrat || empTypeContrat === filterTypeContrat;
+      const matchesTypeContrat = !filterTypeContrat || emp.modele_contrat === filterTypeContrat;
 
       return matchesSearch && matchesStatut && matchesSecteur && matchesTypeContrat;
     })
