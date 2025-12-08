@@ -368,10 +368,10 @@ export function GeneratedLettersList() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Salarié
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                   Modèle
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                   Sujet
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -412,20 +412,20 @@ export function GeneratedLettersList() {
                       <div className="text-xs text-gray-500">{letter.profil.matricule_tca}</div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex flex-col gap-1">
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 max-w-[120px] truncate block" title={letter.modele_nom}>
                         {letter.modele_nom}
                       </span>
                       {letter.archived && letter.pdf_generation_method === 'word_legacy' && (
                         <span className="px-2 py-1 text-xs font-medium rounded bg-amber-100 text-amber-700 flex items-center gap-1">
-                          📄 Archivé (Word)
+                          📄 Archivé
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="max-w-xs truncate" title={letter.sujet}>
+                  <td className="px-4 py-4 text-sm text-gray-900">
+                    <div className="max-w-[150px] truncate" title={letter.sujet}>
                       {letter.sujet}
                     </div>
                   </td>
