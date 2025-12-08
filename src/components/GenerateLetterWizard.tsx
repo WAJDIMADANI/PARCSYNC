@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { X, Search, ChevronRight, ChevronLeft, FileText, Eye } from 'lucide-react';
+import { X, Search, ChevronRight, ChevronLeft, FileText, Eye, Info, AlertTriangle, Sparkles } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { DatePicker } from './DatePicker';
 import { TimePicker } from './TimePicker';
@@ -45,6 +45,19 @@ interface GenerateLetterWizardProps {
   onComplete: () => void;
 }
 
+interface PreviousWarning {
+  id: string;
+  modele_nom: string;
+  variables_remplies: Record<string, any>;
+  created_at: string;
+}
+
+interface WarningsInfo {
+  found: number;
+  required: number;
+  autofilled: string[];
+}
+
 export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWizardProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -61,6 +74,8 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
   const [error, setError] = useState('');
   const [generatedPdfBlob, setGeneratedPdfBlob] = useState<Blob | null>(null);
   const [generatedFileName, setGeneratedFileName] = useState('');
+  const [loadingWarnings, setLoadingWarnings] = useState(false);
+  const [warningsInfo, setWarningsInfo] = useState<WarningsInfo | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -103,6 +118,153 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
       console.error('Erreur chargement modèles:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const formatDateForDisplay = (dateString: string): string => {
+    const date = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    };
+    return date.toLocaleDateString('fr-FR', options);
+  };
+
+  const detectWarningLevel = (templateName: string): number => {
+    const lowerName = templateName.toLowerCase();
+
+    if (lowerName.includes('3ème') || lowerName.includes('3eme') || lowerName.includes('troisième') || lowerName.includes('troisieme')) {
+      return 3;
+    }
+    if (lowerName.includes('2ème') || lowerName.includes('2eme') || lowerName.includes('deuxième') || lowerName.includes('deuxieme')) {
+      return 2;
+    }
+    return 1;
+  };
+
+  const fetchPreviousVehicleWarnings = async (employeeId: string): Promise<PreviousWarning[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('courrier_genere')
+        .select('id, modele_nom, variables_remplies, created_at')
+        .eq('profil_id', employeeId)
+        .ilike('modele_nom', '%Avertissement%utilisation du vehicule%')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Erreur lors de la récupération des avertissements:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (err) {
+      console.error('Erreur fetchPreviousVehicleWarnings:', err);
+      return [];
+    }
+  };
+
+  const mapPreviousWarningsToVariables = (
+    warnings: PreviousWarning[],
+    currentLevel: number
+  ): Record<string, any> => {
+    const mappedValues: Record<string, any> = {};
+
+    if (currentLevel === 2 && warnings.length >= 1) {
+      const first = warnings[0];
+      mappedValues['date_1er_courrier'] = formatDateForDisplay(first.created_at);
+
+      if (first.variables_remplies?.description_faits) {
+        mappedValues['liste_infractions_1er'] = first.variables_remplies.description_faits;
+      } else if (first.variables_remplies?.liste_infractions) {
+        mappedValues['liste_infractions_1er'] = first.variables_remplies.liste_infractions;
+      }
+    }
+
+    if (currentLevel === 3 && warnings.length >= 2) {
+      const first = warnings[0];
+      const second = warnings[1];
+
+      mappedValues['date_1er_courrier'] = formatDateForDisplay(first.created_at);
+      mappedValues['date_2eme_courrier'] = formatDateForDisplay(second.created_at);
+      mappedValues['date_dernier_avertissement'] = formatDateForDisplay(second.created_at);
+
+      if (first.variables_remplies?.description_faits) {
+        mappedValues['liste_infractions_1er'] = first.variables_remplies.description_faits;
+      } else if (first.variables_remplies?.liste_infractions) {
+        mappedValues['liste_infractions_1er'] = first.variables_remplies.liste_infractions;
+      }
+
+      if (second.variables_remplies?.description_faits) {
+        mappedValues['liste_infractions_2eme'] = second.variables_remplies.description_faits;
+      } else if (second.variables_remplies?.liste_infractions) {
+        mappedValues['liste_infractions_2eme'] = second.variables_remplies.liste_infractions;
+      }
+    }
+
+    return mappedValues;
+  };
+
+  const handleTemplateSelection = async (template: LetterTemplate) => {
+    setSelectedTemplate(template);
+    setWarningsInfo(null);
+
+    const templateName = template.nom.toLowerCase();
+    const isVehicleWarning = templateName.includes('avertissement') &&
+                             templateName.includes('utilisation du vehicule');
+
+    if (!isVehicleWarning || !selectedProfile) {
+      return;
+    }
+
+    const level = detectWarningLevel(template.nom);
+
+    if (level === 1) {
+      return;
+    }
+
+    setLoadingWarnings(true);
+
+    try {
+      const warnings = await fetchPreviousVehicleWarnings(selectedProfile.id);
+
+      const requiredWarnings = level - 1;
+      const autofilledFields: string[] = [];
+
+      if (warnings.length >= requiredWarnings) {
+        const mappedValues = mapPreviousWarningsToVariables(warnings, level);
+
+        setCustomValues(prev => ({
+          ...prev,
+          ...mappedValues
+        }));
+
+        Object.keys(mappedValues).forEach(key => {
+          if (mappedValues[key]) {
+            autofilledFields.push(key);
+          }
+        });
+
+        setWarningsInfo({
+          found: warnings.length,
+          required: requiredWarnings,
+          autofilled: autofilledFields
+        });
+
+        console.log(`✓ ${warnings.length} avertissement(s) trouvé(s), ${autofilledFields.length} champ(s) pré-rempli(s)`);
+      } else {
+        setWarningsInfo({
+          found: warnings.length,
+          required: requiredWarnings,
+          autofilled: []
+        });
+
+        console.warn(`Attention: Seulement ${warnings.length} avertissement(s) trouvé(s) sur ${requiredWarnings} requis`);
+      }
+    } catch (err) {
+      console.error('Erreur lors du chargement des avertissements précédents:', err);
+    } finally {
+      setLoadingWarnings(false);
     }
   };
 
@@ -406,6 +568,15 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
                 </select>
               </div>
 
+              {loadingWarnings && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-3">
+                  <LoadingSpinner size="sm" />
+                  <span className="text-sm text-blue-700">
+                    Recherche des avertissements précédents...
+                  </span>
+                </div>
+              )}
+
               {loading ? (
                 <div className="flex justify-center py-8">
                   <LoadingSpinner />
@@ -415,11 +586,12 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
                   {filteredTemplates.map(template => (
                     <button
                       key={template.id}
-                      onClick={() => setSelectedTemplate(template)}
+                      onClick={() => handleTemplateSelection(template)}
+                      disabled={loadingWarnings}
                       className={`text-left p-4 rounded-lg border-2 transition-all ${selectedTemplate?.id === template.id
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                        }`}
+                        } ${loadingWarnings ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <div className="flex items-start gap-3">
                         <FileText className="w-8 h-8 text-blue-600 flex-shrink-0" />
@@ -477,6 +649,50 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
                 </p>
               </div>
 
+              {warningsInfo && warningsInfo.autofilled.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-blue-900 mb-2">
+                        {warningsInfo.found} avertissement(s) précédent(s) trouvé(s) - Champs pré-remplis automatiquement
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {warningsInfo.autofilled.map(field => (
+                          <span
+                            key={field}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                          >
+                            <Info className="w-3 h-3" />
+                            {field}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-xs text-blue-700 mt-2">
+                        Vous pouvez modifier ces valeurs si nécessaire
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {warningsInfo && warningsInfo.found < warningsInfo.required && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-orange-900 mb-1">
+                        Attention: Avertissements précédents manquants
+                      </div>
+                      <div className="text-sm text-orange-700">
+                        Seulement {warningsInfo.found} avertissement(s) trouvé(s) sur {warningsInfo.required} requis.
+                        Veuillez vérifier les données et remplir manuellement les champs manquants.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="text-sm font-medium text-green-800 mb-2">
                   ✓ Variables automatiques ({selectedTemplate.variables_systeme.length})
@@ -500,11 +716,21 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
                   <div className="space-y-4">
                     {Object.entries(selectedTemplate.variables_personnalisees)
                       .sort(([, a], [, b]) => (a.ordre || 0) - (b.ordre || 0))
-                      .map(([name, config]) => (
-                        <div key={name}>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {config.label} {config.required && <span className="text-red-600">*</span>}
-                          </label>
+                      .map(([name, config]) => {
+                        const isAutofilled = warningsInfo?.autofilled.includes(name) || false;
+                        return (
+                          <div key={name}>
+                            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                              <span>
+                                {config.label} {config.required && <span className="text-red-600">*</span>}
+                              </span>
+                              {isAutofilled && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                  <Sparkles className="w-3 h-3" />
+                                  Pré-rempli
+                                </span>
+                              )}
+                            </label>
 
                           {config.type === 'textarea' ? (
                             <textarea
@@ -596,7 +822,8 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
                             <p className="mt-1 text-xs text-gray-500">Format: HH:MM (ex: 14:30)</p>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
                   </div>
                 </div>
               )}
