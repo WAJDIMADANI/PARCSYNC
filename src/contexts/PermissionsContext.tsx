@@ -38,12 +38,15 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      const timestamp = new Date().toISOString();
+      console.log('🔍 ============================================');
+      console.log('🔍 PERMISSIONS LOADING - ' + timestamp);
+      console.log('🔍 ============================================');
       console.log('🔍 Step 1: User exists');
       console.log('  - user.id:', user.id);
       console.log('  - user.email:', user.email);
       console.log('  - user.email type:', typeof user.email);
 
-      // Ajouter du padding pour voir les espaces
       const emailToSearch = user.email?.trim().toLowerCase();
       console.log('  - email to search (trimmed, lowercase):', `"${emailToSearch}"`);
 
@@ -55,48 +58,85 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      console.log('🔍 Step 2: Querying utilisateur_avec_permissions');
+      console.log('🔍 Step 2: Querying utilisateur_avec_permissions VIEW');
+      console.log('  - Query: SELECT * FROM utilisateur_avec_permissions');
+      console.log('  - Filter: .eq("email", "' + emailToSearch + '")');
+
       const { data, error } = await supabase
         .from('utilisateur_avec_permissions')
         .select('*')
         .eq('email', emailToSearch)
         .maybeSingle();
 
-      console.log('🔍 Step 3: Query result');
+      console.log('🔍 Step 3: Query result received');
       console.log('  - data:', data);
       console.log('  - error:', error);
 
       if (error) {
-        console.error('❌ Database error:', error.message);
+        console.error('❌ Database error:', error);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error code:', error.code);
         setAppUser(null);
         setPermissions([]);
       } else if (data) {
-        console.log('✅ User data found!');
+        console.log('✅ ============================================');
+        console.log('✅ USER DATA FOUND!');
+        console.log('✅ ============================================');
         console.log('  - User ID:', data.id);
         console.log('  - User email:', data.email);
-        console.log('  - Permissions array:', data.permissions);
-        console.log('  - Permissions count:', data.permissions?.length || 0);
+        console.log('  - User name:', data.prenom + ' ' + data.nom);
+        console.log('  - User active:', data.actif);
+        console.log('📋 PERMISSIONS ARRAY:', JSON.stringify(data.permissions, null, 2));
+        console.log('📊 PERMISSIONS COUNT:', data.permissions?.length || 0);
+
+        if (data.permissions && data.permissions.length > 0) {
+          console.log('📋 PERMISSIONS BY CATEGORY:');
+          const categorized: Record<string, string[]> = {};
+          data.permissions.forEach((perm: string) => {
+            const category = perm.split('/')[0];
+            if (!categorized[category]) categorized[category] = [];
+            categorized[category].push(perm);
+          });
+          Object.keys(categorized).sort().forEach(category => {
+            console.log(`  - ${category}: ${categorized[category].length} permissions`);
+            categorized[category].forEach(perm => {
+              console.log(`    • ${perm}`);
+            });
+          });
+        }
 
         setAppUser(data as AppUser);
         setPermissions(data.permissions || []);
+
+        console.log('✅ STATE UPDATED - Permissions set in context');
       } else {
-        console.warn('⚠️ No user data found for email:', emailToSearch);
-        console.log('  - This means utilisateur_avec_permissions returned null');
-        console.log('  - Possible causes:');
-        console.log('    1. User does not exist in app_utilisateur');
-        console.log('    2. Email does not match exactly (case sensitive?)');
-        console.log('    3. User has no permissions in utilisateur_permissions');
+        console.warn('⚠️ ============================================');
+        console.warn('⚠️ NO USER DATA FOUND');
+        console.warn('⚠️ ============================================');
+        console.warn('  - Searched email:', emailToSearch);
+        console.warn('  - View returned: NULL');
+        console.warn('  - Possible causes:');
+        console.warn('    1. User does not exist in app_utilisateur');
+        console.warn('    2. Email does not match (case-sensitive issue)');
+        console.warn('    3. User exists but has no permissions');
+        console.warn('  - Please verify with SQL:');
+        console.warn('    SELECT * FROM utilisateur_avec_permissions WHERE email = \'' + emailToSearch + '\';');
 
         setAppUser(null);
         setPermissions([]);
       }
     } catch (error) {
-      console.error('❌ Exception during loadPermissions:', error);
+      console.error('❌ ============================================');
+      console.error('❌ EXCEPTION DURING PERMISSIONS LOADING');
+      console.error('❌ ============================================');
+      console.error('❌ Error:', error);
       setAppUser(null);
       setPermissions([]);
     } finally {
       setLoading(false);
-      console.log('✅ Permission loading complete');
+      console.log('✅ Permission loading complete - timestamp:', new Date().toISOString());
+      console.log('✅ Final permissions state:', permissions.length, 'permissions');
+      console.log('🔍 ============================================');
     }
   };
 
@@ -108,6 +148,13 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const hasPermission = (sectionId: string): boolean => {
     const has = permissions.includes(sectionId);
     console.log(`🔐 Checking permission "${sectionId}":`, has ? '✅ ALLOWED' : '❌ DENIED');
+
+    if (!has && permissions.length > 0) {
+      console.log(`   Available permissions (${permissions.length}):`, permissions);
+    } else if (!has && permissions.length === 0) {
+      console.log('   ⚠️ No permissions loaded - user may need to refresh or permissions are empty');
+    }
+
     return has;
   };
 
