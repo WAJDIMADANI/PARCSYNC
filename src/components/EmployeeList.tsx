@@ -128,6 +128,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatut, setFilterStatut] = useState<string>('');
   const [filterSecteur, setFilterSecteur] = useState<string>('');
+  const [filterTypeContrat, setFilterTypeContrat] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -298,14 +299,19 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   // Réinitialiser la page à 1 quand les filtres changent
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterStatut, filterSecteur]);
+  }, [search, filterStatut, filterSecteur, filterTypeContrat]);
 
   const filteredAndSortedEmployees = employees
     .filter(emp => {
       const matchesSearch = `${emp.prenom} ${emp.nom} ${emp.email} ${emp.role || ''} ${emp.matricule_tca || ''}`.toLowerCase().includes(search.toLowerCase());
       const matchesStatut = !filterStatut || emp.statut === filterStatut;
       const matchesSecteur = !filterSecteur || emp.secteur_id === filterSecteur;
-      return matchesSearch && matchesStatut && matchesSecteur;
+
+      const empContract = contracts.find(c => c.profil_id === emp.id);
+      const empTypeContrat = empContract?.type || '';
+      const matchesTypeContrat = !filterTypeContrat || empTypeContrat === filterTypeContrat;
+
+      return matchesSearch && matchesStatut && matchesSecteur && matchesTypeContrat;
     })
     .sort((a, b) => {
       let aValue: any;
@@ -421,9 +427,10 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const clearFilters = () => {
     setFilterStatut('');
     setFilterSecteur('');
+    setFilterTypeContrat('');
   };
 
-  const hasActiveFilters = filterStatut || filterSecteur;
+  const hasActiveFilters = filterStatut || filterSecteur || filterTypeContrat;
 
   if (loading) {
     return (
@@ -474,14 +481,14 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
             }`}
           >
             <Filter className="w-5 h-5" />
-            Filtres {hasActiveFilters && `(${[filterStatut, filterSecteur].filter(Boolean).length})`}
+            Filtres {hasActiveFilters && `(${[filterStatut, filterSecteur, filterTypeContrat].filter(Boolean).length})`}
           </button>
         </div>
       </div>
 
       {showFilters && (
         <div className="mb-6 bg-white rounded-lg shadow p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
               <select
@@ -508,6 +515,19 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                 {secteurs.map(secteur => (
                   <option key={secteur.id} value={secteur.id}>{secteur.nom}</option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Type de contrat</label>
+              <select
+                value={filterTypeContrat}
+                onChange={(e) => setFilterTypeContrat(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Tous les types</option>
+                <option value="CDD">CDD</option>
+                <option value="CDI">CDI</option>
               </select>
             </div>
           </div>
