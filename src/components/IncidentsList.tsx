@@ -43,6 +43,7 @@ export function IncidentsList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [changingStatus, setChangingStatus] = useState<string | null>(null);
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
 
   useEffect(() => {
     fetchIncidents();
@@ -145,6 +146,57 @@ export function IncidentsList() {
       alert('Erreur lors du changement de statut');
     } finally {
       setChangingStatus(null);
+    }
+  };
+
+  const handleSendReminder = async (incident: Incident) => {
+    if (!incident.profil?.email) {
+      alert('Impossible d\'envoyer le rappel : email du salarié manquant');
+      return;
+    }
+
+    const confirmed = confirm(
+      `Envoyer un rappel par email à ${incident.profil.prenom} ${incident.profil.nom} ?\n\nEmail : ${incident.profil.email}\nDocument : ${getTypeLabel(incident.type)}`
+    );
+
+    if (!confirmed) return;
+
+    setSendingReminder(incident.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-incident-manual-reminder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({
+          incident_id: incident.id,
+          profil_id: incident.profil_id,
+          employee_email: incident.profil.email,
+          employee_name: `${incident.profil.prenom} ${incident.profil.nom}`,
+          document_type: incident.type,
+          expiration_date: incident.date_expiration_originale,
+          user_id: user?.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de l\'envoi du rappel');
+      }
+
+      alert('Rappel envoyé avec succès !');
+      await fetchIncidents();
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      alert(error instanceof Error ? error.message : 'Erreur lors de l\'envoi du rappel');
+    } finally {
+      setSendingReminder(null);
     }
   };
 
@@ -379,6 +431,15 @@ export function IncidentsList() {
                     {activeTab === 'actif' && (
                       <>
                         <button
+                          onClick={() => handleSendReminder(incident)}
+                          disabled={sendingReminder === incident.id}
+                          className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          title="Envoyer un rappel par email"
+                        >
+                          <Mail className="w-4 h-4" />
+                          {sendingReminder === incident.id ? 'Envoi...' : 'Rappel'}
+                        </button>
+                        <button
                           onClick={() => handleChangeStatus(incident.id, 'en_cours')}
                           disabled={changingStatus === incident.id}
                           className="flex items-center gap-1 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
@@ -404,13 +465,24 @@ export function IncidentsList() {
                       </>
                     )}
                     {activeTab === 'en_cours' && (
-                      <button
-                        onClick={() => setSelectedIncident(incident)}
-                        className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Résoudre
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleSendReminder(incident)}
+                          disabled={sendingReminder === incident.id}
+                          className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          title="Envoyer un rappel par email"
+                        >
+                          <Mail className="w-4 h-4" />
+                          {sendingReminder === incident.id ? 'Envoi...' : 'Rappel'}
+                        </button>
+                        <button
+                          onClick={() => setSelectedIncident(incident)}
+                          className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Résoudre
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
