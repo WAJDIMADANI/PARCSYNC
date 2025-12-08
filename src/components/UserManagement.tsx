@@ -33,6 +33,7 @@ const AVAILABLE_PERMISSIONS = [
     { id: 'rh/incidents-historique', label: 'Historique incidents' },
     { id: 'rh/vivier', label: 'Vivier' },
     { id: 'rh/demandes', label: 'Demandes' },
+    { id: 'rh/validations', label: 'Validations' },
   ]},
   { section: 'Parc', permissions: [
     { id: 'parc/vehicules', label: 'Véhicules' },
