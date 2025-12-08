@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResolveIncidentModal } from './ResolveIncidentModal';
+import { SendReminderModal } from './SendReminderModal';
 
 interface Incident {
   id: string;
@@ -43,7 +44,7 @@ export function IncidentsList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [changingStatus, setChangingStatus] = useState<string | null>(null);
-  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [reminderIncident, setReminderIncident] = useState<Incident | null>(null);
 
   useEffect(() => {
     fetchIncidents();
@@ -149,54 +150,42 @@ export function IncidentsList() {
     }
   };
 
-  const handleSendReminder = async (incident: Incident) => {
+  const handleSendReminder = (incident: Incident) => {
     if (!incident.profil?.email) {
       alert('Impossible d\'envoyer le rappel : email du salarié manquant');
       return;
     }
+    setReminderIncident(incident);
+  };
 
-    const confirmed = confirm(
-      `Envoyer un rappel par email à ${incident.profil.prenom} ${incident.profil.nom} ?\n\nEmail : ${incident.profil.email}\nDocument : ${getTypeLabel(incident.type)}`
-    );
+  const confirmSendReminder = async () => {
+    if (!reminderIncident) return;
 
-    if (!confirmed) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-    setSendingReminder(incident.id);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-incident-manual-reminder`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+      },
+      body: JSON.stringify({
+        incident_id: reminderIncident.id,
+        profil_id: reminderIncident.profil_id,
+        employee_email: reminderIncident.profil?.email,
+        employee_name: `${reminderIncident.profil?.prenom} ${reminderIncident.profil?.nom}`,
+        document_type: reminderIncident.type,
+        expiration_date: reminderIncident.date_expiration_originale,
+        user_id: user?.id,
+      }),
+    });
 
-      const response = await fetch(`${supabaseUrl}/functions/v1/send-incident-manual-reminder`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-        },
-        body: JSON.stringify({
-          incident_id: incident.id,
-          profil_id: incident.profil_id,
-          employee_email: incident.profil.email,
-          employee_name: `${incident.profil.prenom} ${incident.profil.nom}`,
-          document_type: incident.type,
-          expiration_date: incident.date_expiration_originale,
-          user_id: user?.id,
-        }),
-      });
+    const result = await response.json();
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Erreur lors de l\'envoi du rappel');
-      }
-
-      alert('Rappel envoyé avec succès !');
-      await fetchIncidents();
-    } catch (error) {
-      console.error('Error sending reminder:', error);
-      alert(error instanceof Error ? error.message : 'Erreur lors de l\'envoi du rappel');
-    } finally {
-      setSendingReminder(null);
+    if (!response.ok) {
+      throw new Error(result.error || 'Erreur lors de l\'envoi du rappel');
     }
   };
 
@@ -432,12 +421,11 @@ export function IncidentsList() {
                       <>
                         <button
                           onClick={() => handleSendReminder(incident)}
-                          disabled={sendingReminder === incident.id}
-                          className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                           title="Envoyer un rappel par email"
                         >
                           <Mail className="w-4 h-4" />
-                          {sendingReminder === incident.id ? 'Envoi...' : 'Rappel'}
+                          Rappel
                         </button>
                         <button
                           onClick={() => handleChangeStatus(incident.id, 'en_cours')}
@@ -468,12 +456,11 @@ export function IncidentsList() {
                       <>
                         <button
                           onClick={() => handleSendReminder(incident)}
-                          disabled={sendingReminder === incident.id}
-                          className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                           title="Envoyer un rappel par email"
                         >
                           <Mail className="w-4 h-4" />
-                          {sendingReminder === incident.id ? 'Envoi...' : 'Rappel'}
+                          Rappel
                         </button>
                         <button
                           onClick={() => setSelectedIncident(incident)}
@@ -497,6 +484,16 @@ export function IncidentsList() {
           incident={selectedIncident}
           onClose={() => setSelectedIncident(null)}
           onUpdate={fetchIncidents}
+        />
+      )}
+
+      {reminderIncident && (
+        <SendReminderModal
+          employeeName={`${reminderIncident.profil?.prenom} ${reminderIncident.profil?.nom}`}
+          employeeEmail={reminderIncident.profil?.email || ''}
+          documentType={getTypeLabel(reminderIncident.type)}
+          onConfirm={confirmSendReminder}
+          onCancel={() => setReminderIncident(null)}
         />
       )}
     </div>
