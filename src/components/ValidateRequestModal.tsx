@@ -130,21 +130,41 @@ export function ValidateRequestModal({ validation, onClose, onSuccess }: Validat
     setSendingMessage(true);
     setError(null);
 
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const messageText = newMessage.trim();
+
+    const optimisticMessage: Message = {
+      id: tempId,
+      demande_validation_id: validation.id,
+      auteur_id: appUser.id,
+      message: messageText,
+      lu: false,
+      created_at: new Date().toISOString(),
+      auteur: {
+        nom: appUser.nom,
+        prenom: appUser.prenom,
+        email: appUser.email,
+      },
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+    setNewMessage('');
+
     try {
       const { error: insertError } = await supabase
         .from('message_validation')
         .insert({
           demande_validation_id: validation.id,
           auteur_id: appUser.id,
-          message: newMessage.trim(),
+          message: messageText,
         });
 
       if (insertError) throw insertError;
-
-      setNewMessage('');
     } catch (err: any) {
       console.error('Error sending message:', err);
       setError(err.message);
+      setMessages(prev => prev.filter(msg => msg.id !== tempId));
+      setNewMessage(messageText);
     } finally {
       setSendingMessage(false);
     }
