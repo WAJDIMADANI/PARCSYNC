@@ -60,6 +60,7 @@ export default function ContractSendModal({
   const [showSuccess, setShowSuccess] = useState(false);
   const [renewTrial, setRenewTrial] = useState(false);
   const [trialPeriodInfo, setTrialPeriodInfo] = useState<{ endDate: string; description: string } | null>(null);
+  const [lastContractVariables, setLastContractVariables] = useState<Record<string, any> | null>(null);
 
   const searchAddress = async (query: string) => {
     if (query.length < 3) {
@@ -126,6 +127,7 @@ export default function ContractSendModal({
   useEffect(() => {
     fetchData();
     fetchDocuments();
+    fetchLastContract();
   }, []);
 
   useEffect(() => {
@@ -139,6 +141,19 @@ export default function ContractSendModal({
       console.log('initialDateDebut is empty or undefined:', initialDateDebut);
     }
   }, [initialDateDebut]);
+
+  // Pré-remplissage automatique des champs depuis le dernier contrat
+  useEffect(() => {
+    if (selectedTemplate && lastContractVariables) {
+      setVariables(prev => ({
+        ...prev,
+        coefficient: lastContractVariables.coefficient || prev.coefficient,
+        heures_semaine: lastContractVariables.heures_semaine || prev.heures_semaine,
+        taux_horaire: lastContractVariables.taux_horaire || prev.taux_horaire,
+        lieu_travail: lastContractVariables.lieu_travail || prev.lieu_travail
+      }));
+    }
+  }, [selectedTemplate]);
 
   const fetchData = async () => {
     try {
@@ -174,6 +189,30 @@ export default function ContractSendModal({
       setDocuments(data || []);
     } catch (error) {
       console.error('Erreur chargement documents:', error);
+    }
+  };
+
+  const fetchLastContract = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contrat')
+        .select('variables, site_id')
+        .eq('profil_id', profilId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setLastContractVariables(data.variables || null);
+        // Pré-sélectionner le site du dernier contrat s'il existe
+        if (data.site_id) {
+          setSelectedSite(data.site_id);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur chargement dernier contrat:', error);
     }
   };
 
