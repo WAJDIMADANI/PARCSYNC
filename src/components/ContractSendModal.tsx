@@ -36,6 +36,7 @@ interface ContractSendModalProps {
   employeeEmail: string;
   onClose: () => void;
   onSuccess: () => void;
+  initialDateDebut?: string;
 }
 
 export default function ContractSendModal({
@@ -43,7 +44,8 @@ export default function ContractSendModal({
   employeeName,
   employeeEmail,
   onClose,
-  onSuccess
+  onSuccess,
+  initialDateDebut
 }: ContractSendModalProps) {
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
@@ -125,6 +127,15 @@ export default function ContractSendModal({
     fetchData();
     fetchDocuments();
   }, []);
+
+  useEffect(() => {
+    if (initialDateDebut) {
+      setVariables(prev => ({
+        ...prev,
+        date_debut: initialDateDebut
+      }));
+    }
+  }, [initialDateDebut]);
 
   const fetchData = async () => {
     try {
