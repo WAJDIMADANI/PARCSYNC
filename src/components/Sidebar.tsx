@@ -12,7 +12,7 @@ export type View =
   | 'rh/salaries'
   | 'rh/courriers'
   | 'rh/courriers-generes'
-  | 'rh/alertes'
+  | 'rh/contrats'
   | 'rh/notifications'
   | 'rh/documents-manquants'
   | 'rh/incidents'
@@ -104,7 +104,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'rh/salaries', label: 'Salariés', icon: Users, enabled: true },
         { id: 'rh/courriers', label: 'Courriers', icon: Mail, enabled: true },
         { id: 'rh/courriers-generes', label: 'Courriers Générés', icon: FileCheck, enabled: true },
-        { id: 'rh/alertes', label: 'Alertes', icon: Bell, enabled: true },
+        { id: 'rh/contrats', label: 'Gestion de Contrats', icon: FileText, enabled: true },
         { id: 'rh/notifications', label: 'Notifications', icon: Sparkles, enabled: true },
         { id: 'rh/documents-manquants', label: 'Documents Manquants', icon: FileWarning, enabled: true },
         { id: 'rh/incidents', label: 'Incidents', icon: AlertCircle, enabled: true },
