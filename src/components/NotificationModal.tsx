@@ -5,7 +5,7 @@ import { X, Mail, CheckCircle, XCircle, AlertTriangle, Calendar, User, FileText,
 interface NotificationModalProps {
   notification: {
     id: string;
-    type: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd';
+    type: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_1' | 'avenant_2';
     profil_id: string;
     date_echeance: string;
     statut: string;
@@ -32,6 +32,8 @@ export function NotificationModal({ notification, onClose, onUpdate }: Notificat
       case 'visite_medicale': return 'Visite médicale';
       case 'permis_conduire': return 'Permis de conduire';
       case 'contrat_cdd': return 'Contrat CDD';
+      case 'avenant_1': return 'Avenant 1';
+      case 'avenant_2': return 'Avenant 2';
       default: return notification.type;
     }
   };
@@ -57,6 +59,8 @@ ${notification.type === 'titre_sejour' ? 'Merci de nous faire parvenir une copie
 ${notification.type === 'visite_medicale' ? 'Merci de prendre rendez-vous pour votre visite médicale et de nous transmettre le certificat médical d\'aptitude.' : ''}
 ${notification.type === 'permis_conduire' ? 'Merci de nous transmettre une copie de votre permis de conduire renouvelé.' : ''}
 ${notification.type === 'contrat_cdd' ? 'Votre contrat à durée déterminée arrive à son terme. Nous prendrons contact avec vous prochainement concernant la suite.' : ''}
+${notification.type === 'avenant_1' ? 'Votre Avenant 1 arrive à son terme. Nous prendrons contact avec vous prochainement pour discuter de la suite.' : ''}
+${notification.type === 'avenant_2' ? 'Votre Avenant 2 arrive à son terme. Nous prendrons contact avec vous prochainement pour discuter de la suite.' : ''}
 
 Pour toute question, n'hésitez pas à nous contacter.
 

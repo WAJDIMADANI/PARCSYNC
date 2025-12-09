@@ -6,7 +6,7 @@ import { NotificationModal } from './NotificationModal';
 
 interface Notification {
   id: string;
-  type: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd';
+  type: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_1' | 'avenant_2';
   profil_id: string;
   date_echeance: string;
   date_notification: string;
@@ -22,13 +22,13 @@ interface Notification {
 }
 
 interface NotificationsListProps {
-  initialTab?: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd';
+  initialTab?: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_1' | 'avenant_2';
 }
 
 export function NotificationsList({ initialTab }: NotificationsListProps = {}) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd'>(initialTab || 'titre_sejour');
+  const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_1' | 'avenant_2'>(initialTab || 'titre_sejour');
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatut, setFilterStatut] = useState<string>('all');
@@ -94,6 +94,8 @@ export function NotificationsList({ initialTab }: NotificationsListProps = {}) {
       case 'visite_medicale': return 'Visite médicale';
       case 'permis_conduire': return 'Permis de conduire';
       case 'contrat_cdd': return 'Contrat CDD';
+      case 'avenant_1': return 'Avenant 1';
+      case 'avenant_2': return 'Avenant 2';
       default: return type;
     }
   };
@@ -104,6 +106,8 @@ export function NotificationsList({ initialTab }: NotificationsListProps = {}) {
       case 'visite_medicale': return <FileText className="w-5 h-5" />;
       case 'permis_conduire': return <CreditCard className="w-5 h-5" />;
       case 'contrat_cdd': return <Calendar className="w-5 h-5" />;
+      case 'avenant_1': return <FileText className="w-5 h-5" />;
+      case 'avenant_2': return <FileText className="w-5 h-5" />;
       default: return <Bell className="w-5 h-5" />;
     }
   };
@@ -216,6 +220,44 @@ export function NotificationsList({ initialTab }: NotificationsListProps = {}) {
               activeTab === 'contrat_cdd' ? 'bg-white text-red-600' : 'bg-red-100 text-red-600'
             }`}>
               {getTabCount('contrat_cdd')}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('avenant_1')}
+          className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all ${
+            activeTab === 'avenant_1'
+              ? 'bg-cyan-600 text-white shadow-lg'
+              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+          }`}
+        >
+          <FileText className="w-5 h-5" />
+          Avenant 1
+          {getTabCount('avenant_1') > 0 && (
+            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+              activeTab === 'avenant_1' ? 'bg-white text-cyan-600' : 'bg-cyan-100 text-cyan-600'
+            }`}>
+              {getTabCount('avenant_1')}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('avenant_2')}
+          className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all ${
+            activeTab === 'avenant_2'
+              ? 'bg-teal-600 text-white shadow-lg'
+              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+          }`}
+        >
+          <FileText className="w-5 h-5" />
+          Avenant 2
+          {getTabCount('avenant_2') > 0 && (
+            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+              activeTab === 'avenant_2' ? 'bg-white text-teal-600' : 'bg-teal-100 text-teal-600'
+            }`}>
+              {getTabCount('avenant_2')}
             </span>
           )}
         </button>
