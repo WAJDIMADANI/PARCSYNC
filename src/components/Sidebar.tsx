@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, RefreshCw
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 
@@ -64,23 +64,9 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['rh', 'parc', 'exports', 'admin'])
   );
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const { hasPermission, permissions, refreshPermissions } = usePermissions();
+  const { hasPermission, permissions } = usePermissions();
 
   console.log('Sidebar - Current permissions:', permissions);
-
-  const handleRefreshPermissions = async () => {
-    setIsRefreshing(true);
-    console.log('🔄 User clicked refresh permissions button');
-    try {
-      await refreshPermissions();
-      console.log('✅ Permissions refreshed successfully');
-    } catch (error) {
-      console.error('❌ Error refreshing permissions:', error);
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 1000);
-    }
-  };
 
   const toggleSection = (sectionId: string) => {
     const newExpanded = new Set(expandedSections);
@@ -300,23 +286,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         })}
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-slate-900 to-transparent space-y-2">
-        <button
-          onClick={handleRefreshPermissions}
-          disabled={isRefreshing}
-          className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${
-            isRefreshing
-              ? 'bg-slate-700/50 text-slate-400 cursor-wait'
-              : 'bg-slate-800/70 hover:bg-slate-700/70 text-slate-300 hover:text-white border border-slate-700/50 hover:border-slate-600'
-          }`}
-          title="Actualiser les permissions"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span className="text-xs font-medium">
-            {isRefreshing ? 'Actualisation...' : 'Actualiser permissions'}
-          </span>
-        </button>
-
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-slate-900 to-transparent">
         <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-2 border border-slate-700/50">
           <p className="text-xs text-slate-400 text-center font-medium">
             Propulsé par MAD IMPACT
