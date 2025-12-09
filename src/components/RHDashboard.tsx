@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
+import { ValidateRequestModal } from './ValidateRequestModal';
+import { usePermissions } from '../contexts/PermissionsContext';
 import {
   Users,
   UserCheck,
@@ -17,6 +19,8 @@ import {
   Bell,
   Phone,
   CheckSquare,
+  MessageSquare,
+  User,
 } from 'lucide-react';
 
 interface Stats {
@@ -66,11 +70,39 @@ interface Stats {
   };
 }
 
+interface ValidationWithMessages {
+  id: string;
+  demande_id: string;
+  demandeur_id: string;
+  validateur_id: string;
+  type_action: string;
+  priorite: 'normale' | 'urgente';
+  statut: 'en_attente' | 'approuvee' | 'rejetee' | 'transferee';
+  message_demande: string;
+  commentaire_validateur: string | null;
+  created_at: string;
+  responded_at: string | null;
+  type_demande: string;
+  demande_description: string;
+  demande_statut: string;
+  nom_salarie: string | null;
+  prenom_salarie: string | null;
+  matricule_salarie: string | null;
+  demandeur_email: string;
+  demandeur_nom: string;
+  demandeur_prenom: string;
+  validateur_email: string | null;
+  validateur_nom: string | null;
+  validateur_prenom: string | null;
+  unread_count: number;
+}
+
 interface RHDashboardProps {
   onNavigate?: (view: string, params?: any) => void;
 }
 
 export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
+  const { appUser } = usePermissions();
   const [stats, setStats] = useState<Stats>({
     candidates: {
       total: 0,
@@ -118,6 +150,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
     },
   });
   const [loading, setLoading] = useState(true);
+  const [validationsWithMessages, setValidationsWithMessages] = useState<ValidationWithMessages[]>([]);
+  const [selectedValidation, setSelectedValidation] = useState<ValidationWithMessages | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -154,6 +188,14 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       .channel('validations-dashboard-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'demande_validation' }, () => {
         fetchValidationsStats();
+        fetchValidationsWithMessages();
+      })
+      .subscribe();
+
+    const messagesChannel = supabase
+      .channel('messages-validation-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_validation' }, () => {
+        fetchValidationsWithMessages();
       })
       .subscribe();
 
@@ -163,6 +205,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       supabase.removeChannel(alertesChannel);
       supabase.removeChannel(notificationsChannel);
       supabase.removeChannel(validationsChannel);
+      supabase.removeChannel(messagesChannel);
     };
   }, []);
 
@@ -175,6 +218,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       fetchIncidentsStats(),
       fetchDemandesStats(),
       fetchValidationsStats(),
+      fetchValidationsWithMessages(),
     ]);
     setLoading(false);
   };
@@ -475,6 +519,94 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
     }
   };
 
+  const fetchValidationsWithMessages = async () => {
+    if (!appUser) return;
+
+    try {
+      const { data: validationsData, error: validationsError } = await supabase
+        .from('demande_validation')
+        .select(`
+          *,
+          demande:demande_id (
+            type_demande,
+            description,
+            statut,
+            salarie:salarie_id (
+              nom,
+              prenom,
+              matricule
+            )
+          ),
+          demandeur:demandeur_id (
+            email,
+            nom,
+            prenom
+          ),
+          validateur:validateur_id (
+            email,
+            nom,
+            prenom
+          )
+        `)
+        .eq('statut', 'en_attente')
+        .order('created_at', { ascending: false });
+
+      if (validationsError) throw validationsError;
+
+      if (!validationsData || validationsData.length === 0) {
+        setValidationsWithMessages([]);
+        return;
+      }
+
+      const validationsWithUnreadCounts = await Promise.all(
+        validationsData.map(async (validation: any) => {
+          const { count, error: countError } = await supabase
+            .from('message_validation')
+            .select('*', { count: 'exact', head: true })
+            .eq('demande_validation_id', validation.id)
+            .eq('lu', false)
+            .neq('auteur_id', appUser.id);
+
+          if (countError) {
+            console.error('Error counting unread messages:', countError);
+          }
+
+          return {
+            id: validation.id,
+            demande_id: validation.demande_id,
+            demandeur_id: validation.demandeur_id,
+            validateur_id: validation.validateur_id,
+            type_action: validation.type_action,
+            priorite: validation.priorite,
+            statut: validation.statut,
+            message_demande: validation.message_demande,
+            commentaire_validateur: validation.commentaire_validateur,
+            created_at: validation.created_at,
+            responded_at: validation.responded_at,
+            type_demande: validation.demande?.type_demande || '',
+            demande_description: validation.demande?.description || '',
+            demande_statut: validation.demande?.statut || '',
+            nom_salarie: validation.demande?.salarie?.nom || null,
+            prenom_salarie: validation.demande?.salarie?.prenom || null,
+            matricule_salarie: validation.demande?.salarie?.matricule || null,
+            demandeur_email: validation.demandeur?.email || '',
+            demandeur_nom: validation.demandeur?.nom || '',
+            demandeur_prenom: validation.demandeur?.prenom || '',
+            validateur_email: validation.validateur?.email || null,
+            validateur_nom: validation.validateur?.nom || null,
+            validateur_prenom: validation.validateur?.prenom || null,
+            unread_count: count || 0,
+          };
+        })
+      );
+
+      const validationsWithUnread = validationsWithUnreadCounts.filter(v => v.unread_count > 0);
+      setValidationsWithMessages(validationsWithUnread);
+    } catch (error) {
+      console.error('Error fetching validations with messages:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -663,6 +795,68 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         </div>
       </div>
 
+      {validationsWithMessages.length > 0 && (
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-xl shadow-sm border border-blue-200 p-6 mb-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
+            <div className="p-2 bg-blue-600 rounded-lg">
+              <MessageSquare className="w-6 h-6 text-white" />
+            </div>
+            Validations avec nouveaux messages
+            <span className="ml-2 px-3 py-1 bg-blue-600 text-white text-sm font-bold rounded-full">
+              {validationsWithMessages.length}
+            </span>
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {validationsWithMessages.map((validation) => (
+              <button
+                key={validation.id}
+                onClick={() => setSelectedValidation(validation)}
+                className="bg-white rounded-lg p-4 border-l-4 border-blue-500 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left relative"
+              >
+                <div className="absolute top-3 right-3">
+                  <span className="inline-flex items-center justify-center w-8 h-8 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">
+                    +{validation.unread_count}
+                  </span>
+                </div>
+                <div className="pr-10">
+                  <p className="text-sm text-gray-600 mb-1 font-medium">
+                    {validation.prenom_salarie} {validation.nom_salarie}
+                  </p>
+                  <p className="text-lg font-bold text-blue-600 mb-2">
+                    {validation.type_demande}
+                  </p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <p className="text-xs text-gray-600">
+                      {validation.demandeur_prenom} {validation.demandeur_nom}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-gray-400" />
+                    <p className="text-xs text-gray-600">
+                      {new Date(validation.created_at).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                  {validation.priorite === 'urgente' && (
+                    <div className="mt-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        Urgent
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Cliquez sur une carte pour voir les messages et répondre
+            </p>
+          </div>
+        </div>
+      )}
+
       {stats.employees.documents_manquants > 0 && (
         <div
           onClick={() => onNavigate?.('rh/documents-manquants')}
@@ -829,6 +1023,18 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           />
         </div>
       </div>
+
+      {selectedValidation && (
+        <ValidateRequestModal
+          validation={selectedValidation}
+          onClose={() => setSelectedValidation(null)}
+          onSuccess={() => {
+            setSelectedValidation(null);
+            fetchValidationsStats();
+            fetchValidationsWithMessages();
+          }}
+        />
+      )}
     </div>
   );
 }
