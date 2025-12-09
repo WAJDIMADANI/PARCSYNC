@@ -1,20 +1,20 @@
+# GUIDE RAPIDE - Correction Notifications CDD
+
+## SCRIPT SQL À EXÉCUTER
+
+Voici le script SQL complet à copier-coller dans Supabase :
+
+---
+
+```sql
 /*
-  # Create function to automatically generate expiration notifications
-
-  1. Function: generate_expiration_notifications()
-    - Scans profil table for documents expiring in 30 days:
-      - titre_sejour_fin_validite (residence permit)
-      - date_fin_visite_medicale (medical visit)
-      - permis_conduire_expiration (driving license)
-    - Scans contrat table for CDD contracts ending in 15 days
-    - Creates notification records automatically
-    - Prevents duplicate notifications
-
-  2. Usage
-    - Can be called manually: SELECT generate_expiration_notifications();
-    - Should be scheduled via pg_cron to run daily
-    - Safe to run multiple times (checks for duplicates)
+  CORRECTION: Notifications CDD à 30 jours
+  Copiez et exécutez ce script COMPLET dans l'éditeur SQL de Supabase
 */
+
+-- ========================================
+-- ÉTAPE 1: Mettre à jour la fonction
+-- ========================================
 
 CREATE OR REPLACE FUNCTION generate_expiration_notifications()
 RETURNS void AS $$
@@ -34,7 +34,6 @@ BEGIN
   LOOP
     v_date_notif := v_profil.titre_sejour_fin_validite - INTERVAL '30 days';
 
-    -- Create notification only if it doesn't already exist
     INSERT INTO notification (type, profil_id, date_echeance, date_notification, metadata)
     SELECT 'titre_sejour', v_profil.id, v_profil.titre_sejour_fin_validite, v_date_notif,
            jsonb_build_object('document', 'Titre de séjour')
@@ -94,6 +93,7 @@ BEGIN
   END LOOP;
 
   -- 4. Notifications for CDD contracts ending (30 days before end)
+  -- *** MODIFIÉ: 30 JOURS AU LIEU DE 15 JOURS ***
   FOR v_contrat IN
     SELECT id, profil_id, date_fin
     FROM contrat
@@ -119,3 +119,66 @@ BEGIN
 
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ========================================
+-- ÉTAPE 2: Exécuter la fonction
+-- ========================================
+
+SELECT generate_expiration_notifications();
+
+-- ========================================
+-- ÉTAPE 3: Vérification
+-- ========================================
+
+SELECT
+  'Notifications CDD créées avec succès' as message,
+  COUNT(*) as nombre_notifications
+FROM notification
+WHERE type = 'contrat_cdd'
+  AND statut IN ('active', 'email_envoye');
+```
+
+---
+
+## INSTRUCTIONS EN 3 ÉTAPES
+
+1. **Ouvrir Supabase**
+   - Connectez-vous à votre projet Supabase
+   - Allez dans **SQL Editor**
+
+2. **Copier-coller le script**
+   - Copiez le script SQL ci-dessus (TOUT le contenu)
+   - Collez-le dans l'éditeur SQL
+   - Cliquez sur **Run**
+
+3. **Vérifier dans l'application**
+   - Retournez dans votre application
+   - Allez dans **Notifications** → **Contrats CDD**
+   - Les notifications CDD devraient maintenant apparaître
+
+---
+
+## RÉSULTAT ATTENDU
+
+Après l'exécution, vous verrez :
+- "Function created successfully"
+- Le nombre de notifications CDD créées
+- Liste des notifications avec dates d'échéance
+
+Si le nombre de notifications = 0, cela signifie qu'il n'y a actuellement aucun contrat CDD se terminant dans les 30 prochains jours.
+
+---
+
+## POUR EXÉCUTER AUTOMATIQUEMENT CHAQUE JOUR
+
+Si vous voulez que les notifications se génèrent automatiquement, ajoutez ce cron job (nécessite pg_cron) :
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+SELECT cron.schedule(
+  'generate-notifications-daily',
+  '0 6 * * *',
+  $$ SELECT generate_expiration_notifications(); $$
+);
+```

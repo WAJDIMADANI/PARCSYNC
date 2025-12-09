@@ -1,20 +1,22 @@
 /*
-  # Create function to automatically generate expiration notifications
+  # GÉNÉRATION DES NOTIFICATIONS CDD (30 JOURS)
 
-  1. Function: generate_expiration_notifications()
-    - Scans profil table for documents expiring in 30 days:
-      - titre_sejour_fin_validite (residence permit)
-      - date_fin_visite_medicale (medical visit)
-      - permis_conduire_expiration (driving license)
-    - Scans contrat table for CDD contracts ending in 15 days
-    - Creates notification records automatically
-    - Prevents duplicate notifications
+  Ce script met à jour la fonction de génération de notifications pour détecter
+  les contrats CDD arrivant à échéance dans les 30 prochains jours (au lieu de 15 jours),
+  puis génère les notifications.
 
-  2. Usage
-    - Can be called manually: SELECT generate_expiration_notifications();
-    - Should be scheduled via pg_cron to run daily
-    - Safe to run multiple times (checks for duplicates)
+  INSTRUCTIONS:
+  1. Copiez et exécutez ce script COMPLET dans l'éditeur SQL de Supabase
+  2. Vérifiez le résultat dans l'onglet Notifications de votre application
+  3. Les notifications CDD devraient maintenant apparaître
+
+  IMPORTANT: Ce script peut être exécuté plusieurs fois sans problème
+  (il ne créera pas de doublons grâce à la vérification NOT EXISTS)
 */
+
+-- ========================================
+-- ÉTAPE 1: Mettre à jour la fonction
+-- ========================================
 
 CREATE OR REPLACE FUNCTION generate_expiration_notifications()
 RETURNS void AS $$
@@ -94,6 +96,7 @@ BEGIN
   END LOOP;
 
   -- 4. Notifications for CDD contracts ending (30 days before end)
+  -- *** MODIFIÉ: 30 JOURS AU LIEU DE 15 JOURS ***
   FOR v_contrat IN
     SELECT id, profil_id, date_fin
     FROM contrat
@@ -119,3 +122,61 @@ BEGIN
 
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ========================================
+-- ÉTAPE 2: Exécuter la fonction
+-- ========================================
+
+-- Génère toutes les notifications (y compris CDD à 30 jours)
+SELECT generate_expiration_notifications();
+
+-- ========================================
+-- ÉTAPE 3: Vérification
+-- ========================================
+
+-- Afficher les notifications CDD créées
+SELECT
+  'Notifications CDD créées avec succès' as message,
+  COUNT(*) as nombre_notifications
+FROM notification
+WHERE type = 'contrat_cdd'
+  AND statut IN ('active', 'email_envoye');
+
+-- Détail des notifications CDD
+SELECT
+  n.id,
+  n.date_echeance as date_fin_contrat,
+  EXTRACT(DAY FROM (n.date_echeance - CURRENT_DATE)) as jours_restants,
+  n.statut,
+  n.created_at as notification_creee_le,
+  p.prenom,
+  p.nom,
+  p.email
+FROM notification n
+LEFT JOIN profil p ON n.profil_id = p.id
+WHERE n.type = 'contrat_cdd'
+ORDER BY n.date_echeance ASC;
+
+-- ========================================
+-- RÉSUMÉ FINAL
+-- ========================================
+
+SELECT
+  '=== RÉSUMÉ FINAL ===' as titre;
+
+SELECT
+  'Contrats CDD se terminant dans 30 jours' as categorie,
+  COUNT(*) as nombre
+FROM contrat
+WHERE type = 'CDD'
+  AND date_fin IS NOT NULL
+  AND date_fin > CURRENT_DATE
+  AND date_fin <= CURRENT_DATE + INTERVAL '30 days'
+  AND statut = 'actif'
+UNION ALL
+SELECT
+  'Notifications CDD actives créées' as categorie,
+  COUNT(*) as nombre
+FROM notification
+WHERE type = 'contrat_cdd'
+  AND statut IN ('active', 'email_envoye');
