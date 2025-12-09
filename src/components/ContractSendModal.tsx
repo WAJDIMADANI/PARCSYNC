@@ -130,10 +130,13 @@ export default function ContractSendModal({
 
   useEffect(() => {
     if (initialDateDebut) {
+      console.log('Setting date_debut to:', initialDateDebut);
       setVariables(prev => ({
         ...prev,
         date_debut: initialDateDebut
       }));
+    } else {
+      console.log('initialDateDebut is empty or undefined:', initialDateDebut);
     }
   }, [initialDateDebut]);
 

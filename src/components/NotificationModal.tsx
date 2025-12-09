@@ -28,15 +28,14 @@ export function NotificationModal({ notification, onClose, onUpdate }: Notificat
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [showContractModal, setShowContractModal] = useState(false);
   const [profilData, setProfilData] = useState<any>(null);
-  const [contractEndDate, setContractEndDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (['contrat_cdd', 'avenant_1', 'avenant_2'].includes(notification.type)) {
-      fetchProfilAndContractData();
+      fetchProfilData();
     }
   }, [notification.profil_id, notification.type]);
 
-  const fetchProfilAndContractData = async () => {
+  const fetchProfilData = async () => {
     try {
       const { data: profil, error: profilError } = await supabase
         .from('profil')
@@ -46,34 +45,23 @@ export function NotificationModal({ notification, onClose, onUpdate }: Notificat
 
       if (profilError) throw profilError;
       setProfilData(profil);
-
-      const { data: contracts, error: contractsError } = await supabase
-        .from('contrat')
-        .select('variables')
-        .eq('profil_id', notification.profil_id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (contractsError) throw contractsError;
-
-      if (contracts && contracts.length > 0 && contracts[0].variables) {
-        const variables = contracts[0].variables as any;
-        if (variables.date_fin) {
-          setContractEndDate(variables.date_fin);
-        }
-      }
     } catch (error) {
-      console.error('Error fetching profil and contract data:', error);
+      console.error('Error fetching profil data:', error);
     }
   };
 
   const calculateNextStartDate = () => {
-    if (!contractEndDate) return '';
+    if (!notification.date_echeance) {
+      console.log('notification.date_echeance is not defined');
+      return '';
+    }
 
-    const endDate = new Date(contractEndDate);
+    const endDate = new Date(notification.date_echeance);
     endDate.setDate(endDate.getDate() + 1);
+    const nextStartDate = endDate.toISOString().split('T')[0];
 
-    return endDate.toISOString().split('T')[0];
+    console.log('Calculated next start date:', nextStartDate, 'from date_echeance:', notification.date_echeance);
+    return nextStartDate;
   };
 
   const isContractNotification = ['contrat_cdd', 'avenant_1', 'avenant_2'].includes(notification.type);
@@ -319,11 +307,9 @@ Le service RH`;
                       Le contrat arrive à échéance le <strong>{new Date(notification.date_echeance).toLocaleDateString('fr-FR')}</strong>.
                       Créez un nouveau contrat pour ce salarié avec le même workflow complet (génération PDF, envoi email, signature YouSign).
                     </p>
-                    {contractEndDate && (
-                      <p className="text-sm text-green-700 mb-4">
-                        La date de début sera automatiquement fixée au <strong>{new Date(calculateNextStartDate()).toLocaleDateString('fr-FR')}</strong> (lendemain de la fin du contrat actuel).
-                      </p>
-                    )}
+                    <p className="text-sm text-green-700 mb-4">
+                      La date de début sera automatiquement fixée au <strong>{new Date(calculateNextStartDate()).toLocaleDateString('fr-FR')}</strong> (lendemain de la fin du contrat actuel).
+                    </p>
                     <button
                       onClick={() => setShowContractModal(true)}
                       disabled={!profilData}
