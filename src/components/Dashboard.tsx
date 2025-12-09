@@ -36,7 +36,7 @@ import { MissingDocuments } from './MissingDocuments';
 import { GenerateLetterPage } from './GenerateLetterPage';
 
 export function Dashboard() {
-  const [view, setView] = useState<View>('rh/candidats');
+  const [view, setView] = useState<View>('dashboards/rh');
   const [viewParams, setViewParams] = useState<any>(null);
   const { signOut, user } = useAuth();
 
