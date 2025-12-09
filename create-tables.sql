@@ -142,13 +142,23 @@ WHERE date_expiration IS NOT NULL
   AND date_expiration >= CURRENT_DATE;
 
 CREATE OR REPLACE VIEW v_contrats_cdd_fin AS
-SELECT id, profil_id, type, date_fin,
-  (date_fin - CURRENT_DATE) as jours_restants
-FROM contrat
-WHERE type = 'cdd'
-  AND date_fin IS NOT NULL
-  AND date_fin < CURRENT_DATE + INTERVAL '30 days'
-  AND date_fin >= CURRENT_DATE;
+SELECT
+  c.id,
+  c.profil_id,
+  c.type,
+  c.date_fin,
+  (c.date_fin - CURRENT_DATE) as jours_restants,
+  p.nom,
+  p.prenom,
+  p.email,
+  s.nom as secteur_nom
+FROM contrat c
+LEFT JOIN profil p ON c.profil_id = p.id
+LEFT JOIN secteur s ON p.secteur_id = s.id
+WHERE c.type = 'cdd'
+  AND c.date_fin IS NOT NULL
+  AND c.date_fin < CURRENT_DATE + INTERVAL '30 days'
+  AND c.date_fin >= CURRENT_DATE;
 
 -- Table vehicule
 CREATE TABLE IF NOT EXISTS vehicule (
