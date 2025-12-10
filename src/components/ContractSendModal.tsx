@@ -37,6 +37,8 @@ interface ContractSendModalProps {
   onClose: () => void;
   onSuccess: () => void;
   initialDateDebut?: string;
+  employeeBirthplace?: string;
+  employeeSSN?: string;
 }
 
 export default function ContractSendModal({
@@ -45,7 +47,9 @@ export default function ContractSendModal({
   employeeEmail,
   onClose,
   onSuccess,
-  initialDateDebut
+  initialDateDebut,
+  employeeBirthplace,
+  employeeSSN
 }: ContractSendModalProps) {
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
@@ -139,6 +143,27 @@ export default function ContractSendModal({
       console.log('initialDateDebut is empty or undefined:', initialDateDebut);
     }
   }, [initialDateDebut]);
+
+  // Pré-remplissage automatique des données du salarié depuis le profil
+  useEffect(() => {
+    const updates: Record<string, string> = {};
+
+    if (employeeBirthplace) {
+      updates.birthplace = employeeBirthplace;
+    }
+
+    if (employeeSSN) {
+      updates.id_number = employeeSSN;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      console.log('🔄 Pré-remplissage depuis le profil:', updates);
+      setVariables(prev => ({
+        ...prev,
+        ...updates
+      }));
+    }
+  }, [employeeBirthplace, employeeSSN]);
 
   // Pré-remplissage automatique des champs depuis le modèle de contrat sélectionné
   useEffect(() => {

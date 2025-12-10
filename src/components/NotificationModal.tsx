@@ -389,6 +389,8 @@ Le service RH`;
           profilId={notification.profil_id}
           employeeName={`${notification.profil?.prenom || ''} ${notification.profil?.nom || ''}`}
           employeeEmail={notification.profil?.email || ''}
+          employeeBirthplace={profilData.lieu_naissance || ''}
+          employeeSSN={profilData.numero_securite_sociale || ''}
           onClose={() => setShowContractModal(false)}
           onSuccess={() => {
             setShowContractModal(false);

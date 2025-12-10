@@ -3652,6 +3652,8 @@ function EmployeeDetailModal({
         profilId={currentEmployee.id}
         employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
         employeeEmail={currentEmployee.email}
+        employeeBirthplace={currentEmployee.lieu_naissance || ''}
+        employeeSSN={currentEmployee.numero_securite_sociale || ''}
         onClose={() => setShowContractSend(false)}
         onSuccess={handleContractSent}
       />
@@ -3761,6 +3763,8 @@ function EmployeeDetailModal({
         profilId={currentEmployee.id}
         employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
         employeeEmail={currentEmployee.email}
+        employeeBirthplace={currentEmployee.lieu_naissance || ''}
+        employeeSSN={currentEmployee.numero_securite_sociale || ''}
         onClose={() => setShowContractSend(false)}
         onSuccess={handleContractSent}
       />
