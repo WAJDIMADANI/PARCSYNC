@@ -70,6 +70,9 @@ Deno.serve(async (req: Request) => {
                 .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
                 .button { display: inline-block; background-color: #16a34a; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
                 .info-box { background-color: #e0f2fe; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px; }
+                .warning-box { background-color: #dc2626; color: white; padding: 25px; margin: 25px 0; border-radius: 8px; text-align: center; border: 4px solid #991b1b; font-weight: bold; }
+                .warning-box .main-text { font-size: 22px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+                .warning-box .sub-text { font-size: 16px; margin-top: 10px; }
                 .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
               </style>
             </head>
@@ -81,6 +84,11 @@ Deno.serve(async (req: Request) => {
                 <div class="content">
                   <p>Bonjour ${employeeName},</p>
 
+                  <div class="warning-box">
+                    <div class="main-text">⚠️ ATTENTION : CE LIEN N'EST VALABLE QUE 48 HEURES ⚠️</div>
+                    <div class="sub-text">Vous devez signer votre contrat dans les 48 heures suivant la réception de cet email, sinon le lien de signature électronique expirera.</div>
+                  </div>
+
                   <p>Votre contrat de travail est prêt ! Vous trouverez ci-dessous les informations principales :</p>
 
                   <div class="info-box">
@@ -91,15 +99,18 @@ Deno.serve(async (req: Request) => {
 
                   <p><strong>⚠️ Actions requises :</strong></p>
                   <ol>
+                    <li><span style="color: #dc2626; font-weight: bold; font-size: 16px;">SIGNER DANS LES 48 HEURES (délai impératif)</span></li>
                     <li>Télécharger et lire attentivement votre contrat en PDF</li>
                     <li>Signer électroniquement le contrat</li>
                     <li>Uploader votre certificat médical d'aptitude</li>
                   </ol>
 
                   <div style="text-align: center; margin: 30px 0;">
+                    <p style="color: #dc2626; font-weight: bold; font-size: 18px; margin-bottom: 20px; text-transform: uppercase;">⏰ À SIGNER DANS LES 48 HEURES ⏰</p>
                     <a href="${pdfDownloadLink}" class="button" style="background-color: #dc2626; margin-bottom: 10px; display: inline-block;">📄 Télécharger le contrat (PDF)</a>
                     <br>
                     <a href="${contractSignatureLink}" class="button">📝 Signer le contrat en ligne</a>
+                    <p style="color: #dc2626; font-weight: bold; font-size: 16px; margin-top: 20px;">Lien de signature valable uniquement 48 heures après réception</p>
                   </div>
 
                   <p><strong>Important :</strong> Une fois votre contrat signé et votre certificat médical fourni, votre employeur finalisera votre dossier en effectuant la DPAE (Déclaration Préalable à l'Embauche).</p>
