@@ -12,7 +12,7 @@ interface ContractTemplate {
   variables: Record<string, any>;
 }
 
-interface Site {
+interface Secteur {
   id: string;
   nom: string;
 }
@@ -48,7 +48,7 @@ export default function ContractSendModal({
   initialDateDebut
 }: ContractSendModalProps) {
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
-  const [sites, setSites] = useState<Site[]>([]);
+  const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [postes, setPostes] = useState<Poste[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -92,7 +92,7 @@ export default function ContractSendModal({
   };
 
   const [selectedTemplate, setSelectedTemplate] = useState('');
-  const [selectedSite, setSelectedSite] = useState('');
+  const [selectedSecteur, setSelectedSecteur] = useState('');
   const [variables, setVariables] = useState({
     poste: '',
     salaire: '',
@@ -166,18 +166,18 @@ export default function ContractSendModal({
 
   const fetchData = async () => {
     try {
-      const [templatesRes, sitesRes, postesRes] = await Promise.all([
+      const [templatesRes, secteursRes, postesRes] = await Promise.all([
         supabase.from('modeles_contrats').select('*').order('nom'),
-        supabase.from('site').select('*').order('nom'),
+        supabase.from('secteur').select('*').order('nom'),
         supabase.from('poste').select('id, nom, description').eq('actif', true).order('nom')
       ]);
 
       if (templatesRes.error) throw templatesRes.error;
-      if (sitesRes.error) throw sitesRes.error;
+      if (secteursRes.error) throw secteursRes.error;
       if (postesRes.error) throw postesRes.error;
 
       setTemplates(templatesRes.data || []);
-      setSites(sitesRes.data || []);
+      setSecteurs(secteursRes.data || []);
       setPostes(postesRes.data || []);
     } catch (error) {
       console.error('Erreur chargement données:', error);
@@ -256,8 +256,8 @@ export default function ContractSendModal({
   };
 
   const handleSend = async () => {
-    if (!selectedTemplate || !selectedSite) {
-      alert('Veuillez sélectionner un modèle de contrat et un site');
+    if (!selectedTemplate || !selectedSecteur) {
+      alert('Veuillez sélectionner un modèle de contrat et un secteur');
       return;
     }
 
@@ -287,7 +287,7 @@ export default function ContractSendModal({
         .insert({
           profil_id: profilId,
           modele_id: selectedTemplate,
-          site_id: selectedSite,
+          secteur_id: selectedSecteur,
           variables: {
             ...variables,
             nom_salarie: employeeName,
@@ -371,7 +371,7 @@ export default function ContractSendModal({
       // ✅ ÉTAPE 4 : Mettre à jour le profil
       const updateData: any = {
         statut: 'contrat_envoye',
-        site_id: selectedSite
+        secteur_id: selectedSecteur
       };
 
       if (trialPeriodInfo?.endDate) {
@@ -479,18 +479,18 @@ export default function ContractSendModal({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Building className="w-4 h-4 inline mr-1" />
-                Site de travail *
+                Secteur *
               </label>
               <select
-                value={selectedSite}
-                onChange={(e) => setSelectedSite(e.target.value)}
+                value={selectedSecteur}
+                onChange={(e) => setSelectedSecteur(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               >
-                <option value="">Sélectionner un site</option>
-                {sites.map(site => (
-                  <option key={site.id} value={site.id}>
-                    {site.nom}
+                <option value="">Sélectionner un secteur</option>
+                {secteurs.map(secteur => (
+                  <option key={secteur.id} value={secteur.id}>
+                    {secteur.nom}
                   </option>
                 ))}
               </select>
@@ -699,7 +699,7 @@ export default function ContractSendModal({
             </button>
             <button
               onClick={handleSend}
-              disabled={sending || !selectedTemplate || !selectedSite}
+              disabled={sending || !selectedTemplate || !selectedSecteur}
               className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
             >
               {sending ? (
