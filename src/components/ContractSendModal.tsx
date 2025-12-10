@@ -286,8 +286,8 @@ export default function ContractSendModal({
       return;
     }
 
-    if (!variables.poste || !variables.salaire) {
-      alert('Veuillez remplir au minimum le poste et le salaire');
+    if (!variables.poste) {
+      alert('Veuillez remplir au minimum le poste');
       return;
     }
 
@@ -544,21 +544,6 @@ export default function ContractSendModal({
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <DollarSign className="w-4 h-4 inline mr-1" />
-                  Salaire brut mensuel *
-                </label>
-                <input
-                  type="text"
-                  value={variables.salaire}
-                  onChange={(e) => setVariables({...variables, salaire: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Ex: 2000€"
-                  required
-                />
               </div>
 
               <div>

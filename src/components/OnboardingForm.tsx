@@ -631,27 +631,6 @@ export function OnboardingForm() {
             </div>
           </div>
 
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">
-              Affectation
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Site (optionnel)</label>
-                <select value={formData.site_id} onChange={(e) => setFormData({ ...formData, site_id: e.target.value })} className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium">
-                  <option value="">Sélectionner un site</option>
-                  {sites.map((site) => <option key={site.id} value={site.id}>{site.nom}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Secteur (optionnel)</label>
-                <select value={formData.secteur_id} onChange={(e) => setFormData({ ...formData, secteur_id: e.target.value })} className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium">
-                  <option value="">Sélectionner un secteur</option>
-                  {secteurs.map((secteur) => <option key={secteur.id} value={secteur.id}>{secteur.nom}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
 
           <div>
             <h2 className="text-xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">

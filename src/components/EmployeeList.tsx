@@ -312,6 +312,14 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       return matchesSearch && matchesStatut && matchesSecteur && matchesTypeContrat;
     })
     .sort((a, b) => {
+      // Priority sorting: 'en_attente_contrat' status always appears first
+      const aIsWaiting = a.statut === 'en_attente_contrat';
+      const bIsWaiting = b.statut === 'en_attente_contrat';
+
+      if (aIsWaiting && !bIsWaiting) return -1;
+      if (!aIsWaiting && bIsWaiting) return 1;
+
+      // If both have the same priority, sort by the selected field
       let aValue: any;
       let bValue: any;
 
