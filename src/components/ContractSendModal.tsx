@@ -60,7 +60,6 @@ export default function ContractSendModal({
   const [showSuccess, setShowSuccess] = useState(false);
   const [renewTrial, setRenewTrial] = useState(false);
   const [trialPeriodInfo, setTrialPeriodInfo] = useState<{ endDate: string; description: string } | null>(null);
-  const [lastContractVariables, setLastContractVariables] = useState<Record<string, any> | null>(null);
 
   const searchAddress = async (query: string) => {
     if (query.length < 3) {
@@ -127,7 +126,6 @@ export default function ContractSendModal({
   useEffect(() => {
     fetchData();
     fetchDocuments();
-    fetchLastContract();
   }, []);
 
   useEffect(() => {
@@ -142,18 +140,29 @@ export default function ContractSendModal({
     }
   }, [initialDateDebut]);
 
-  // Pré-remplissage automatique des champs depuis le dernier contrat
+  // Pré-remplissage automatique des champs depuis le modèle de contrat sélectionné
   useEffect(() => {
-    if (selectedTemplate && lastContractVariables) {
-      setVariables(prev => ({
-        ...prev,
-        coefficient: lastContractVariables.coefficient || prev.coefficient,
-        heures_semaine: lastContractVariables.heures_semaine || prev.heures_semaine,
-        taux_horaire: lastContractVariables.taux_horaire || prev.taux_horaire,
-        lieu_travail: lastContractVariables.lieu_travail || prev.lieu_travail
-      }));
+    if (selectedTemplate && templates.length > 0) {
+      const template = templates.find(t => t.id === selectedTemplate);
+      if (template && template.variables) {
+        console.log('📋 Pré-remplissage depuis le modèle:', template.nom, template.variables);
+
+        // Mapping entre la structure du modèle et les champs du formulaire
+        const templateVars = template.variables as any;
+
+        setVariables(prev => ({
+          ...prev,
+          poste: templateVars.contract?.job_title || prev.poste,
+          coefficient: templateVars.contract?.coef || prev.coefficient,
+          heures_semaine: templateVars.contract?.weekly_hours || prev.heures_semaine,
+          taux_horaire: templateVars.contract?.hourly_rate || prev.taux_horaire,
+          lieu_travail: templateVars.work?.work_site || prev.lieu_travail,
+          birthplace: templateVars.employee?.birthplace || prev.birthplace,
+          id_number: templateVars.employee?.id_number || prev.id_number
+        }));
+      }
     }
-  }, [selectedTemplate]);
+  }, [selectedTemplate, templates]);
 
   const fetchData = async () => {
     try {
@@ -189,30 +198,6 @@ export default function ContractSendModal({
       setDocuments(data || []);
     } catch (error) {
       console.error('Erreur chargement documents:', error);
-    }
-  };
-
-  const fetchLastContract = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('contrat')
-        .select('variables, site_id')
-        .eq('profil_id', profilId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data) {
-        setLastContractVariables(data.variables || null);
-        // Pré-sélectionner le site du dernier contrat s'il existe
-        if (data.site_id) {
-          setSelectedSite(data.site_id);
-        }
-      }
-    } catch (error) {
-      console.error('Erreur chargement dernier contrat:', error);
     }
   };
 
