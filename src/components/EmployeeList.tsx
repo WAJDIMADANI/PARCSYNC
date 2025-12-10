@@ -107,7 +107,7 @@ interface Contract {
   } | null;
 }
 
-type SortField = 'prenom' | 'nom' | 'email' | 'secteur' | 'date_entree' | 'type_contrat' | 'statut_contrat';
+type SortField = 'matricule_tca' | 'prenom' | 'nom' | 'email' | 'secteur' | 'date_entree' | 'type_contrat' | 'statut_contrat';
 type SortDirection = 'asc' | 'desc';
 
 interface EmployeeListProps {
@@ -312,18 +312,22 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       return matchesSearch && matchesStatut && matchesSecteur && matchesTypeContrat;
     })
     .sort((a, b) => {
-      // Priority sorting: 'en_attente_contrat' status always appears first
-      const aIsWaiting = a.statut === 'en_attente_contrat';
-      const bIsWaiting = b.statut === 'en_attente_contrat';
+      // Priority sorting: 'contrat_envoye' and 'en_attente_contrat' statuses always appear first
+      const aIsPriority = a.statut === 'contrat_envoye' || a.statut === 'en_attente_contrat';
+      const bIsPriority = b.statut === 'contrat_envoye' || b.statut === 'en_attente_contrat';
 
-      if (aIsWaiting && !bIsWaiting) return -1;
-      if (!aIsWaiting && bIsWaiting) return 1;
+      if (aIsPriority && !bIsPriority) return -1;
+      if (!aIsPriority && bIsPriority) return 1;
 
       // If both have the same priority, sort by the selected field
       let aValue: any;
       let bValue: any;
 
       switch (sortField) {
+        case 'matricule_tca':
+          aValue = (a.matricule_tca || '').toLowerCase();
+          bValue = (b.matricule_tca || '').toLowerCase();
+          break;
         case 'prenom':
           aValue = a.prenom.toLowerCase();
           bValue = b.prenom.toLowerCase();
@@ -577,6 +581,15 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
               <thead className="bg-gray-50">
                 <tr>
                   <th
+                    onClick={() => handleSort('matricule_tca')}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    <div className="flex items-center gap-2">
+                      Matricule TCA
+                      {getSortIcon('matricule_tca')}
+                    </div>
+                  </th>
+                  <th
                     onClick={() => handleSort('prenom')}
                     className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   >
@@ -651,6 +664,9 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                     onClick={() => setSelectedEmployee(employee)}
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
                   >
+                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      {employee.matricule_tca || '-'}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                       {employee.prenom}
                     </td>
