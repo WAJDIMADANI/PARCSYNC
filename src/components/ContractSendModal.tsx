@@ -312,7 +312,6 @@ export default function ContractSendModal({
         .insert({
           profil_id: profilId,
           modele_id: selectedTemplate,
-          secteur_id: selectedSecteur,
           variables: {
             ...variables,
             nom_salarie: employeeName,
