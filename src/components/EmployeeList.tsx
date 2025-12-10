@@ -1146,14 +1146,30 @@ function EmployeeDetailModal({
   const getActiveContractWithEndDate = () => {
     if (!employeeContracts || employeeContracts.length === 0) return null;
 
-    // Chercher un contrat actif avec une date de fin
+    // Chercher un contrat actif avec une date de fin (tous types: manuels et générés)
     const activeContract = employeeContracts.find((contract: any) => {
       const hasEndDate = contract.date_fin && contract.date_fin.trim() !== '';
       const isActive = contract.statut === 'actif' || contract.statut === 'signe';
-      const typeContrat = contract.modele?.type_contrat?.toLowerCase() || '';
-      const isCDD = typeContrat.includes('cdd') || typeContrat.includes('avenant');
 
-      return hasEndDate && isActive && isCDD;
+      // Récupérer le type de contrat (manuel ou généré)
+      const isManual = contract.source === 'manuel' || !contract.modele_id;
+      const typeContrat = isManual && contract.variables?.type_contrat
+        ? contract.variables.type_contrat
+        : contract.modele?.type_contrat || '';
+
+      // Log pour débogage
+      if (hasEndDate && isActive) {
+        console.log('📋 Contrat éligible trouvé:', {
+          id: contract.id,
+          type: typeContrat,
+          isManual,
+          date_fin: contract.date_fin,
+          statut: contract.statut
+        });
+      }
+
+      // Accepter tous les contrats avec date de fin et statut actif/signé
+      return hasEndDate && isActive;
     });
 
     return activeContract || null;
@@ -3518,26 +3534,34 @@ function EmployeeDetailModal({
               </div>
 
               {/* Message d'information si contrat actif avec date de fin */}
-              {activeContractWithEndDate && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-sm font-semibold text-green-900 mb-1">
-                        Contrat actif avec date de fin détecté
-                      </h4>
-                      <p className="text-sm text-green-800">
-                        Le salarié a un contrat <strong>{activeContractWithEndDate.modele?.type_contrat || 'CDD'}</strong> qui
-                        se termine le <strong>{new Date(activeContractWithEndDate.date_fin).toLocaleDateString('fr-FR')}</strong>.
-                        Vous pouvez créer un nouveau contrat qui débutera automatiquement le{' '}
-                        <strong>{new Date(nextContractStartDate).toLocaleDateString('fr-FR')}</strong>.
-                      </p>
+              {activeContractWithEndDate && (() => {
+                // Récupérer le type de contrat correctement (manuel ou généré)
+                const isManualContract = activeContractWithEndDate.source === 'manuel' || !activeContractWithEndDate.modele_id;
+                const contractType = isManualContract && activeContractWithEndDate.variables?.type_contrat
+                  ? activeContractWithEndDate.variables.type_contrat
+                  : activeContractWithEndDate.modele?.type_contrat || 'Contrat';
+
+                return (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <AlertCircle className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-green-900 mb-1">
+                          Contrat actif avec date de fin détecté
+                        </h4>
+                        <p className="text-sm text-green-800">
+                          Le salarié a un contrat <strong>{contractType}</strong> qui
+                          se termine le <strong>{new Date(activeContractWithEndDate.date_fin).toLocaleDateString('fr-FR')}</strong>.
+                          Vous pouvez créer un nouveau contrat qui débutera automatiquement le{' '}
+                          <strong>{new Date(nextContractStartDate).toLocaleDateString('fr-FR')}</strong>.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Boutons d'action */}
               <div className="flex flex-col sm:flex-row gap-3">
