@@ -842,7 +842,7 @@ export function ImportSalariesBulk() {
           if (emp.data.complement_adresse) updateData.complement_adresse = emp.data.complement_adresse;
           if (emp.data.ville) updateData.ville = emp.data.ville;
           if (emp.data.code_postal) updateData.code_postal = emp.data.code_postal;
-          if (emp.data.numero_securite_sociale) updateData.numero_securite_sociale = emp.data.numero_securite_sociale;
+          if (emp.data.numero_securite_sociale) updateData.nir = emp.data.numero_securite_sociale;
           if (emp.data.iban) updateData.iban = emp.data.iban;
           if (emp.data.bic) updateData.bic = emp.data.bic;
           if (emp.data.poste) updateData.poste = emp.data.poste;
@@ -891,7 +891,7 @@ export function ImportSalariesBulk() {
             complement_adresse: emp.data.complement_adresse,
             ville: emp.data.ville,
             code_postal: emp.data.code_postal,
-            numero_securite_sociale: emp.data.numero_securite_sociale,
+            nir: emp.data.numero_securite_sociale,
             iban: emp.data.iban,
             bic: emp.data.bic,
             poste: emp.data.poste,

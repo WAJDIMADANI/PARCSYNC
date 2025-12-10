@@ -390,7 +390,7 @@ Le service RH`;
           employeeName={`${notification.profil?.prenom || ''} ${notification.profil?.nom || ''}`}
           employeeEmail={notification.profil?.email || ''}
           employeeBirthplace={profilData.lieu_naissance || ''}
-          employeeSSN={profilData.numero_securite_sociale || ''}
+          employeeSSN={profilData.nir || ''}
           onClose={() => setShowContractModal(false)}
           onSuccess={() => {
             setShowContractModal(false);

@@ -144,7 +144,7 @@ export function formatProfileData(profil: any): Record<string, string> {
     date_naissance: profil.date_naissance ? formatDate(profil.date_naissance) : '',
     lieu_naissance: profil.lieu_naissance || '',
     nationalite: profil.nationalite || '',
-    numero_securite_sociale: profil.numero_securite_sociale || '',
+    numero_securite_sociale: profil.nir || '',
 
     // Dates
     date_aujourd_hui: formatDate(today.toISOString()),

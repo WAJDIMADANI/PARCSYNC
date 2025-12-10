@@ -78,7 +78,7 @@ interface Employee {
   nationalite: string | null;
   genre: string | null;
   nom_naissance: string | null;
-  numero_securite_sociale: string | null;
+  nir: string | null;
   adresse: string | null;
   complement_adresse: string | null;
   ville: string | null;
@@ -867,7 +867,7 @@ function EmployeeDetailModal({
   const [editedNationalite, setEditedNationalite] = useState(currentEmployee.nationalite || '');
   const [editedGenre, setEditedGenre] = useState(currentEmployee.genre || '');
   const [editedNomNaissance, setEditedNomNaissance] = useState(currentEmployee.nom_naissance || '');
-  const [editedNumeroSS, setEditedNumeroSS] = useState(currentEmployee.numero_securite_sociale || '');
+  const [editedNumeroSS, setEditedNumeroSS] = useState(currentEmployee.nir || '');
 
   // Edited fields for address
   const [editedAdresse, setEditedAdresse] = useState(currentEmployee.adresse || '');
@@ -919,7 +919,7 @@ function EmployeeDetailModal({
       setEditedNationalite(employee.nationalite || '');
       setEditedGenre(employee.genre || '');
       setEditedNomNaissance(employee.nom_naissance || '');
-      setEditedNumeroSS(employee.numero_securite_sociale || '');
+      setEditedNumeroSS(employee.nir || '');
     }
 
     if (!isEditingAddress) {
@@ -1748,7 +1748,7 @@ function EmployeeDetailModal({
           nationalite: editedNationalite || null,
           genre: editedGenre || null,
           nom_naissance: editedNomNaissance || null,
-          numero_securite_sociale: editedNumeroSS || null
+          nir: editedNumeroSS || null
         })
         .eq('id', currentEmployee.id);
 
@@ -1762,7 +1762,7 @@ function EmployeeDetailModal({
         nationalite: editedNationalite || null,
         genre: editedGenre || null,
         nom_naissance: editedNomNaissance || null,
-        numero_securite_sociale: editedNumeroSS || null
+        nir: editedNumeroSS || null
       });
 
       setIsEditingPersonal(false);
@@ -1863,7 +1863,7 @@ function EmployeeDetailModal({
     setEditedNationalite(currentEmployee.nationalite || '');
     setEditedGenre(currentEmployee.genre || '');
     setEditedNomNaissance(currentEmployee.nom_naissance || '');
-    setEditedNumeroSS(currentEmployee.numero_securite_sociale || '');
+    setEditedNumeroSS(currentEmployee.nir || '');
     setIsEditingPersonal(false);
   };
 
@@ -2524,7 +2524,7 @@ function EmployeeDetailModal({
               <div className="md:col-span-2">
                 <label className="text-xs font-medium text-gray-500 uppercase">Numéro de sécurité sociale</label>
                 {!isEditingPersonal ? (
-                  <p className="text-sm text-gray-900 font-mono">{currentEmployee.numero_securite_sociale || '-'}</p>
+                  <p className="text-sm text-gray-900 font-mono">{currentEmployee.nir || '-'}</p>
                 ) : (
                   <input
                     type="text"
@@ -3780,7 +3780,7 @@ function EmployeeDetailModal({
         employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
         employeeEmail={currentEmployee.email}
         employeeBirthplace={currentEmployee.lieu_naissance || ''}
-        employeeSSN={currentEmployee.numero_securite_sociale || ''}
+        employeeSSN={currentEmployee.nir || ''}
         onClose={() => setShowContractSend(false)}
         onSuccess={handleContractSent}
       />
@@ -3792,7 +3792,7 @@ function EmployeeDetailModal({
         employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
         employeeEmail={currentEmployee.email}
         employeeBirthplace={currentEmployee.lieu_naissance || ''}
-        employeeSSN={currentEmployee.numero_securite_sociale || ''}
+        employeeSSN={currentEmployee.nir || ''}
         initialDateDebut={nextContractStartDate}
         onClose={() => setShowCreateContractModal(false)}
         onSuccess={handleCreateContractSuccess}
@@ -3904,7 +3904,7 @@ function EmployeeDetailModal({
         employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
         employeeEmail={currentEmployee.email}
         employeeBirthplace={currentEmployee.lieu_naissance || ''}
-        employeeSSN={currentEmployee.numero_securite_sociale || ''}
+        employeeSSN={currentEmployee.nir || ''}
         onClose={() => setShowContractSend(false)}
         onSuccess={handleContractSent}
       />
