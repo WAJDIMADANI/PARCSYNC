@@ -133,6 +133,59 @@ Deno.serve(async (req: Request) => {
       const profilId = updated[0].profil_id;
       if (profilId) {
         console.log("Mise à jour du profil:", profilId);
+
+        // Récupérer le profil actuel pour vérifier le matricule TCA
+        const profilResponse = await fetch(
+          `${SUPABASE_URL}/rest/v1/profil?id=eq.${profilId}&select=matricule_tca`,
+          {
+            headers: {
+              "Authorization": `Bearer ${SERVICE_KEY}`,
+              "apikey": SERVICE_KEY || "",
+            },
+          }
+        );
+
+        const profils = await profilResponse.json();
+        const profil = profils && profils.length > 0 ? profils[0] : null;
+
+        // Préparer les données de mise à jour
+        const updateData: any = {
+          statut: "contrat_signe",
+        };
+
+        // Générer un matricule TCA si nécessaire
+        if (!profil?.matricule_tca) {
+          console.log("Génération du matricule TCA pour le profil:", profilId);
+
+          // Récupérer le dernier matricule TCA
+          const lastMatriculeResponse = await fetch(
+            `${SUPABASE_URL}/rest/v1/profil?select=matricule_tca&matricule_tca=not.is.null&matricule_tca=like.1590*&order=matricule_tca.desc&limit=1`,
+            {
+              headers: {
+                "Authorization": `Bearer ${SERVICE_KEY}`,
+                "apikey": SERVICE_KEY || "",
+              },
+            }
+          );
+
+          const lastMatricules = await lastMatriculeResponse.json();
+          let nextNumber = 1;
+
+          if (lastMatricules && lastMatricules.length > 0) {
+            const lastMatricule = lastMatricules[0].matricule_tca;
+            // Extraire le numéro après "1590"
+            const match = lastMatricule.match(/^1590(\d+)$/);
+            if (match) {
+              nextNumber = parseInt(match[1], 10) + 1;
+            }
+          }
+
+          const newMatricule = `1590${nextNumber}`;
+          updateData.matricule_tca = newMatricule;
+          console.log("Nouveau matricule TCA généré:", newMatricule);
+        }
+
+        // Mettre à jour le profil
         await fetch(
           `${SUPABASE_URL}/rest/v1/profil?id=eq.${profilId}`,
           {
@@ -143,9 +196,7 @@ Deno.serve(async (req: Request) => {
               "apikey": SERVICE_KEY || "",
               "Prefer": "return=minimal",
             },
-            body: JSON.stringify({
-              statut: "contrat_signe",
-            }),
+            body: JSON.stringify(updateData),
           }
         );
       }
