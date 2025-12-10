@@ -261,6 +261,12 @@ Deno.serve(async (req: Request) => {
     const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
     console.log("PDF ready for Yousign, size:", pdfBlob.size, "bytes");
 
+    // Calculer la date d'expiration (48h)
+    const expirationDate = new Date();
+    expirationDate.setHours(expirationDate.getHours() + 48);
+    const formattedExpiration = expirationDate.toISOString().split('T')[0];
+    console.log("Setting expiration to 48h:", formattedExpiration);
+
     // ✅ ÉTAPE 1 : Créer une signature request
     console.log("Step 1: Creating signature request...");
     const signatureRequestResponse = await fetch("https://api-sandbox.yousign.app/v3/signature_requests", {
@@ -273,6 +279,7 @@ Deno.serve(async (req: Request) => {
         name: `Contrat de travail - ${employeeName}`,
         delivery_mode: "email",
         timezone: "Europe/Paris",
+        expiration_date: formattedExpiration,
         external_id: contractId,
       }),
     });
