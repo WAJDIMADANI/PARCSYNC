@@ -1118,8 +1118,8 @@ function EmployeeDetailModal({
         ) || uniqueContracts[0];
 
         if (activeContract) {
-          setEditedDateDebutContrat(activeContract.date_debut || '');
-          setEditedDateFinContrat(activeContract.date_fin || '');
+          setEditedDateDebutContrat(activeContract.date_debut || activeContract.variables?.date_debut || '');
+          setEditedDateFinContrat(activeContract.date_fin || activeContract.variables?.date_fin || '');
         }
       }
     } catch (error) {
@@ -1915,12 +1915,21 @@ function EmployeeDetailModal({
 
         if (activeContract) {
           // Mettre à jour le contrat existant
+          // Mettre à jour à la fois les colonnes et l'objet variables pour maintenir la cohérence
+          const updatedVariables = {
+            ...(activeContract.variables || {}),
+            date_debut: editedDateDebutContrat || null,
+            date_fin: editedDateFinContrat || null,
+            type_contrat: contractType.toUpperCase()
+          };
+
           const { error: contratError } = await supabase
             .from('contrat')
             .update({
               date_debut: editedDateDebutContrat || null,
               date_fin: editedDateFinContrat || null,
-              type: contractType
+              type: contractType,
+              variables: updatedVariables
             })
             .eq('id', activeContract.id);
 
@@ -2547,9 +2556,20 @@ function EmployeeDetailModal({
             ) || employeeContracts[0];
 
             // Calculer les informations du contrat
-            const contractDateDebut = editedDateDebutContrat || activeContract?.date_debut;
-            const contractDateFin = editedDateFinContrat || activeContract?.date_fin;
-            const contractType = contractDateFin ? 'CDD' : 'CDI';
+            // Lire depuis les colonnes directes OU depuis l'objet variables (pour les contrats Yousign)
+            const contractDateDebut = editedDateDebutContrat
+              || activeContract?.date_debut
+              || activeContract?.variables?.date_debut;
+            const contractDateFin = editedDateFinContrat
+              || activeContract?.date_fin
+              || activeContract?.variables?.date_fin;
+
+            // Détecter le type de contrat correctement (pour tous les types de contrats)
+            const isManualContract = activeContract?.source === 'manuel' || !activeContract?.modele_id;
+            const contractType = activeContract?.type
+              || (isManualContract && activeContract?.variables?.type_contrat)
+              || activeContract?.modele?.type_contrat
+              || (contractDateFin ? 'CDD' : 'CDI');
             const isCDD = contractType === 'CDD';
             const daysRemaining = calculateDaysRemainingForContract(contractDateFin);
             const urgencyLevel = getContractUrgencyLevel(daysRemaining);
