@@ -822,6 +822,7 @@ function EmployeeDetailModal({
   const [employeeContracts, setEmployeeContracts] = useState<any[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
   const [showManualContractModal, setShowManualContractModal] = useState(false);
+  const [showCreateContractModal, setShowCreateContractModal] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<any | null>(null);
   const [deletingContract, setDeletingContract] = useState(false);
 
@@ -1141,6 +1142,39 @@ function EmployeeDetailModal({
     }
   };
 
+  // Fonctions pour la création de nouveau contrat
+  const getActiveContractWithEndDate = () => {
+    if (!employeeContracts || employeeContracts.length === 0) return null;
+
+    // Chercher un contrat actif avec une date de fin
+    const activeContract = employeeContracts.find((contract: any) => {
+      const hasEndDate = contract.date_fin && contract.date_fin.trim() !== '';
+      const isActive = contract.statut === 'actif' || contract.statut === 'signe';
+      const typeContrat = contract.modele?.type_contrat?.toLowerCase() || '';
+      const isCDD = typeContrat.includes('cdd') || typeContrat.includes('avenant');
+
+      return hasEndDate && isActive && isCDD;
+    });
+
+    return activeContract || null;
+  };
+
+  const getNextContractStartDate = (activeContract: any) => {
+    if (!activeContract || !activeContract.date_fin) return '';
+
+    try {
+      const dateFin = new Date(activeContract.date_fin);
+      dateFin.setDate(dateFin.getDate() + 1); // Jour suivant
+      return dateFin.toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Erreur calcul date début:', error);
+      return '';
+    }
+  };
+
+  const activeContractWithEndDate = getActiveContractWithEndDate();
+  const nextContractStartDate = activeContractWithEndDate ? getNextContractStartDate(activeContractWithEndDate) : '';
+
   // Fonctions utilitaires pour les contrats
   const calculateDaysRemainingForContract = (dateFinStr?: string): number | null => {
     if (!dateFinStr) return null;
@@ -1410,6 +1444,13 @@ function EmployeeDetailModal({
 
   const handleContractSent = async () => {
     setShowContractSend(false);
+    await refreshEmployee();
+    onUpdate();
+  };
+
+  const handleCreateContractSuccess = async () => {
+    setShowCreateContractModal(false);
+    await fetchEmployeeContracts(currentEmployee.id);
     await refreshEmployee();
     onUpdate();
   };
@@ -3463,24 +3504,62 @@ function EmployeeDetailModal({
 
           {/* Section Contrats signés */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Contrats signés</h3>
-                {employeeContracts.length > 0 && (
-                  <span className="ml-2 bg-blue-600 text-white text-xs px-2.5 py-1 rounded-full font-semibold">
-                    {employeeContracts.length}
-                  </span>
-                )}
+            <div className="flex flex-col gap-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">Contrats signés</h3>
+                  {employeeContracts.length > 0 && (
+                    <span className="ml-2 bg-blue-600 text-white text-xs px-2.5 py-1 rounded-full font-semibold">
+                      {employeeContracts.length}
+                    </span>
+                  )}
+                </div>
               </div>
-              <button
-                onClick={() => setShowManualContractModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
-                title="Ajouter un contrat manuel"
-              >
-                <Upload className="w-4 h-4" />
-                Ajouter un contrat
-              </button>
+
+              {/* Message d'information si contrat actif avec date de fin */}
+              {activeContractWithEndDate && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-green-900 mb-1">
+                        Contrat actif avec date de fin détecté
+                      </h4>
+                      <p className="text-sm text-green-800">
+                        Le salarié a un contrat <strong>{activeContractWithEndDate.modele?.type_contrat || 'CDD'}</strong> qui
+                        se termine le <strong>{new Date(activeContractWithEndDate.date_fin).toLocaleDateString('fr-FR')}</strong>.
+                        Vous pouvez créer un nouveau contrat qui débutera automatiquement le{' '}
+                        <strong>{new Date(nextContractStartDate).toLocaleDateString('fr-FR')}</strong>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Boutons d'action */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {activeContractWithEndDate && (
+                  <button
+                    onClick={() => setShowCreateContractModal(true)}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
+                    title="Créer un nouveau contrat"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Créer un contrat
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowManualContractModal(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
+                  title="Ajouter un contrat manuel"
+                >
+                  <Upload className="w-4 h-4" />
+                  Ajouter un contrat
+                </button>
+              </div>
             </div>
 
             {loadingContracts ? (
@@ -3656,6 +3735,19 @@ function EmployeeDetailModal({
         employeeSSN={currentEmployee.numero_securite_sociale || ''}
         onClose={() => setShowContractSend(false)}
         onSuccess={handleContractSent}
+      />
+    )}
+
+    {showCreateContractModal && (
+      <ContractSendModal
+        profilId={currentEmployee.id}
+        employeeName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
+        employeeEmail={currentEmployee.email}
+        employeeBirthplace={currentEmployee.lieu_naissance || ''}
+        employeeSSN={currentEmployee.numero_securite_sociale || ''}
+        initialDateDebut={nextContractStartDate}
+        onClose={() => setShowCreateContractModal(false)}
+        onSuccess={handleCreateContractSuccess}
       />
     )}
 
