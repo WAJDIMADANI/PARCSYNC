@@ -257,25 +257,36 @@ export default function ImportantDocumentUpload({ profilId, onClose, onSuccess }
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-gray-50 px-6 py-4 rounded-b-xl flex items-center justify-end gap-3 border-t border-gray-200">
+        <div
+          className="sticky bottom-0 bg-gray-50 px-4 sm:px-6 py-4 rounded-b-xl flex items-center justify-end gap-3 border-t border-gray-200"
+          style={{
+            paddingBottom: 'max(1rem, calc(1rem + env(safe-area-inset-bottom, 0px)))'
+          }}
+        >
           <button
             onClick={onClose}
             disabled={uploading}
-            className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-3 sm:px-5 sm:py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ touchAction: 'manipulation' }}
           >
             Annuler
           </button>
           <button
             onClick={handleUpload}
             disabled={uploading || !selectedFile || !documentType}
-            className="px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-3 sm:px-5 sm:py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            style={{
+              touchAction: 'manipulation',
+              minHeight: '48px'
+            }}
           >
             {uploading ? (
               <LoadingSpinner size="sm" variant="white" text="Upload en cours..." />
             ) : (
               <>
-                <Upload className="w-4 h-4" />
-                Uploader le document
+                <Upload className="w-5 h-5" />
+                <span className="hidden sm:inline">Uploader le document</span>
+                <span className="sm:hidden">Uploader</span>
               </>
             )}
           </button>

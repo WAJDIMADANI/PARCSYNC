@@ -466,22 +466,23 @@ export default function UploadAllMissingDocuments() {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 py-8 px-4 pb-32"
+      className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 py-4 px-3 sm:py-8 sm:px-4"
       style={{
-        paddingBottom: 'max(8rem, calc(8rem + env(safe-area-inset-bottom, 0px)))',
+        paddingBottom: 'max(12rem, calc(12rem + env(safe-area-inset-bottom, 20px)))',
         WebkitOverflowScrolling: 'touch',
-        overflowY: 'auto'
-      }}
+        overflowY: 'auto',
+        minHeight: '100dvh'
+      } as React.CSSProperties}
     >
       <div className="max-w-4xl mx-auto mb-8">
         <div className="bg-white rounded-xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-8 py-6">
-            <h1 className="text-3xl font-bold text-white mb-2">{documentTitle}</h1>
-            <p className="text-orange-100">Bonjour {profilData?.prenom} {profilData?.nom}</p>
+          <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-5 sm:px-8 sm:py-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{documentTitle}</h1>
+            <p className="text-orange-100 text-sm sm:text-base">Bonjour {profilData?.prenom} {profilData?.nom}</p>
             <div className="mt-4 bg-white/20 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-white font-semibold">Progression</span>
-                <span className="text-white font-bold">{completedDocs} / {totalDocs}</span>
+                <span className="text-white font-semibold text-sm sm:text-base">Progression</span>
+                <span className="text-white font-bold text-lg">{completedDocs} / {totalDocs}</span>
               </div>
               <div className="w-full bg-white/30 rounded-full h-3 overflow-hidden">
                 <div
@@ -492,7 +493,7 @@ export default function UploadAllMissingDocuments() {
             </div>
           </div>
 
-          <div className="p-8 pb-16">
+          <div className="p-4 sm:p-8 pb-16">
             {successMessage && (
               <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded animate-fade-in">
                 <div className="flex items-center gap-2">
@@ -511,13 +512,16 @@ export default function UploadAllMissingDocuments() {
               </div>
             )}
 
-            <div className="mb-6 bg-orange-50 border-l-4 border-orange-500 p-4 rounded">
-              <p className="text-orange-800">
-                <strong>📱 Astuce mobile :</strong> Utilisez le bouton "Prendre une photo" pour capturer vos documents directement avec votre caméra !
-              </p>
-            </div>
+            {isMobile && (
+              <div className="mb-6 bg-orange-50 border-l-4 border-orange-500 p-4 rounded-lg shadow-md">
+                <p className="text-orange-800 text-sm font-medium">
+                  <strong className="block mb-1 text-base">📱 Astuce mobile</strong>
+                  Les boutons sont placés en haut de chaque document pour être toujours visibles. Utilisez "Prendre une photo" pour capturer directement !
+                </p>
+              </div>
+            )}
 
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               {missingDocuments.map((doc) => {
                 const Icon = doc.icon;
                 const isUploading = uploadingDocs.has(doc.type);
@@ -526,11 +530,11 @@ export default function UploadAllMissingDocuments() {
                 const alreadyUploaded = doc.alreadyUploaded;
 
                 return (
-                  <div key={doc.type} className={`bg-white border-2 rounded-xl p-6 transition-colors ${alreadyUploaded ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-orange-300'}`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <Icon className={`w-6 h-6 ${alreadyUploaded ? 'text-green-600' : 'text-orange-600'}`} />
-                        <h3 className="text-lg font-bold text-gray-800">{doc.label}</h3>
+                  <div key={doc.type} className={`bg-white border-2 rounded-xl p-4 sm:p-6 transition-colors shadow-lg ${alreadyUploaded ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-orange-300'}`}>
+                    <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Icon className={`w-6 h-6 sm:w-7 sm:h-7 flex-shrink-0 ${alreadyUploaded ? 'text-green-600' : 'text-orange-600'}`} />
+                        <h3 className="text-base sm:text-lg font-bold text-gray-800 break-words">{doc.label}</h3>
                       </div>
                       {alreadyUploaded && (
                         <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full">
@@ -554,19 +558,24 @@ export default function UploadAllMissingDocuments() {
                       <>
                     {!hasFile && !isUploaded && (
                       <>
-                        <div className={`grid gap-4 mb-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                        {/* Boutons d'action en haut - TOUJOURS VISIBLES */}
+                        <div className={`grid gap-3 mb-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                           {isMobile ? (
                             <>
                               <button
                                 onClick={() => handleCameraCapture(doc.type)}
                                 disabled={isUploading}
-                                className="flex items-center justify-center gap-2 px-6 py-4 bg-orange-600 text-white rounded-xl hover:bg-orange-700 disabled:opacity-50 text-lg font-bold shadow-lg transition-all"
+                                className="flex items-center justify-center gap-3 px-6 py-5 bg-orange-600 text-white rounded-xl hover:bg-orange-700 disabled:opacity-50 text-xl font-bold shadow-2xl transition-all active:scale-95 border-4 border-orange-700"
+                                style={{
+                                  minHeight: '70px',
+                                  touchAction: 'manipulation'
+                                }}
                               >
-                                <Camera className="w-6 h-6" />
+                                <Camera className="w-7 h-7" />
                                 Prendre une photo
                               </button>
 
-                              <label className="cursor-pointer">
+                              <label className="cursor-pointer block">
                                 <input
                                   type="file"
                                   accept="image/*,application/pdf"
@@ -574,15 +583,21 @@ export default function UploadAllMissingDocuments() {
                                   onChange={(e) => handleFileSelect(e, doc.type)}
                                   disabled={isUploading}
                                 />
-                                <div className="flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-lg font-bold transition-all">
-                                  <Upload className="w-6 h-6" />
+                                <div
+                                  className="flex items-center justify-center gap-3 px-6 py-5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-xl font-bold shadow-2xl transition-all active:scale-95 border-4 border-blue-700"
+                                  style={{
+                                    minHeight: '70px',
+                                    touchAction: 'manipulation'
+                                  }}
+                                >
+                                  <Upload className="w-7 h-7" />
                                   Choisir un fichier
                                 </div>
                               </label>
                             </>
                           ) : (
                             <>
-                              <label className="cursor-pointer">
+                              <label className="cursor-pointer block">
                                 <input
                                   type="file"
                                   accept="image/*,application/pdf"
@@ -590,7 +605,7 @@ export default function UploadAllMissingDocuments() {
                                   onChange={(e) => handleFileSelect(e, doc.type)}
                                   disabled={isUploading}
                                 />
-                                <div className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all">
+                                <div className="flex items-center justify-center gap-2 px-5 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all font-semibold shadow-lg">
                                   <Upload className="w-5 h-5" />
                                   Choisir un fichier
                                 </div>
@@ -599,7 +614,7 @@ export default function UploadAllMissingDocuments() {
                               <button
                                 onClick={() => handleCameraCapture(doc.type)}
                                 disabled={isUploading}
-                                className="flex items-center justify-center gap-2 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-all"
+                                className="flex items-center justify-center gap-2 px-5 py-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-all font-semibold shadow-lg"
                               >
                                 <Camera className="w-5 h-5" />
                                 Prendre une photo
@@ -608,23 +623,26 @@ export default function UploadAllMissingDocuments() {
                           )}
                         </div>
 
-                        <div
-                          onDrop={(e) => handleDrop(e, doc.type)}
-                          onDragOver={handleDragOver}
-                          className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-orange-500 transition-colors"
-                        >
-                          <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-gray-500 text-sm">Ou glissez-déposez votre fichier ici</p>
-                        </div>
+                        {/* Zone de glisser-déposer - en bas */}
+                        {!isMobile && (
+                          <div
+                            onDrop={(e) => handleDrop(e, doc.type)}
+                            onDragOver={handleDragOver}
+                            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors"
+                          >
+                            <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-gray-500 text-sm">Ou glissez-déposez votre fichier ici</p>
+                          </div>
+                        )}
                       </>
                     )}
 
                     {hasFile && !isUploaded && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-blue-600" />
-                            <span className="text-blue-800 font-medium">{hasFile.name}</span>
+                      <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-5 shadow-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <FileText className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                            <span className="text-blue-800 font-semibold truncate text-lg">{hasFile.name}</span>
                           </div>
                           <button
                             onClick={() => {
@@ -632,25 +650,29 @@ export default function UploadAllMissingDocuments() {
                               delete newFiles[doc.type];
                               setSelectedFiles(newFiles);
                             }}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="text-blue-600 hover:text-blue-800 ml-2 flex-shrink-0 p-2"
                           >
-                            <X className="w-5 h-5" />
+                            <X className="w-6 h-6" />
                           </button>
                         </div>
                         <button
                           onClick={() => handleUpload(doc.type)}
                           disabled={isUploading}
-                          className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-bold"
+                          className={`w-full flex items-center justify-center gap-3 px-6 py-5 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 font-bold shadow-2xl transition-all active:scale-95 border-4 border-green-700 ${isMobile ? 'text-xl' : 'text-lg'}`}
+                          style={{
+                            minHeight: isMobile ? '70px' : '56px',
+                            touchAction: 'manipulation'
+                          }}
                         >
                           {isUploading ? (
                             <>
-                              <Loader className="w-5 h-5 animate-spin" />
-                              Téléchargement en cours...
+                              <Loader className={`${isMobile ? 'w-7 h-7' : 'w-5 h-5'} animate-spin`} />
+                              Envoi en cours...
                             </>
                           ) : (
                             <>
-                              <Upload className="w-5 h-5" />
-                              Envoyer
+                              <Upload className={`${isMobile ? 'w-7 h-7' : 'w-5 h-5'}`} />
+                              Envoyer le document
                             </>
                           )}
                         </button>
