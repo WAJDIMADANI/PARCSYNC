@@ -3096,16 +3096,57 @@ function EmployeeDetailModal({
                 const activeContract = employeeContracts
                   .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-                if (!activeContract || (!activeContract.date_debut && !activeContract.date_fin && !currentEmployee.date_entree)) {
+                // Lire depuis les colonnes directes OU depuis l'objet variables (pour les contrats Yousign)
+                const contractDateDebut = activeContract?.date_debut || activeContract?.variables?.date_debut;
+                const contractDateFin = activeContract?.date_fin || activeContract?.variables?.date_fin;
+
+                if (!activeContract || (!contractDateDebut && !contractDateFin && !currentEmployee.date_entree)) {
                   return null;
                 }
 
+                // Détecter le type de contrat correctement
+                const isManualContract = activeContract?.source === 'manuel' || !activeContract?.modele_id;
+                const contractType = activeContract?.type
+                  || (isManualContract && activeContract?.variables?.type_contrat)
+                  || activeContract?.modele?.type_contrat
+                  || (contractDateFin ? 'CDD' : 'CDI');
+                const isCDD = contractType === 'CDD';
+                const daysRemaining = calculateDaysRemainingForContract(contractDateFin);
+                const urgencyLevel = getContractUrgencyLevel(daysRemaining);
+                const urgencyColors = getContractUrgencyColors(urgencyLevel);
+
                 return (
-                  <div className="bg-blue-50 border border-blue-200 border-l-4 border-l-blue-500 rounded-lg p-4">
+                  <div className={`border border-l-4 rounded-lg p-4 ${isCDD && daysRemaining !== null ? urgencyColors.bg + ' ' + urgencyColors.border : 'bg-blue-50 border-blue-200 border-l-blue-500'}`}>
                     <div className="flex items-center gap-2 mb-3">
                       <FileText className="w-4 h-4 text-blue-600" />
                       <h4 className="text-sm font-semibold text-blue-900">Contrat</h4>
+                      <span className={`ml-auto px-2.5 py-1 text-xs font-bold rounded-full ${
+                        isCDD ? 'bg-orange-500 text-white' : 'bg-green-500 text-white'
+                      }`}>
+                        {contractType}
+                      </span>
                     </div>
+
+                    {/* Alerte CDD - Jours restants */}
+                    {isCDD && contractDateFin && daysRemaining !== null && (
+                      <div className={`mb-3 border rounded-lg p-3 ${urgencyColors.bg} ${urgencyColors.border}`}>
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className={`w-4 h-4 ${urgencyColors.text}`} />
+                          <div className="flex-1">
+                            {urgencyLevel === 'expired' ? (
+                              <span className={`text-xs font-bold ${urgencyColors.text}`}>
+                                EXPIRÉ depuis le {formatDate(contractDateFin)}
+                              </span>
+                            ) : (
+                              <span className={`text-xs font-bold ${urgencyColors.text}`}>
+                                {daysRemaining} jour{daysRemaining > 1 ? 's' : ''} restant{daysRemaining > 1 ? 's' : ''} - Fin le {formatDate(contractDateFin)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
@@ -3113,8 +3154,8 @@ function EmployeeDetailModal({
                           <label className="text-xs font-medium text-gray-500 uppercase">Date de début</label>
                         </div>
                         <p className="text-sm text-gray-900">
-                          {activeContract.date_debut
-                            ? new Date(activeContract.date_debut).toLocaleDateString('fr-FR')
+                          {contractDateDebut
+                            ? new Date(contractDateDebut).toLocaleDateString('fr-FR')
                             : currentEmployee.date_entree
                             ? new Date(currentEmployee.date_entree).toLocaleDateString('fr-FR')
                             : '-'}
@@ -3126,8 +3167,8 @@ function EmployeeDetailModal({
                           <label className="text-xs font-medium text-gray-500 uppercase">Date de fin</label>
                         </div>
                         <p className="text-sm text-gray-900">
-                          {activeContract.date_fin
-                            ? new Date(activeContract.date_fin).toLocaleDateString('fr-FR')
+                          {contractDateFin
+                            ? new Date(contractDateFin).toLocaleDateString('fr-FR')
                             : '-'}
                         </p>
                       </div>
@@ -3656,6 +3697,16 @@ function EmployeeDetailModal({
                   const dateCreation = contract.created_at;
                   const hasPdf = contract.fichier_signe_url;
 
+                  // Lire les dates depuis les colonnes directes OU depuis l'objet variables
+                  const contractDateDebut = contract.date_debut || contract.variables?.date_debut;
+                  const contractDateFin = contract.date_fin || contract.variables?.date_fin;
+
+                  // Calculer les jours restants pour les CDD
+                  const isCDD = typeContrat === 'CDD';
+                  const daysRemaining = calculateDaysRemainingForContract(contractDateFin);
+                  const urgencyLevel = getContractUrgencyLevel(daysRemaining);
+                  const urgencyColors = getContractUrgencyColors(urgencyLevel);
+
                   const getTypeColor = (type: string) => {
                     const lowerType = type.toLowerCase();
                     if (lowerType.includes('cdi')) return 'bg-green-100 text-green-800 border-green-300';
@@ -3703,7 +3754,37 @@ function EmployeeDetailModal({
                                 <p>✓ Signé le {new Date(dateSignature).toLocaleDateString('fr-FR')}</p>
                               )}
                               <p>Créé le {new Date(dateCreation).toLocaleDateString('fr-FR')}</p>
+                              {contractDateDebut && (
+                                <p className="text-gray-700 font-medium">
+                                  📅 Début: {new Date(contractDateDebut).toLocaleDateString('fr-FR')}
+                                </p>
+                              )}
+                              {contractDateFin && (
+                                <p className="text-gray-700 font-medium">
+                                  📅 Fin: {new Date(contractDateFin).toLocaleDateString('fr-FR')}
+                                </p>
+                              )}
                             </div>
+
+                            {/* Alerte CDD - Jours restants */}
+                            {isCDD && contractDateFin && daysRemaining !== null && (
+                              <div className={`mt-3 border rounded-lg p-2 ${urgencyColors.bg} ${urgencyColors.border}`}>
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className={`w-4 h-4 ${urgencyColors.text}`} />
+                                  <div className="flex-1">
+                                    {urgencyLevel === 'expired' ? (
+                                      <span className={`text-xs font-bold ${urgencyColors.text}`}>
+                                        EXPIRÉ
+                                      </span>
+                                    ) : (
+                                      <span className={`text-xs font-bold ${urgencyColors.text}`}>
+                                        {daysRemaining} jour{daysRemaining > 1 ? 's' : ''} restant{daysRemaining > 1 ? 's' : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
