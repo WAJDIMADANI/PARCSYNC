@@ -128,6 +128,123 @@ Deno.serve(async (req: Request) => {
     const updated = await updateResponse.json();
     console.log("Contrat mis à jour avec succès:", updated);
 
+    // ========================================
+    // Génération automatique notification/incident
+    // ========================================
+    let notificationResult = null;
+    if (updated && updated.length > 0) {
+      const contractId = updated[0].id;
+      console.log("=== Tentative de création automatique de notification/incident ===");
+      console.log("Contract ID:", contractId);
+
+      try {
+        // Récupérer le contrat avec toutes ses relations pour vérifier l'éligibilité
+        const contractDetailsResponse = await fetch(
+          `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=id,profil_id,modele_id,variables,modele_contrat(type_contrat),profil(avenant_1_date_fin,avenant_2_date_fin)`,
+          {
+            headers: {
+              "Authorization": `Bearer ${SERVICE_KEY}`,
+              "apikey": SERVICE_KEY || "",
+            },
+          }
+        );
+
+        if (contractDetailsResponse.ok) {
+          const contracts = await contractDetailsResponse.json();
+          if (contracts && contracts.length > 0) {
+            const contract = contracts[0];
+            const modeleType = contract.modele_contrat?.type_contrat;
+            const variablesType = contract.variables?.type_contrat;
+            const variablesDateFin = contract.variables?.date_fin;
+            const profilAv1Date = contract.profil?.avenant_1_date_fin;
+            const profilAv2Date = contract.profil?.avenant_2_date_fin;
+
+            console.log("Détails du contrat récupérés:");
+            console.log("  - Modèle type:", modeleType);
+            console.log("  - Variables type:", variablesType);
+            console.log("  - Variables date_fin:", variablesDateFin);
+            console.log("  - Profil avenant_1_date_fin:", profilAv1Date);
+            console.log("  - Profil avenant_2_date_fin:", profilAv2Date);
+
+            // Vérifier l'éligibilité
+            let isEligible = false;
+
+            if (modeleType === "CDD" && variablesDateFin) {
+              isEligible = true;
+              console.log("✓ Éligible: CDD avec date_fin dans variables");
+            } else if (modeleType === "Avenant") {
+              if (variablesType === "Avenant 1" && (variablesDateFin || profilAv1Date)) {
+                isEligible = true;
+                console.log("✓ Éligible: Avenant 1 avec date_fin disponible");
+              } else if (variablesType === "Avenant 2" && (variablesDateFin || profilAv2Date)) {
+                isEligible = true;
+                console.log("✓ Éligible: Avenant 2 avec date_fin disponible");
+              } else {
+                console.log("✗ Non éligible: Avenant sans date_fin ou type inconnu");
+              }
+            } else {
+              console.log("✗ Non éligible: Type de contrat non supporté ou date manquante");
+            }
+
+            if (isEligible) {
+              console.log("Appel de la fonction SQL create_notification_or_incident_for_contract...");
+
+              // Appeler la fonction SQL via RPC
+              const rpcResponse = await fetch(
+                `${SUPABASE_URL}/rest/v1/rpc/create_notification_or_incident_for_contract`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${SERVICE_KEY}`,
+                    "apikey": SERVICE_KEY || "",
+                  },
+                  body: JSON.stringify({
+                    p_contract_id: contractId,
+                  }),
+                }
+              );
+
+              if (rpcResponse.ok) {
+                notificationResult = await rpcResponse.json();
+                console.log("Résultat de la création:", JSON.stringify(notificationResult, null, 2));
+
+                if (notificationResult.success) {
+                  console.log("✓ Succès:", notificationResult.message);
+                  console.log("  - Type créé:", notificationResult.type_created);
+                  console.log("  - Notification type:", notificationResult.notification_type);
+                  console.log("  - ID:", notificationResult.id);
+                  console.log("  - Date fin utilisée:", notificationResult.date_fin_utilisee);
+                  console.log("  - Source date:", notificationResult.source_date);
+                  console.log("  - Jours avant expiration:", notificationResult.days_until_expiry);
+                } else {
+                  console.log("✗ Échec:", notificationResult.error);
+                }
+              } else {
+                const errorText = await rpcResponse.text();
+                console.error("Erreur lors de l'appel RPC:", errorText);
+                notificationResult = { success: false, error: errorText };
+              }
+            } else {
+              console.log("Contrat non éligible pour notification/incident automatique");
+              notificationResult = { success: false, skipped: true, reason: "Non éligible" };
+            }
+          } else {
+            console.log("Aucun contrat trouvé avec cet ID");
+          }
+        } else {
+          const errorText = await contractDetailsResponse.text();
+          console.error("Erreur lors de la récupération des détails du contrat:", errorText);
+        }
+      } catch (notifError) {
+        console.error("Erreur lors de la génération de notification/incident:", notifError);
+        console.error("Stack:", notifError.stack);
+        notificationResult = { success: false, error: String(notifError) };
+      }
+
+      console.log("=== Fin de la création automatique ===");
+    }
+
     // Mettre à jour le profil si nécessaire
     if (updated && updated.length > 0) {
       const profilId = updated[0].profil_id;
@@ -207,6 +324,7 @@ Deno.serve(async (req: Request) => {
         ok: true,
         message: "Contrat mis à jour avec succès",
         contractId: externalId,
+        notificationCreation: notificationResult,
       }),
       {
         status: 200,

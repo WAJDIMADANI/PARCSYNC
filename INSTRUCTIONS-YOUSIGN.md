@@ -35,6 +35,26 @@ Tu dois déployer les deux nouvelles fonctions :
    - Le statut du profil → `contrat_signe`
    - La date de signature
    - L'URL du document signé
+   - **NOUVEAU** : Création automatique de notification ou incident selon la date d'expiration
+
+## ✨ Nouvelles Fonctionnalités : Notifications Automatiques
+
+À partir de maintenant, le webhook Yousign génère automatiquement des notifications ou incidents pour :
+- **CDD** (Contrats à Durée Déterminée)
+- **Avenant 1**
+- **Avenant 2**
+
+### Gestion Intelligente des Dates
+Pour les avenants, le système consulte automatiquement **deux sources** de dates et prend la plus récente :
+- `contrat.variables.date_fin`
+- `profil.avenant_1_date_fin` ou `profil.avenant_2_date_fin`
+
+### Trois Scénarios Automatiques
+- **Contrat > 30 jours** : Notification créée à J-30
+- **Contrat 1-30 jours** : Notification urgente immédiate
+- **Contrat expiré** : Incident créé automatiquement
+
+📖 **Documentation complète** : Voir `WEBHOOK-NOTIFICATIONS-AUTO.md`
 
 ## Flux complet
 
@@ -56,6 +76,10 @@ Tu dois déployer les deux nouvelles fonctions :
 8. Système met à jour le contrat (statut = signé)
    ↓
 9. Document signé disponible via yousign_document_url
+   ↓
+10. ✨ NOUVEAU : Si CDD ou Avenant, création automatique notification/incident
+   ↓
+11. RH voit l'alerte dans l'interface (onglet Notifications ou Incidents)
 ```
 
 ## Nouveaux statuts des contrats
