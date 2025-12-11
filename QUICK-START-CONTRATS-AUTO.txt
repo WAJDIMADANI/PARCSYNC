@@ -1,0 +1,74 @@
+╔═══════════════════════════════════════════════════════════════════╗
+║     SYSTÈME AUTOMATIQUE DE NOTIFICATIONS POUR CONTRATS           ║
+║                    GUIDE RAPIDE (5 MINUTES)                      ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+🎯 OBJECTIF
+-----------
+Quand vous créez un contrat (Yousign, manuel, ou import masse),
+le système crée AUTOMATIQUEMENT une notification ou un incident
+pour suivre la date d'expiration.
+
+
+📋 INSTALLATION (3 FICHIERS SQL À EXÉCUTER)
+--------------------------------------------
+
+Ouvrir Supabase → SQL Editor
+
+1️⃣ FICHIER: update-notification-incident-types.sql
+   → Copier/coller → Run
+   ✅ Message attendu: "Migration terminée avec succès!"
+
+2️⃣ FICHIER: create-auto-notification-for-contracts.sql
+   → Copier/coller → Run
+   ✅ Message attendu: "Fonction créée avec succès!"
+
+3️⃣ FICHIER: create-trigger-auto-notification-contrat.sql
+   → Copier/coller → Run
+   ✅ Message attendu: "Trigger automatique activé avec succès!"
+
+
+🧪 TEST IMMÉDIAT
+-----------------
+
+Pour un employé avec contrat expiré (comme Djeneba DEMBELE):
+
+1. Cliquer sur l'employé
+2. Bouton "Ajouter un contrat"
+3. Remplir:
+   - Type: CDD
+   - Date début: aujourd'hui
+   - Date fin: dans 60 jours
+   - Uploader un PDF
+4. Valider
+
+5. Aller dans "Notifications"
+   → Vous devriez voir une nouvelle notification automatique!
+
+
+✅ FONCTIONNEMENT
+------------------
+
+Contrat expire dans > 30 jours  →  NOTIFICATION créée
+Contrat expire dans < 30 jours  →  INCIDENT créé (priorité haute)
+Contrat déjà expiré             →  INCIDENT créé (priorité haute)
+
+
+🔍 VÉRIFICATION
+----------------
+
+Le système empêche les doublons automatiquement.
+Si vous voyez "Notification existante trouvée" dans les logs,
+c'est NORMAL - le système fonctionne correctement!
+
+
+📚 DOCUMENTATION COMPLÈTE
+--------------------------
+
+Voir: INSTALLATION-CONTRATS-AUTO.md
+
+
+═══════════════════════════════════════════════════════════════════
+Temps d'installation: 5 minutes
+Gain de temps: PERMANENT - Plus besoin de créer les notifications manuellement!
+═══════════════════════════════════════════════════════════════════
