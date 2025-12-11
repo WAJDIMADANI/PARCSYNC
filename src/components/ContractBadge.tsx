@@ -50,13 +50,18 @@ export function ContractBadge({ type, value, showFullText = false }: ContractBad
   }
 
   if (type === 'status') {
-    const isSigned = value.toLowerCase().includes('sign');
-    const isSent = value.toLowerCase().includes('envoye') || value.toLowerCase().includes('envoy');
+    const lowerValue = value.toLowerCase();
+    const isSigned = lowerValue.includes('sign');
+    const isSent = lowerValue.includes('envoye') || lowerValue.includes('envoy');
+    const isExpired = lowerValue.includes('expir') || lowerValue === 'expiré';
 
     let bgColor = 'bg-gray-100 text-gray-700';
     let label = value;
 
-    if (isSigned) {
+    if (isExpired) {
+      bgColor = 'bg-red-100 text-red-800 border border-red-300';
+      label = 'Expiré';
+    } else if (isSigned) {
       bgColor = 'bg-green-100 text-green-800';
       label = 'Signé';
     } else if (isSent) {

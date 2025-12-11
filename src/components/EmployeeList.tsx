@@ -296,6 +296,29 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
+  // Calculer le statut réel du contrat en tenant compte de la date d'expiration
+  const getActualContractStatus = (employee: Employee): string => {
+    const employeeContracts = contracts.filter(c => c.profil_id === employee.id);
+
+    if (employeeContracts.length === 0) {
+      return employee.statut || 'actif';
+    }
+
+    const activeContract = employeeContracts[0];
+
+    if (activeContract.date_fin) {
+      const dateFin = new Date(activeContract.date_fin);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (dateFin < today) {
+        return 'expiré';
+      }
+    }
+
+    return activeContract.statut || employee.statut || 'actif';
+  };
+
   // Réinitialiser la page à 1 quand les filtres changent
   useEffect(() => {
     setCurrentPage(1);
@@ -349,8 +372,8 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           bValue = new Date(b.date_entree || 0).getTime();
           break;
         case 'statut_contrat':
-          aValue = (a.statut || '').toLowerCase();
-          bValue = (b.statut || '').toLowerCase();
+          aValue = getActualContractStatus(a).toLowerCase();
+          bValue = getActualContractStatus(b).toLowerCase();
           break;
         case 'secteur':
           aValue = (a.secteur?.nom || '').toLowerCase();
@@ -683,7 +706,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                       {formatDate(employee.date_entree)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
-                      <ContractBadge type="status" value={employee.statut || undefined} />
+                      <ContractBadge type="status" value={getActualContractStatus(employee)} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                       {employee.secteur?.nom || '-'}
