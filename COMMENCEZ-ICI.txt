@@ -1,6 +1,6 @@
 ╔════════════════════════════════════════════════════════════════════╗
 ║                                                                    ║
-║            GUIDE RAPIDE - NOTIFICATIONS D'EXPIRATION              ║
+║            AFFICHER WAJDI DANS LES NOTIFICATIONS                  ║
 ║                                                                    ║
 ╚════════════════════════════════════════════════════════════════════╝
 
@@ -8,60 +8,41 @@
 🎯 PROBLÈME
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Le contrat de Wajdi n'apparaît pas dans Notifications > Contrats CDD
-Erreur: "relation 'incidents' does not exist"
+Le contrat de Wajdi expire AUJOURD'HUI (11/12/2025) avec 0 jour restant
+mais il n'apparaît PAS dans Notifications > Contrats CDD
 
 
 💡 CAUSE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Le système d'incidents et notifications n'a pas été installé
-dans la base de données.
+La fonction utilise: date_fin > CURRENT_DATE
+Cela EXCLUT les contrats qui expirent AUJOURD'HUI!
 
 
-✅ SOLUTION EN 2 ÉTAPES (5 minutes)
+✅ SOLUTION EN 1 ÉTAPE (2 minutes)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 
 ╔════════════════════════════════════════════════════════════════╗
-║  ÉTAPE 1: INSTALLER LE SYSTÈME                                ║
+║  CORRIGER LA FONCTION ET CRÉER LA NOTIFICATION               ║
 ╚════════════════════════════════════════════════════════════════╝
 
 1. Supabase Dashboard → SQL Editor
 
 2. Nouveau fichier → Copiez-collez:
-   📄 INSTALLATION-COMPLETE-SYSTEME.sql
+   📄 CORRIGER-NOTIFICATIONS-AUJOURDHUI.sql
 
 3. Run (bouton vert)
 
 4. Vérifiez le résultat:
-   ✅ Table notification créée
-   ✅ Table incident créée
-   ✅ Fonction generate_daily_expired_incidents() créée
-   ✅ Cron job configuré
-   ✅ Vue contrats_cdd_expirant_bientot créée
-
-
-╔════════════════════════════════════════════════════════════════╗
-║  ÉTAPE 2: TESTER AVEC WAJDI                                   ║
-╚════════════════════════════════════════════════════════════════╝
-
-1. SQL Editor → Nouveau fichier
-
-2. Copiez-collez:
-   📄 TEST-EXPIRATION-CONTRAT-WAJDI-MAINTENANT-FIXE.sql
-
-3. Run (bouton vert)
-
-4. Vérifiez le résultat:
-   ✅ Date_fin changée à aujourd'hui
-   ✅ Incidents créés: 1
-   ✅ Notifications créées: 1
+   ✅ Fonction corrigée (>= au lieu de >)
+   ✅ Notification créée pour Wajdi
+   ✅ Vérifié dans la base de données
 
 5. Dans l'application:
    - Rafraîchissez la page (F5)
    - Allez dans Notifications > Contrats CDD
-   - Cherchez "waj"
+   - Cherchez "wajdi" ou "15901"
    - ✅ Wajdi MADANI apparaît!
 
 
@@ -71,49 +52,69 @@ dans la base de données.
 📚 FICHIERS DISPONIBLES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📄 INSTALLATION-COMPLETE-SYSTEME.sql
-   → Installe tout le système d'expiration
+📄 CORRIGER-NOTIFICATIONS-AUJOURDHUI.sql (PRINCIPAL)
+   → Corrige la fonction et crée la notification pour Wajdi
 
-📄 TEST-EXPIRATION-CONTRAT-WAJDI-MAINTENANT-FIXE.sql
-   → Test avec le contrat de Wajdi
+📄 POURQUOI-WAJDI-ABSENT-NOTIFICATIONS.sql (DIAGNOSTIC)
+   → Diagnostic complet pour comprendre le problème
 
-📄 POURQUOI-PAS-DE-NOTIFICATION-WAJDI.txt
-   → Explication détaillée du problème
-
-📄 INSTRUCTIONS-TEST-NOTIFICATION-WAJDI.md
-   → Guide complet avec debugging
+📄 GUIDE-RAPIDE-WAJDI.md (DOCUMENTATION)
+   → Guide complet avec explications techniques
 
 
-🔄 EN PRODUCTION
+💡 EXPLICATION TECHNIQUE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Une fois installé, le système fonctionne automatiquement:
+AVANT (bug):
+  WHERE date_fin > CURRENT_DATE
 
-📅 Tous les jours à minuit:
-   → Détecte les contrats qui expirent AUJOURD'HUI
-   → Crée automatiquement les incidents
-   → Crée automatiquement les notifications
-   → Elles apparaissent dans l'interface
+  Si date_fin = 11/12/2025 et aujourd'hui = 11/12/2025:
+  → 11/12 > 11/12 = FAUX
+  → Contrat NON détecté ❌
 
-Vous n'avez RIEN à faire manuellement!
+APRÈS (corrigé):
+  WHERE date_fin >= CURRENT_DATE
+
+  Si date_fin = 11/12/2025 et aujourd'hui = 11/12/2025:
+  → 11/12 >= 11/12 = VRAI
+  → Contrat détecté ✅
 
 
 ⚡ QUICK START (copy-paste)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. Supabase → SQL Editor
-2. Copiez INSTALLATION-COMPLETE-SYSTEME.sql
+2. Copiez CORRIGER-NOTIFICATIONS-AUJOURDHUI.sql
 3. Run
-4. Copiez TEST-EXPIRATION-CONTRAT-WAJDI-MAINTENANT-FIXE.sql
-5. Run
-6. Rafraîchissez l'application
-7. ✅ DONE!
+4. Rafraîchissez l'application
+5. ✅ DONE!
 
 
 💬 BESOIN D'AIDE?
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Si vous avez des erreurs:
-- Lisez les messages d'erreur dans Supabase
-- Vérifiez INSTRUCTIONS-TEST-NOTIFICATION-WAJDI.md
-- Section "Debugging" pour résoudre les problèmes
+Si Wajdi n'apparaît toujours pas:
+
+1. Exécutez POURQUOI-WAJDI-ABSENT-NOTIFICATIONS.sql
+   → Diagnostic complet avec messages détaillés
+
+2. Vérifiez que le contrat a:
+   - statut = 'actif' (pas 'signe' ou 'valide')
+   - type = 'CDD'
+   - date_fin renseignée
+
+3. Vérifiez les filtres de l'interface:
+   - Onglet "Active" vs "Toutes"
+   - Recherche "wajdi" ou "15901"
+
+4. Consultez GUIDE-RAPIDE-WAJDI.md
+   → Section "Dépannage"
+
+
+🎯 RÉSUMÉ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Problème: La fonction exclut les contrats qui expirent aujourd'hui
+Solution: Changer > en >= dans la condition SQL
+Action: Exécuter CORRIGER-NOTIFICATIONS-AUJOURDHUI.sql
+Résultat: Wajdi apparaît dans Notifications > Contrats CDD
