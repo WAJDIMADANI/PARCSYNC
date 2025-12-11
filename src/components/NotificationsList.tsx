@@ -116,6 +116,13 @@ export function NotificationsList({ initialTab }: NotificationsListProps = {}) {
     .filter(n => n.type === activeTab)
     .filter(n => filterStatut === 'all' || n.statut === filterStatut)
     .filter(n => {
+      // Exclure les documents déjà expirés (ils doivent apparaître dans Incidents, pas ici)
+      const daysRemaining = Math.ceil(
+        (new Date(n.date_echeance).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return daysRemaining > 0; // Afficher uniquement ceux qui arrivent à échéance
+    })
+    .filter(n => {
       if (!searchTerm) return true;
       const searchLower = searchTerm.toLowerCase();
       return (
@@ -126,7 +133,16 @@ export function NotificationsList({ initialTab }: NotificationsListProps = {}) {
     });
 
   const getTabCount = (type: string) => {
-    return notifications.filter(n => n.type === type && n.statut !== 'resolue' && n.statut !== 'ignoree').length;
+    return notifications.filter(n => {
+      if (n.type !== type) return false;
+      if (n.statut === 'resolue' || n.statut === 'ignoree') return false;
+
+      // Exclure les documents expirés
+      const daysRemaining = Math.ceil(
+        (new Date(n.date_echeance).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return daysRemaining > 0;
+    }).length;
   };
 
   if (loading) {
