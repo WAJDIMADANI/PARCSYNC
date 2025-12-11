@@ -51,12 +51,12 @@ SELECT
   n.id,
   n.type,
   n.date_echeance,
-  n.date_envoi,
+  n.created_at,
   n.statut
 FROM notification n
 JOIN profil p ON n.profil_id = p.id
 WHERE p.matricule_tca = '15901'
-ORDER BY n.date_envoi DESC;
+ORDER BY n.created_at DESC;
 
 -- 5. Test de la condition de la fonction d'incidents
 -- Cette requête simule ce que fait generate_daily_expired_incidents()
