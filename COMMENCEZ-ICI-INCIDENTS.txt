@@ -1,0 +1,160 @@
+╔════════════════════════════════════════════════════════════════════╗
+║                                                                    ║
+║            CRÉER L'INCIDENT POUR WAJDI                            ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+
+
+🎯 PROBLÈME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Le contrat de Wajdi expire AUJOURD'HUI (11/12/2025) avec 0 jour restant:
+  ✅ Il apparaît dans "Notifications de documents"
+  ❌ Mais il n'apparaît PAS dans "Incidents"
+
+
+💡 POURQUOI?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NOTIFICATIONS vs INCIDENTS:
+
+📋 NOTIFICATIONS (Documents)
+   → Pour les contrats qui vont expirer (1-30 jours)
+   → Type: "contrat_cdd"
+   → Fonction: generate_expiration_notifications()
+
+🚨 INCIDENTS (Contrats Expirés)
+   → Pour les contrats DÉJÀ EXPIRÉS (0 jour ou moins)
+   → Type: "contrat_expire"
+   → Fonction: generate_daily_expired_incidents()
+
+Le contrat de Wajdi expire AUJOURD'HUI:
+  → Il est dans Notifications (car détecté à l'avance)
+  → Il devrait AUSSI être dans Incidents (car date = aujourd'hui)
+
+
+✅ SOLUTION EN 1 ÉTAPE (2 minutes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+╔════════════════════════════════════════════════════════════════╗
+║  CRÉER L'INCIDENT POUR WAJDI                                  ║
+╚════════════════════════════════════════════════════════════════╝
+
+1. Supabase Dashboard → SQL Editor
+
+2. Nouveau fichier → Copiez-collez:
+   📄 CREER-INCIDENT-WAJDI-MAINTENANT.sql
+
+3. Run (bouton vert)
+
+4. Vérifiez le résultat:
+   ✅ Incident créé
+   ✅ Type: contrat_expire
+   ✅ Priorité: HAUTE
+   ✅ Statut: OUVERT
+
+5. Dans l'application:
+   - Rafraîchissez la page (F5)
+   - Allez dans: Incidents > Contrats Expirés
+   - Cherchez "wajdi" ou "15901"
+   - ✅ Wajdi MADANI apparaît en ROUGE (haute priorité)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+📚 FICHIERS DISPONIBLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📄 CREER-INCIDENT-WAJDI-MAINTENANT.sql (PRINCIPAL)
+   → Crée l'incident pour le contrat expiré de Wajdi
+
+📄 CORRIGER-NOTIFICATIONS-AUJOURDHUI.sql
+   → Corrige les notifications (déjà fait)
+
+
+💡 COMPRENDRE LA DIFFÉRENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────┐
+│  NOTIFICATIONS (Documents)                                  │
+├─────────────────────────────────────────────────────────────┤
+│  Objectif: PRÉVENIR à l'avance                             │
+│  Délai: 1 à 30 jours AVANT expiration                      │
+│  Type: contrat_cdd                                          │
+│  Priorité: Normale                                          │
+│  Action: Préparer le renouvellement                         │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  INCIDENTS (Contrats Expirés)                               │
+├─────────────────────────────────────────────────────────────┤
+│  Objectif: ALERTER quand c'est expiré                      │
+│  Délai: 0 jour (aujourd'hui) ou déjà passé                  │
+│  Type: contrat_expire                                       │
+│  Priorité: HAUTE (rouge)                                    │
+│  Action: URGENT - renouvellement ou fin de contrat          │
+└─────────────────────────────────────────────────────────────┘
+
+EXEMPLE avec Wajdi (expire le 11/12/2025):
+
+  📅 30/11/2025 (J-30):
+     → Notification créée dans "Documents"
+     → "Le contrat expire dans 30 jours"
+
+  📅 11/12/2025 (J+0) - AUJOURD'HUI:
+     → Notification toujours dans "Documents"
+     → ❗ Incident créé dans "Incidents > Contrats Expirés"
+     → "Le contrat expire AUJOURD'HUI - URGENT"
+
+  📅 12/12/2025 (J+1):
+     → Notification reste (peut être résolue)
+     → ❗ Incident reste OUVERT jusqu'à résolution manuelle
+
+
+⚡ QUICK START (copy-paste)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Supabase → SQL Editor
+2. Copiez CREER-INCIDENT-WAJDI-MAINTENANT.sql
+3. Run
+4. Rafraîchissez l'application
+5. Incidents > Contrats Expirés
+6. ✅ DONE!
+
+
+💬 BESOIN D'AIDE?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si l'incident n'apparaît toujours pas:
+
+1. Vérifiez que la table 'incident' existe:
+   SELECT * FROM incident LIMIT 1;
+
+2. Si erreur "relation 'incident' does not exist":
+   → Exécutez: INSTALLATION-COMPLETE-SYSTEME.sql
+   → Puis: CREER-INCIDENT-WAJDI-MAINTENANT.sql
+
+3. Vérifiez les filtres de l'interface:
+   - Onglet "Ouverts" vs "Tous"
+   - Filtre par type: "Contrats Expirés"
+
+4. Vérifiez dans la base:
+   SELECT * FROM incident
+   WHERE type = 'contrat_expire'
+   ORDER BY created_at DESC;
+
+
+🎯 RÉSUMÉ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Situation: Le contrat de Wajdi expire AUJOURD'HUI (0 jour)
+
+Où le trouver:
+  ✅ Notifications > Documents (notification préventive)
+  ❗ Incidents > Contrats Expirés (incident urgent)
+
+Action: Exécuter CREER-INCIDENT-WAJDI-MAINTENANT.sql
+
+Résultat: Wajdi apparaît dans Incidents avec priorité HAUTE
