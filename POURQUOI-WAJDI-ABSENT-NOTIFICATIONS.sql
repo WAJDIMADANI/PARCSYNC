@@ -39,7 +39,7 @@ SELECT
 SELECT
   n.id,
   n.type as "Type Notif",
-  n.titre as "Titre",
+  n.metadata->>'document' as "Document",
   n.date_echeance as "Date Échéance",
   n.statut as "Statut",
   n.created_at as "Créée le",
