@@ -6,9 +6,19 @@ Corriger tous les contrats signés via Yousign pour qu'ils soient détectés par
 
 ## 📋 Étapes (5 minutes)
 
-### 1️⃣ Exécuter le Script de Correction
+### 1️⃣ Corriger la Contrainte CHECK (IMPORTANT)
 
 Allez dans **Supabase Dashboard** → **SQL Editor** → Nouveau Query
+
+Copiez-collez le contenu de **`fix-contrat-statut-constraint.sql`**
+
+Cliquez sur **Run**
+
+**Pourquoi?** La contrainte CHECK actuelle n'accepte pas le statut `'actif'` que la fonction de détection utilise.
+
+### 2️⃣ Exécuter le Script de Correction
+
+Dans le même SQL Editor:
 
 Copiez-collez le contenu de **`fix-existing-yousign-contracts.sql`**
 
@@ -23,7 +33,7 @@ Avec date_fin: XX
 Statut actif: XX
 ```
 
-### 2️⃣ Vérifier le Contrat de Wajdi
+### 3️⃣ Vérifier le Contrat de Wajdi
 
 ```sql
 SELECT
@@ -40,7 +50,7 @@ WHERE id = '4ce63c31-c775-4e50-98a4-d27966fccecc';
 
 **Vous devez voir:** Tous les ✅
 
-### 3️⃣ Tester la Détection
+### 4️⃣ Tester la Détection
 
 ```sql
 SELECT * FROM generate_daily_expired_incidents();
@@ -48,7 +58,7 @@ SELECT * FROM generate_daily_expired_incidents();
 
 Si la date de fin du contrat est dans moins de 30 jours, un incident sera créé!
 
-### 4️⃣ Déployer le Webhook Corrigé
+### 5️⃣ Déployer le Webhook Corrigé
 
 **Option A: Via CLI (recommandé)**
 ```bash
@@ -62,7 +72,7 @@ supabase functions deploy yousign-webhook --no-verify-jwt
 3. Remplacez le code par le contenu de `supabase/functions/yousign-webhook/index.ts`
 4. Cliquez sur **Deploy**
 
-### 5️⃣ Vérification Finale
+### 6️⃣ Vérification Finale
 
 Testez avec un nouveau contrat Yousign (ou simulez avec les logs):
 
@@ -99,7 +109,8 @@ ORDER BY c.date_fin;
 
 ## ✅ Checklist Finale
 
-- [ ] Script SQL exécuté
+- [ ] Contrainte CHECK corrigée (accepte 'actif')
+- [ ] Script SQL de correction exécuté
 - [ ] Contrat de Wajdi corrigé (type, date_fin, statut)
 - [ ] Fonction de détection testée
 - [ ] Webhook déployé

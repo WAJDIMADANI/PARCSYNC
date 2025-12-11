@@ -43,6 +43,7 @@ SOLUTION
 
 FICHIERS CRÉÉS
 --------------
+✓ fix-contrat-statut-constraint.sql         → Correction contrainte CHECK
 ✓ fix-existing-yousign-contracts.sql        → Correction rétroactive
 ✓ test-correction-wajdi.sql                 → Tests de vérification
 ✓ CORRECTION-CONTRATS-YOUSIGN.md            → Documentation complète
@@ -55,19 +56,25 @@ FICHIERS MODIFIÉS
 ✓ supabase/functions/yousign-webhook/index.ts  → Webhook amélioré
 
 
-DÉPLOIEMENT (3 ÉTAPES)
+DÉPLOIEMENT (4 ÉTAPES)
 ----------------------
 
-ÉTAPE 1: Corriger les contrats existants
+ÉTAPE 1: Corriger la contrainte CHECK
+  → Ouvrir Supabase Dashboard → SQL Editor
+  → Copier/coller fix-contrat-statut-constraint.sql
+  → Cliquer "Run"
+  (Permet d'accepter le statut 'actif')
+
+ÉTAPE 2: Corriger les contrats existants
   → Ouvrir Supabase Dashboard → SQL Editor
   → Copier/coller fix-existing-yousign-contracts.sql
   → Cliquer "Run"
 
-ÉTAPE 2: Vérifier le contrat de Wajdi
+ÉTAPE 3: Vérifier le contrat de Wajdi
   → SELECT * FROM contrat WHERE id = '4ce63c31-c775-4e50-98a4-d27966fccecc';
   → Doit avoir: type='CDD', date_fin=[date], statut='actif'
 
-ÉTAPE 3: Déployer le webhook
+ÉTAPE 4: Déployer le webhook
   → Via CLI: supabase functions deploy yousign-webhook --no-verify-jwt
   → OU copier manuellement le code dans Supabase Dashboard
 
