@@ -1,0 +1,150 @@
+================================================================================
+                    SOLUTION COMPLÈTE - CONTRATS YOUSIGN
+================================================================================
+
+PROBLÈME
+--------
+Les contrats signés via Yousign n'ont pas les colonnes type, date_debut et
+date_fin renseignées, donc ils ne sont JAMAIS détectés par le système
+d'expiration automatique.
+
+Exemple: Contrat de Wajdi
+  - type: NULL (devrait être 'CDD')
+  - date_fin: NULL (devrait avoir la date d'expiration)
+  - statut: 'valide' ou 'signe' (devrait être 'actif')
+  → Résultat: ❌ PAS détecté par generate_daily_expired_incidents()
+
+
+CAUSE
+-----
+Le webhook Yousign ne mettait à jour QUE le statut, sans extraire les
+informations du modèle et des variables du contrat.
+
+
+SOLUTION
+--------
+
+1. WEBHOOK AMÉLIORÉ ✅
+   Fichier: supabase/functions/yousign-webhook/index.ts
+
+   Maintenant extrait automatiquement:
+   - type: depuis modeles_contrats.type_contrat ou variables
+   - date_debut: depuis variables.date_debut
+   - date_fin: depuis variables.date_fin (CDD) ou profil (avenants)
+   - statut: changé en "actif" (au lieu de "signe")
+
+2. SCRIPT DE CORRECTION ✅
+   Fichier: fix-existing-yousign-contracts.sql
+
+   Corrige TOUS les contrats existants en:
+   - Remplissant les colonnes manquantes
+   - Changeant statut "signe" → "actif"
+
+
+FICHIERS CRÉÉS
+--------------
+✓ fix-existing-yousign-contracts.sql        → Correction rétroactive
+✓ test-correction-wajdi.sql                 → Tests de vérification
+✓ CORRECTION-CONTRATS-YOUSIGN.md            → Documentation complète
+✓ DEMARRAGE-RAPIDE-CORRECTION.md            → Guide pas à pas
+✓ RESUME-SOLUTION-YOUSIGN.txt               → Ce fichier
+
+
+FICHIERS MODIFIÉS
+-----------------
+✓ supabase/functions/yousign-webhook/index.ts  → Webhook amélioré
+
+
+DÉPLOIEMENT (3 ÉTAPES)
+----------------------
+
+ÉTAPE 1: Corriger les contrats existants
+  → Ouvrir Supabase Dashboard → SQL Editor
+  → Copier/coller fix-existing-yousign-contracts.sql
+  → Cliquer "Run"
+
+ÉTAPE 2: Vérifier le contrat de Wajdi
+  → SELECT * FROM contrat WHERE id = '4ce63c31-c775-4e50-98a4-d27966fccecc';
+  → Doit avoir: type='CDD', date_fin=[date], statut='actif'
+
+ÉTAPE 3: Déployer le webhook
+  → Via CLI: supabase functions deploy yousign-webhook --no-verify-jwt
+  → OU copier manuellement le code dans Supabase Dashboard
+
+
+VÉRIFICATION
+------------
+
+Test 1: Contrat corrigé?
+  SELECT type, date_fin, statut
+  FROM contrat
+  WHERE id = '4ce63c31-c775-4e50-98a4-d27966fccecc';
+
+  Attendu: type='CDD', date_fin=[date], statut='actif'
+
+Test 2: Détection fonctionne?
+  SELECT * FROM generate_daily_expired_incidents();
+
+  Si date_fin < 30 jours: incident créé ✅
+
+Test 3: Stats globales
+  SELECT
+    COUNT(*) as total_yousign,
+    SUM(CASE WHEN type IS NOT NULL THEN 1 ELSE 0 END) as avec_type,
+    SUM(CASE WHEN date_fin IS NOT NULL THEN 1 ELSE 0 END) as avec_date_fin
+  FROM contrat
+  WHERE yousign_signature_request_id IS NOT NULL;
+
+
+IMPACT
+------
+
+AVANT:
+  ❌ Contrats Yousign ignorés par le système d'expiration
+  ❌ Aucun incident créé pour les CDD expirés
+  ❌ Données manquantes dans la table contrat
+
+APRÈS:
+  ✅ Tous les contrats Yousign ont type + date_fin
+  ✅ Détection automatique d'expiration fonctionne
+  ✅ Incidents créés automatiquement
+  ✅ Plus besoin de manipulation manuelle
+
+
+CHANGEMENTS CLÉS
+----------------
+
+| Colonne     | Avant              | Après                    |
+|-------------|--------------------|-----------------------  -|
+| type        | NULL               | 'CDD' / 'CDI'           |
+| date_debut  | NULL               | Date depuis variables   |
+| date_fin    | NULL               | Date depuis variables   |
+| statut      | 'signe' / 'valide' | 'actif'                 |
+
+
+WORKFLOW COMPLET
+----------------
+
+1. Utilisateur envoie contrat → Yousign
+2. Salarié signe le contrat via Yousign
+3. Webhook reçoit "signature_request.done"
+4. Webhook extrait type, date_debut, date_fin
+5. Webhook met à jour contrat avec statut='actif'
+6. Cron job quotidien appelle generate_daily_expired_incidents()
+7. Si date_fin < 30 jours → incident créé ✅
+
+
+SUPPORT
+-------
+
+Documentation complète: CORRECTION-CONTRATS-YOUSIGN.md
+Guide rapide: DEMARRAGE-RAPIDE-CORRECTION.md
+Tests: test-correction-wajdi.sql
+
+Questions? Vérifiez les logs:
+  Supabase Dashboard → Edge Functions → yousign-webhook → Logs
+
+
+================================================================================
+                            FIN DU RÉSUMÉ
+================================================================================
