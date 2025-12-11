@@ -68,9 +68,9 @@ export function Dashboard() {
       case 'rh/documents-manquants':
         return <MissingDocuments onNavigate={handleViewChange} />;
       case 'rh/incidents':
-        return <IncidentsList />;
+        return <IncidentsList onViewProfile={(profilId) => handleViewChange('rh/salaries', { profilId })} />;
       case 'rh/incidents-historique':
-        return <IncidentHistory />;
+        return <IncidentHistory onViewProfile={(profilId) => handleViewChange('rh/salaries', { profilId })} />;
       case 'rh/vivier':
         return <VivierList />;
       case 'rh/demandes':

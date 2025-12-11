@@ -15,6 +15,7 @@ interface HistoryEntry {
   created_at: string;
   incident?: {
     type: string;
+    profil_id: string;
     profil?: {
       prenom: string;
       nom: string;
@@ -30,7 +31,11 @@ interface Stats {
   par_type: { type: string; count: number }[];
 }
 
-export function IncidentHistory() {
+interface IncidentHistoryProps {
+  onViewProfile?: (profilId: string) => void;
+}
+
+export function IncidentHistory({ onViewProfile }: IncidentHistoryProps = {}) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +58,7 @@ export function IncidentHistory() {
           *,
           incident:incident_id (
             type,
+            profil_id,
             profil:profil_id (
               prenom,
               nom
@@ -129,6 +135,12 @@ export function IncidentHistory() {
       case 'permis_conduire': return 'Permis de conduire';
       case 'contrat_cdd': return 'Contrat CDD';
       default: return type;
+    }
+  };
+
+  const handleViewProfile = (profilId: string) => {
+    if (onViewProfile) {
+      onViewProfile(profilId);
     }
   };
 
@@ -322,12 +334,13 @@ export function IncidentHistory() {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Employé</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Changement</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Notes</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredHistory.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <History className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-gray-600">Aucune entrée d'historique trouvée</p>
                   </td>
@@ -371,6 +384,17 @@ export function IncidentHistory() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
                       {entry.notes || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {entry.incident?.profil_id && (
+                        <button
+                          onClick={() => handleViewProfile(entry.incident!.profil_id)}
+                          className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                          title="Voir le profil du salarié"
+                        >
+                          <User className="w-5 h-5" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

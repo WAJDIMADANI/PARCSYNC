@@ -36,7 +36,11 @@ interface Incident {
   };
 }
 
-export function IncidentsList() {
+interface IncidentsListProps {
+  onViewProfile?: (profilId: string) => void;
+}
+
+export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'actif' | 'en_cours' | 'resolu' | 'ignore' | 'expire'>('actif');
@@ -158,6 +162,12 @@ export function IncidentsList() {
       return;
     }
     setReminderIncident(incident);
+  };
+
+  const handleViewProfile = (profilId: string) => {
+    if (onViewProfile) {
+      onViewProfile(profilId);
+    }
   };
 
   const confirmSendReminder = async () => {
@@ -453,6 +463,13 @@ export function IncidentsList() {
                     {activeTab === 'actif' && (
                       <>
                         <button
+                          onClick={() => handleViewProfile(incident.profil_id)}
+                          className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                          title="Voir le profil du salarié"
+                        >
+                          <User className="w-5 h-5" />
+                        </button>
+                        <button
                           onClick={() => handleSendReminder(incident)}
                           className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                           title="Envoyer un rappel par email"
@@ -488,6 +505,13 @@ export function IncidentsList() {
                     {activeTab === 'en_cours' && (
                       <>
                         <button
+                          onClick={() => handleViewProfile(incident.profil_id)}
+                          className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                          title="Voir le profil du salarié"
+                        >
+                          <User className="w-5 h-5" />
+                        </button>
+                        <button
                           onClick={() => handleSendReminder(incident)}
                           className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                           title="Envoyer un rappel par email"
@@ -506,6 +530,13 @@ export function IncidentsList() {
                     )}
                     {activeTab === 'expire' && (
                       <>
+                        <button
+                          onClick={() => handleViewProfile(incident.profil_id)}
+                          className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                          title="Voir le profil du salarié"
+                        >
+                          <User className="w-5 h-5" />
+                        </button>
                         <button
                           onClick={() => handleSendReminder(incident)}
                           className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -538,6 +569,15 @@ export function IncidentsList() {
                           Ignorer
                         </button>
                       </>
+                    )}
+                    {(activeTab === 'resolu' || activeTab === 'ignore') && (
+                      <button
+                        onClick={() => handleViewProfile(incident.profil_id)}
+                        className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                        title="Voir le profil du salarié"
+                      >
+                        <User className="w-5 h-5" />
+                      </button>
                     )}
                   </div>
                 </div>
