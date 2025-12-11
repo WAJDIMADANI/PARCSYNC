@@ -95,6 +95,122 @@ Deno.serve(async (req: Request) => {
 
     console.log("Mise à jour du contrat:", externalId);
 
+    // ========================================
+    // RÉCUPÉRER LES DONNÉES DU CONTRAT POUR EXTRACTION TYPE ET DATES
+    // ========================================
+    console.log("Récupération des détails du contrat pour mise à jour complète...");
+    const contractDataResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${externalId}&select=id,profil_id,modele_id,variables,type,date_debut,date_fin,modeles_contrats(type_contrat),profil(avenant_1_date_fin,avenant_2_date_fin)`,
+      {
+        headers: {
+          "Authorization": `Bearer ${SERVICE_KEY}`,
+          "apikey": SERVICE_KEY || "",
+        },
+      }
+    );
+
+    if (!contractDataResponse.ok) {
+      console.error("Erreur lors de la récupération du contrat");
+      return new Response(
+        JSON.stringify({ ok: false, error: "Failed to fetch contract data" }),
+        {
+          status: contractDataResponse.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const contractDataList = await contractDataResponse.json();
+    const contractData = contractDataList && contractDataList.length > 0 ? contractDataList[0] : null;
+
+    if (!contractData) {
+      console.error("Contrat non trouvé");
+      return new Response(
+        JSON.stringify({ ok: false, error: "Contract not found" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Extraction des données
+    const variables = typeof contractData.variables === 'string'
+      ? JSON.parse(contractData.variables)
+      : (contractData.variables || {});
+
+    const modeleType = contractData.modeles_contrats?.type_contrat;
+    const variablesType = variables?.type_contrat;
+    const variablesDateFin = variables?.date_fin;
+    const variablesDateDebut = variables?.date_debut;
+    const profilAv1Date = contractData.profil?.avenant_1_date_fin;
+    const profilAv2Date = contractData.profil?.avenant_2_date_fin;
+
+    console.log("Données extraites:");
+    console.log("  - Modèle type:", modeleType);
+    console.log("  - Variables type:", variablesType);
+    console.log("  - Variables date_debut:", variablesDateDebut);
+    console.log("  - Variables date_fin:", variablesDateFin);
+    console.log("  - Profil avenant_1_date_fin:", profilAv1Date);
+    console.log("  - Profil avenant_2_date_fin:", profilAv2Date);
+
+    // Déterminer le type de contrat
+    let contractType = contractData.type || modeleType || variablesType || 'CDI';
+
+    // Pour les avenants, extraire le type de base
+    if (contractType === 'Avenant' || contractType.startsWith('Avenant')) {
+      if (variablesType === 'Avenant 1' || variablesType === 'Avenant 2') {
+        contractType = 'CDD'; // Les avenants sont des prolongations de CDD
+      }
+    }
+
+    console.log("Type de contrat déterminé:", contractType);
+
+    // Déterminer la date de fin selon le type
+    let dateFin = contractData.date_fin || null;
+
+    if (contractType === 'CDD') {
+      // Pour un CDD classique
+      if (variablesDateFin) {
+        dateFin = variablesDateFin;
+        console.log("Date fin CDD depuis variables:", dateFin);
+      }
+    } else if (modeleType === 'Avenant') {
+      // Pour un avenant
+      if (variablesType === 'Avenant 1') {
+        dateFin = variablesDateFin || profilAv1Date;
+        console.log("Date fin Avenant 1:", dateFin);
+      } else if (variablesType === 'Avenant 2') {
+        dateFin = variablesDateFin || profilAv2Date;
+        console.log("Date fin Avenant 2:", dateFin);
+      }
+    }
+
+    // Date de début
+    let dateDebut = contractData.date_debut || variablesDateDebut || new Date().toISOString().split('T')[0];
+    console.log("Date début déterminée:", dateDebut);
+    console.log("Date fin déterminée:", dateFin);
+
+    // Préparer les données de mise à jour
+    const updateData: any = {
+      statut: "actif", // Changé de "signe" à "actif" pour correspondre à la fonction de détection
+      date_signature: new Date().toISOString(),
+      yousign_signed_at: new Date().toISOString(),
+    };
+
+    // Mettre à jour type et dates seulement si elles n'existent pas déjà
+    if (!contractData.type) {
+      updateData.type = contractType;
+    }
+    if (!contractData.date_debut) {
+      updateData.date_debut = dateDebut;
+    }
+    if (!contractData.date_fin && dateFin) {
+      updateData.date_fin = dateFin;
+    }
+
+    console.log("Données de mise à jour:", JSON.stringify(updateData, null, 2));
+
     const updateResponse = await fetch(
       `${SUPABASE_URL}/rest/v1/contrat?id=eq.${externalId}`,
       {
@@ -105,11 +221,7 @@ Deno.serve(async (req: Request) => {
           "apikey": SERVICE_KEY || "",
           "Prefer": "return=representation",
         },
-        body: JSON.stringify({
-          statut: "signe",
-          date_signature: new Date().toISOString(),
-          yousign_signed_at: new Date().toISOString(),
-        }),
+        body: JSON.stringify(updateData),
       }
     );
 
