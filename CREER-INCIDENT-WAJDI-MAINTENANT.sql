@@ -69,6 +69,7 @@ DECLARE
   v_incident_exists BOOLEAN;
   v_incident_id uuid;
   v_description text;
+  v_type_to_use text;
 BEGIN
   RAISE NOTICE '';
   RAISE NOTICE '╔════════════════════════════════════════════════════════════╗';
@@ -117,11 +118,46 @@ BEGIN
   ELSE
     -- Vérifier si le type 'contrat_expire' est accepté
     -- Sinon, utiliser 'contrat_cdd'
-    DECLARE
-      v_type_to_use text;
     BEGIN
       -- Tester si 'contrat_expire' est accepté
-      BEGIN
+      INSERT INTO incident (
+        type,
+        profil_id,
+        date_expiration_originale,
+        date_creation_incident,
+        statut,
+        notes,
+        metadata
+      ) VALUES (
+        'contrat_expire',
+        v_contrat.profil_id,
+        v_contrat.date_fin,
+        CURRENT_DATE,
+        'actif',
+        format('Contrat %s expiré - %s %s (matricule: %s) - Le contrat a expiré le %s. Action requise: renouvellement ou fin de contrat.',
+          v_contrat.type,
+          v_contrat.prenom,
+          v_contrat.nom,
+          v_contrat.matricule_tca,
+          to_char(v_contrat.date_fin, 'DD/MM/YYYY')
+        ),
+        jsonb_build_object(
+          'contrat_id', v_contrat.contrat_id,
+          'contrat_type', v_contrat.type,
+          'date_expiration', v_contrat.date_fin,
+          'matricule', v_contrat.matricule_tca,
+          'email', v_contrat.email,
+          'source', 'yousign',
+          'created_manually', true,
+          'reason', 'contract_expired_today'
+        )
+      )
+      RETURNING id INTO v_incident_id;
+
+      v_type_to_use := 'contrat_expire';
+    EXCEPTION
+      WHEN check_violation THEN
+        -- Si 'contrat_expire' n'est pas accepté, utiliser 'contrat_cdd'
         INSERT INTO incident (
           type,
           profil_id,
@@ -131,7 +167,7 @@ BEGIN
           notes,
           metadata
         ) VALUES (
-          'contrat_expire',
+          'contrat_cdd',
           v_contrat.profil_id,
           v_contrat.date_fin,
           CURRENT_DATE,
@@ -156,46 +192,7 @@ BEGIN
         )
         RETURNING id INTO v_incident_id;
 
-        v_type_to_use := 'contrat_expire';
-      EXCEPTION
-        WHEN check_violation THEN
-          -- Si 'contrat_expire' n'est pas accepté, utiliser 'contrat_cdd'
-          INSERT INTO incident (
-            type,
-            profil_id,
-            date_expiration_originale,
-            date_creation_incident,
-            statut,
-            notes,
-            metadata
-          ) VALUES (
-            'contrat_cdd',
-            v_contrat.profil_id,
-            v_contrat.date_fin,
-            CURRENT_DATE,
-            'actif',
-            format('Contrat %s expiré - %s %s (matricule: %s) - Le contrat a expiré le %s. Action requise: renouvellement ou fin de contrat.',
-              v_contrat.type,
-              v_contrat.prenom,
-              v_contrat.nom,
-              v_contrat.matricule_tca,
-              to_char(v_contrat.date_fin, 'DD/MM/YYYY')
-            ),
-            jsonb_build_object(
-              'contrat_id', v_contrat.contrat_id,
-              'contrat_type', v_contrat.type,
-              'date_expiration', v_contrat.date_fin,
-              'matricule', v_contrat.matricule_tca,
-              'email', v_contrat.email,
-              'source', 'yousign',
-              'created_manually', true,
-              'reason', 'contract_expired_today'
-            )
-          )
-          RETURNING id INTO v_incident_id;
-
-          v_type_to_use := 'contrat_cdd';
-      END;
+        v_type_to_use := 'contrat_cdd';
     END;
 
     RAISE NOTICE '✅ Incident créé avec succès!';
