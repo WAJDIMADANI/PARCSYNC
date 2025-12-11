@@ -1,86 +1,119 @@
 ╔════════════════════════════════════════════════════════════════════╗
 ║                                                                    ║
-║            CORRECTION DU CONTRAT DE WAJDI                         ║
-║            Problème: type NULL, date_fin NULL, statut valide      ║
+║            GUIDE RAPIDE - NOTIFICATIONS D'EXPIRATION              ║
 ║                                                                    ║
 ╚════════════════════════════════════════════════════════════════════╝
 
 
-📋 SOLUTION RAPIDE (1 minute)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 PROBLÈME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. Ouvrez Supabase Dashboard → SQL Editor
-
-2. Copiez-collez le contenu de ce fichier:
-
-   📄 CORRECTION-COMPLETE-WAJDI-EN-1-FOIS.sql
-
-3. Cliquez sur "Run"
-
-4. Vérifiez que tous les ✅ sont visibles
+Le contrat de Wajdi n'apparaît pas dans Notifications > Contrats CDD
+Erreur: "relation 'incidents' does not exist"
 
 
-✅ C'EST TOUT ! Le contrat sera corrigé.
+💡 CAUSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Le système d'incidents et notifications n'a pas été installé
+dans la base de données.
 
 
-📚 DOCUMENTATION COMPLÈTE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Si vous voulez comprendre en détail:
-
-📄 README-FIX-STATUT-ACTIF.md
-   → Explication de l'erreur "contrat_statut_check"
-
-📄 INSTRUCTIONS-CORRECTION-WAJDI.md
-   → Guide détaillé étape par étape
-
-📄 DEMARRAGE-RAPIDE-CORRECTION.md
-   → Guide complet avec tous les fichiers
+✅ SOLUTION EN 2 ÉTAPES (5 minutes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 
-🔧 SCRIPTS DISPONIBLES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╔════════════════════════════════════════════════════════════════╗
+║  ÉTAPE 1: INSTALLER LE SYSTÈME                                ║
+╚════════════════════════════════════════════════════════════════╝
 
-CORRECTION EN 1 FOIS (RECOMMANDÉ):
-✅ CORRECTION-COMPLETE-WAJDI-EN-1-FOIS.sql
-   → Fait tout en une seule exécution
+1. Supabase Dashboard → SQL Editor
 
-CORRECTION ÉTAPE PAR ÉTAPE:
-1. fix-contrat-statut-constraint.sql
-2. FIX-WAJDI-DIRECT.sql
+2. Nouveau fichier → Copiez-collez:
+   📄 INSTALLATION-COMPLETE-SYSTEME.sql
 
-CORRECTION GLOBALE:
-✅ fix-existing-yousign-contracts.sql
-   → Corrige TOUS les contrats Yousign d'un coup
+3. Run (bouton vert)
 
-DIAGNOSTIC:
-🔍 DIAGNOSTIC-CONTRAT-WAJDI-COMPLET.sql
-   → Voir toutes les données du contrat
-
-
-❓ APRÈS LA CORRECTION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Le contrat devrait avoir:
-- type: CDD
-- date_debut: 2025-10-21
-- date_fin: 2026-07-03
-- statut: actif
-
-Le contrat sera automatiquement détecté par le système
-d'expiration le 2026-07-03.
+4. Vérifiez le résultat:
+   ✅ Table notification créée
+   ✅ Table incident créée
+   ✅ Fonction generate_daily_expired_incidents() créée
+   ✅ Cron job configuré
+   ✅ Vue contrats_cdd_expirant_bientot créée
 
 
-🚀 PROCHAINE ÉTAPE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╔════════════════════════════════════════════════════════════════╗
+║  ÉTAPE 2: TESTER AVEC WAJDI                                   ║
+╚════════════════════════════════════════════════════════════════╝
 
-Déployer le webhook corrigé pour les FUTURS contrats:
+1. SQL Editor → Nouveau fichier
 
-supabase functions deploy yousign-webhook --no-verify-jwt
+2. Copiez-collez:
+   📄 TEST-EXPIRATION-CONTRAT-WAJDI-MAINTENANT-FIXE.sql
+
+3. Run (bouton vert)
+
+4. Vérifiez le résultat:
+   ✅ Date_fin changée à aujourd'hui
+   ✅ Incidents créés: 1
+   ✅ Notifications créées: 1
+
+5. Dans l'application:
+   - Rafraîchissez la page (F5)
+   - Allez dans Notifications > Contrats CDD
+   - Cherchez "waj"
+   - ✅ Wajdi MADANI apparaît!
 
 
-💡 AIDE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Si vous avez des questions ou des erreurs:
-→ Consultez INSTRUCTIONS-CORRECTION-WAJDI.md
+
+📚 FICHIERS DISPONIBLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📄 INSTALLATION-COMPLETE-SYSTEME.sql
+   → Installe tout le système d'expiration
+
+📄 TEST-EXPIRATION-CONTRAT-WAJDI-MAINTENANT-FIXE.sql
+   → Test avec le contrat de Wajdi
+
+📄 POURQUOI-PAS-DE-NOTIFICATION-WAJDI.txt
+   → Explication détaillée du problème
+
+📄 INSTRUCTIONS-TEST-NOTIFICATION-WAJDI.md
+   → Guide complet avec debugging
+
+
+🔄 EN PRODUCTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Une fois installé, le système fonctionne automatiquement:
+
+📅 Tous les jours à minuit:
+   → Détecte les contrats qui expirent AUJOURD'HUI
+   → Crée automatiquement les incidents
+   → Crée automatiquement les notifications
+   → Elles apparaissent dans l'interface
+
+Vous n'avez RIEN à faire manuellement!
+
+
+⚡ QUICK START (copy-paste)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Supabase → SQL Editor
+2. Copiez INSTALLATION-COMPLETE-SYSTEME.sql
+3. Run
+4. Copiez TEST-EXPIRATION-CONTRAT-WAJDI-MAINTENANT-FIXE.sql
+5. Run
+6. Rafraîchissez l'application
+7. ✅ DONE!
+
+
+💬 BESOIN D'AIDE?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si vous avez des erreurs:
+- Lisez les messages d'erreur dans Supabase
+- Vérifiez INSTRUCTIONS-TEST-NOTIFICATION-WAJDI.md
+- Section "Debugging" pour résoudre les problèmes
