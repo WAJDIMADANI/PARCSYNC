@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Bell, Calendar, FileText, CreditCard, AlertCircle, Mail, CheckCircle, X, Loader2 } from 'lucide-react';
+import { Bell, Calendar, FileText, CreditCard, AlertCircle, Mail, CheckCircle, X, Loader2, User } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { NotificationModal } from './NotificationModal';
 
@@ -23,9 +23,10 @@ interface Notification {
 
 interface NotificationsListProps {
   initialTab?: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_1' | 'avenant_2';
+  onViewProfile?: (profilId: string) => void;
 }
 
-export function NotificationsList({ initialTab }: NotificationsListProps = {}) {
+export function NotificationsList({ initialTab, onViewProfile }: NotificationsListProps = {}) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_1' | 'avenant_2'>(initialTab || 'titre_sejour');
@@ -85,6 +86,13 @@ export function NotificationsList({ initialTab }: NotificationsListProps = {}) {
       case 'critical': return 'bg-red-100 border-red-300 text-red-800';
       case 'urgent': return 'bg-orange-100 border-orange-300 text-orange-800';
       case 'warning': return 'bg-yellow-100 border-yellow-300 text-yellow-800';
+    }
+  };
+
+  const handleViewProfile = (e: React.MouseEvent, profilId: string) => {
+    e.stopPropagation(); // Empêche l'ouverture du NotificationModal
+    if (onViewProfile) {
+      onViewProfile(profilId);
     }
   };
 
@@ -366,6 +374,13 @@ export function NotificationsList({ initialTab }: NotificationsListProps = {}) {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => handleViewProfile(e, notification.profil_id)}
+                      className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      title="Voir le profil du salarié"
+                    >
+                      <User className="w-5 h-5" />
+                    </button>
                     {notification.statut === 'resolue' && (
                       <CheckCircle className="w-6 h-6 text-green-600" />
                     )}

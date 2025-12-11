@@ -61,7 +61,10 @@ export function Dashboard() {
       case 'rh/contrats':
         return <ContractsDashboard />;
       case 'rh/notifications':
-        return <NotificationsList initialTab={viewParams?.tab} />;
+        return <NotificationsList
+          initialTab={viewParams?.tab}
+          onViewProfile={(profilId) => handleViewChange('rh/salaries', { profilId })}
+        />;
       case 'rh/documents-manquants':
         return <MissingDocuments onNavigate={handleViewChange} />;
       case 'rh/incidents':
