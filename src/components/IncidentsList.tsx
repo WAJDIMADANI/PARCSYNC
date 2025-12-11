@@ -96,6 +96,21 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
       if (error) throw error;
       setIncidents(data || []);
+
+      const cddCount = (data || []).filter(i =>
+        i.type === 'contrat_cdd' ||
+        (i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'cdd')
+      ).length;
+
+      const avenantCount = (data || []).filter(i =>
+        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'avenant'
+      ).length;
+
+      console.log('📊 Compteurs incidents:', {
+        total_contrat_expire: (data || []).filter(i => i.type === 'contrat_expire').length,
+        cdd_incidents: cddCount,
+        avenant_incidents: avenantCount
+      });
     } catch (error) {
       console.error('Error fetching incidents:', error);
     } finally {
@@ -104,6 +119,19 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   };
 
   const getTabCount = (type: string) => {
+    if (type === 'contrat_cdd') {
+      return incidents.filter(i =>
+        i.type === 'contrat_cdd' ||
+        (i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'cdd')
+      ).length;
+    }
+
+    if (type === 'contrat_expire') {
+      return incidents.filter(i =>
+        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'avenant'
+      ).length;
+    }
+
     return incidents.filter(i => i.type === type).length;
   };
 
@@ -224,7 +252,18 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   };
 
   const filteredIncidents = incidents.filter(incident => {
-    if (incident.type !== activeTab) return false;
+    let matchesTab = false;
+
+    if (activeTab === 'contrat_cdd') {
+      matchesTab = incident.type === 'contrat_cdd' ||
+                   (incident.type === 'contrat_expire' && incident.contrat?.type?.toLowerCase() === 'cdd');
+    } else if (activeTab === 'contrat_expire') {
+      matchesTab = incident.type === 'contrat_expire' && incident.contrat?.type?.toLowerCase() === 'avenant';
+    } else {
+      matchesTab = incident.type === activeTab;
+    }
+
+    if (!matchesTab) return false;
 
     if (filterStatus !== 'all' && incident.statut !== filterStatus) return false;
 
