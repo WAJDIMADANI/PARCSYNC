@@ -16,7 +16,7 @@ BEGIN
     RAISE NOTICE '   Incidents pour Wajdi (1590): %', (
       SELECT count(*)
       FROM incidents
-      WHERE profil_id = (SELECT id FROM profil WHERE matricule = '1590')
+      WHERE profil_id = (SELECT id FROM profil WHERE matricule_tca = '1590')
     );
   ELSE
     RAISE NOTICE '1. Table "incidents" n''existe PAS';
@@ -27,7 +27,7 @@ BEGIN
   RAISE NOTICE '   Incidents pour Wajdi (1590): %', (
     SELECT count(*)
     FROM incident
-    WHERE profil_id = (SELECT id FROM profil WHERE matricule = '1590')
+    WHERE profil_id = (SELECT id FROM profil WHERE matricule_tca = '1590')
   );
 END $$;
 
@@ -45,7 +45,7 @@ BEGIN
     -- Copier tous les incidents de "incidents" vers "incident"
     FOR v_incident_record IN
       SELECT * FROM incidents
-      WHERE profil_id = (SELECT id FROM profil WHERE matricule = '1590')
+      WHERE profil_id = (SELECT id FROM profil WHERE matricule_tca = '1590')
     LOOP
       -- Insérer dans la bonne table
       INSERT INTO incident (
@@ -81,7 +81,7 @@ BEGIN
 
     -- Supprimer de l'ancienne table
     DELETE FROM incidents
-    WHERE profil_id = (SELECT id FROM profil WHERE matricule = '1590');
+    WHERE profil_id = (SELECT id FROM profil WHERE matricule_tca = '1590');
 
     RAISE NOTICE 'Incidents supprimés de l''ancienne table';
   ELSE
@@ -100,10 +100,10 @@ BEGIN
   -- Récupérer l'ID du profil
   SELECT id INTO v_profil_id
   FROM profil
-  WHERE matricule = '1590';
+  WHERE matricule_tca = '1590';
 
   IF v_profil_id IS NULL THEN
-    RAISE EXCEPTION 'Profil avec matricule 1590 non trouvé';
+    RAISE EXCEPTION 'Profil avec matricule_tca 1590 non trouvé';
   END IF;
 
   -- Vérifier si l'incident existe déjà
@@ -132,7 +132,7 @@ BEGIN
       '2025-12-11',
       NOW(),
       'actif',
-      'Contrat CDD expiré - WAJDI MADANI (matricule: 1590)',
+      'Contrat CDD expiré - WAJDI MADANI (matricule_tca: 1590)',
       jsonb_build_object(
         'source', 'correction_manuelle',
         'date_creation', NOW()
@@ -155,11 +155,11 @@ SELECT
   i.type,
   i.statut,
   p.prenom || ' ' || p.nom as nom_complet,
-  p.matricule,
+  p.matricule_tca,
   i.date_expiration_originale,
   i.date_creation_incident
 FROM incident i
 JOIN profil p ON p.id = i.profil_id
-WHERE p.matricule = '1590'
+WHERE p.matricule_tca = '1590'
 AND i.type = 'contrat_cdd'
 AND i.statut = 'actif';
