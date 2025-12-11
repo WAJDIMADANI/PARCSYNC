@@ -46,7 +46,7 @@ BEGIN
 END $$;
 
 -- Étape 2: Supprimer les incidents liés à ces CDI fantômes
-DELETE FROM incidents
+DELETE FROM incident
 WHERE contrat_id IN (
   SELECT c.id
   FROM contrat c
