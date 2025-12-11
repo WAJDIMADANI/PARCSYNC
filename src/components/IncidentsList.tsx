@@ -97,19 +97,21 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       if (error) throw error;
       setIncidents(data || []);
 
-      const cddCount = (data || []).filter(i =>
-        i.type === 'contrat_cdd' ||
-        (i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'cdd')
+      const cddExpiresCount = (data || []).filter(i =>
+        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'cdd'
       ).length;
 
-      const avenantCount = (data || []).filter(i =>
+      const avenantExpiresCount = (data || []).filter(i =>
         i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'avenant'
       ).length;
 
-      console.log('📊 Compteurs incidents:', {
-        total_contrat_expire: (data || []).filter(i => i.type === 'contrat_expire').length,
-        cdd_incidents: cddCount,
-        avenant_incidents: avenantCount
+      const totalContratExpire = (data || []).filter(i => i.type === 'contrat_expire').length;
+
+      console.log('📊 Compteurs incidents (contrats expirés uniquement):', {
+        total_contrat_expire: totalContratExpire,
+        cdd_expires: cddExpiresCount,
+        avenant_expires: avenantExpiresCount,
+        verification: cddExpiresCount + avenantExpiresCount === totalContratExpire ? '✅ OK' : '❌ Erreur'
       });
     } catch (error) {
       console.error('Error fetching incidents:', error);
@@ -121,8 +123,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   const getTabCount = (type: string) => {
     if (type === 'contrat_cdd') {
       return incidents.filter(i =>
-        i.type === 'contrat_cdd' ||
-        (i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'cdd')
+        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'cdd'
       ).length;
     }
 
@@ -255,8 +256,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     let matchesTab = false;
 
     if (activeTab === 'contrat_cdd') {
-      matchesTab = incident.type === 'contrat_cdd' ||
-                   (incident.type === 'contrat_expire' && incident.contrat?.type?.toLowerCase() === 'cdd');
+      matchesTab = incident.type === 'contrat_expire' && incident.contrat?.type?.toLowerCase() === 'cdd';
     } else if (activeTab === 'contrat_expire') {
       matchesTab = incident.type === 'contrat_expire' && incident.contrat?.type?.toLowerCase() === 'avenant';
     } else {
