@@ -311,7 +311,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      if (dateFin < today) {
+      if (dateFin <= today) {
         return 'expiré';
       }
     }
