@@ -49,13 +49,15 @@ SELECT
 SELECT
   i.id,
   i.type as "Type",
+  i.titre as "Titre",
   i.statut as "Statut",
-  i.date_incident as "Date Incident",
+  i.date_expiration_originale as "Date Expiration",
+  i.date_creation_incident as "Date Création",
   i.created_at as "Créé le"
 FROM incident i
 JOIN contrat c ON c.profil_id = i.profil_id
 WHERE c.id = '4ce63c31-c775-4e50-98a4-d27966fccecc'
-  AND i.type = 'contrat_expire'
+  AND i.type IN ('contrat_expire', 'contrat_cdd')
 ORDER BY i.created_at DESC;
 
 -- ========================================
@@ -101,7 +103,7 @@ BEGIN
     WHERE i.profil_id = v_contrat.profil_id
       AND i.type = 'contrat_expire'
       AND (i.metadata->>'contrat_id')::uuid = v_contrat.contrat_id
-      AND i.statut IN ('ouvert', 'en_cours')
+      AND i.statut IN ('actif', 'en_cours')
   ) INTO v_incident_exists;
 
   IF v_incident_exists THEN
@@ -116,15 +118,24 @@ BEGIN
     INSERT INTO incident (
       type,
       titre,
-      description,
       profil_id,
-      date_incident,
+      date_expiration_originale,
+      date_creation_incident,
       statut,
-      priorite,
+      notes,
       metadata
     ) VALUES (
       'contrat_expire',
-      format('Contrat %s expiré - %s %s', v_contrat.type, v_contrat.prenom, v_contrat.nom),
+      format('Contrat %s expiré - %s %s (matricule: %s)',
+        v_contrat.type,
+        v_contrat.prenom,
+        v_contrat.nom,
+        v_contrat.matricule_tca
+      ),
+      v_contrat.profil_id,
+      v_contrat.date_fin,
+      CURRENT_DATE,
+      'actif',
       format('Le contrat %s de %s %s (matricule: %s) a expiré le %s. Action requise: renouvellement ou fin de contrat.',
         v_contrat.type,
         v_contrat.prenom,
@@ -132,10 +143,6 @@ BEGIN
         v_contrat.matricule_tca,
         to_char(v_contrat.date_fin, 'DD/MM/YYYY')
       ),
-      v_contrat.profil_id,
-      v_contrat.date_fin,
-      'ouvert',
-      'haute',
       jsonb_build_object(
         'contrat_id', v_contrat.contrat_id,
         'contrat_type', v_contrat.type,
@@ -157,13 +164,12 @@ BEGIN
     RAISE NOTICE '  Matricule: %', v_contrat.matricule_tca;
     RAISE NOTICE '  Type: Contrat %', v_contrat.type;
     RAISE NOTICE '  Date expiration: %', v_contrat.date_fin;
-    RAISE NOTICE '  Priorité: HAUTE';
-    RAISE NOTICE '  Statut: OUVERT';
+    RAISE NOTICE '  Statut: ACTIF (à traiter)';
     RAISE NOTICE '';
     RAISE NOTICE '→ Rafraîchissez l''application (F5)';
     RAISE NOTICE '→ Allez dans: Incidents > Contrats Expirés';
     RAISE NOTICE '→ Cherchez "wajdi" ou "15901"';
-    RAISE NOTICE '→ L''incident apparaîtra en ROUGE (haute priorité)';
+    RAISE NOTICE '→ L''incident apparaîtra dans la liste';
   END IF;
   RAISE NOTICE '';
 END $$;
@@ -179,9 +185,9 @@ SELECT
   i.id,
   i.type as "Type",
   i.titre as "Titre",
-  i.date_incident as "Date Incident",
-  i.date_incident - CURRENT_DATE as "Jours depuis",
-  i.priorite as "Priorité",
+  i.date_expiration_originale as "Date Expiration",
+  i.date_creation_incident as "Date Création",
+  CURRENT_DATE - i.date_expiration_originale as "Jours depuis expiration",
   i.statut as "Statut",
   i.created_at as "Créé le",
   i.metadata->>'matricule' as "Matricule"

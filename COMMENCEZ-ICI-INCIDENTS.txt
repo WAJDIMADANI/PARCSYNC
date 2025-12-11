@@ -51,14 +51,13 @@ Le contrat de Wajdi expire AUJOURD'HUI:
 4. Vérifiez le résultat:
    ✅ Incident créé
    ✅ Type: contrat_expire
-   ✅ Priorité: HAUTE
-   ✅ Statut: OUVERT
+   ✅ Statut: ACTIF (à traiter)
 
 5. Dans l'application:
    - Rafraîchissez la page (F5)
    - Allez dans: Incidents > Contrats Expirés
    - Cherchez "wajdi" ou "15901"
-   - ✅ Wajdi MADANI apparaît en ROUGE (haute priorité)
+   - ✅ Wajdi MADANI apparaît dans la liste
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -93,7 +92,7 @@ Le contrat de Wajdi expire AUJOURD'HUI:
 │  Objectif: ALERTER quand c'est expiré                      │
 │  Délai: 0 jour (aujourd'hui) ou déjà passé                  │
 │  Type: contrat_expire                                       │
-│  Priorité: HAUTE (rouge)                                    │
+│  Statut: ACTIF (à traiter)                                  │
 │  Action: URGENT - renouvellement ou fin de contrat          │
 └─────────────────────────────────────────────────────────────┘
 
@@ -110,7 +109,7 @@ EXEMPLE avec Wajdi (expire le 11/12/2025):
 
   📅 12/12/2025 (J+1):
      → Notification reste (peut être résolue)
-     → ❗ Incident reste OUVERT jusqu'à résolution manuelle
+     → ❗ Incident reste ACTIF jusqu'à résolution manuelle
 
 
 ⚡ QUICK START (copy-paste)
@@ -157,4 +156,4 @@ Où le trouver:
 
 Action: Exécuter CREER-INCIDENT-WAJDI-MAINTENANT.sql
 
-Résultat: Wajdi apparaît dans Incidents avec priorité HAUTE
+Résultat: Wajdi apparaît dans Incidents avec statut ACTIF
