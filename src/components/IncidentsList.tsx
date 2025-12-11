@@ -50,10 +50,10 @@ interface IncidentsListProps {
 export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'actif' | 'en_cours' | 'resolu' | 'ignore' | 'expire'>('actif');
+  const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'contrat_expire'>('titre_sejour');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [changingStatus, setChangingStatus] = useState<string | null>(null);
   const [reminderIncident, setReminderIncident] = useState<Incident | null>(null);
 
@@ -103,8 +103,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     }
   };
 
-  const getTabCount = (tab: string) => {
-    return incidents.filter(i => i.statut === tab).length;
+  const getTabCount = (type: string) => {
+    return incidents.filter(i => i.type === type).length;
   };
 
   const getTypeLabel = (incident: Incident) => {
@@ -224,9 +224,9 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   };
 
   const filteredIncidents = incidents.filter(incident => {
-    if (incident.statut !== activeTab) return false;
+    if (incident.type !== activeTab) return false;
 
-    if (filterType !== 'all' && incident.type !== filterType) return false;
+    if (filterStatus !== 'all' && incident.statut !== filterStatus) return false;
 
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
@@ -264,96 +264,96 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
       <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
         <button
-          onClick={() => setActiveTab('actif')}
+          onClick={() => setActiveTab('titre_sejour')}
           className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all whitespace-nowrap ${
-            activeTab === 'actif'
-              ? 'bg-red-600 text-white shadow-lg'
+            activeTab === 'titre_sejour'
+              ? 'bg-blue-600 text-white shadow-lg'
               : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
           }`}
         >
-          <AlertCircle className="w-5 h-5" />
-          Actifs
-          {getTabCount('actif') > 0 && (
+          <CreditCard className="w-5 h-5" />
+          Titre de séjour
+          {getTabCount('titre_sejour') > 0 && (
             <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-              activeTab === 'actif' ? 'bg-white text-red-600' : 'bg-red-100 text-red-600'
+              activeTab === 'titre_sejour' ? 'bg-white text-blue-600' : 'bg-blue-100 text-blue-600'
             }`}>
-              {getTabCount('actif')}
+              {getTabCount('titre_sejour')}
             </span>
           )}
         </button>
 
         <button
-          onClick={() => setActiveTab('en_cours')}
+          onClick={() => setActiveTab('visite_medicale')}
           className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all whitespace-nowrap ${
-            activeTab === 'en_cours'
-              ? 'bg-orange-600 text-white shadow-lg'
-              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-          }`}
-        >
-          <PlayCircle className="w-5 h-5" />
-          En cours
-          {getTabCount('en_cours') > 0 && (
-            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-              activeTab === 'en_cours' ? 'bg-white text-orange-600' : 'bg-orange-100 text-orange-600'
-            }`}>
-              {getTabCount('en_cours')}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('resolu')}
-          className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all whitespace-nowrap ${
-            activeTab === 'resolu'
+            activeTab === 'visite_medicale'
               ? 'bg-green-600 text-white shadow-lg'
               : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
           }`}
         >
-          <CheckCircle className="w-5 h-5" />
-          Résolus
-          {getTabCount('resolu') > 0 && (
+          <FileText className="w-5 h-5" />
+          Visite médicale
+          {getTabCount('visite_medicale') > 0 && (
             <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-              activeTab === 'resolu' ? 'bg-white text-green-600' : 'bg-green-100 text-green-600'
+              activeTab === 'visite_medicale' ? 'bg-white text-green-600' : 'bg-green-100 text-green-600'
             }`}>
-              {getTabCount('resolu')}
+              {getTabCount('visite_medicale')}
             </span>
           )}
         </button>
 
         <button
-          onClick={() => setActiveTab('ignore')}
+          onClick={() => setActiveTab('permis_conduire')}
           className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all whitespace-nowrap ${
-            activeTab === 'ignore'
-              ? 'bg-gray-600 text-white shadow-lg'
+            activeTab === 'permis_conduire'
+              ? 'bg-orange-600 text-white shadow-lg'
               : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
           }`}
         >
-          <XCircle className="w-5 h-5" />
-          Ignorés
-          {getTabCount('ignore') > 0 && (
+          <CreditCard className="w-5 h-5" />
+          Permis de conduire
+          {getTabCount('permis_conduire') > 0 && (
             <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-              activeTab === 'ignore' ? 'bg-white text-gray-600' : 'bg-gray-100 text-gray-600'
+              activeTab === 'permis_conduire' ? 'bg-white text-orange-600' : 'bg-orange-100 text-orange-600'
             }`}>
-              {getTabCount('ignore')}
+              {getTabCount('permis_conduire')}
             </span>
           )}
         </button>
 
         <button
-          onClick={() => setActiveTab('expire')}
+          onClick={() => setActiveTab('contrat_cdd')}
           className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all whitespace-nowrap ${
-            activeTab === 'expire'
+            activeTab === 'contrat_cdd'
+              ? 'bg-red-600 text-white shadow-lg'
+              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+          }`}
+        >
+          <Calendar className="w-5 h-5" />
+          CDD
+          {getTabCount('contrat_cdd') > 0 && (
+            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+              activeTab === 'contrat_cdd' ? 'bg-white text-red-600' : 'bg-red-100 text-red-600'
+            }`}>
+              {getTabCount('contrat_cdd')}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('contrat_expire')}
+          className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all whitespace-nowrap ${
+            activeTab === 'contrat_expire'
               ? 'bg-red-700 text-white shadow-lg'
               : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
           }`}
         >
-          <AlertCircle className="w-5 h-5" />
-          Expirés
-          {getTabCount('expire') > 0 && (
+          <Calendar className="w-5 h-5" />
+          Avenant
+          {getTabCount('contrat_expire') > 0 && (
             <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-              activeTab === 'expire' ? 'bg-white text-red-700' : 'bg-red-100 text-red-700'
+              activeTab === 'contrat_expire' ? 'bg-white text-red-700' : 'bg-red-100 text-red-700'
             }`}>
-              {getTabCount('expire')}
+              {getTabCount('contrat_expire')}
             </span>
           )}
         </button>
@@ -371,16 +371,16 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
           />
         </div>
         <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          <option value="all">Tous les types</option>
-          <option value="titre_sejour">Titre de séjour</option>
-          <option value="visite_medicale">Visite médicale</option>
-          <option value="permis_conduire">Permis de conduire</option>
-          <option value="contrat_cdd">Contrat CDD</option>
-          <option value="contrat_expire">Contrats expirés (CDD + Avenants)</option>
+          <option value="all">Tous les statuts</option>
+          <option value="actif">Actifs</option>
+          <option value="en_cours">En cours</option>
+          <option value="resolu">Résolus</option>
+          <option value="ignore">Ignorés</option>
+          <option value="expire">Expirés</option>
         </select>
       </div>
 
@@ -389,9 +389,12 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
           <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun incident</h3>
           <p className="text-gray-600">
-            {searchTerm || filterType !== 'all'
+            {searchTerm || filterStatus !== 'all'
               ? 'Aucun incident ne correspond à vos critères de recherche'
-              : `Aucun incident avec le statut "${activeTab}"`}
+              : `Aucun incident de type "${activeTab === 'titre_sejour' ? 'Titre de séjour' :
+                  activeTab === 'visite_medicale' ? 'Visite médicale' :
+                  activeTab === 'permis_conduire' ? 'Permis de conduire' :
+                  activeTab === 'contrat_cdd' ? 'CDD' : 'Avenant'}"`}
           </p>
         </div>
       ) : (
@@ -404,16 +407,16 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
               <div
                 key={incident.id}
                 className={`bg-white rounded-lg border-2 p-5 transition-all hover:shadow-lg ${
-                  activeTab === 'expire' ? 'border-red-700 bg-red-50' :
-                  activeTab !== 'resolu' ? getUrgencyColor(daysSince) : 'border-gray-200'
+                  incident.statut === 'expire' ? 'border-red-700 bg-red-50' :
+                  incident.statut !== 'resolu' ? getUrgencyColor(daysSince) : 'border-gray-200'
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
                       <div className={`p-2 rounded-lg ${
-                        activeTab === 'expire' ? 'bg-red-300' :
-                        activeTab === 'resolu' ? 'bg-green-200' :
+                        incident.statut === 'expire' ? 'bg-red-300' :
+                        incident.statut === 'resolu' ? 'bg-green-200' :
                         daysSince > 30 ? 'bg-red-200' :
                         daysSince > 7 ? 'bg-orange-200' : 'bg-yellow-200'
                       }`}>
@@ -424,12 +427,12 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                           <h3 className="font-bold text-lg text-gray-900">
                             {incident.profil?.prenom} {incident.profil?.nom}
                           </h3>
-                          {activeTab === 'expire' && (
+                          {incident.statut === 'expire' && (
                             <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-700 text-white">
                               EXPIRÉ
                             </span>
                           )}
-                          {activeTab !== 'resolu' && activeTab !== 'expire' && (
+                          {incident.statut !== 'resolu' && incident.statut !== 'expire' && (
                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${urgencyBadge.color}`}>
                               {urgencyBadge.text}
                             </span>
@@ -455,12 +458,12 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                           Expiré le: {new Date(incident.date_expiration_originale).toLocaleDateString('fr-FR')}
                         </span>
                       </div>
-                      {activeTab !== 'resolu' && activeTab !== 'expire' && (
+                      {incident.statut !== 'resolu' && incident.statut !== 'expire' && (
                         <div className="px-3 py-1 rounded-full bg-red-600 text-white font-bold">
                           {daysSince} jour{daysSince > 1 ? 's' : ''} depuis expiration
                         </div>
                       )}
-                      {activeTab === 'expire' && (
+                      {incident.statut === 'expire' && (
                         <div className="px-3 py-1 rounded-full bg-red-700 text-white font-bold">
                           Contrat expiré - Nécessite une action
                         </div>
@@ -483,7 +486,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                   </div>
 
                   <div className="flex items-center gap-2 ml-4">
-                    {activeTab === 'actif' && (
+                    {incident.statut === 'actif' && (
                       <>
                         <button
                           onClick={() => handleViewProfile(incident.profil_id)}
@@ -525,7 +528,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                         </button>
                       </>
                     )}
-                    {activeTab === 'en_cours' && (
+                    {incident.statut === 'en_cours' && (
                       <>
                         <button
                           onClick={() => handleViewProfile(incident.profil_id)}
@@ -551,7 +554,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                         </button>
                       </>
                     )}
-                    {activeTab === 'expire' && (
+                    {incident.statut === 'expire' && (
                       <>
                         <button
                           onClick={() => handleViewProfile(incident.profil_id)}
@@ -593,7 +596,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                         </button>
                       </>
                     )}
-                    {(activeTab === 'resolu' || activeTab === 'ignore') && (
+                    {(incident.statut === 'resolu' || incident.statut === 'ignore') && (
                       <button
                         onClick={() => handleViewProfile(incident.profil_id)}
                         className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
