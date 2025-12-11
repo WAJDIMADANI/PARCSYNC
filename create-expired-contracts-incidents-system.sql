@@ -188,8 +188,14 @@ DO $cron$
 BEGIN
   -- Vérifier si pg_cron est disponible
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
-    -- Supprimer l'ancien job s'il existe
-    PERFORM cron.unschedule('generate-expired-contract-incidents');
+    -- Supprimer l'ancien job s'il existe (ignorer l'erreur s'il n'existe pas)
+    BEGIN
+      PERFORM cron.unschedule('generate-expired-contract-incidents');
+    EXCEPTION
+      WHEN OTHERS THEN
+        -- Job n'existe pas, c'est normal
+        NULL;
+    END;
 
     -- Créer le job quotidien (tous les jours à 1h du matin)
     PERFORM cron.schedule(
