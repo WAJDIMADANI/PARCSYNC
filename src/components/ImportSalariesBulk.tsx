@@ -944,21 +944,41 @@ export function ImportSalariesBulk() {
 
         if (emp.data.date_debut_contrat) {
           const isContractSigned = emp.data.statut_contrat?.toLowerCase().includes('sign');
+          const modeleContrat = emp.data.modele_contrat?.toLowerCase() || '';
 
-          const contratData = cleanDataForInsert({
-            profil_id: profil.id,
-            type: emp.data.date_fin_contrat ? 'cdd' : 'cdi',
-            date_debut: emp.data.date_debut_contrat,
-            date_fin: emp.data.date_fin_contrat,
-            esign: 'signed',
-            statut: isContractSigned ? 'signe' : 'envoye',
-            date_signature: isContractSigned ? emp.data.date_debut_contrat : null,
-            variables: emp.data.modele_contrat ? { type_contrat: emp.data.modele_contrat } : {},
-            source: 'import',
-          });
+          // Déterminer le type de contrat en analysant modele_contrat
+          let contractType: 'cdi' | 'cdd' | null = null;
 
-          console.log(`📝 Ligne ${emp.rowNumber}: Insertion contrat avec données:`, contratData);
-          await supabase.from('contrat').insert(contratData);
+          // Si modele_contrat contient uniquement "Avenant" (sans CDI/CDD), ne pas créer de contrat principal
+          if (modeleContrat.includes('avenant') && !modeleContrat.includes('cdi') && !modeleContrat.includes('cdd')) {
+            console.log(`⏭️  Ligne ${emp.rowNumber}: Pas de contrat principal (uniquement avenants dans modele_contrat: "${emp.data.modele_contrat}")`);
+            contractType = null;
+          } else if (modeleContrat.includes('cdi')) {
+            contractType = 'cdi';
+          } else if (modeleContrat.includes('cdd') || emp.data.date_fin_contrat) {
+            contractType = 'cdd';
+          } else {
+            // Par défaut, si pas de date_fin et pas d'indication claire, on considère que c'est un CDD temporaire
+            contractType = 'cdd';
+          }
+
+          // Créer le contrat principal uniquement si un type a été déterminé
+          if (contractType) {
+            const contratData = cleanDataForInsert({
+              profil_id: profil.id,
+              type: contractType,
+              date_debut: emp.data.date_debut_contrat,
+              date_fin: emp.data.date_fin_contrat,
+              esign: 'signed',
+              statut: isContractSigned ? 'signe' : 'envoye',
+              date_signature: isContractSigned ? emp.data.date_debut_contrat : null,
+              variables: emp.data.modele_contrat ? { type_contrat: emp.data.modele_contrat } : {},
+              source: 'import',
+            });
+
+            console.log(`📝 Ligne ${emp.rowNumber}: Insertion contrat avec données:`, contratData);
+            await supabase.from('contrat').insert(contratData);
+          }
         }
 
         if (emp.data.avenant_1_date_debut) {
