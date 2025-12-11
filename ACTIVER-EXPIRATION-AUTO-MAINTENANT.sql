@@ -1,34 +1,7 @@
-/*
-  # Système de gestion automatique des incidents expirés
-
-  ## Description
-  Ce système détecte automatiquement les incidents dont la date d'expiration est passée
-  et les marque comme "expire". La détection se fait à chaque chargement de la page.
-
-  ## Changements
-
-  1. Ajout du statut "expire"
-    - Nouveau statut pour les incidents dont la date_expiration_originale est passée
-    - Les incidents expirés restent modifiables manuellement
-
-  2. Fonction de détection automatique
-    - `detect_and_expire_incidents()` : parcourt tous les incidents actifs
-    - Vérifie si date_expiration_originale < date du jour
-    - Change automatiquement le statut vers "expire"
-    - Crée un historique de la modification
-
-  3. Application aux incidents existants
-    - Mise à jour de tous les incidents déjà créés
-    - Détection rétroactive des dates expirées
-
-  ## Notes importantes
-  - Seuls les incidents avec statut "actif" sont vérifiés
-  - Les autres statuts (en_cours, resolu, ignore) ne sont pas affectés
-  - L'historique est conservé dans incident_historique
-*/
+-- SCRIPT RAPIDE : Activer le système d'expiration automatique
+-- Copiez-collez ce script dans Supabase SQL Editor et exécutez-le
 
 -- 1. Modifier la contrainte CHECK pour ajouter le statut "expire"
--- La table incident utilise une contrainte CHECK, pas un type enum
 ALTER TABLE incident DROP CONSTRAINT IF EXISTS incident_statut_check;
 ALTER TABLE incident ADD CONSTRAINT incident_statut_check
   CHECK (statut IN ('actif', 'en_cours', 'resolu', 'ignore', 'expire'));
@@ -38,8 +11,8 @@ CREATE OR REPLACE FUNCTION detect_and_expire_incidents()
 RETURNS TABLE(
   incident_id uuid,
   profil_id uuid,
-  ancien_statut incident_statut,
-  nouveau_statut incident_statut,
+  ancien_statut text,
+  nouveau_statut text,
   date_expiration date
 )
 LANGUAGE plpgsql
@@ -49,18 +22,15 @@ DECLARE
   incident_record RECORD;
   user_id uuid;
 BEGIN
-  -- Récupérer l'ID de l'utilisateur système pour l'historique
   SELECT id INTO user_id
   FROM app_utilisateur
   WHERE email = 'system@rh-app.com'
   LIMIT 1;
 
-  -- Si pas d'utilisateur système, utiliser NULL
   IF user_id IS NULL THEN
     user_id := NULL;
   END IF;
 
-  -- Parcourir tous les incidents actifs avec une date d'expiration passée
   FOR incident_record IN
     SELECT
       i.id,
@@ -74,14 +44,12 @@ BEGIN
       AND i.date_expiration_originale < CURRENT_DATE
       AND i.type IN ('contrat_cdd', 'avenant_1', 'avenant_2')
   LOOP
-    -- Mettre à jour le statut vers "expire"
     UPDATE incident
     SET
       statut = 'expire',
       updated_at = NOW()
     WHERE id = incident_record.id;
 
-    -- Créer un historique de la modification
     INSERT INTO incident_historique (
       incident_id,
       action,
@@ -98,7 +66,6 @@ BEGIN
       user_id
     );
 
-    -- Retourner les informations de l'incident modifié
     incident_id := incident_record.id;
     profil_id := incident_record.profil_id;
     ancien_statut := incident_record.statut;
@@ -112,8 +79,10 @@ BEGIN
 END;
 $$;
 
--- 3. Appliquer la détection aux incidents existants (backfill)
+-- 3. Appliquer immédiatement à tous les incidents existants
 SELECT * FROM detect_and_expire_incidents();
 
--- Note: La fonction sera appelée depuis le frontend à chaque chargement de la page incidents
--- Les politiques RLS nécessaires existent déjà sur la table incident
+-- 4. Vérification : Compter les incidents expirés
+SELECT COUNT(*) as nombre_incidents_expires
+FROM incident
+WHERE statut = 'expire';

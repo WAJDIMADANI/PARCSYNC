@@ -19,17 +19,11 @@ Ce système détecte automatiquement les incidents de contrat CDD et avenants do
 3. Copiez-collez le script suivant :
 
 ```sql
--- 1. Ajouter le statut "expire" au type enum
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_type t
-    JOIN pg_enum e ON t.oid = e.enumtypid
-    WHERE t.typname = 'incident_statut' AND e.enumlabel = 'expire'
-  ) THEN
-    ALTER TYPE incident_statut ADD VALUE 'expire';
-  END IF;
-END $$;
+-- 1. Modifier la contrainte CHECK pour ajouter le statut "expire"
+-- La table incident utilise une contrainte CHECK, pas un type enum
+ALTER TABLE incident DROP CONSTRAINT IF EXISTS incident_statut_check;
+ALTER TABLE incident ADD CONSTRAINT incident_statut_check
+  CHECK (statut IN ('actif', 'en_cours', 'resolu', 'ignore', 'expire'));
 
 -- 2. Créer la fonction de détection et mise à jour automatique
 CREATE OR REPLACE FUNCTION detect_and_expire_incidents()
@@ -65,15 +59,15 @@ BEGIN
       i.profil_id,
       i.statut,
       i.date_expiration_originale,
-      i.type_incident
-    FROM incidents i
+      i.type
+    FROM incident i
     WHERE i.statut = 'actif'
       AND i.date_expiration_originale IS NOT NULL
       AND i.date_expiration_originale < CURRENT_DATE
-      AND i.type_incident IN ('contrat_cdd', 'avenant_1', 'avenant_2')
+      AND i.type IN ('contrat_cdd', 'avenant_1', 'avenant_2')
   LOOP
     -- Mettre à jour le statut vers "expire"
-    UPDATE incidents
+    UPDATE incident
     SET
       statut = 'expire',
       updated_at = NOW()
@@ -82,12 +76,14 @@ BEGIN
     -- Créer un historique de la modification
     INSERT INTO incident_historique (
       incident_id,
+      action,
       ancien_statut,
       nouveau_statut,
-      commentaire,
-      modifie_par
+      notes,
+      effectue_par
     ) VALUES (
       incident_record.id,
+      'changement_statut',
       incident_record.statut,
       'expire',
       'Statut changé automatiquement : date d''expiration passée',
@@ -126,10 +122,10 @@ SELECT
   i.id,
   p.prenom,
   p.nom,
-  i.type_incident,
+  i.type,
   i.date_expiration_originale,
   i.statut
-FROM incidents i
+FROM incident i
 JOIN profil p ON p.id = i.profil_id
 WHERE i.statut = 'expire'
 ORDER BY i.date_expiration_originale;
