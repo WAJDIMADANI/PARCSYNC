@@ -1,0 +1,86 @@
+╔════════════════════════════════════════════════════════════════════╗
+║                                                                    ║
+║            CORRECTION DU CONTRAT DE WAJDI                         ║
+║            Problème: type NULL, date_fin NULL, statut valide      ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+
+
+📋 SOLUTION RAPIDE (1 minute)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Ouvrez Supabase Dashboard → SQL Editor
+
+2. Copiez-collez le contenu de ce fichier:
+
+   📄 CORRECTION-COMPLETE-WAJDI-EN-1-FOIS.sql
+
+3. Cliquez sur "Run"
+
+4. Vérifiez que tous les ✅ sont visibles
+
+
+✅ C'EST TOUT ! Le contrat sera corrigé.
+
+
+📚 DOCUMENTATION COMPLÈTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si vous voulez comprendre en détail:
+
+📄 README-FIX-STATUT-ACTIF.md
+   → Explication de l'erreur "contrat_statut_check"
+
+📄 INSTRUCTIONS-CORRECTION-WAJDI.md
+   → Guide détaillé étape par étape
+
+📄 DEMARRAGE-RAPIDE-CORRECTION.md
+   → Guide complet avec tous les fichiers
+
+
+🔧 SCRIPTS DISPONIBLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CORRECTION EN 1 FOIS (RECOMMANDÉ):
+✅ CORRECTION-COMPLETE-WAJDI-EN-1-FOIS.sql
+   → Fait tout en une seule exécution
+
+CORRECTION ÉTAPE PAR ÉTAPE:
+1. fix-contrat-statut-constraint.sql
+2. FIX-WAJDI-DIRECT.sql
+
+CORRECTION GLOBALE:
+✅ fix-existing-yousign-contracts.sql
+   → Corrige TOUS les contrats Yousign d'un coup
+
+DIAGNOSTIC:
+🔍 DIAGNOSTIC-CONTRAT-WAJDI-COMPLET.sql
+   → Voir toutes les données du contrat
+
+
+❓ APRÈS LA CORRECTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Le contrat devrait avoir:
+- type: CDD
+- date_debut: 2025-10-21
+- date_fin: 2026-07-03
+- statut: actif
+
+Le contrat sera automatiquement détecté par le système
+d'expiration le 2026-07-03.
+
+
+🚀 PROCHAINE ÉTAPE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Déployer le webhook corrigé pour les FUTURS contrats:
+
+supabase functions deploy yousign-webhook --no-verify-jwt
+
+
+💡 AIDE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si vous avez des questions ou des erreurs:
+→ Consultez INSTRUCTIONS-CORRECTION-WAJDI.md
