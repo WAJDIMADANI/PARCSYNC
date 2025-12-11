@@ -24,7 +24,7 @@ interface Incident {
   profil_id: string;
   date_expiration_originale: string;
   date_creation_incident: string;
-  statut: 'actif' | 'en_cours' | 'resolu' | 'ignore';
+  statut: 'actif' | 'en_cours' | 'resolu' | 'ignore' | 'expire';
   date_resolution: string | null;
   nouvelle_date_validite: string | null;
   notes: string | null;
@@ -39,7 +39,7 @@ interface Incident {
 export function IncidentsList() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'actif' | 'en_cours' | 'resolu' | 'ignore'>('actif');
+  const [activeTab, setActiveTab] = useState<'actif' | 'en_cours' | 'resolu' | 'ignore' | 'expire'>('actif');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
@@ -63,6 +63,8 @@ export function IncidentsList() {
 
   const fetchIncidents = async () => {
     try {
+      await supabase.rpc('detect_and_expire_incidents');
+
       const { data, error } = await supabase
         .from('incident')
         .select(`
@@ -304,6 +306,25 @@ export function IncidentsList() {
             </span>
           )}
         </button>
+
+        <button
+          onClick={() => setActiveTab('expire')}
+          className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all whitespace-nowrap ${
+            activeTab === 'expire'
+              ? 'bg-red-700 text-white shadow-lg'
+              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+          }`}
+        >
+          <AlertCircle className="w-5 h-5" />
+          Expirés
+          {getTabCount('expire') > 0 && (
+            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+              activeTab === 'expire' ? 'bg-white text-red-700' : 'bg-red-100 text-red-700'
+            }`}>
+              {getTabCount('expire')}
+            </span>
+          )}
+        </button>
       </div>
 
       <div className="mb-6 flex gap-4">
@@ -350,6 +371,7 @@ export function IncidentsList() {
               <div
                 key={incident.id}
                 className={`bg-white rounded-lg border-2 p-5 transition-all hover:shadow-lg ${
+                  activeTab === 'expire' ? 'border-red-700 bg-red-50' :
                   activeTab !== 'resolu' ? getUrgencyColor(daysSince) : 'border-gray-200'
                 }`}
               >
@@ -357,6 +379,7 @@ export function IncidentsList() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
                       <div className={`p-2 rounded-lg ${
+                        activeTab === 'expire' ? 'bg-red-300' :
                         activeTab === 'resolu' ? 'bg-green-200' :
                         daysSince > 30 ? 'bg-red-200' :
                         daysSince > 7 ? 'bg-orange-200' : 'bg-yellow-200'
@@ -368,7 +391,12 @@ export function IncidentsList() {
                           <h3 className="font-bold text-lg text-gray-900">
                             {incident.profil?.prenom} {incident.profil?.nom}
                           </h3>
-                          {activeTab !== 'resolu' && (
+                          {activeTab === 'expire' && (
+                            <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-700 text-white">
+                              EXPIRÉ
+                            </span>
+                          )}
+                          {activeTab !== 'resolu' && activeTab !== 'expire' && (
                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${urgencyBadge.color}`}>
                               {urgencyBadge.text}
                             </span>
@@ -394,9 +422,14 @@ export function IncidentsList() {
                           Expiré le: {new Date(incident.date_expiration_originale).toLocaleDateString('fr-FR')}
                         </span>
                       </div>
-                      {activeTab !== 'resolu' && (
+                      {activeTab !== 'resolu' && activeTab !== 'expire' && (
                         <div className="px-3 py-1 rounded-full bg-red-600 text-white font-bold">
                           {daysSince} jour{daysSince > 1 ? 's' : ''} depuis expiration
+                        </div>
+                      )}
+                      {activeTab === 'expire' && (
+                        <div className="px-3 py-1 rounded-full bg-red-700 text-white font-bold">
+                          Contrat expiré - Nécessite une action
                         </div>
                       )}
                       {incident.statut === 'resolu' && incident.nouvelle_date_validite && (
@@ -468,6 +501,41 @@ export function IncidentsList() {
                         >
                           <CheckCircle className="w-4 h-4" />
                           Résoudre
+                        </button>
+                      </>
+                    )}
+                    {activeTab === 'expire' && (
+                      <>
+                        <button
+                          onClick={() => handleSendReminder(incident)}
+                          className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          title="Envoyer un rappel par email"
+                        >
+                          <Mail className="w-4 h-4" />
+                          Rappel
+                        </button>
+                        <button
+                          onClick={() => handleChangeStatus(incident.id, 'en_cours')}
+                          disabled={changingStatus === incident.id}
+                          className="flex items-center gap-1 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+                        >
+                          <PlayCircle className="w-4 h-4" />
+                          En cours
+                        </button>
+                        <button
+                          onClick={() => setSelectedIncident(incident)}
+                          className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Résoudre
+                        </button>
+                        <button
+                          onClick={() => handleChangeStatus(incident.id, 'ignore')}
+                          disabled={changingStatus === incident.id}
+                          className="flex items-center gap-1 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+                        >
+                          <X className="w-4 h-4" />
+                          Ignorer
                         </button>
                       </>
                     )}
