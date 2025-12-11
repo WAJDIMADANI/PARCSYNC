@@ -184,7 +184,7 @@ SELECT * FROM generate_expired_contract_incidents();
 -- Note: pg_cron doit être activé dans Supabase
 -- Cette partie sera gérée via une edge function si pg_cron n'est pas disponible
 
-DO $$
+DO $cron$
 BEGIN
   -- Vérifier si pg_cron est disponible
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
@@ -195,15 +195,13 @@ BEGIN
     PERFORM cron.schedule(
       'generate-expired-contract-incidents',
       '0 1 * * *',
-      $$
-        SELECT generate_expired_contract_incidents();
-        SELECT update_expired_contract_statuses();
-      $$
+      'SELECT generate_expired_contract_incidents(); SELECT update_expired_contract_statuses();'
     );
   ELSE
     RAISE NOTICE 'pg_cron n''est pas installé. Utilisez une edge function avec un scheduler externe.';
   END IF;
-END $$;
+END
+$cron$;
 
 -- ============================================================================
 -- ÉTAPE 6: Fonction helper pour le frontend
