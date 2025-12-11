@@ -20,8 +20,9 @@ import { SendReminderModal } from './SendReminderModal';
 
 interface Incident {
   id: string;
-  type: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd';
+  type: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'contrat_expire';
   profil_id: string;
+  contrat_id?: string;
   date_expiration_originale: string;
   date_creation_incident: string;
   statut: 'actif' | 'en_cours' | 'resolu' | 'ignore' | 'expire';
@@ -33,6 +34,12 @@ interface Incident {
     prenom: string;
     nom: string;
     email: string;
+  };
+  contrat?: {
+    type: string;
+    date_debut: string;
+    date_fin: string;
+    statut: string;
   };
 }
 
@@ -77,6 +84,12 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
             prenom,
             nom,
             email
+          ),
+          contrat:contrat_id (
+            type,
+            date_debut,
+            date_fin,
+            statut
           )
         `)
         .order('date_expiration_originale', { ascending: true });
@@ -94,13 +107,21 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     return incidents.filter(i => i.statut === tab).length;
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
+  const getTypeLabel = (incident: Incident) => {
+    if (incident.type === 'contrat_expire' && incident.contrat) {
+      const contratType = incident.contrat.type.toLowerCase();
+      if (contratType === 'cdd') return 'Contrat CDD';
+      if (contratType === 'avenant') return 'Avenant au contrat';
+      return 'Contrat';
+    }
+
+    switch (incident.type) {
       case 'titre_sejour': return 'Titre de séjour';
       case 'visite_medicale': return 'Visite médicale';
       case 'permis_conduire': return 'Permis de conduire';
       case 'contrat_cdd': return 'Contrat CDD';
-      default: return type;
+      case 'contrat_expire': return 'Contrat expiré';
+      default: return incident.type;
     }
   };
 
@@ -110,6 +131,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       case 'visite_medicale': return <FileText className="w-5 h-5" />;
       case 'permis_conduire': return <CreditCard className="w-5 h-5" />;
       case 'contrat_cdd': return <Calendar className="w-5 h-5" />;
+      case 'contrat_expire': return <Calendar className="w-5 h-5" />;
       default: return <AlertCircle className="w-5 h-5" />;
     }
   };
@@ -358,6 +380,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
           <option value="visite_medicale">Visite médicale</option>
           <option value="permis_conduire">Permis de conduire</option>
           <option value="contrat_cdd">Contrat CDD</option>
+          <option value="contrat_expire">Contrats expirés (CDD + Avenants)</option>
         </select>
       </div>
 
@@ -419,7 +442,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                           </div>
                           <div className="flex items-center gap-1">
                             <FileText className="w-4 h-4" />
-                            <span>{getTypeLabel(incident.type)}</span>
+                            <span>{getTypeLabel(incident)}</span>
                           </div>
                         </div>
                       </div>
@@ -599,7 +622,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         <SendReminderModal
           employeeName={`${reminderIncident.profil?.prenom} ${reminderIncident.profil?.nom}`}
           employeeEmail={reminderIncident.profil?.email || ''}
-          documentType={getTypeLabel(reminderIncident.type)}
+          documentType={getTypeLabel(reminderIncident)}
           onConfirm={confirmSendReminder}
           onCancel={() => setReminderIncident(null)}
         />
