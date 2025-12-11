@@ -1,0 +1,101 @@
+╔════════════════════════════════════════════════════════════════════╗
+║                                                                    ║
+║            POURQUOI WAJDI N'APPARAÎT PAS ?                        ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+
+
+📍 PROBLÈME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Vous cherchez "waj" dans Notifications > Contrats CDD
+→ Résultat: "Aucune notification"
+
+
+💡 EXPLICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Le contrat de Wajdi a:
+  Date fin: 2025-12-11 (DEMAIN)
+  Aujourd'hui: 2025-12-10
+
+Les notifications sont créées UNIQUEMENT pour les contrats
+qui expirent LE JOUR MÊME (date_fin = aujourd'hui).
+
+Le contrat de Wajdi expire DEMAIN, donc:
+✅ Pas encore expiré = Pas de notification aujourd'hui
+✅ Demain à minuit = Notification créée automatiquement
+
+
+🧪 TESTER MAINTENANT (30 secondes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si vous voulez voir la notification MAINTENANT:
+
+1. Supabase Dashboard → SQL Editor
+
+2. Copiez-collez:
+   📄 TEST-EXPIRATION-CONTRAT-WAJDI-MAINTENANT.sql
+
+3. Run
+
+4. Rafraîchissez la page de l'application
+
+5. Notifications > Contrats CDD > Cherchez "waj"
+
+   → ✅ Wajdi MADANI apparaît!
+
+
+📋 CE QUE LE SCRIPT FAIT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Change date_fin à AUJOURD'HUI
+2. Génère l'incident "Contrat expiré"
+3. Crée la notification "Contrat CDD expire"
+4. Affiche les résultats
+
+
+🔄 EN PRODUCTION (Automatique)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+En production, le système fait cela automatiquement:
+
+📅 Tous les jours à minuit:
+   → Détecte les contrats qui expirent AUJOURD'HUI
+   → Crée automatiquement les incidents
+   → Crée automatiquement les notifications
+   → Vous les voyez dans l'interface
+
+Vous n'avez RIEN à faire manuellement!
+
+
+✅ LE SYSTÈME FONCTIONNE !
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Le contrat de Wajdi est correctement configuré:
+  - Type: CDD ✅
+  - Date fin: 2025-12-11 ✅
+  - Statut: actif ✅
+
+Il sera automatiquement détecté demain (11/12/2025).
+
+
+📚 PLUS D'INFOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📄 INSTRUCTIONS-TEST-NOTIFICATION-WAJDI.md
+   → Guide complet avec debugging
+
+📄 TEST-EXPIRATION-CONTRAT-WAJDI-MAINTENANT.sql
+   → Script de test automatique
+
+
+🎯 RÉSUMÉ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+C'est NORMAL que Wajdi n'apparaisse pas aujourd'hui.
+Son contrat expire DEMAIN.
+
+Demain, il apparaîtra automatiquement.
+
+Pour tester MAINTENANT, exécutez le script de test.
