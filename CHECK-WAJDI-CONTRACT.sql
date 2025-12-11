@@ -16,7 +16,7 @@ WHERE matricule_tca = '15901';
 SELECT
   'CONTRATS' as table_name,
   c.id,
-  c.type_contrat,
+  c.type,
   c.date_debut,
   c.date_fin,
   c.statut as statut_contrat,
@@ -63,11 +63,11 @@ ORDER BY n.date_envoi DESC;
 SELECT
   'TEST CONDITION FONCTION' as table_name,
   c.id,
-  c.type_contrat,
+  c.type,
   c.date_fin,
   c.statut,
   CASE
-    WHEN c.type_contrat = 'CDD' THEN '✅ Type OK'
+    WHEN c.type = 'CDD' THEN '✅ Type OK'
     ELSE '❌ Type NON OK'
   END as check_type,
   CASE
@@ -79,11 +79,11 @@ SELECT
     ELSE '❌ Statut NON OK (fonction cherche ''actif'')'
   END as check_statut,
   CASE
-    WHEN c.type_contrat = 'CDD'
+    WHEN c.type = 'CDD'
       AND c.date_fin <= CURRENT_DATE
       AND c.statut = 'actif'
     THEN '✅ DEVRAIT CRÉER INCIDENT'
-    WHEN c.type_contrat = 'CDD'
+    WHEN c.type = 'CDD'
       AND c.date_fin <= CURRENT_DATE
       AND c.statut != 'actif'
     THEN '❌ BLOQUÉ PAR STATUT "' || c.statut || '"'
