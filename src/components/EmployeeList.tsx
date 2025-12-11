@@ -3707,14 +3707,46 @@ function EmployeeDetailModal({
               </div>
             ) : (
               <div className="space-y-3">
-                {employeeContracts.map((contract: any) => {
+                {employeeContracts.map((contract: any, index: number) => {
                   const isManual = contract.source === 'manuel' || !contract.modele_id;
                   const typeContrat = isManual && contract.variables?.type_contrat
                     ? contract.variables.type_contrat
                     : contract.modele?.type_contrat || 'Autre';
-                  const nomModele = isManual && contract.variables?.poste
-                    ? contract.variables.poste
-                    : contract.modele?.nom || 'Contrat de travail';
+
+                  // Déterminer le titre du contrat en fonction du type
+                  let nomModele = 'Contrat de travail';
+                  const contractType = contract.type?.toLowerCase();
+
+                  if (contractType === 'avenant') {
+                    // Pour les avenants, calculer la numérotation
+                    const avenants = employeeContracts.filter((c: any) => c.type?.toLowerCase() === 'avenant');
+                    const sortedAvenants = avenants.sort((a: any, b: any) => {
+                      const dateA = new Date(a.date_debut || a.created_at).getTime();
+                      const dateB = new Date(b.date_debut || b.created_at).getTime();
+                      return dateA - dateB;
+                    });
+                    const avenantNumber = sortedAvenants.findIndex((a: any) => a.id === contract.id) + 1;
+                    nomModele = `Avenant ${avenantNumber} au contrat`;
+                  } else if (contractType === 'cdi') {
+                    nomModele = 'Contrat de travail (CDI)';
+                  } else if (contractType === 'cdd') {
+                    nomModele = 'Contrat de travail (CDD)';
+                  } else if (isManual && contract.variables?.poste) {
+                    nomModele = contract.variables.poste;
+                  } else if (contract.modele?.nom) {
+                    nomModele = contract.modele.nom;
+                  }
+
+                  // Déterminer le badge de type à afficher
+                  let typeBadgeLabel = typeContrat;
+                  if (contractType === 'cdi') {
+                    typeBadgeLabel = 'CDI';
+                  } else if (contractType === 'cdd') {
+                    typeBadgeLabel = 'CDD';
+                  } else if (contractType === 'avenant') {
+                    typeBadgeLabel = 'Avenant';
+                  }
+
                   const statut = contract.statut;
                   const dateSignature = contract.date_signature || contract.yousign_signed_at;
                   const dateCreation = contract.created_at;
@@ -3724,14 +3756,17 @@ function EmployeeDetailModal({
                   const contractDateDebut = contract.date_debut || contract.variables?.date_debut;
                   const contractDateFin = contract.date_fin || contract.variables?.date_fin;
 
-                  // Calculer les jours restants pour les CDD
-                  const isCDD = typeContrat === 'CDD';
+                  // Calculer les jours restants pour les CDD et avenants
+                  const isCDD = contractType === 'cdd' || typeContrat === 'CDD';
+                  const isAvenant = contractType === 'avenant';
+                  const hasEndDate = !!contractDateFin;
                   const daysRemaining = calculateDaysRemainingForContract(contractDateFin);
                   const urgencyLevel = getContractUrgencyLevel(daysRemaining);
                   const urgencyColors = getContractUrgencyColors(urgencyLevel);
 
                   const getTypeColor = (type: string) => {
                     const lowerType = type.toLowerCase();
+                    if (lowerType === 'avenant') return 'bg-indigo-100 text-indigo-800 border-indigo-300';
                     if (lowerType.includes('cdi')) return 'bg-green-100 text-green-800 border-green-300';
                     if (lowerType.includes('cdd')) return 'bg-blue-100 text-blue-800 border-blue-300';
                     if (lowerType.includes('ctt')) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
@@ -3759,8 +3794,8 @@ function EmployeeDetailModal({
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-gray-900 text-base mb-2">{nomModele}</h4>
                             <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${getTypeColor(typeContrat)}`}>
-                                {typeContrat}
+                              <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${getTypeColor(typeBadgeLabel)}`}>
+                                {typeBadgeLabel}
                               </span>
                               <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${statutDisplay.color}`}>
                                 {statutDisplay.label}
@@ -3789,8 +3824,8 @@ function EmployeeDetailModal({
                               )}
                             </div>
 
-                            {/* Alerte CDD - Jours restants */}
-                            {isCDD && contractDateFin && daysRemaining !== null && (
+                            {/* Alerte CDD/Avenant - Jours restants */}
+                            {(isCDD || isAvenant) && contractDateFin && daysRemaining !== null && (
                               <div className={`mt-3 border rounded-lg p-2 ${urgencyColors.bg} ${urgencyColors.border}`}>
                                 <div className="flex items-center gap-2">
                                   <AlertTriangle className={`w-4 h-4 ${urgencyColors.text}`} />
