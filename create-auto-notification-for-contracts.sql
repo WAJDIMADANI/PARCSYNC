@@ -59,7 +59,7 @@ BEGIN
     v_profil_avenant_1_date_fin,
     v_profil_avenant_2_date_fin
   FROM contrat c
-  JOIN modele_contrat m ON c.modele_id = m.id
+  JOIN modeles_contrats m ON c.modele_id = m.id
   JOIN profil p ON c.profil_id = p.id
   WHERE c.id = p_contract_id;
 

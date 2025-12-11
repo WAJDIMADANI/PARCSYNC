@@ -13,7 +13,7 @@ Le système analyse intelligemment les dates d'expiration et crée soit une noti
 
 ### 1. Détection Automatique du Type de Contrat
 Le système identifie automatiquement le type de contrat en analysant :
-- Le champ `modele_contrat.type_contrat` (CDD ou Avenant)
+- Le champ `modeles_contrats.type_contrat` (CDD ou Avenant)
 - Le champ `contrat.variables.type_contrat` (pour distinguer Avenant 1 de Avenant 2)
 
 ### 2. Gestion Intelligente des Dates Multiples pour Avenants
@@ -549,7 +549,7 @@ WHERE proname = 'create_notification_or_incident_for_contract';
 ```sql
 -- Vérifier le type du modèle
 SELECT id, nom, type_contrat
-FROM modele_contrat
+FROM modeles_contrats
 WHERE id = 'uuid-du-modele';
 
 -- Le type_contrat doit être 'CDD' ou 'Avenant'
@@ -570,7 +570,7 @@ SELECT
   p.avenant_1_date_fin,
   p.avenant_2_date_fin
 FROM contrat c
-JOIN modele_contrat m ON c.modele_id = m.id
+JOIN modeles_contrats m ON c.modele_id = m.id
 JOIN profil p ON c.profil_id = p.id
 WHERE c.id = 'uuid-du-contrat';
 ```

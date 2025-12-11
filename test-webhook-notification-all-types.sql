@@ -39,8 +39,8 @@ BEGIN
   SELECT id INTO test_profil_id FROM profil LIMIT 1;
 
   -- Récupérer les modèles
-  SELECT id INTO cdd_modele_id FROM modele_contrat WHERE type_contrat = 'CDD' LIMIT 1;
-  SELECT id INTO avenant_modele_id FROM modele_contrat WHERE type_contrat = 'Avenant' LIMIT 1;
+  SELECT id INTO cdd_modele_id FROM modeles_contrats WHERE type_contrat = 'CDD' LIMIT 1;
+  SELECT id INTO avenant_modele_id FROM modeles_contrats WHERE type_contrat = 'Avenant' LIMIT 1;
 
   RAISE NOTICE 'IDs à utiliser pour les tests:';
   RAISE NOTICE '  - Profil: %', test_profil_id;
@@ -62,7 +62,7 @@ DECLARE
 BEGIN
   -- Récupérer les IDs (adapter selon votre base)
   SELECT id INTO test_profil_id FROM profil LIMIT 1;
-  SELECT id INTO cdd_modele_id FROM modele_contrat WHERE type_contrat = 'CDD' LIMIT 1;
+  SELECT id INTO cdd_modele_id FROM modeles_contrats WHERE type_contrat = 'CDD' LIMIT 1;
 
   -- Créer le contrat
   INSERT INTO contrat (profil_id, modele_id, statut, variables)
@@ -106,7 +106,7 @@ BEGIN
   SELECT id INTO test_profil_id FROM profil WHERE id NOT IN (
     SELECT profil_id FROM notification WHERE type = 'contrat_cdd'
   ) LIMIT 1;
-  SELECT id INTO cdd_modele_id FROM modele_contrat WHERE type_contrat = 'CDD' LIMIT 1;
+  SELECT id INTO cdd_modele_id FROM modeles_contrats WHERE type_contrat = 'CDD' LIMIT 1;
 
   INSERT INTO contrat (profil_id, modele_id, statut, variables)
   VALUES (
@@ -144,7 +144,7 @@ BEGIN
     UNION
     SELECT profil_id FROM incident WHERE type = 'contrat_cdd'
   ) LIMIT 1;
-  SELECT id INTO cdd_modele_id FROM modele_contrat WHERE type_contrat = 'CDD' LIMIT 1;
+  SELECT id INTO cdd_modele_id FROM modeles_contrats WHERE type_contrat = 'CDD' LIMIT 1;
 
   INSERT INTO contrat (profil_id, modele_id, statut, variables)
   VALUES (
@@ -180,7 +180,7 @@ BEGIN
   SELECT id INTO test_profil_id FROM profil WHERE id NOT IN (
     SELECT profil_id FROM notification WHERE type = 'avenant_1'
   ) LIMIT 1;
-  SELECT id INTO avenant_modele_id FROM modele_contrat WHERE type_contrat = 'Avenant' LIMIT 1;
+  SELECT id INTO avenant_modele_id FROM modeles_contrats WHERE type_contrat = 'Avenant' LIMIT 1;
 
   INSERT INTO contrat (profil_id, modele_id, statut, variables)
   VALUES (
@@ -229,7 +229,7 @@ BEGIN
     RETURNING id INTO test_profil_id;
   END IF;
 
-  SELECT id INTO avenant_modele_id FROM modele_contrat WHERE type_contrat = 'Avenant' LIMIT 1;
+  SELECT id INTO avenant_modele_id FROM modeles_contrats WHERE type_contrat = 'Avenant' LIMIT 1;
 
   -- Créer le contrat SANS date_fin dans variables
   INSERT INTO contrat (profil_id, modele_id, statut, variables)
@@ -268,7 +268,7 @@ BEGIN
   )
   RETURNING id INTO test_profil_id;
 
-  SELECT id INTO avenant_modele_id FROM modele_contrat WHERE type_contrat = 'Avenant' LIMIT 1;
+  SELECT id INTO avenant_modele_id FROM modeles_contrats WHERE type_contrat = 'Avenant' LIMIT 1;
 
   -- Créer le contrat avec une date plus ancienne dans variables
   INSERT INTO contrat (profil_id, modele_id, statut, variables)
@@ -307,7 +307,7 @@ BEGIN
   SELECT id INTO test_profil_id FROM profil WHERE id NOT IN (
     SELECT profil_id FROM notification WHERE type = 'avenant_2'
   ) LIMIT 1;
-  SELECT id INTO avenant_modele_id FROM modele_contrat WHERE type_contrat = 'Avenant' LIMIT 1;
+  SELECT id INTO avenant_modele_id FROM modeles_contrats WHERE type_contrat = 'Avenant' LIMIT 1;
 
   INSERT INTO contrat (profil_id, modele_id, statut, variables)
   VALUES (
@@ -348,7 +348,7 @@ BEGIN
   )
   RETURNING id INTO test_profil_id;
 
-  SELECT id INTO avenant_modele_id FROM modele_contrat WHERE type_contrat = 'Avenant' LIMIT 1;
+  SELECT id INTO avenant_modele_id FROM modeles_contrats WHERE type_contrat = 'Avenant' LIMIT 1;
 
   -- Créer le contrat avec une date plus récente dans variables
   INSERT INTO contrat (profil_id, modele_id, statut, variables)
@@ -387,7 +387,7 @@ BEGIN
   SELECT id INTO test_profil_id FROM profil WHERE id NOT IN (
     SELECT profil_id FROM incident WHERE type = 'avenant_2'
   ) LIMIT 1;
-  SELECT id INTO avenant_modele_id FROM modele_contrat WHERE type_contrat = 'Avenant' LIMIT 1;
+  SELECT id INTO avenant_modele_id FROM modeles_contrats WHERE type_contrat = 'Avenant' LIMIT 1;
 
   INSERT INTO contrat (profil_id, modele_id, statut, variables)
   VALUES (

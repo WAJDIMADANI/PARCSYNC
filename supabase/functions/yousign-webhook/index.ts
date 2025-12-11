@@ -140,7 +140,7 @@ Deno.serve(async (req: Request) => {
       try {
         // Récupérer le contrat avec toutes ses relations pour vérifier l'éligibilité
         const contractDetailsResponse = await fetch(
-          `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=id,profil_id,modele_id,variables,modele_contrat(type_contrat),profil(avenant_1_date_fin,avenant_2_date_fin)`,
+          `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=id,profil_id,modele_id,variables,modeles_contrats(type_contrat),profil(avenant_1_date_fin,avenant_2_date_fin)`,
           {
             headers: {
               "Authorization": `Bearer ${SERVICE_KEY}`,
@@ -153,7 +153,7 @@ Deno.serve(async (req: Request) => {
           const contracts = await contractDetailsResponse.json();
           if (contracts && contracts.length > 0) {
             const contract = contracts[0];
-            const modeleType = contract.modele_contrat?.type_contrat;
+            const modeleType = contract.modeles_contrats?.type_contrat;
             const variablesType = contract.variables?.type_contrat;
             const variablesDateFin = contract.variables?.date_fin;
             const profilAv1Date = contract.profil?.avenant_1_date_fin;
