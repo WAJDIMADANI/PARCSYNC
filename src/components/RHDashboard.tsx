@@ -375,8 +375,21 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       }
 
       const { data: incidents } = await supabase
-        .from('v_incidents_ouverts_rh')
-        .select('*')
+        .from('incident')
+        .select(`
+          *,
+          profil:profil_id (
+            prenom,
+            nom,
+            email
+          ),
+          contrat:contrat_id (
+            type,
+            date_debut,
+            date_fin,
+            statut
+          )
+        `)
         .order('date_creation_incident', { ascending: false });
 
       if (!incidents || !statsData) {
@@ -400,12 +413,20 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         }
       });
 
-      const getTypeLabel = (type: string) => {
+      const getTypeLabel = (type: string, contrat?: any) => {
+        if (type === 'contrat_expire' && contrat) {
+          const contratType = contrat.type?.toLowerCase();
+          if (contratType === 'cdd') return 'Contrat CDD';
+          if (contratType === 'avenant') return 'Avenant au contrat';
+          return 'Contrat';
+        }
+
         switch (type) {
           case 'titre_sejour': return 'Titre de séjour';
           case 'visite_medicale': return 'Visite médicale';
           case 'permis_conduire': return 'Permis de conduire';
           case 'contrat_cdd': return 'Contrat CDD';
+          case 'contrat_expire': return 'Contrat expiré';
           default: return type;
         }
       };
@@ -417,12 +438,12 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
 
       const employeMap: { [key: string]: { nom: string; prenom: string; count: number } } = {};
       incidents.forEach((i: any) => {
-        if (i.profil_id) {
+        if (i.profil_id && i.profil) {
           const key = i.profil_id;
           if (!employeMap[key]) {
             employeMap[key] = {
-              nom: i.nom,
-              prenom: i.prenom,
+              nom: i.profil.nom,
+              prenom: i.profil.prenom,
               count: 0,
             };
           }
