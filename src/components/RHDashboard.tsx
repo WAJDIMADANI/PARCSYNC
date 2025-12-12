@@ -375,8 +375,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       }
 
       const { data: incidents } = await supabase
-        .from('incident')
-        .select('*, profil:profil_id(nom, prenom)')
+        .from('v_incidents_ouverts_rh')
+        .select('*')
         .order('date_creation_incident', { ascending: false });
 
       if (!incidents || !statsData) {
@@ -417,12 +417,12 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
 
       const employeMap: { [key: string]: { nom: string; prenom: string; count: number } } = {};
       incidents.forEach((i: any) => {
-        if (i.profil_id && i.profil && i.statut !== 'resolu') {
+        if (i.profil_id) {
           const key = i.profil_id;
           if (!employeMap[key]) {
             employeMap[key] = {
-              nom: i.profil.nom,
-              prenom: i.profil.prenom,
+              nom: i.nom,
+              prenom: i.prenom,
               count: 0,
             };
           }
