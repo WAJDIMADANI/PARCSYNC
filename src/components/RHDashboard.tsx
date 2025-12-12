@@ -365,17 +365,26 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
 
   const fetchIncidentsStats = async () => {
     try {
+      const { data: statsData, error: statsError } = await supabase
+        .from('v_incidents_stats')
+        .select('*')
+        .single();
+
+      if (statsError) {
+        console.error('Error fetching v_incidents_stats:', statsError);
+      }
+
       const { data: incidents } = await supabase
         .from('incident')
         .select('*, profil:profil_id(nom, prenom)')
         .order('date_creation_incident', { ascending: false });
 
-      if (!incidents) {
+      if (!incidents || !statsData) {
         setStats((prev) => ({
           ...prev,
           incidents: {
-            total: 0,
-            ce_mois: 0,
+            total: statsData?.total_incidents || 0,
+            ce_mois: statsData?.incidents_ce_mois || 0,
             par_type: [],
             recents: [],
             top_employes: [],
@@ -383,15 +392,6 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         }));
         return;
       }
-
-      const now = new Date();
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      const actifs = incidents.filter((i) => i.statut === 'actif').length;
-      const enCours = incidents.filter((i) => i.statut === 'en_cours').length;
-      const ce_mois = incidents.filter(
-        (i) => new Date(i.date_creation_incident) >= firstDayOfMonth
-      ).length;
 
       const typeMap: { [key: string]: number } = {};
       incidents.forEach((i) => {
@@ -439,8 +439,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       setStats((prev) => ({
         ...prev,
         incidents: {
-          total: actifs + enCours,
-          ce_mois,
+          total: statsData.total_incidents,
+          ce_mois: statsData.incidents_ce_mois,
           par_type,
           recents: activeIncidents,
           top_employes,
