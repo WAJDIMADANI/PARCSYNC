@@ -23,7 +23,7 @@ SELECT
   i.*,
   p.nom,
   p.prenom,
-  p.matricule
+  p.matricule_tca
 FROM incident i
 INNER JOIN profil p ON i.profil_id = p.id
 WHERE i.statut IN ('actif', 'en_cours', 'ignore')
