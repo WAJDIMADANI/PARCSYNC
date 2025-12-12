@@ -8,7 +8,6 @@ import { VehicleList } from './VehicleList';
 import { FuelList } from './FuelList';
 import { FinesList } from './FinesList';
 import { ContractsList } from './ContractsList';
-import { ContractsDashboard } from './ContractsDashboard';
 import { LettersList } from './LettersList';
 import { AlertsList } from './AlertsList';
 import { SetupCheck } from './SetupCheck';
@@ -58,8 +57,6 @@ export function Dashboard() {
         return <DocumentsManager />;
       case 'rh/courriers':
         return <GeneratedLettersList />;
-      case 'rh/contrats':
-        return <ContractsDashboard />;
       case 'rh/notifications':
         return <NotificationsList
           initialTab={viewParams?.tab}
@@ -138,7 +135,6 @@ export function Dashboard() {
                 {view === 'rh/documents' && 'Documents'}
                 {view === 'rh/courriers' && 'Courriers Générés'}
                 {view === 'rh/courriers-generes' && 'Courriers Générés'}
-                {view === 'rh/contrats' && 'Gestion de Contrats'}
                 {view === 'rh/notifications' && 'Notifications'}
                 {view === 'rh/documents-manquants' && 'Documents Manquants'}
                 {view === 'rh/incidents' && 'Incidents'}
