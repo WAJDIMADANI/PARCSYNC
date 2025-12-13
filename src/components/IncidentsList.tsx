@@ -76,40 +76,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     try {
       await supabase.rpc('detect_and_expire_incidents');
 
-      // Récupérer les incidents de contrats depuis la vue (exclut les profils avec CDI actif)
-      const { data: contratsData, error: contratsError } = await supabase
-        .from('v_incidents_contrats_affichables')
-        .select(`
-          id,
-          type,
-          profil_id,
-          contrat_id,
-          date_expiration_originale,
-          date_creation_incident,
-          statut,
-          date_changement_statut,
-          date_resolution,
-          ancienne_date_validite,
-          nouvelle_date_validite,
-          resolu_par,
-          notes,
-          metadata,
-          created_at,
-          updated_at,
-          nom,
-          prenom,
-          email,
-          contrat_type,
-          contrat_date_debut,
-          contrat_date_fin,
-          contrat_statut
-        `)
-        .order('date_expiration_originale', { ascending: true });
-
-      if (contratsError) throw contratsError;
-
-      // Récupérer les autres types d'incidents (titre_sejour, visite_medicale, permis_conduire)
-      const { data: autresData, error: autresError } = await supabase
+      const { data, error } = await supabase
         .from('incident')
         .select(`
           *,
@@ -125,66 +92,26 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
             statut
           )
         `)
-        .neq('type', 'contrat_expire')
         .order('date_expiration_originale', { ascending: true });
 
-      if (autresError) throw autresError;
+      if (error) throw error;
+      setIncidents(data || []);
 
-      // Transformer les données de la vue pour matcher le format attendu
-      const contratsFormatted = (contratsData || []).map(c => ({
-        id: c.id,
-        type: c.type,
-        profil_id: c.profil_id,
-        contrat_id: c.contrat_id,
-        date_expiration_originale: c.date_expiration_originale,
-        date_creation_incident: c.date_creation_incident,
-        statut: c.statut,
-        date_changement_statut: c.date_changement_statut,
-        date_resolution: c.date_resolution,
-        ancienne_date_validite: c.ancienne_date_validite,
-        nouvelle_date_validite: c.nouvelle_date_validite,
-        resolu_par: c.resolu_par,
-        notes: c.notes,
-        metadata: c.metadata,
-        created_at: c.created_at,
-        updated_at: c.updated_at,
-        profil: {
-          nom: c.nom,
-          prenom: c.prenom,
-          email: c.email
-        },
-        contrat: c.contrat_id ? {
-          type: c.contrat_type,
-          date_debut: c.contrat_date_debut,
-          date_fin: c.contrat_date_fin,
-          statut: c.contrat_statut
-        } : null
-      }));
-
-      // Fusionner les deux listes
-      const allIncidents = [...contratsFormatted, ...(autresData || [])];
-
-      // Trier par date d'expiration
-      allIncidents.sort((a, b) =>
-        new Date(a.date_expiration_originale).getTime() - new Date(b.date_expiration_originale).getTime()
-      );
-
-      setIncidents(allIncidents);
-
-      const cddExpiresCount = contratsFormatted.filter(i =>
-        i.contrat?.type?.toLowerCase() === 'cdd'
+      const cddExpiresCount = (data || []).filter(i =>
+        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'cdd'
       ).length;
 
-      const avenantExpiresCount = contratsFormatted.filter(i =>
-        i.contrat?.type?.toLowerCase() === 'avenant'
+      const avenantExpiresCount = (data || []).filter(i =>
+        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'avenant'
       ).length;
 
-      console.log('📊 Compteurs incidents (contrats expirés - hors CDI actifs):', {
-        total_contrat_expire: contratsFormatted.length,
+      const totalContratExpire = (data || []).filter(i => i.type === 'contrat_expire').length;
+
+      console.log('📊 Compteurs incidents (contrats expirés uniquement):', {
+        total_contrat_expire: totalContratExpire,
         cdd_expires: cddExpiresCount,
         avenant_expires: avenantExpiresCount,
-        autres_incidents: (autresData || []).length,
-        verification: cddExpiresCount + avenantExpiresCount === contratsFormatted.length ? '✅ OK' : '❌ Erreur'
+        verification: cddExpiresCount + avenantExpiresCount === totalContratExpire ? '✅ OK' : '❌ Erreur'
       });
     } catch (error) {
       console.error('Error fetching incidents:', error);
