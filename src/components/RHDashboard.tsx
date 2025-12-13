@@ -184,6 +184,13 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       })
       .subscribe();
 
+    const incidentsChannel = supabase
+      .channel('incidents-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'incident' }, () => {
+        fetchNotificationsStats();
+      })
+      .subscribe();
+
     const validationsChannel = supabase
       .channel('validations-dashboard-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'demande_validation' }, () => {
@@ -204,6 +211,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       supabase.removeChannel(profilsChannel);
       supabase.removeChannel(alertesChannel);
       supabase.removeChannel(notificationsChannel);
+      supabase.removeChannel(incidentsChannel);
       supabase.removeChannel(validationsChannel);
       supabase.removeChannel(messagesChannel);
     };
@@ -326,10 +334,9 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .select('date_expiration')
         .not('date_expiration', 'is', null);
 
-      const { data: notifications } = await supabase
-        .from('notification')
-        .select('type, statut')
-        .in('statut', ['active', 'email_envoye']);
+      const { data: incidents } = await supabase
+        .from('incident')
+        .select('type, statut, contrat:contrat_id(type)');
 
       const non_lues = alertes?.filter((a) => !a.is_read).length || 0;
       const urgentes = alertes?.filter((a) => a.priorite === 'haute').length || 0;
@@ -340,10 +347,12 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           (d) => d.date_expiration && new Date(d.date_expiration) <= now
         ).length || 0;
 
-      const titre_sejour = notifications?.filter(n => n.type === 'titre_sejour').length || 0;
-      const visite_medicale = notifications?.filter(n => n.type === 'visite_medicale').length || 0;
-      const permis_conduire = notifications?.filter(n => n.type === 'permis_conduire').length || 0;
-      const contrat_cdd = notifications?.filter(n => n.type === 'contrat_cdd').length || 0;
+      const titre_sejour = incidents?.filter(i => i.type === 'titre_sejour').length || 0;
+      const visite_medicale = incidents?.filter(i => i.type === 'visite_medicale').length || 0;
+      const permis_conduire = incidents?.filter(i => i.type === 'permis_conduire').length || 0;
+      const contrat_cdd = incidents?.filter(i =>
+        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'cdd'
+      ).length || 0;
 
       setStats((prev) => ({
         ...prev,
