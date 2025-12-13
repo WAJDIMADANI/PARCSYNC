@@ -334,6 +334,12 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .select('date_expiration')
         .not('date_expiration', 'is', null);
 
+      // Récupérer toutes les notifications depuis la table notification
+      const { data: notifications } = await supabase
+        .from('notification')
+        .select('type, statut')
+        .in('statut', ['active', 'email_envoye']);
+
       // Récupérer les incidents de contrats depuis la vue (exclut les profils avec CDI actif)
       const { data: contratsIncidents } = await supabase
         .from('v_incidents_contrats_affichables')
@@ -364,7 +370,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       setStats((prev) => ({
         ...prev,
         notifications: {
-          total: alertes?.length || 0,
+          total: notifications?.length || 0,
           non_lues,
           urgentes,
           documents_expires,
@@ -390,7 +396,61 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         console.error('Error fetching v_incidents_stats:', statsError);
       }
 
-      const { data: incidents } = await supabase
+      // Récupérer les incidents de contrats depuis la vue (exclut les profils avec CDI actif)
+      const { data: contratsIncidents } = await supabase
+        .from('v_incidents_contrats_affichables')
+        .select('id, type, created_at, profil_id, contrat_type');
+
+      // Récupérer les autres types d'incidents
+      const { data: autresIncidents } = await supabase
+        .from('incident')
+        .select(`
+          id,
+          type,
+          created_at,
+          profil_id,
+          profil:profil_id (
+            prenom,
+            nom,
+            email
+          )
+        `)
+        .neq('type', 'contrat_expire')
+        .order('date_creation_incident', { ascending: false });
+
+      // Fusionner pour avoir le total affiché dans la page Gestion des incidents
+      const totalIncidents = (contratsIncidents?.length || 0) + (autresIncidents?.length || 0);
+
+      // Compter les incidents de ce mois
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const contratsThisMonth = contratsIncidents?.filter(i =>
+        new Date(i.created_at) >= firstDayOfMonth
+      ).length || 0;
+
+      const autresThisMonth = autresIncidents?.filter(i =>
+        new Date(i.created_at) >= firstDayOfMonth
+      ).length || 0;
+
+      const ce_mois = contratsThisMonth + autresThisMonth;
+
+      if (!autresIncidents && !contratsIncidents) {
+        setStats((prev) => ({
+          ...prev,
+          incidents: {
+            total: 0,
+            ce_mois: 0,
+            par_type: [],
+            recents: [],
+            top_employes: [],
+          },
+        }));
+        return;
+      }
+
+      // Récupérer les incidents complets pour les statistiques détaillées
+      const { data: allIncidentsForStats } = await supabase
         .from('incident')
         .select(`
           *,
@@ -408,19 +468,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         `)
         .order('date_creation_incident', { ascending: false });
 
-      if (!incidents || !statsData) {
-        setStats((prev) => ({
-          ...prev,
-          incidents: {
-            total: statsData?.total_incidents || 0,
-            ce_mois: statsData?.incidents_ce_mois || 0,
-            par_type: [],
-            recents: [],
-            top_employes: [],
-          },
-        }));
-        return;
-      }
+      const incidents = allIncidentsForStats || [];
 
       const typeMap: { [key: string]: number } = {};
       incidents.forEach((i) => {
@@ -476,8 +524,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       setStats((prev) => ({
         ...prev,
         incidents: {
-          total: statsData.total_incidents,
-          ce_mois: statsData.incidents_ce_mois,
+          total: totalIncidents,
+          ce_mois: ce_mois,
           par_type,
           recents: activeIncidents,
           top_employes,
@@ -721,10 +769,10 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           <StatCard
             icon={<Bell className="w-6 h-6" />}
             title="Notifications"
-            value={(stats.notifications.titre_sejour || 0) + (stats.notifications.visite_medicale || 0) + (stats.notifications.permis_conduire || 0) + (stats.notifications.contrat_cdd || 0)}
-            subtitle={`${stats.notifications.documents_expires} docs expirés`}
-            trend={((stats.notifications.titre_sejour || 0) + (stats.notifications.visite_medicale || 0) + (stats.notifications.permis_conduire || 0) + (stats.notifications.contrat_cdd || 0)) > 0 ? 'up' : 'neutral'}
-            trendValue={`Documents à renouveler`}
+            value={stats.notifications.total}
+            subtitle={`${stats.notifications.non_lues} non lues`}
+            trend={stats.notifications.total > 0 ? 'up' : 'neutral'}
+            trendValue={`${stats.notifications.urgentes} urgentes`}
             color="amber"
           />
         </button>
@@ -827,7 +875,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         </div>
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600">
-            Total: <span className="font-bold text-blue-700">{(stats.notifications.titre_sejour || 0) + (stats.notifications.visite_medicale || 0) + (stats.notifications.permis_conduire || 0) + (stats.notifications.contrat_cdd || 0)}</span> notifications actives
+            Total: <span className="font-bold text-blue-700">{(stats.notifications.titre_sejour || 0) + (stats.notifications.visite_medicale || 0) + (stats.notifications.permis_conduire || 0) + (stats.notifications.contrat_cdd || 0)}</span> incidents actifs
           </p>
         </div>
       </div>
