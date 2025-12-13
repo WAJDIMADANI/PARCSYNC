@@ -334,9 +334,16 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .select('date_expiration')
         .not('date_expiration', 'is', null);
 
-      const { data: incidents } = await supabase
+      // Récupérer les incidents de contrats depuis la vue (exclut les profils avec CDI actif)
+      const { data: contratsIncidents } = await supabase
+        .from('v_incidents_contrats_affichables')
+        .select('contrat_type');
+
+      // Récupérer les autres types d'incidents
+      const { data: autresIncidents } = await supabase
         .from('incident')
-        .select('type, statut, contrat:contrat_id(type)');
+        .select('type')
+        .neq('type', 'contrat_expire');
 
       const non_lues = alertes?.filter((a) => !a.is_read).length || 0;
       const urgentes = alertes?.filter((a) => a.priorite === 'haute').length || 0;
@@ -347,11 +354,11 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           (d) => d.date_expiration && new Date(d.date_expiration) <= now
         ).length || 0;
 
-      const titre_sejour = incidents?.filter(i => i.type === 'titre_sejour').length || 0;
-      const visite_medicale = incidents?.filter(i => i.type === 'visite_medicale').length || 0;
-      const permis_conduire = incidents?.filter(i => i.type === 'permis_conduire').length || 0;
-      const contrat_cdd = incidents?.filter(i =>
-        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'cdd'
+      const titre_sejour = autresIncidents?.filter(i => i.type === 'titre_sejour').length || 0;
+      const visite_medicale = autresIncidents?.filter(i => i.type === 'visite_medicale').length || 0;
+      const permis_conduire = autresIncidents?.filter(i => i.type === 'permis_conduire').length || 0;
+      const contrat_cdd = contratsIncidents?.filter(c =>
+        c.contrat_type?.toLowerCase() === 'cdd'
       ).length || 0;
 
       setStats((prev) => ({
