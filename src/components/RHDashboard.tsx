@@ -753,7 +753,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <button
-            onClick={() => onNavigate?.('rh/notifications', { tab: 'titre_sejour' })}
+            onClick={() => onNavigate?.('rh/incidents', { tab: 'titre_sejour' })}
             className="bg-white rounded-lg p-4 border-l-4 border-red-500 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left"
           >
             <div className="flex items-center justify-between">
@@ -767,7 +767,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             </div>
           </button>
           <button
-            onClick={() => onNavigate?.('rh/notifications', { tab: 'visite_medicale' })}
+            onClick={() => onNavigate?.('rh/incidents', { tab: 'visite_medicale' })}
             className="bg-white rounded-lg p-4 border-l-4 border-green-500 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left"
           >
             <div className="flex items-center justify-between">
@@ -781,7 +781,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             </div>
           </button>
           <button
-            onClick={() => onNavigate?.('rh/notifications', { tab: 'permis_conduire' })}
+            onClick={() => onNavigate?.('rh/incidents', { tab: 'permis_conduire' })}
             className="bg-white rounded-lg p-4 border-l-4 border-orange-500 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left"
           >
             <div className="flex items-center justify-between">
@@ -795,7 +795,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             </div>
           </button>
           <button
-            onClick={() => onNavigate?.('rh/notifications', { tab: 'contrat_cdd' })}
+            onClick={() => onNavigate?.('rh/incidents', { tab: 'contrat_cdd' })}
             className="bg-white rounded-lg p-4 border-l-4 border-red-600 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left"
           >
             <div className="flex items-center justify-between">
