@@ -749,7 +749,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           <div className="p-2 bg-blue-600 rounded-lg">
             <Bell className="w-6 h-6 text-white" />
           </div>
-          Notifications urgentes - Documents à renouveler
+          Documents expirés
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <button
