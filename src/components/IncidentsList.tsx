@@ -131,9 +131,10 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       if (autresError) throw autresError;
 
       // Transformer les données de la vue pour matcher le format attendu
+      // IMPORTANT: c.type est 'contrat_expire', c.contrat_type est 'cdd' ou 'avenant'
       const contratsFormatted = (contratsData || []).map(c => ({
         id: c.id,
-        type: c.type,
+        type: 'contrat_expire' as const, // Toujours 'contrat_expire' pour les incidents de contrats
         profil_id: c.profil_id,
         contrat_id: c.contrat_id,
         date_expiration_originale: c.date_expiration_originale,
