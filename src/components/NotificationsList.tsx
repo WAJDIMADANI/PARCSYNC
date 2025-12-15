@@ -65,7 +65,12 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         `)
         .order('date_echeance', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ SUPABASE ERROR:', error);
+        throw error;
+      }
+
+      console.log('✅ Notifications reçues:', data?.length, 'données:', data);
       setNotifications(data || []);
     } catch (error) {
       console.error('Error fetching notifications:', error);
