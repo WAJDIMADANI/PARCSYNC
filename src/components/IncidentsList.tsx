@@ -99,31 +99,14 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
       console.log('📊 CDD expirés depuis RPC:', cddData?.length || 0);
 
-      // 2. Récupérer les incidents d'avenants depuis la vue (uniquement les avenants)
-      const { data: avenantsData, error: avenantsError } = await supabase
-        .from('v_incidents_contrats_affichables')
-        .select(`
-          id,
-          type,
-          profil_id,
-          contrat_id,
-          date_expiration_originale,
-          date_creation_incident,
-          statut,
-          nom,
-          prenom,
-          email,
-          contrat_type,
-          contrat_date_debut,
-          contrat_date_fin,
-          contrat_statut
-        `)
-        .ilike('contrat_type', 'avenant')
-        .order('date_expiration_originale', { ascending: true });
+      // 2. Récupérer les avenants expirés depuis la fonction RPC
+      const { data: avenantsData, error: avenantsError } = await supabase.rpc('get_avenants_expires');
 
       if (avenantsError) {
-        console.error('❌ Erreur avenants:', avenantsError);
+        console.error('❌ Erreur get_avenants_expires:', avenantsError);
       }
+
+      console.log('📊 Avenants expirés depuis RPC:', avenantsData?.length || 0);
 
       // Récupérer les autres types d'incidents (titre_sejour, visite_medicale, permis_conduire)
       const { data: autresData, error: autresError } = await supabase
@@ -172,26 +155,34 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         }
       }));
 
-      // Transformer les avenants depuis la vue
-      const avenantsFormatted = (avenantsData || []).map(c => ({
-        id: c.id,
+      // Transformer les avenants depuis la RPC
+      const avenantsFormatted = (avenantsData || []).map(av => ({
+        id: `avenant-${av.profil_id}-${av.contrat_id}`, // ID généré pour l'affichage
         type: 'contrat_expire' as const,
-        profil_id: c.profil_id,
-        contrat_id: c.contrat_id,
-        date_expiration_originale: c.date_expiration_originale,
-        date_creation_incident: c.date_creation_incident,
-        statut: c.statut,
-        profil: {
-          nom: c.nom,
-          prenom: c.prenom,
-          email: c.email
+        profil_id: av.profil_id,
+        contrat_id: av.contrat_id,
+        date_expiration_originale: av.date_expiration_reelle,
+        date_creation_incident: new Date().toISOString(),
+        statut: 'actif' as const,
+        date_resolution: null,
+        nouvelle_date_validite: null,
+        notes: null,
+        metadata: {
+          jours_depuis_expiration: av.jours_depuis_expiration,
+          avenant_1_date_fin: av.avenant_1_date_fin,
+          avenant_2_date_fin: av.avenant_2_date_fin
         },
-        contrat: c.contrat_id ? {
-          type: c.contrat_type,
-          date_debut: c.contrat_date_debut,
-          date_fin: c.contrat_date_fin,
-          statut: c.contrat_statut
-        } : null
+        profil: {
+          nom: av.nom,
+          prenom: av.prenom,
+          email: av.email
+        },
+        contrat: {
+          type: 'avenant',
+          date_debut: av.contrat_date_debut,
+          date_fin: av.contrat_date_fin,
+          statut: av.contrat_statut
+        }
       }));
 
       // Fusionner CDD et avenants
