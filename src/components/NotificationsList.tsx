@@ -126,7 +126,13 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
   };
 
   const filteredNotifications = notifications
-    .filter(n => n.type === activeTab)
+    .filter(n => {
+      // Mapper 'contrat_cdd' vers le vrai type 'contrat_expire' de la base
+      if (activeTab === 'contrat_cdd') {
+        return n.type === 'contrat_expire';
+      }
+      return n.type === activeTab;
+    })
     .filter(n => filterStatut === 'all' || n.statut === filterStatut)
     .filter(n => {
       // Exclure les documents déjà expirés (ils doivent apparaître dans Incidents, pas ici)
@@ -147,7 +153,12 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
 
   const getTabCount = (type: string) => {
     const filtered = notifications.filter(n => {
-      if (n.type !== type) return false;
+      // Mapper 'contrat_cdd' vers le vrai type 'contrat_expire' de la base
+      if (type === 'contrat_cdd') {
+        if (n.type !== 'contrat_expire') return false;
+      } else if (n.type !== type) {
+        return false;
+      }
       if (n.statut === 'resolue' || n.statut === 'ignoree') return false;
 
       // Exclure les documents expirés
