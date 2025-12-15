@@ -58,7 +58,21 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   const [reminderIncident, setReminderIncident] = useState<Incident | null>(null);
 
   useEffect(() => {
-    fetchIncidents();
+    let isInitialLoad = true;
+
+    const loadIncidents = async () => {
+      if (isInitialLoad) {
+        try {
+          await supabase.rpc('detect_and_expire_incidents');
+        } catch (error) {
+          console.error('Error detecting expired incidents:', error);
+        }
+        isInitialLoad = false;
+      }
+      await fetchIncidents();
+    };
+
+    loadIncidents();
 
     const channel = supabase
       .channel('incidents-changes')
@@ -74,7 +88,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
   const fetchIncidents = async () => {
     try {
-      await supabase.rpc('detect_and_expire_incidents');
+      // Ne plus appeler detect_and_expire_incidents ici pour éviter la boucle infinie
 
       // Récupérer les incidents de contrats depuis la vue (exclut les profils avec CDI actif)
       const { data: contratsData, error: contratsError } = await supabase
