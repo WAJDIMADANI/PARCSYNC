@@ -18,10 +18,14 @@ function AppContent() {
   const [checkingSetup, setCheckingSetup] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkAdminSetup = async () => {
       try {
         if (!user) {
-          setCheckingSetup(false);
+          if (isMounted) {
+            setCheckingSetup(false);
+          }
           return;
         }
 
@@ -33,6 +37,8 @@ function AppContent() {
         if (allUsersError && allUsersError.code !== 'PGRST116') {
           throw allUsersError;
         }
+
+        if (!isMounted) return;
 
         if (!allUsers || allUsers.length === 0) {
           console.log('Aucun utilisateur en base - afficher FirstAdminSetup');
@@ -50,6 +56,8 @@ function AppContent() {
         if (currentUserError && currentUserError.code !== 'PGRST116') {
           throw currentUserError;
         }
+
+        if (!isMounted) return;
 
         if (!currentUserData) {
           console.log('Utilisateur connecté non trouvé - création');
@@ -70,17 +78,27 @@ function AppContent() {
           console.log('Utilisateur connecté trouvé:', currentUserData.email);
         }
 
-        setNeedsAdminSetup(false);
+        if (isMounted) {
+          setNeedsAdminSetup(false);
+        }
       } catch (err) {
         console.error('Erreur lors de la vérification du setup admin:', err);
-        setNeedsAdminSetup(true);
+        if (isMounted) {
+          setNeedsAdminSetup(true);
+        }
       } finally {
-        setCheckingSetup(false);
+        if (isMounted) {
+          setCheckingSetup(false);
+        }
       }
     };
 
     checkAdminSetup();
-  }, [user]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   if (path === '/apply' || path.startsWith('/apply/')) {
     return <Apply />;
