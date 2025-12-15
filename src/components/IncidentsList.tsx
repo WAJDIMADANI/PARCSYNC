@@ -108,12 +108,6 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
             prenom,
             nom,
             email
-          ),
-          contrat:contrat_id (
-            type,
-            date_debut,
-            date_fin,
-            statut
           )
         `)
         .neq('type', 'contrat_expire')
@@ -136,15 +130,6 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         date_expiration_effective: c.date_expiration_effective,
         date_creation_incident: c.date_creation_incident,
         statut: c.statut,
-        date_changement_statut: c.date_changement_statut,
-        date_resolution: c.date_resolution,
-        ancienne_date_validite: c.ancienne_date_validite,
-        nouvelle_date_validite: c.nouvelle_date_validite,
-        resolu_par: c.resolu_par,
-        notes: c.notes,
-        metadata: c.metadata,
-        created_at: c.created_at,
-        updated_at: c.updated_at,
         profil: {
           nom: c.nom,
           prenom: c.prenom,
