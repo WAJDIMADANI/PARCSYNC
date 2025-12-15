@@ -146,7 +146,7 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
     });
 
   const getTabCount = (type: string) => {
-    return notifications.filter(n => {
+    const filtered = notifications.filter(n => {
       if (n.type !== type) return false;
       if (n.statut === 'resolue' || n.statut === 'ignoree') return false;
 
@@ -155,7 +155,21 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         (new Date(n.date_echeance).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
       );
       return daysRemaining >= 0;
-    }).length;
+    });
+
+    // DEBUG pour visites médicales
+    if (type === 'visite_medicale') {
+      console.log('🔍 VISITE MEDICALE - Type=', type);
+      console.log('   Total notifications:', notifications.length);
+      console.log('   Avec ce type:', notifications.filter(n => n.type === type).length);
+      console.log('   Données détaillées:', notifications.filter(n => n.type === type).map(n => ({
+        date: n.date_echeance,
+        statut: n.statut,
+        daysRemaining: Math.ceil((new Date(n.date_echeance).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+      })));
+    }
+
+    return filtered.length;
   };
 
   if (loading) {
