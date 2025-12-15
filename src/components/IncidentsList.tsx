@@ -193,7 +193,10 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         verification: cddExpiresCount + avenantExpiresCount === contratsFormatted.length ? '✅ OK' : '❌ Erreur'
       });
     } catch (error) {
-      console.error('Error fetching incidents:', error);
+      console.error('❌ ERREUR COMPLÈTE:', error);
+      console.error('Message:', error?.message);
+      console.error('Status:', error?.status);
+      console.error('Details:', error?.details);
     } finally {
       setLoading(false);
     }
