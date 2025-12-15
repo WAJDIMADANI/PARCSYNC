@@ -148,7 +148,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         profil: {
           nom: cdd.nom,
           prenom: cdd.prenom,
-          email: cdd.email
+          email: cdd.email,
+          matricule_tca: cdd.matricule_tca
         },
         contrat: {
           type: 'cdd',
@@ -179,7 +180,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         profil: {
           nom: av.nom,
           prenom: av.prenom,
-          email: av.email
+          email: av.email,
+          matricule_tca: av.matricule_tca
         },
         contrat: {
           type: 'avenant',
