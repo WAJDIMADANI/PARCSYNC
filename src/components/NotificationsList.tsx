@@ -128,7 +128,7 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
       const daysRemaining = Math.ceil(
         (new Date(n.date_echeance).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
       );
-      return daysRemaining > 0; // Afficher uniquement ceux qui arrivent à échéance
+      return daysRemaining >= 0; // Afficher ceux qui expirent aujourd'hui ou plus tard
     })
     .filter(n => {
       if (!searchTerm) return true;
@@ -149,7 +149,7 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
       const daysRemaining = Math.ceil(
         (new Date(n.date_echeance).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
       );
-      return daysRemaining > 0;
+      return daysRemaining >= 0;
     }).length;
   };
 
