@@ -340,10 +340,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .select('type, statut')
         .in('statut', ['active', 'email_envoye']);
 
-      // Récupérer les incidents de contrats depuis la vue (exclut les profils avec CDI actif)
-      const { data: contratsIncidents } = await supabase
-        .from('v_incidents_contrats_affichables')
-        .select('contrat_type');
+      // Récupérer les CDD expirés depuis la fonction RPC
+      const { data: cddData } = await supabase.rpc('get_cdd_expires');
 
       // Récupérer les autres types d'incidents
       const { data: autresIncidents } = await supabase
@@ -363,9 +361,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       const titre_sejour = autresIncidents?.filter(i => i.type === 'titre_sejour').length || 0;
       const visite_medicale = autresIncidents?.filter(i => i.type === 'visite_medicale').length || 0;
       const permis_conduire = autresIncidents?.filter(i => i.type === 'permis_conduire').length || 0;
-      const contrat_cdd = contratsIncidents?.filter(c =>
-        c.contrat_type?.toLowerCase() === 'cdd'
-      ).length || 0;
+      const contrat_cdd = cddData?.length || 0;
 
       setStats((prev) => ({
         ...prev,
@@ -396,10 +392,30 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         console.error('Error fetching v_incidents_stats:', statsError);
       }
 
-      // Récupérer les incidents de contrats depuis la vue (exclut les profils avec CDI actif)
-      const { data: contratsIncidents } = await supabase
-        .from('v_incidents_contrats_affichables')
-        .select('id, type, created_at, profil_id, contrat_type');
+      // Récupérer les CDD expirés depuis la fonction RPC
+      const { data: cddData } = await supabase.rpc('get_cdd_expires');
+
+      // Récupérer les avenants expirés depuis la fonction RPC
+      const { data: avenantsData } = await supabase.rpc('get_avenants_expires');
+
+      // Transformer les CDD et avenants en format incident
+      const cddIncidents = (cddData || []).map(cdd => ({
+        id: `cdd-${cdd.profil_id}-${cdd.contrat_id}`,
+        type: 'contrat_expire',
+        created_at: new Date().toISOString(),
+        profil_id: cdd.profil_id,
+        contrat_type: 'CDD'
+      }));
+
+      const avenantsIncidents = (avenantsData || []).map(av => ({
+        id: `avenant-${av.profil_id}-${av.contrat_id}`,
+        type: 'contrat_expire',
+        created_at: new Date().toISOString(),
+        profil_id: av.profil_id,
+        contrat_type: 'Avenant'
+      }));
+
+      const contratsIncidents = [...cddIncidents, ...avenantsIncidents];
 
       // Récupérer les autres types d'incidents
       const { data: autresIncidents } = await supabase
@@ -435,7 +451,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
 
       const ce_mois = contratsThisMonth + autresThisMonth;
 
-      if (!autresIncidents && !contratsIncidents) {
+      if (!autresIncidents && contratsIncidents.length === 0) {
         setStats((prev) => ({
           ...prev,
           incidents: {

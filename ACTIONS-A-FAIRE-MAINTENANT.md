@@ -23,6 +23,8 @@ create-get-avenants-expires-function.sql
 Actualiser la page dans votre navigateur
 
 ### 5. Vérifier
+
+**A) Page Incidents :**
 1. Aller dans "Incidents"
 2. Ouvrir la console du navigateur (F12)
 3. Vérifier les logs :
@@ -31,12 +33,18 @@ Actualiser la page dans votre navigateur
    📊 Avenants expirés depuis RPC: X
    ```
 
+**B) Dashboard RH :**
+1. Aller dans le Dashboard
+2. Vérifier le compteur "Contrats CDD" : doit afficher 0 (au lieu de 7)
+3. Vérifier que le total des incidents est cohérent
+
 ## ✅ Résultat attendu
 
-- **0 CDD** affichés (au lieu de 9)
-- **X avenants** réellement expirés
+- **Dashboard** : 0 CDD (au lieu de 7)
+- **Page Incidents** : 0 CDD (au lieu de 9)
+- **X avenants** réellement expirés dans les deux pages
 - Plus de rechargement en boucle
-- Comptage cohérent avec le Dashboard
+- Comptage cohérent entre Dashboard et page Incidents
 
 ## 📚 Documentation
 

@@ -67,10 +67,16 @@ IncidentsList.tsx
    - Utilise `get_avenants_expires()`
    - Ne dépend plus de `v_incidents_contrats_affichables`
 
-2. **create-get-cdd-expires-function.sql**
+2. **src/components/RHDashboard.tsx**
+   - Utilise `get_cdd_expires()` dans `fetchNotificationsStats()`
+   - Utilise `get_cdd_expires()` et `get_avenants_expires()` dans `fetchIncidentsStats()`
+   - Ne dépend plus de `v_incidents_contrats_affichables`
+   - Affiche maintenant 0 CDD au lieu de 7
+
+3. **create-get-cdd-expires-function.sql**
    - Nouvelle fonction pour les CDD
 
-3. **create-get-avenants-expires-function.sql**
+4. **create-get-avenants-expires-function.sql**
    - Nouvelle fonction pour les avenants
 
 ## Actions requises
@@ -85,16 +91,18 @@ IncidentsList.tsx
 
 ### 2. Rafraîchir l'application
 
-### 3. Vérifier dans la console
+### 3. Vérifier les affichages
+
+**Dans IncidentsList.tsx (console) :**
 ```javascript
 📊 CDD expirés depuis RPC: 0  // ✅ Correct
 📊 Avenants expirés depuis RPC: X
-📊 Compteurs incidents (logique Dashboard):
-  - cdd_expires_depuis_rpc: 0
-  - avenant_expires_depuis_vue: X
-  - total_contrats_expires: X
-  - autres_incidents: X
 ```
+
+**Dans RHDashboard.tsx (affichage) :**
+- Compteur "Contrats CDD" : 0 (au lieu de 7)
+- Compteur "Total Incidents" : X (CDD + Avenants + autres)
+- Cohérent avec la page Incidents
 
 ## Avantages de la solution
 
