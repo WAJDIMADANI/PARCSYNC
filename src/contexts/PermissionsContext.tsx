@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -28,7 +28,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadPermissions = async () => {
+  const loadPermissions = useCallback(async () => {
     if (!user) {
       console.warn('⚠️ No user found in AuthContext - user is null/undefined');
       setAppUser(null);
@@ -135,15 +135,14 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
       console.log('✅ Permission loading complete - timestamp:', new Date().toISOString());
-      console.log('✅ Final permissions state:', permissions.length, 'permissions');
       console.log('🔍 ============================================');
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     console.log('⏰ useEffect triggered - loading permissions...');
     loadPermissions();
-  }, [user]);
+  }, [loadPermissions]);
 
   const hasPermission = (sectionId: string): boolean => {
     const has = permissions.includes(sectionId);
