@@ -90,8 +90,17 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     try {
       // Ne plus appeler detect_and_expire_incidents ici pour éviter la boucle infinie
 
-      // Récupérer les incidents de contrats depuis la vue (exclut les profils avec CDI actif)
-      const { data: contratsData, error: contratsError } = await supabase
+      // 1. Récupérer les CDD expirés depuis la fonction RPC (logique Dashboard)
+      const { data: cddData, error: cddError } = await supabase.rpc('get_cdd_expires');
+
+      if (cddError) {
+        console.error('❌ Erreur get_cdd_expires:', cddError);
+      }
+
+      console.log('📊 CDD expirés depuis RPC:', cddData?.length || 0);
+
+      // 2. Récupérer les incidents d'avenants depuis la vue (uniquement les avenants)
+      const { data: avenantsData, error: avenantsError } = await supabase
         .from('v_incidents_contrats_affichables')
         .select(`
           id,
@@ -109,9 +118,12 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
           contrat_date_fin,
           contrat_statut
         `)
+        .ilike('contrat_type', 'avenant')
         .order('date_expiration_originale', { ascending: true });
 
-      if (contratsError) throw contratsError;
+      if (avenantsError) {
+        console.error('❌ Erreur avenants:', avenantsError);
+      }
 
       // Récupérer les autres types d'incidents (titre_sejour, visite_medicale, permis_conduire)
       const { data: autresData, error: autresError } = await supabase
@@ -134,11 +146,36 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       console.log('Total autres incidents:', autresData?.length);
       console.log('Erreur autresError:', autresError);
 
-      // Transformer les données de la vue pour matcher le format attendu
-      // IMPORTANT: c.type est 'contrat_expire', c.contrat_type est 'cdd' ou 'avenant'
-      const contratsFormatted = (contratsData || []).map(c => ({
+      // Transformer les CDD depuis la RPC (logique Dashboard)
+      const cddFormatted = (cddData || []).map(cdd => ({
+        id: `cdd-${cdd.profil_id}-${cdd.contrat_id}`, // ID généré pour l'affichage
+        type: 'contrat_expire' as const,
+        profil_id: cdd.profil_id,
+        contrat_id: cdd.contrat_id,
+        date_expiration_originale: cdd.date_expiration_reelle,
+        date_creation_incident: new Date().toISOString(),
+        statut: 'actif' as const,
+        date_resolution: null,
+        nouvelle_date_validite: null,
+        notes: null,
+        metadata: { jours_avant_expiration: cdd.jours_avant_expiration },
+        profil: {
+          nom: cdd.nom,
+          prenom: cdd.prenom,
+          email: cdd.email
+        },
+        contrat: {
+          type: 'cdd',
+          date_debut: cdd.contrat_date_debut,
+          date_fin: cdd.contrat_date_fin,
+          statut: cdd.contrat_statut
+        }
+      }));
+
+      // Transformer les avenants depuis la vue
+      const avenantsFormatted = (avenantsData || []).map(c => ({
         id: c.id,
-        type: 'contrat_expire' as const, // Toujours 'contrat_expire' pour les incidents de contrats
+        type: 'contrat_expire' as const,
         profil_id: c.profil_id,
         contrat_id: c.contrat_id,
         date_expiration_originale: c.date_expiration_originale,
@@ -157,6 +194,9 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         } : null
       }));
 
+      // Fusionner CDD et avenants
+      const contratsFormatted = [...cddFormatted, ...avenantsFormatted];
+
       // Fusionner les deux listes
       const allIncidents = [...contratsFormatted, ...(autresData || [])];
 
@@ -167,20 +207,12 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
       setIncidents(allIncidents);
 
-      const cddExpiresCount = contratsFormatted.filter(i =>
-        i.contrat?.type?.toLowerCase() === 'cdd'
-      ).length;
-
-      const avenantExpiresCount = contratsFormatted.filter(i =>
-        i.contrat?.type?.toLowerCase() === 'avenant'
-      ).length;
-
-      console.log('📊 Compteurs incidents (contrats expirés - hors CDI actifs):', {
-        total_contrat_expire: contratsFormatted.length,
-        cdd_expires: cddExpiresCount,
-        avenant_expires: avenantExpiresCount,
+      console.log('📊 Compteurs incidents (logique Dashboard):', {
+        cdd_expires_depuis_rpc: cddFormatted.length,
+        avenant_expires_depuis_vue: avenantsFormatted.length,
+        total_contrats_expires: contratsFormatted.length,
         autres_incidents: (autresData || []).length,
-        verification: cddExpiresCount + avenantExpiresCount === contratsFormatted.length ? '✅ OK' : '❌ Erreur'
+        total_tous_incidents: allIncidents.length
       });
     } catch (error) {
       console.error('❌ ERREUR COMPLÈTE:', error);
