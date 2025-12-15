@@ -130,6 +130,11 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
       if (autresError) throw autresError;
 
+      // DEBUG: Vérifier les données titre_sejour
+      console.log('Données titre_sejour retournées:', autresData?.filter(i => i.type === 'titre_sejour'));
+      console.log('Total autres incidents:', autresData?.length);
+      console.log('Erreur autresError:', autresError);
+
       // Transformer les données de la vue pour matcher le format attendu
       // IMPORTANT: c.type est 'contrat_expire', c.contrat_type est 'cdd' ou 'avenant'
       const contratsFormatted = (contratsData || []).map(c => ({
