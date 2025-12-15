@@ -99,17 +99,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
       console.log('📊 CDD expirés depuis RPC:', cddData?.length || 0);
 
-      // 2. Récupérer les avenants expirés depuis la fonction RPC
-      const { data: avenantsData, error: avenantsError } = await supabase.rpc('get_avenants_expires');
-
-      if (avenantsError) {
-        console.error('❌ Erreur get_avenants_expires:', avenantsError);
-      }
-
-      console.log('📊 Avenants expirés depuis RPC:', avenantsData?.length || 0);
-
-      // Récupérer les autres types d'incidents (titre_sejour, visite_medicale, permis_conduire)
-      const { data: autresData, error: autresError } = await supabase
+      // 2. Récupérer TOUS les incidents directement depuis la table incident (y compris les contrat_expire)
+      const { data: allIncidentsData, error: allError } = await supabase
         .from('incident')
         .select(`
           *,
@@ -117,93 +108,76 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
             prenom,
             nom,
             email
+          ),
+          contrat:contrat_id (
+            type,
+            date_debut,
+            date_fin,
+            statut,
+            avenant_1_date_fin,
+            avenant_2_date_fin
           )
         `)
-        .neq('type', 'contrat_expire')
         .order('date_expiration_originale', { ascending: true });
 
-      if (autresError) throw autresError;
+      if (allError) throw allError;
 
-      // DEBUG: Vérifier les données titre_sejour
-      console.log('Données titre_sejour retournées:', autresData?.filter(i => i.type === 'titre_sejour'));
-      console.log('Total autres incidents:', autresData?.length);
-      console.log('Erreur autresError:', autresError);
+      console.log('📊 Total incidents dans la table:', allIncidentsData?.length || 0);
+      console.log('📊 Incidents contrat_expire:', allIncidentsData?.filter(i => i.type === 'contrat_expire').length || 0);
+      console.log('📊 Incidents titre_sejour:', allIncidentsData?.filter(i => i.type === 'titre_sejour').length || 0);
 
-      // Transformer les CDD depuis la RPC (logique Dashboard)
-      const cddFormatted = (cddData || []).map(cdd => ({
-        id: `cdd-${cdd.profil_id}-${cdd.contrat_id}`, // ID généré pour l'affichage
-        type: 'contrat_expire' as const,
-        profil_id: cdd.profil_id,
-        contrat_id: cdd.contrat_id,
-        date_expiration_originale: cdd.date_expiration_reelle,
-        date_creation_incident: new Date().toISOString(),
-        statut: 'actif' as const,
-        date_resolution: null,
-        nouvelle_date_validite: null,
-        notes: null,
-        metadata: { jours_avant_expiration: cdd.jours_avant_expiration },
-        profil: {
-          nom: cdd.nom,
-          prenom: cdd.prenom,
-          email: cdd.email
-        },
-        contrat: {
-          type: 'cdd',
-          date_debut: cdd.contrat_date_debut,
-          date_fin: cdd.contrat_date_fin,
-          statut: cdd.contrat_statut
-        }
-      }));
+      // Fusionner avec les CDD/Avenants depuis RPC (pour ceux qui ne sont pas encore en incident)
+      const cddFormatted = (cddData || [])
+        .filter(cdd => {
+          // Ne pas dupliquer si un incident existe déjà pour ce contrat
+          return !allIncidentsData?.some(i =>
+            i.type === 'contrat_expire' &&
+            i.contrat_id === cdd.contrat_id &&
+            i.profil_id === cdd.profil_id
+          );
+        })
+        .map(cdd => ({
+          id: `cdd-${cdd.profil_id}-${cdd.contrat_id}`,
+          type: 'contrat_expire' as const,
+          profil_id: cdd.profil_id,
+          contrat_id: cdd.contrat_id,
+          date_expiration_originale: cdd.date_expiration_reelle,
+          date_creation_incident: new Date().toISOString(),
+          statut: 'actif' as const,
+          date_resolution: null,
+          nouvelle_date_validite: null,
+          notes: null,
+          metadata: { jours_avant_expiration: cdd.jours_avant_expiration, contrat_type: 'cdd' },
+          profil: {
+            nom: cdd.nom,
+            prenom: cdd.prenom,
+            email: cdd.email
+          },
+          contrat: {
+            type: 'cdd',
+            date_debut: cdd.contrat_date_debut,
+            date_fin: cdd.contrat_date_fin,
+            statut: cdd.contrat_statut
+          }
+        }));
 
-      // Transformer les avenants depuis la RPC
-      const avenantsFormatted = (avenantsData || []).map(av => ({
-        id: `avenant-${av.profil_id}-${av.contrat_id}`, // ID généré pour l'affichage
-        type: 'contrat_expire' as const,
-        profil_id: av.profil_id,
-        contrat_id: av.contrat_id,
-        date_expiration_originale: av.date_expiration_reelle,
-        date_creation_incident: new Date().toISOString(),
-        statut: 'actif' as const,
-        date_resolution: null,
-        nouvelle_date_validite: null,
-        notes: null,
-        metadata: {
-          jours_depuis_expiration: av.jours_depuis_expiration,
-          avenant_1_date_fin: av.avenant_1_date_fin,
-          avenant_2_date_fin: av.avenant_2_date_fin
-        },
-        profil: {
-          nom: av.nom,
-          prenom: av.prenom,
-          email: av.email
-        },
-        contrat: {
-          type: 'avenant',
-          date_debut: av.contrat_date_debut,
-          date_fin: av.contrat_date_fin,
-          statut: av.contrat_statut
-        }
-      }));
+      console.log('📊 CDD depuis RPC (non dupliqués):', cddFormatted.length);
 
-      // Fusionner CDD et avenants
-      const contratsFormatted = [...cddFormatted, ...avenantsFormatted];
-
-      // Fusionner les deux listes
-      const allIncidents = [...contratsFormatted, ...(autresData || [])];
-
-      // Trier par date d'expiration
-      allIncidents.sort((a, b) =>
-        new Date(a.date_expiration_originale).getTime() - new Date(b.date_expiration_originale).getTime()
-      );
+      // Fusionner les incidents de la table + les CDD/Avenants depuis RPC
+      const allIncidents = [...(allIncidentsData || []), ...cddFormatted];
 
       setIncidents(allIncidents);
 
-      console.log('📊 Compteurs incidents (logique Dashboard):', {
-        cdd_expires_depuis_rpc: cddFormatted.length,
-        avenant_expires_depuis_vue: avenantsFormatted.length,
-        total_contrats_expires: contratsFormatted.length,
-        autres_incidents: (autresData || []).length,
-        total_tous_incidents: allIncidents.length
+      console.log('📊 Compteurs incidents:', {
+        depuis_table_incident: (allIncidentsData || []).length,
+        cdd_rpc_non_dupliques: cddFormatted.length,
+        total_affiches: allIncidents.length,
+        repartition: {
+          contrat_expire: allIncidents.filter(i => i.type === 'contrat_expire').length,
+          titre_sejour: allIncidents.filter(i => i.type === 'titre_sejour').length,
+          visite_medicale: allIncidents.filter(i => i.type === 'visite_medicale').length,
+          permis_conduire: allIncidents.filter(i => i.type === 'permis_conduire').length
+        }
       });
     } catch (error) {
       console.error('❌ ERREUR COMPLÈTE:', error);
@@ -218,13 +192,19 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   const getTabCount = (type: string) => {
     if (type === 'contrat_cdd') {
       return incidents.filter(i =>
-        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'cdd'
+        i.type === 'contrat_expire' && (
+          i.contrat?.type?.toLowerCase() === 'cdd' ||
+          i.metadata?.contrat_type?.toLowerCase() === 'cdd'
+        )
       ).length;
     }
 
     if (type === 'contrat_expire') {
       return incidents.filter(i =>
-        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'avenant'
+        i.type === 'contrat_expire' && (
+          i.contrat?.type?.toLowerCase() === 'avenant' ||
+          i.metadata?.contrat_type?.toLowerCase() === 'avenant'
+        )
       ).length;
     }
 
@@ -232,11 +212,12 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   };
 
   const getTypeLabel = (incident: Incident) => {
-    if (incident.type === 'contrat_expire' && incident.contrat) {
-      const contratType = incident.contrat.type.toLowerCase();
+    if (incident.type === 'contrat_expire') {
+      // Essayer d'abord depuis contrat, sinon depuis metadata
+      const contratType = incident.contrat?.type?.toLowerCase() || incident.metadata?.contrat_type?.toLowerCase();
       if (contratType === 'cdd') return 'Contrat CDD';
       if (contratType === 'avenant') return 'Avenant au contrat';
-      return 'Contrat';
+      return 'Contrat expiré';
     }
 
     switch (incident.type) {
@@ -244,7 +225,6 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       case 'visite_medicale': return 'Visite médicale';
       case 'permis_conduire': return 'Permis de conduire';
       case 'contrat_cdd': return 'Contrat CDD';
-      case 'contrat_expire': return 'Contrat expiré';
       default: return incident.type;
     }
   };
@@ -351,9 +331,15 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     let matchesTab = false;
 
     if (activeTab === 'contrat_cdd') {
-      matchesTab = incident.type === 'contrat_expire' && incident.contrat?.type?.toLowerCase() === 'cdd';
+      matchesTab = incident.type === 'contrat_expire' && (
+        incident.contrat?.type?.toLowerCase() === 'cdd' ||
+        incident.metadata?.contrat_type?.toLowerCase() === 'cdd'
+      );
     } else if (activeTab === 'contrat_expire') {
-      matchesTab = incident.type === 'contrat_expire' && incident.contrat?.type?.toLowerCase() === 'avenant';
+      matchesTab = incident.type === 'contrat_expire' && (
+        incident.contrat?.type?.toLowerCase() === 'avenant' ||
+        incident.metadata?.contrat_type?.toLowerCase() === 'avenant'
+      );
     } else {
       matchesTab = incident.type === activeTab;
     }
