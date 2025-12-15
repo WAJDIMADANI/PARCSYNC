@@ -141,7 +141,10 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         date_resolution: null,
         nouvelle_date_validite: null,
         notes: null,
-        metadata: { jours_avant_expiration: cdd.jours_avant_expiration },
+        metadata: {
+          jours_avant_expiration: cdd.jours_avant_expiration,
+          contrat_type: 'cdd'
+        },
         profil: {
           nom: cdd.nom,
           prenom: cdd.prenom,
@@ -170,7 +173,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         metadata: {
           jours_depuis_expiration: av.jours_depuis_expiration,
           avenant_1_date_fin: av.avenant_1_date_fin,
-          avenant_2_date_fin: av.avenant_2_date_fin
+          avenant_2_date_fin: av.avenant_2_date_fin,
+          contrat_type: 'avenant'
         },
         profil: {
           nom: av.nom,
@@ -218,13 +222,13 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   const getTabCount = (type: string) => {
     if (type === 'contrat_cdd') {
       return incidents.filter(i =>
-        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'cdd'
+        i.type === 'contrat_expire' && i.metadata?.contrat_type?.toLowerCase() === 'cdd'
       ).length;
     }
 
     if (type === 'contrat_expire') {
       return incidents.filter(i =>
-        i.type === 'contrat_expire' && i.contrat?.type?.toLowerCase() === 'avenant'
+        i.type === 'contrat_expire' && i.metadata?.contrat_type?.toLowerCase() === 'avenant'
       ).length;
     }
 
@@ -232,8 +236,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   };
 
   const getTypeLabel = (incident: Incident) => {
-    if (incident.type === 'contrat_expire' && incident.contrat) {
-      const contratType = incident.contrat.type.toLowerCase();
+    if (incident.type === 'contrat_expire' && incident.metadata?.contrat_type) {
+      const contratType = incident.metadata.contrat_type.toLowerCase();
       if (contratType === 'cdd') return 'Contrat CDD';
       if (contratType === 'avenant') return 'Avenant au contrat';
       return 'Contrat';
@@ -351,9 +355,9 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     let matchesTab = false;
 
     if (activeTab === 'contrat_cdd') {
-      matchesTab = incident.type === 'contrat_expire' && incident.contrat?.type?.toLowerCase() === 'cdd';
+      matchesTab = incident.type === 'contrat_expire' && incident.metadata?.contrat_type?.toLowerCase() === 'cdd';
     } else if (activeTab === 'contrat_expire') {
-      matchesTab = incident.type === 'contrat_expire' && incident.contrat?.type?.toLowerCase() === 'avenant';
+      matchesTab = incident.type === 'contrat_expire' && incident.metadata?.contrat_type?.toLowerCase() === 'avenant';
     } else {
       matchesTab = incident.type === activeTab;
     }
