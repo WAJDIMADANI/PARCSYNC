@@ -23,7 +23,7 @@ interface Incident {
   type: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'contrat_expire';
   profil_id: string;
   contrat_id?: string;
-  date_expiration_originale: string;
+  date_expiration_effective: string;
   date_creation_incident: string;
   statut: 'actif' | 'en_cours' | 'resolu' | 'ignore' | 'expire';
   date_resolution: string | null;
@@ -84,7 +84,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
           type,
           profil_id,
           contrat_id,
-          date_expiration_originale,
+          date_expiration_effective,
           date_creation_incident,
           statut,
           date_changement_statut,
@@ -104,7 +104,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
           contrat_date_fin,
           contrat_statut
         `)
-        .order('date_expiration_originale', { ascending: true });
+        .order('date_expiration_effective', { ascending: true });
 
       if (contratsError) throw contratsError;
 
@@ -126,7 +126,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
           )
         `)
         .neq('type', 'contrat_expire')
-        .order('date_expiration_originale', { ascending: true });
+        .order('date_expiration_effective', { ascending: true });
 
       if (autresError) throw autresError;
 
@@ -142,7 +142,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         type: 'contrat_expire' as const, // Toujours 'contrat_expire' pour les incidents de contrats
         profil_id: c.profil_id,
         contrat_id: c.contrat_id,
-        date_expiration_originale: c.date_expiration_originale,
+        date_expiration_effective: c.date_expiration_effective,
         date_creation_incident: c.date_creation_incident,
         statut: c.statut,
         date_changement_statut: c.date_changement_statut,
@@ -172,7 +172,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
       // Trier par date d'expiration
       allIncidents.sort((a, b) =>
-        new Date(a.date_expiration_originale).getTime() - new Date(b.date_expiration_originale).getTime()
+        new Date(a.date_expiration_effective).getTime() - new Date(b.date_expiration_effective).getTime()
       );
 
       setIncidents(allIncidents);
@@ -322,7 +322,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         employee_email: reminderIncident.profil?.email,
         employee_name: `${reminderIncident.profil?.prenom} ${reminderIncident.profil?.nom}`,
         document_type: reminderIncident.type,
-        expiration_date: reminderIncident.date_expiration_originale,
+        expiration_date: reminderIncident.date_expiration_effective,
         user_id: user?.id,
       }),
     });
@@ -521,7 +521,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       ) : (
         <div className="space-y-3">
           {filteredIncidents.map((incident) => {
-            const daysSince = getDaysSinceExpiration(incident.date_expiration_originale);
+            const daysSince = getDaysSinceExpiration(incident.date_expiration_effective);
             const urgencyBadge = getUrgencyBadge(daysSince);
 
             return (
@@ -576,7 +576,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
                         <span className="font-medium">
-                          Expiré le: {new Date(incident.date_expiration_originale).toLocaleDateString('fr-FR')}
+                          Expiré le: {new Date(incident.date_expiration_effective).toLocaleDateString('fr-FR')}
                         </span>
                       </div>
                       {incident.statut !== 'resolu' && incident.statut !== 'expire' && (
