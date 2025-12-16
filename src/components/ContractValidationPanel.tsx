@@ -7,8 +7,9 @@ import { LoadingSpinner } from './LoadingSpinner';
 
 interface Contract {
   id: string;
+  type: string;
   variables: Record<string, any>;
-  date_envoi: string;
+  date_envoi: string | null;
   date_signature: string | null;
   statut: string;
   certificat_medical_id: string | null;
@@ -16,10 +17,10 @@ interface Contract {
   modele: {
     nom: string;
     type_contrat: string;
-  };
+  } | null;
   profil: {
     email: string;
-  };
+  } | null;
 }
 
 interface ContractValidationPanelProps {
@@ -256,11 +257,17 @@ export default function ContractValidationPanel({
             <div className="flex items-start gap-3">
               <FileText className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold text-blue-900">Contrat : {contract.modele.nom}</h3>
-                <p className="text-sm text-blue-700 mt-1">Type : {contract.modele.type_contrat}</p>
-                <p className="text-sm text-blue-700">
-                  Envoyé le {new Date(contract.date_envoi).toLocaleDateString('fr-FR')}
+                <h3 className="font-semibold text-blue-900">
+                  Contrat : {contract.modele?.nom || contract.variables?.type_contrat || contract.type || 'Non spécifié'}
+                </h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  Type : {contract.modele?.type_contrat || contract.type || 'Non spécifié'}
                 </p>
+                {contract.date_envoi && (
+                  <p className="text-sm text-blue-700">
+                    Envoyé le {new Date(contract.date_envoi).toLocaleDateString('fr-FR')}
+                  </p>
+                )}
                 {contract.variables?.poste && (
                   <p className="text-sm text-blue-700 font-medium mt-2">
                     Poste : {contract.variables.poste} | Salaire : {contract.variables.salaire}
