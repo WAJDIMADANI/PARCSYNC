@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
+  appUserId: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -13,17 +14,43 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [appUserId, setAppUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const loadAppUserId = async (authUser: User | null) => {
+    if (!authUser) {
+      setAppUserId(null);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('app_utilisateur')
+        .select('id')
+        .eq('auth_user_id', authUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erreur chargement app_utilisateur:', error);
+        return;
+      }
+
+      setAppUserId(data?.id ?? null);
+    } catch (error) {
+      console.error('Erreur loadAppUserId:', error);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      setLoading(false);
+      loadAppUserId(session?.user ?? null).finally(() => setLoading(false));
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       (async () => {
         setUser(session?.user ?? null);
+        await loadAppUserId(session?.user ?? null);
       })();
     });
 
@@ -41,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, appUserId, loading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

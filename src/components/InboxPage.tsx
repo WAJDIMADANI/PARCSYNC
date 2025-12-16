@@ -26,7 +26,7 @@ interface TaskStats {
 }
 
 export function InboxPage() {
-  const { user } = useAuth();
+  const { user, appUserId } = useAuth();
   const [taches, setTaches] = useState<Tache[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<TaskStats>({ en_attente: 0, en_cours: 0, completee: 0, total: 0 });
@@ -47,10 +47,10 @@ export function InboxPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, appUserId]);
 
   const fetchTaches = async () => {
-    if (!user) return;
+    if (!user || !appUserId) return;
 
     try {
       const { data, error } = await supabase
@@ -60,7 +60,7 @@ export function InboxPage() {
           expediteur:expediteur_id(nom, prenom, email),
           assignee:assignee_id(nom, prenom, email)
         `)
-        .eq('assignee_id', user.id)
+        .eq('assignee_id', appUserId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
