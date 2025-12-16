@@ -445,7 +445,11 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .order('date_creation_incident', { ascending: false });
 
       // Fusionner pour avoir le total affiché dans la page Gestion des incidents
-      const totalIncidents = (contratsIncidents?.length || 0) + (autresIncidents?.length || 0);
+      const activeAutresIncidents = autresIncidents?.filter(i =>
+        i.statut !== 'resolu' && i.statut !== 'ignore'
+      ).length || 0;
+
+      const totalIncidents = (contratsIncidents?.length || 0) + activeAutresIncidents;
 
       // Compter les incidents de ce mois
       const now = new Date();
