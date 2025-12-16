@@ -119,7 +119,6 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
-  const [incidents, setIncidents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
@@ -210,7 +209,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     if (!silent) setLoading(true);
 
     try {
-      const [employeesRes, contractsRes, sitesRes, secteursRes, incidentsRes] = await Promise.all([
+      const [employeesRes, contractsRes, sitesRes, secteursRes] = await Promise.all([
         supabase
           .from('profil')
           .select(`
@@ -225,30 +224,23 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           .select('id, profil_id, statut, date_signature, yousign_signed_at, created_at, modele_id, date_debut, date_fin, type, modeles_contrats:modele_id(nom)')
           .order('created_at', { ascending: false }),
         supabase.from('site').select('*').order('nom'),
-        supabase.from('secteur').select('*').order('nom'),
-        supabase
-          .from('incident')
-          .select('id, profil_id, type, statut, date_expiration')
-          .eq('statut', 'ouvert')
+        supabase.from('secteur').select('*').order('nom')
       ]);
 
       if (employeesRes.error) throw employeesRes.error;
       if (contractsRes.error) throw contractsRes.error;
       if (sitesRes.error) throw sitesRes.error;
       if (secteursRes.error) throw secteursRes.error;
-      if (incidentsRes.error) throw incidentsRes.error;
 
       setEmployees(employeesRes.data || []);
       setContracts(contractsRes.data || []);
       setSites(sitesRes.data || []);
       setSecteurs(secteursRes.data || []);
-      setIncidents(incidentsRes.data || []);
 
       if (!silent) {
         console.log('✅ Données chargées:', {
           employees: employeesRes.data?.length,
-          contracts: contractsRes.data?.length,
-          incidents: incidentsRes.data?.length
+          contracts: contractsRes.data?.length
         });
       }
     } catch (error) {
@@ -304,18 +296,8 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
-  // Calculer le statut réel du contrat en vérifiant les incidents
+  // Calculer le statut réel du contrat
   const getActualContractStatus = (employee: Employee): string => {
-    // Vérifier d'abord s'il y a un incident de contrat expiré pour ce profil
-    const hasExpiredIncident = incidents.some(
-      incident => incident.profil_id === employee.id && incident.type === 'contrat_expire'
-    );
-
-    if (hasExpiredIncident) {
-      return 'expiré';
-    }
-
-    // Sinon, retourner le statut du contrat ou de l'employé
     const employeeContracts = contracts.filter(c => c.profil_id === employee.id);
 
     if (employeeContracts.length === 0) {
@@ -334,11 +316,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const filteredAndSortedEmployees = employees
     .filter(emp => {
       const matchesSearch = `${emp.prenom} ${emp.nom} ${emp.email} ${emp.role || ''} ${emp.matricule_tca || ''}`.toLowerCase().includes(search.toLowerCase());
-
-      // Pour le filtre de statut, on utilise getActualContractStatus qui prend en compte le statut du contrat et l'expiration
-      const actualStatus = getActualContractStatus(emp);
-      const matchesStatut = !filterStatut || actualStatus === filterStatut;
-
+      const matchesStatut = !filterStatut || emp.statut === filterStatut;
       const matchesSecteur = !filterSecteur || emp.secteur_id === filterSecteur;
 
       const matchesTypeContrat = !filterTypeContrat || emp.modele_contrat === filterTypeContrat;
@@ -417,19 +395,18 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   };
 
   const getStatutBadge = (statut: string, employeeId: string) => {
-    // Vérifier le statut réel incluant les incidents
-    const employee = employees.find(e => e.id === employeeId);
-    if (!employee) return 'bg-slate-100 text-slate-800 border border-slate-300';
+    // Vérifier le statut réel du contrat
+    const contractStatus = getEmployeeContractStatus(employeeId);
 
-    const actualStatus = getActualContractStatus(employee);
+    if (contractStatus === 'signe') {
+      return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+    }
 
-    switch (actualStatus) {
-      case 'signe':
-        return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
-      case 'en_attente_signature':
-        return 'bg-amber-100 text-amber-800 border border-amber-300';
-      case 'expiré':
-        return 'bg-red-100 text-red-800 border border-red-300';
+    if (contractStatus === 'en_attente_signature') {
+      return 'bg-amber-100 text-amber-800 border border-amber-300';
+    }
+
+    switch (statut) {
       case 'actif':
         return 'bg-teal-100 text-teal-800 border border-teal-300';
       case 'en_attente_contrat':
@@ -444,19 +421,18 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   };
 
   const getStatutLabel = (statut: string, employeeId: string) => {
-    // Vérifier le statut réel incluant les incidents
-    const employee = employees.find(e => e.id === employeeId);
-    if (!employee) return statut;
+    // Vérifier le statut réel du contrat
+    const contractStatus = getEmployeeContractStatus(employeeId);
 
-    const actualStatus = getActualContractStatus(employee);
+    if (contractStatus === 'signe') {
+      return '✓ Signé';
+    }
 
-    switch (actualStatus) {
-      case 'signe':
-        return '✓ Signé';
-      case 'en_attente_signature':
-        return '⏳ En attente signature';
-      case 'expiré':
-        return '⚠ Expiré';
+    if (contractStatus === 'en_attente_signature') {
+      return '⏳ En attente signature';
+    }
+
+    switch (statut) {
       case 'actif':
         return '✓ Actif';
       case 'en_attente_contrat':
@@ -466,7 +442,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       case 'inactif':
         return '✕ Inactif';
       default:
-        return actualStatus;
+        return statut;
     }
   };
 
@@ -543,12 +519,9 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Tous les statuts</option>
+                <option value="actif">Actif</option>
                 <option value="en_attente_contrat">En attente contrat</option>
                 <option value="contrat_envoye">Contrat envoyé</option>
-                <option value="en_attente_signature">En attente signature</option>
-                <option value="signe">Signé</option>
-                <option value="actif">Actif</option>
-                <option value="expiré">Expiré</option>
                 <option value="inactif">Inactif</option>
               </select>
             </div>
@@ -815,7 +788,6 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           onUpdate={fetchData}
           contractStatus={getEmployeeContractStatus(selectedEmployee.id)}
           onOpen={() => setIsModalOpen(true)}
-          incidents={incidents}
         />
       )}
     </div>
@@ -827,15 +799,13 @@ function EmployeeDetailModal({
   onClose,
   onUpdate,
   contractStatus,
-  onOpen,
-  incidents
+  onOpen
 }: {
   employee: Employee;
   onClose: () => void;
   onUpdate: () => void;
   contractStatus: string | null;
   onOpen: () => void;
-  incidents: any[];
 }) {
   const [showHistory, setShowHistory] = useState(false);
   const [showDeparture, setShowDeparture] = useState(false);
@@ -2262,21 +2232,14 @@ function EmployeeDetailModal({
     }
   };
 
-  // Vérifier si l'employé a un incident de contrat expiré
-  const hasExpiredIncident = incidents.some(
-    incident => incident.profil_id === currentEmployee.id && incident.type === 'contrat_expire'
-  );
-
-  // Afficher le vrai statut basé sur le contrat et les incidents
-  const displayStatut = hasExpiredIncident ? 'Expiré' :
-                        currentContractStatus === 'signe' ? 'Signé' :
+  // Afficher le vrai statut basé sur le contrat
+  const displayStatut = currentContractStatus === 'signe' ? 'Signé' :
                         currentContractStatus === 'en_attente_signature' ? 'Contrat envoyé' :
                         currentEmployee.statut === 'en_attente_contrat' ? 'En attente contrat' :
                         currentEmployee.statut === 'contrat_envoye' ? 'Contrat envoyé' :
                         currentEmployee.statut;
 
-  const displayBadgeColor = hasExpiredIncident ? 'bg-red-100 text-red-700' :
-                            currentContractStatus === 'signe' ? 'bg-green-100 text-green-700' :
+  const displayBadgeColor = currentContractStatus === 'signe' ? 'bg-green-100 text-green-700' :
                             currentContractStatus === 'en_attente_signature' ? 'bg-yellow-100 text-yellow-700' :
                             currentEmployee.statut === 'actif' ? 'bg-green-100 text-green-700' :
                             currentEmployee.statut === 'en_attente_contrat' ? 'bg-orange-100 text-orange-700' :
