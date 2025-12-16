@@ -343,12 +343,6 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       // Récupérer les CDD expirés depuis la fonction RPC
       const { data: cddData } = await supabase.rpc('get_cdd_expires');
 
-      // Récupérer les autres types d'incidents
-      const { data: autresIncidents } = await supabase
-        .from('incident')
-        .select('type')
-        .neq('type', 'contrat_expire');
-
       const non_lues = alertes?.filter((a) => !a.is_read).length || 0;
       const urgentes = alertes?.filter((a) => a.priorite === 'haute').length || 0;
 
@@ -358,10 +352,11 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           (d) => d.date_expiration && new Date(d.date_expiration) <= now
         ).length || 0;
 
-      const titre_sejour = autresIncidents?.filter(i => i.type === 'titre_sejour').length || 0;
-      const visite_medicale = autresIncidents?.filter(i => i.type === 'visite_medicale').length || 0;
-      const permis_conduire = autresIncidents?.filter(i => i.type === 'permis_conduire').length || 0;
-      const contrat_cdd = cddData?.length || 0;
+      // Chercher tous les types dans la table notification (pas incident)
+      const titre_sejour = notifications?.filter(n => n.type === 'titre_sejour').length || 0;
+      const visite_medicale = notifications?.filter(n => n.type === 'visite_medicale').length || 0;
+      const permis_conduire = notifications?.filter(n => n.type === 'permis_conduire').length || 0;
+      const contrat_cdd = notifications?.filter(n => n.type === 'cdd').length || 0;
 
       setStats((prev) => ({
         ...prev,
