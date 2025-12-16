@@ -328,7 +328,13 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
 
     const activeContract = employeeContracts[0];
 
-    // Vérifier AUSSI variables.date_fin
+    // Si c'est un CDI, jamais expiré
+    const contractType = activeContract.type || activeContract.variables?.type_contrat;
+    if (contractType?.toUpperCase() === 'CDI') {
+      return activeContract.statut || employee.statut || 'actif';
+    }
+
+    // Vérifier AUSSI variables.date_fin pour CDD/Avenant
     const dateFin = activeContract.date_fin || activeContract.variables?.date_fin;
 
     if (dateFin) {
@@ -2286,20 +2292,28 @@ function EmployeeDetailModal({
 
   if (modalEmployeeContracts.length > 0) {
     const activeContract = modalEmployeeContracts[0];
-    const dateFin = activeContract.date_fin || activeContract.variables?.date_fin;
 
-    if (dateFin) {
-      const dateFinDate = new Date(dateFin);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    // Si c'est un CDI, jamais expiré
+    const contractType = activeContract.type || activeContract.variables?.type_contrat;
+    if (contractType?.toUpperCase() === 'CDI') {
+      actualStatus = activeContract.statut || currentEmployee.statut || 'actif';
+    } else {
+      // Vérifier AUSSI variables.date_fin pour CDD/Avenant
+      const dateFin = activeContract.date_fin || activeContract.variables?.date_fin;
 
-      if (dateFinDate < today) {
-        actualStatus = 'expiré';
+      if (dateFin) {
+        const dateFinDate = new Date(dateFin);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (dateFinDate < today) {
+          actualStatus = 'expiré';
+        } else {
+          actualStatus = activeContract.statut || currentEmployee.statut || 'actif';
+        }
       } else {
         actualStatus = activeContract.statut || currentEmployee.statut || 'actif';
       }
-    } else {
-      actualStatus = activeContract.statut || currentEmployee.statut || 'actif';
     }
   }
 
