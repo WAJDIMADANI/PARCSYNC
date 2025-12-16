@@ -19,7 +19,14 @@ FROM auth.users au
 LEFT JOIN app_utilisateur app ON app.id = au.id
 WHERE app.id IS NULL;
 
--- 2. Créer les profils manquants pour les utilisateurs auth
+-- 2. Synchroniser les IDs : Mettre à jour app_utilisateur pour utiliser l'ID de auth.users
+UPDATE app_utilisateur
+SET id = au.id
+FROM auth.users au
+WHERE app_utilisateur.email = au.email
+AND app_utilisateur.id != au.id;
+
+-- 3. Créer les profils manquants pour les utilisateurs auth (si il y en a)
 INSERT INTO app_utilisateur (id, email, nom, prenom, actif)
 SELECT
   au.id,
@@ -30,7 +37,8 @@ SELECT
 FROM auth.users au
 LEFT JOIN app_utilisateur app ON app.id = au.id
 WHERE app.id IS NULL
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING
+ON CONFLICT (email) DO UPDATE SET id = EXCLUDED.id;
 
 -- 3. Vérifier que tous les utilisateurs ont maintenant un profil
 SELECT
