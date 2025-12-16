@@ -402,17 +402,18 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         console.error('Error fetching v_incidents_stats:', statsError);
       }
 
-      // Récupérer les CDD expirés depuis la fonction RPC
-      const { data: cddData } = await supabase.rpc('get_cdd_expires');
+      // 1. Récupérer CDD expirés (SEULEMENT les vrais expirés)
+      const { data: cddData } = await supabase.rpc('get_cdd_expires_for_incidents');
 
-      // Récupérer les avenants expirés depuis la fonction RPC
+      // 2. Récupérer avenants expirés
       const { data: avenantsData } = await supabase.rpc('get_avenants_expires');
 
-      // Transformer les CDD et avenants en format incident
+      // 3. Transformer comme dans IncidentsList
       const cddIncidents = (cddData || []).map(cdd => ({
         id: `cdd-${cdd.profil_id}-${cdd.contrat_id}`,
         type: 'contrat_expire',
         created_at: new Date().toISOString(),
+        statut: 'actif',
         profil_id: cdd.profil_id,
         contrat_type: 'CDD'
       }));
@@ -421,13 +422,14 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         id: `avenant-${av.profil_id}-${av.contrat_id}`,
         type: 'contrat_expire',
         created_at: new Date().toISOString(),
+        statut: 'actif',
         profil_id: av.profil_id,
         contrat_type: 'Avenant'
       }));
 
       const contratsIncidents = [...cddIncidents, ...avenantsIncidents];
 
-      // Récupérer les autres types d'incidents
+      // 4. Récupérer les autres types d'incidents
       const { data: autresIncidents } = await supabase
         .from('incident')
         .select(`
@@ -445,12 +447,16 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .neq('type', 'contrat_expire')
         .order('date_creation_incident', { ascending: false });
 
-      // Fusionner pour avoir le total affiché dans la page Gestion des incidents
+      // 5. Filtrer les autres incidents (actifs seulement)
       const activeAutresIncidents = autresIncidents?.filter(i =>
         i.statut !== 'resolu' && i.statut !== 'ignore'
       ).length || 0;
 
-      const totalIncidents = (contratsIncidents?.length || 0) + activeAutresIncidents;
+      // 6. Compter le total comme dans IncidentsList
+      const totalIncidents =
+        (cddIncidents?.length || 0) +
+        (avenantsIncidents?.length || 0) +
+        activeAutresIncidents;
 
       // Compter les incidents de ce mois
       const now = new Date();
