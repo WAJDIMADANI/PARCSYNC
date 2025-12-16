@@ -20,13 +20,13 @@ LEFT JOIN app_utilisateur app ON app.id = au.id
 WHERE app.id IS NULL;
 
 -- 2. Créer les profils manquants pour les utilisateurs auth
-INSERT INTO app_utilisateur (id, email, nom, prenom, role)
+INSERT INTO app_utilisateur (id, email, nom, prenom, actif)
 SELECT
   au.id,
   au.email,
   COALESCE(au.raw_user_meta_data->>'nom', 'Utilisateur'),
   COALESCE(au.raw_user_meta_data->>'prenom', 'Système'),
-  'admin'
+  true
 FROM auth.users au
 LEFT JOIN app_utilisateur app ON app.id = au.id
 WHERE app.id IS NULL
