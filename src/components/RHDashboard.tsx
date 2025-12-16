@@ -434,6 +434,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           id,
           type,
           created_at,
+          statut,
           profil_id,
           profil:profil_id (
             prenom,
