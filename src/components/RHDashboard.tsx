@@ -337,7 +337,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       // Récupérer toutes les notifications depuis la table notification
       const { data: notifications } = await supabase
         .from('notification')
-        .select('type, statut')
+        .select('type, statut, date_echeance')
         .in('statut', ['active', 'email_envoye']);
 
       // Récupérer les CDD expirés depuis la fonction RPC
@@ -352,16 +352,31 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           (d) => d.date_expiration && new Date(d.date_expiration) <= now
         ).length || 0;
 
-      // Chercher tous les types dans la table notification (pas incident)
-      const titre_sejour = notifications?.filter(n => n.type === 'titre_sejour').length || 0;
-      const visite_medicale = notifications?.filter(n => n.type === 'visite_medicale').length || 0;
-      const permis_conduire = notifications?.filter(n => n.type === 'permis_conduire').length || 0;
-      const contrat_cdd = notifications?.filter(n => n.type === 'cdd').length || 0;
+      // Compter le total en appliquant les mêmes filtres que NotificationsList
+      const activeNotifications = notifications?.filter(n => {
+        // Exclure resolue et ignoree
+        if (n.statut === 'resolue' || n.statut === 'ignoree') return false;
+
+        // Exclure les notifications expirées
+        if (n.date_echeance) {
+          const daysRemaining = Math.ceil(
+            (new Date(n.date_echeance).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          );
+          return daysRemaining >= 0; // Seulement non expirés
+        }
+        return true;
+      }) || [];
+
+      // Chercher tous les types dans les notifications actives (pas incident)
+      const titre_sejour = activeNotifications.filter(n => n.type === 'titre_sejour').length;
+      const visite_medicale = activeNotifications.filter(n => n.type === 'visite_medicale').length;
+      const permis_conduire = activeNotifications.filter(n => n.type === 'permis_conduire').length;
+      const contrat_cdd = activeNotifications.filter(n => n.type === 'cdd').length;
 
       setStats((prev) => ({
         ...prev,
         notifications: {
-          total: notifications?.length || 0,
+          total: activeNotifications.length,
           non_lues,
           urgentes,
           documents_expires,
