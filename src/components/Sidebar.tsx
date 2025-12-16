@@ -106,7 +106,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'rh/notifications', label: 'Notifications', icon: Sparkles, enabled: true },
         { id: 'rh/documents-manquants', label: 'Documents Manquants', icon: FileWarning, enabled: true },
         { id: 'rh/incidents', label: 'Incidents', icon: AlertCircle, enabled: true },
-        { id: 'rh/incidents-historique', label: 'Historique incidents', icon: History, enabled: true },
+        { id: 'rh/incidents-historique', label: 'Historique incidents', icon: History, enabled: false },
         { id: 'rh/vivier', label: 'Vivier', icon: Archive, enabled: true },
         { id: 'rh/demandes', label: 'Demandes', icon: Phone, enabled: true },
         { id: 'rh/validations', label: 'Validations', icon: CheckSquare, enabled: true },
