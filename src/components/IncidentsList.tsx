@@ -91,7 +91,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       // Ne plus appeler detect_and_expire_incidents ici pour éviter la boucle infinie
 
       // 1. Récupérer les CDD expirés depuis la fonction RPC (logique Dashboard)
-      const { data: cddData, error: cddError } = await supabase.rpc('get_cdd_expires');
+      const { data: cddData, error: cddError } = await supabase.rpc('get_cdd_expires_for_incidents');
 
       if (cddError) {
         console.error('❌ Erreur get_cdd_expires:', cddError);
