@@ -327,7 +327,11 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const filteredAndSortedEmployees = employees
     .filter(emp => {
       const matchesSearch = `${emp.prenom} ${emp.nom} ${emp.email} ${emp.role || ''} ${emp.matricule_tca || ''}`.toLowerCase().includes(search.toLowerCase());
-      const matchesStatut = !filterStatut || emp.statut === filterStatut;
+
+      // Pour le filtre de statut, on utilise getActualContractStatus qui prend en compte le statut du contrat et l'expiration
+      const actualStatus = getActualContractStatus(emp);
+      const matchesStatut = !filterStatut || actualStatus === filterStatut;
+
       const matchesSecteur = !filterSecteur || emp.secteur_id === filterSecteur;
 
       const matchesTypeContrat = !filterTypeContrat || emp.modele_contrat === filterTypeContrat;
@@ -530,9 +534,12 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Tous les statuts</option>
-                <option value="actif">Actif</option>
                 <option value="en_attente_contrat">En attente contrat</option>
                 <option value="contrat_envoye">Contrat envoyé</option>
+                <option value="en_attente_signature">En attente signature</option>
+                <option value="signe">Signé</option>
+                <option value="actif">Actif</option>
+                <option value="expiré">Expiré</option>
                 <option value="inactif">Inactif</option>
               </select>
             </div>
