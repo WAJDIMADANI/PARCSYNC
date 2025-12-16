@@ -331,7 +331,14 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     // Si c'est un CDI, jamais expiré
     const contractType = activeContract.type || activeContract.variables?.type_contrat;
 
-    // DEBUG: Log pour voir les valeurs
+    // DEBUG: Log COMPLET pour voir la structure
+    console.log('🔍 Full contract object:', activeContract);
+    console.log('📝 Contract type from:', {
+      'from type': activeContract.type,
+      'from variables.type_contrat': activeContract.variables?.type_contrat,
+      'from modele_id': activeContract.modele_id,
+      'all variables': activeContract.variables
+    });
     console.log('🔍 DEBUG Contract Status:', {
       employeeName: `${employee.prenom} ${employee.nom}`,
       contractType,

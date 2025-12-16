@@ -958,8 +958,9 @@ export function ImportSalariesBulk() {
           } else if (modeleContrat.includes('cdd') || emp.data.date_fin_contrat) {
             contractType = 'cdd';
           } else {
-            // Par défaut, si pas de date_fin et pas d'indication claire, on considère que c'est un CDD temporaire
-            contractType = 'cdd';
+            // ✅ FIX: Si pas de date_fin et pas d'indication claire, c'est un CDI (contrat sans terme)
+            contractType = 'cdi';
+            console.log(`📋 Ligne ${emp.rowNumber}: Contrat sans date_fin détecté → CDI par défaut`);
           }
 
           // Créer le contrat principal uniquement si un type a été déterminé
