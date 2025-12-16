@@ -102,6 +102,7 @@ interface Contract {
   source?: string;
   fichier_signe_url?: string;
   signed_storage_path?: string;
+  variables?: any;
   modeles_contrats?: {
     nom: string;
   } | null;
@@ -305,6 +306,20 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     }
 
     const activeContract = employeeContracts[0];
+
+    // Vérifier AUSSI variables.date_fin
+    const dateFin = activeContract.date_fin || activeContract.variables?.date_fin;
+
+    if (dateFin) {
+      const dateFinDate = new Date(dateFin);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (dateFinDate < today) {
+        return 'expiré';
+      }
+    }
+
     return activeContract.statut || employee.statut || 'actif';
   };
 
@@ -316,7 +331,11 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const filteredAndSortedEmployees = employees
     .filter(emp => {
       const matchesSearch = `${emp.prenom} ${emp.nom} ${emp.email} ${emp.role || ''} ${emp.matricule_tca || ''}`.toLowerCase().includes(search.toLowerCase());
-      const matchesStatut = !filterStatut || emp.statut === filterStatut;
+
+      // Utiliser getActualContractStatus pour le filtre
+      const actualStatus = getActualContractStatus(emp);
+      const matchesStatut = !filterStatut || actualStatus === filterStatut;
+
       const matchesSecteur = !filterSecteur || emp.secteur_id === filterSecteur;
 
       const matchesTypeContrat = !filterTypeContrat || emp.modele_contrat === filterTypeContrat;
@@ -395,18 +414,19 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   };
 
   const getStatutBadge = (statut: string, employeeId: string) => {
-    // Vérifier le statut réel du contrat
-    const contractStatus = getEmployeeContractStatus(employeeId);
+    // Utiliser getActualContractStatus pour obtenir le statut réel
+    const employee = employees.find(e => e.id === employeeId);
+    if (!employee) return 'bg-slate-100 text-slate-800 border border-slate-300';
 
-    if (contractStatus === 'signe') {
-      return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
-    }
+    const actualStatus = getActualContractStatus(employee);
 
-    if (contractStatus === 'en_attente_signature') {
-      return 'bg-amber-100 text-amber-800 border border-amber-300';
-    }
-
-    switch (statut) {
+    switch (actualStatus) {
+      case 'signe':
+        return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+      case 'en_attente_signature':
+        return 'bg-amber-100 text-amber-800 border border-amber-300';
+      case 'expiré':
+        return 'bg-red-100 text-red-800 border border-red-300';
       case 'actif':
         return 'bg-teal-100 text-teal-800 border border-teal-300';
       case 'en_attente_contrat':
@@ -421,18 +441,19 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   };
 
   const getStatutLabel = (statut: string, employeeId: string) => {
-    // Vérifier le statut réel du contrat
-    const contractStatus = getEmployeeContractStatus(employeeId);
+    // Utiliser getActualContractStatus pour obtenir le statut réel
+    const employee = employees.find(e => e.id === employeeId);
+    if (!employee) return statut;
 
-    if (contractStatus === 'signe') {
-      return '✓ Signé';
-    }
+    const actualStatus = getActualContractStatus(employee);
 
-    if (contractStatus === 'en_attente_signature') {
-      return '⏳ En attente signature';
-    }
-
-    switch (statut) {
+    switch (actualStatus) {
+      case 'signe':
+        return '✓ Signé';
+      case 'en_attente_signature':
+        return '⏳ En attente signature';
+      case 'expiré':
+        return '⚠ Expiré';
       case 'actif':
         return '✓ Actif';
       case 'en_attente_contrat':
@@ -442,7 +463,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       case 'inactif':
         return '✕ Inactif';
       default:
-        return statut;
+        return actualStatus;
     }
   };
 
@@ -522,6 +543,9 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                 <option value="actif">Actif</option>
                 <option value="en_attente_contrat">En attente contrat</option>
                 <option value="contrat_envoye">Contrat envoyé</option>
+                <option value="en_attente_signature">En attente signature</option>
+                <option value="signe">Signé</option>
+                <option value="expiré">Expiré</option>
                 <option value="inactif">Inactif</option>
               </select>
             </div>
@@ -779,6 +803,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       {selectedEmployee && (
         <EmployeeDetailModal
           employee={selectedEmployee}
+          contracts={contracts}
           onClose={() => {
             setIsModalOpen(false);
             setSelectedEmployee(null);
@@ -796,12 +821,14 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
 
 function EmployeeDetailModal({
   employee,
+  contracts,
   onClose,
   onUpdate,
   contractStatus,
   onOpen
 }: {
   employee: Employee;
+  contracts: Contract[];
   onClose: () => void;
   onUpdate: () => void;
   contractStatus: string | null;
@@ -2232,18 +2259,43 @@ function EmployeeDetailModal({
     }
   };
 
-  // Afficher le vrai statut basé sur le contrat
-  const displayStatut = currentContractStatus === 'signe' ? 'Signé' :
-                        currentContractStatus === 'en_attente_signature' ? 'Contrat envoyé' :
-                        currentEmployee.statut === 'en_attente_contrat' ? 'En attente contrat' :
-                        currentEmployee.statut === 'contrat_envoye' ? 'Contrat envoyé' :
-                        currentEmployee.statut;
+  // Calculer le statut réel en utilisant la même logique que getActualContractStatus
+  const modalEmployeeContracts = contracts.filter(c => c.profil_id === currentEmployee.id);
+  let actualStatus = currentEmployee.statut || 'actif';
 
-  const displayBadgeColor = currentContractStatus === 'signe' ? 'bg-green-100 text-green-700' :
-                            currentContractStatus === 'en_attente_signature' ? 'bg-yellow-100 text-yellow-700' :
-                            currentEmployee.statut === 'actif' ? 'bg-green-100 text-green-700' :
-                            currentEmployee.statut === 'en_attente_contrat' ? 'bg-orange-100 text-orange-700' :
-                            currentEmployee.statut === 'contrat_envoye' ? 'bg-blue-100 text-blue-700' :
+  if (modalEmployeeContracts.length > 0) {
+    const activeContract = modalEmployeeContracts[0];
+    const dateFin = activeContract.date_fin || activeContract.variables?.date_fin;
+
+    if (dateFin) {
+      const dateFinDate = new Date(dateFin);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (dateFinDate < today) {
+        actualStatus = 'expiré';
+      } else {
+        actualStatus = activeContract.statut || currentEmployee.statut || 'actif';
+      }
+    } else {
+      actualStatus = activeContract.statut || currentEmployee.statut || 'actif';
+    }
+  }
+
+  // Afficher le vrai statut basé sur le statut réel calculé
+  const displayStatut = actualStatus === 'signe' ? 'Signé' :
+                        actualStatus === 'en_attente_signature' ? 'Contrat envoyé' :
+                        actualStatus === 'en_attente_contrat' ? 'En attente contrat' :
+                        actualStatus === 'contrat_envoye' ? 'Contrat envoyé' :
+                        actualStatus === 'expiré' ? 'Expiré' :
+                        actualStatus;
+
+  const displayBadgeColor = actualStatus === 'signe' ? 'bg-green-100 text-green-700' :
+                            actualStatus === 'en_attente_signature' ? 'bg-yellow-100 text-yellow-700' :
+                            actualStatus === 'actif' ? 'bg-green-100 text-green-700' :
+                            actualStatus === 'en_attente_contrat' ? 'bg-orange-100 text-orange-700' :
+                            actualStatus === 'contrat_envoye' ? 'bg-blue-100 text-blue-700' :
+                            actualStatus === 'expiré' ? 'bg-red-100 text-red-700' :
                             'bg-red-100 text-red-700';
 
   // Helper pour formater les dates
