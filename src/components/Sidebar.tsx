@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 export type View =
   | 'setup'
+  | 'inbox'
   | 'rh/candidats'
   | 'rh/salaries'
   | 'rh/courriers'
@@ -63,9 +66,43 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['rh', 'parc', 'exports', 'admin'])
   );
+  const [inboxCount, setInboxCount] = useState(0);
   const { hasPermission, permissions } = usePermissions();
+  const { user } = useAuth();
 
   console.log('Sidebar - Current permissions:', permissions);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchInboxCount = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('taches')
+          .select('statut')
+          .eq('assignee_id', user.id)
+          .in('statut', ['en_attente', 'en_cours']);
+
+        if (error) throw error;
+        setInboxCount(data?.length || 0);
+      } catch (error) {
+        console.error('Erreur chargement inbox count:', error);
+      }
+    };
+
+    fetchInboxCount();
+
+    const channel = supabase
+      .channel('inbox-count')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'taches' }, () => {
+        fetchInboxCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const toggleSection = (sectionId: string) => {
     const newExpanded = new Set(expandedSections);
@@ -91,6 +128,12 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       id: 'setup',
       label: 'Setup Check',
       icon: CheckCircle,
+      enabled: true,
+    },
+    {
+      id: 'inbox',
+      label: 'Inbox',
+      icon: Inbox,
       enabled: true,
     },
     {
@@ -277,6 +320,11 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
               >
                 <Icon className="w-5 h-5" />
                 <span className="text-sm font-medium">{item.label}</span>
+                {item.id === 'inbox' && inboxCount > 0 && (
+                  <span className="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] text-center">
+                    {inboxCount}
+                  </span>
+                )}
               </button>
             );
           }
