@@ -330,7 +330,21 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
 
     // Si c'est un CDI, jamais expiré
     const contractType = activeContract.type || activeContract.variables?.type_contrat;
+
+    // DEBUG: Log pour voir les valeurs
+    console.log('🔍 DEBUG Contract Status:', {
+      employeeName: `${employee.prenom} ${employee.nom}`,
+      contractType,
+      activeContractType: activeContract.type,
+      variablesType: activeContract.variables?.type_contrat,
+      isCDI: contractType?.toUpperCase() === 'CDI',
+      dateFin: activeContract.date_fin,
+      variablesDateFin: activeContract.variables?.date_fin,
+      statut: activeContract.statut
+    });
+
     if (contractType?.toUpperCase() === 'CDI') {
+      console.log('✅ CDI détecté - retourne:', activeContract.statut || employee.statut || 'actif');
       return activeContract.statut || employee.statut || 'actif';
     }
 
@@ -343,6 +357,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       today.setHours(0, 0, 0, 0);
 
       if (dateFinDate < today) {
+        console.log('❌ CDD/Avenant expiré');
         return 'expiré';
       }
     }
