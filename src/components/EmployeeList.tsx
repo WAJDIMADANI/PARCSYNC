@@ -323,6 +323,27 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     return activeContract.statut || employee.statut || 'actif';
   };
 
+  // Obtenir le dernier contrat actif/signé
+  const getLatestActiveContract = (employeeId: string): string | null => {
+    const employeeContracts = contracts.filter(c =>
+      c.profil_id === employeeId &&
+      (c.statut === 'actif' || c.statut === 'signe')
+    );
+
+    if (employeeContracts.length === 0) {
+      return null;
+    }
+
+    // Trier par date_debut (plus récent d'abord)
+    const sortedContracts = [...employeeContracts].sort((a, b) => {
+      const dateA = a.date_debut ? new Date(a.date_debut).getTime() : 0;
+      const dateB = b.date_debut ? new Date(b.date_debut).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    return sortedContracts[0]?.type || null;
+  };
+
   // Réinitialiser la page à 1 quand les filtres changent
   useEffect(() => {
     setCurrentPage(1);
@@ -713,7 +734,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                       {employee.email}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
-                      <ContractBadge type="type" value={employee.modele_contrat || undefined} />
+                      <ContractBadge type="type" value={getLatestActiveContract(employee.id) || employee.modele_contrat || undefined} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                       {formatDate(employee.date_entree)}
@@ -2696,9 +2717,9 @@ function EmployeeDetailModal({
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <ContractBadge type="type" value={currentEmployee.modele_contrat} />
+                      <ContractBadge type="type" value={getLatestActiveContract(currentEmployee.id) || currentEmployee.modele_contrat || undefined} />
                       <span className="text-sm font-medium text-gray-900">
-                        {currentEmployee.modele_contrat}
+                        {getLatestActiveContract(currentEmployee.id) || currentEmployee.modele_contrat}
                       </span>
                     </div>
                   </div>
