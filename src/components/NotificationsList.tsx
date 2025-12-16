@@ -127,9 +127,8 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
 
   const filteredNotifications = notifications
     .filter(n => {
-      // Mapper 'contrat_cdd' vers le vrai type 'contrat_expire' de la base
       if (activeTab === 'contrat_cdd') {
-        return n.type === 'contrat_expire';
+        return n.type === 'cdd';
       }
       return n.type === activeTab;
     })
@@ -153,9 +152,8 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
 
   const getTabCount = (type: string) => {
     const filtered = notifications.filter(n => {
-      // Mapper 'contrat_cdd' vers le vrai type 'contrat_expire' de la base
       if (type === 'contrat_cdd') {
-        if (n.type !== 'contrat_expire') return false;
+        if (n.type !== 'cdd') return false;
       } else if (n.type !== type) {
         return false;
       }
