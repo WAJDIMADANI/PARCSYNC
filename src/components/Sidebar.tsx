@@ -318,10 +318,10 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
                     : 'text-slate-600 cursor-not-allowed'
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className={`w-5 h-5 ${item.id === 'inbox' && inboxCount > 0 ? 'text-red-400' : ''}`} />
                 <span className="text-sm font-medium">{item.label}</span>
                 {item.id === 'inbox' && inboxCount > 0 && (
-                  <span className="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] text-center">
+                  <span className="ml-auto px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[24px] text-center shadow-lg animate-pulse">
                     {inboxCount}
                   </span>
                 )}
