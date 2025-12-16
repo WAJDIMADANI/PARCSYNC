@@ -94,6 +94,7 @@ CREATE POLICY "Users can delete tasks they are involved in"
 ALTER PUBLICATION supabase_realtime ADD TABLE taches;
 
 -- Créer une vue pour faciliter les requêtes avec les noms des utilisateurs
+-- Note: Les vues héritent automatiquement des politiques RLS des tables sous-jacentes
 CREATE OR REPLACE VIEW taches_avec_utilisateurs AS
 SELECT
   t.*,
@@ -106,13 +107,3 @@ SELECT
 FROM taches t
 LEFT JOIN app_utilisateur e ON t.expediteur_id = e.id
 LEFT JOIN app_utilisateur a ON t.assignee_id = a.id;
-
--- RLS pour la vue
-ALTER TABLE taches_avec_utilisateurs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view tasks with user details"
-  ON taches_avec_utilisateurs FOR SELECT
-  TO authenticated
-  USING (
-    auth.uid() = assignee_id OR auth.uid() = expediteur_id
-  );
