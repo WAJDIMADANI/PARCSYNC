@@ -78,13 +78,12 @@ export function InboxPage() {
 
       if (error) throw error;
 
-      // Récupérer les messages non lus
+      // Récupérer les messages non lus par tâche
       const { data: unreadMessages } = await supabase
         .from('messages_tache')
         .select('tache_id')
         .eq('is_read', false);
 
-      // Créer un map du count des messages non lus par tâche
       const unreadMap: { [key: string]: number } = {};
       unreadMessages?.forEach(msg => {
         unreadMap[msg.tache_id] = (unreadMap[msg.tache_id] || 0) + 1;
@@ -414,7 +413,7 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
       .channel(`messages-${task.id}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages_tache', filter: `tache_id=eq.${task.id}` },
+        { event: '*', schema: 'public', table: 'messages_tache', filter: `tache_id=eq.${task.id}` },
         (payload: any) => {
           fetchMessages();
         }
@@ -448,10 +447,10 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
 
       setMessages(formattedMessages);
 
-      // Marquer tous les messages comme lus
+      // Marquer SEULEMENT les messages REÇUS (pas les nôtres) comme lus
       if (formattedMessages.length > 0) {
         const unreadMessageIds = formattedMessages
-          .filter(m => !m.is_read)
+          .filter(m => !m.is_read && m.auteur_id !== appUserId)
           .map(m => m.id);
 
         if (unreadMessageIds.length > 0) {
@@ -493,6 +492,24 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
       alert('Erreur lors de l\'envoi du message');
     } finally {
       setSendingMessage(false);
+    }
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    if (!confirm('Voulez-vous vraiment supprimer ce message ?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('messages_tache')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+    } catch (error) {
+      console.error('Erreur suppression message:', error);
+      alert('Erreur lors de la suppression du message');
     }
   };
 
@@ -598,6 +615,13 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
                           {msg.contenu}
                         </p>
                       </div>
+                      <button
+                        onClick={() => deleteMessage(msg.id)}
+                        className="flex-shrink-0 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Supprimer ce message"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))}
