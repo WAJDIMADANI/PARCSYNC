@@ -50,6 +50,39 @@ export function InboxPage() {
 
   useEffect(() => {
     fetchTaches();
+
+    // Abonnement temps réel pour les mises à jour de tâches
+    const subscription = supabase
+      .channel('taches_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'taches',
+        },
+        () => {
+          // Recharger toutes les tâches quand il y a un changement
+          fetchTaches();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'taches_messages',
+        },
+        () => {
+          // Recharger quand il y a un nouveau message
+          fetchTaches();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [user, appUserId]);
 
   const fetchTaches = async () => {
