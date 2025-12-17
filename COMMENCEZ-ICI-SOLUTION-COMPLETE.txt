@@ -1,0 +1,65 @@
+═══════════════════════════════════════════════════════════════
+  🎯 SOLUTION COMPLÈTE : INBOX + NON LU (COMME GMAIL)
+═══════════════════════════════════════════════════════════════
+
+VOUS ALLEZ OBTENIR :
+✅ Messages reçus et affichés correctement
+✅ Bouton "Répondre" visible et fonctionnel
+✅ Messages non lus en GRAS avec point bleu 🔵
+✅ Badge rouge avec compteur de non lus
+✅ Fond bleu clair pour les non lus
+✅ Marquage automatique comme "lu" à l'ouverture
+✅ Remise en "non lu" quand on reçoit une réponse
+
+═══════════════════════════════════════════════════════════════
+
+INSTALLATION (2 MINUTES) :
+
+1. Ouvrez Supabase Dashboard → SQL Editor
+
+2. Exécutez FICHIER 1 : FIX-INBOX-COMPLET-MAINTENANT.sql
+   (corrige la réception des messages)
+
+3. Attendez : ✅ INSTALLATION COMPLÈTE !
+
+4. Exécutez FICHIER 2 : add-unread-status-to-inbox.sql
+   (ajoute le système non lu)
+
+5. Attendez : ✅ SYSTÈME NON LU INSTALLÉ !
+
+6. Rafraîchissez l'application (Ctrl+Shift+R)
+
+7. Déconnectez-vous et reconnectez-vous
+
+8. Testez en envoyant une tâche entre deux utilisateurs
+
+═══════════════════════════════════════════════════════════════
+
+VÉRIFICATION :
+
+Le destinataire doit voir la tâche :
+• En GRAS
+• Avec un point bleu 🔵 à gauche
+• Sur fond bleu clair
+• Avec un badge rouge "1" sur l'icône de la boîte
+• Avec "(1 non lu)" dans le titre
+
+Quand il ouvre la tâche :
+• Elle passe en texte normal
+• Le point bleu disparaît
+• Le fond devient blanc
+• Le badge et le compteur disparaissent
+• Un bouton "Répondre" est visible en bas
+
+═══════════════════════════════════════════════════════════════
+
+GUIDE COMPLET :
+→ SOLUTION-COMPLETE-INBOX-ET-NON-LU.md
+
+═══════════════════════════════════════════════════════════════
+
+C'EST TOUT !
+
+Vous avez maintenant un système d'inbox professionnel comme Gmail.
+
+═══════════════════════════════════════════════════════════════

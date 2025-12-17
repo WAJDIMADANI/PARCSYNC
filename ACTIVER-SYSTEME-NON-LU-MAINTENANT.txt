@@ -1,0 +1,41 @@
+═══════════════════════════════════════════════════════════════
+  ✅ ACTIVER LE SYSTÈME "NON LU" (COMME GMAIL)
+═══════════════════════════════════════════════════════════════
+
+RÉSULTAT :
+✅ Messages non lus en GRAS
+✅ Point bleu pour les non lus
+✅ Badge rouge avec compteur
+✅ Fond bleu clair
+✅ Marquage automatique comme lu quand on ouvre
+✅ Remise à non lu quand on reçoit une réponse
+
+═══════════════════════════════════════════════════════════════
+
+INSTALLATION (1 MINUTE) :
+
+1. Ouvrez Supabase Dashboard → SQL Editor
+
+2. Copiez-collez le contenu du fichier :
+   → add-unread-status-to-inbox.sql
+
+3. Cliquez sur "Run"
+
+4. Attendez : ✅ SYSTÈME NON LU INSTALLÉ !
+
+5. Rafraîchissez l'application (Ctrl+Shift+R)
+
+6. Testez en envoyant une tâche entre deux utilisateurs
+
+7. La tâche doit apparaître en GRAS avec un point bleu 🔵
+
+═══════════════════════════════════════════════════════════════
+
+GUIDE COMPLET :
+→ INSTALLER-SYSTEME-NON-LU.md
+
+═══════════════════════════════════════════════════════════════
+
+C'EST TOUT ! Profitez du système comme Gmail.
+
+═══════════════════════════════════════════════════════════════

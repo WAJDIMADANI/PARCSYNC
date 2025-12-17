@@ -16,6 +16,8 @@ interface Tache {
   expediteur_nom: string;
   expediteur_prenom: string;
   expediteur_email: string;
+  lu_par_assignee: boolean;
+  date_derniere_reponse: string | null;
 }
 
 interface TacheMessage {
@@ -34,13 +36,14 @@ interface TaskStats {
   en_cours: number;
   completee: number;
   total: number;
+  non_lus: number;
 }
 
 export function InboxPage() {
   const { user, appUserId } = useAuth();
   const [taches, setTaches] = useState<Tache[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<TaskStats>({ en_attente: 0, en_cours: 0, completee: 0, total: 0 });
+  const [stats, setStats] = useState<TaskStats>({ en_attente: 0, en_cours: 0, completee: 0, total: 0, non_lus: 0 });
   const [selectedTask, setSelectedTask] = useState<Tache | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'en_attente' | 'en_cours' | 'completee'>('all');
@@ -61,7 +64,7 @@ export function InboxPage() {
           assignee:assignee_id(nom, prenom, email)
         `)
         .or(`assignee_id.eq.${appUserId},expediteur_id.eq.${appUserId}`)
-        .order('created_at', { ascending: false });
+        .order('date_derniere_reponse', { ascending: false, nullsFirst: false });
 
       if (error) throw error;
 
@@ -69,16 +72,23 @@ export function InboxPage() {
         ...t,
         expediteur_nom: t.expediteur?.nom || '',
         expediteur_prenom: t.expediteur?.prenom || '',
-        expediteur_email: t.expediteur?.email || ''
+        expediteur_email: t.expediteur?.email || '',
+        lu_par_assignee: t.lu_par_assignee ?? false
       }));
 
       setTaches(formattedTaches);
+
+      // Compter uniquement les tâches non lues où je suis assignee
+      const nonLus = formattedTaches.filter((t: Tache) =>
+        t.assignee_id === appUserId && !t.lu_par_assignee
+      ).length;
 
       const newStats = {
         en_attente: formattedTaches.filter((t: Tache) => t.statut === 'en_attente').length,
         en_cours: formattedTaches.filter((t: Tache) => t.statut === 'en_cours').length,
         completee: formattedTaches.filter((t: Tache) => t.statut === 'completee').length,
-        total: formattedTaches.length
+        total: formattedTaches.length,
+        non_lus: nonLus
       };
       setStats(newStats);
     } catch (error) {
@@ -121,6 +131,32 @@ export function InboxPage() {
     }
   };
 
+  const markAsRead = async (tache: Tache) => {
+    // Marquer comme lu seulement si je suis l'assignee et que ce n'est pas déjà lu
+    if (tache.assignee_id === appUserId && !tache.lu_par_assignee) {
+      try {
+        const { error } = await supabase.rpc('mark_task_as_read', { task_uuid: tache.id });
+
+        if (!error) {
+          // Mettre à jour l'état local
+          setTaches(prev => prev.map(t =>
+            t.id === tache.id ? { ...t, lu_par_assignee: true } : t
+          ));
+
+          // Mettre à jour les stats
+          setStats(prev => ({ ...prev, non_lus: Math.max(0, prev.non_lus - 1) }));
+        }
+      } catch (error) {
+        console.error('Erreur marquage lu:', error);
+      }
+    }
+  };
+
+  const handleOpenTask = (tache: Tache) => {
+    setSelectedTask(tache);
+    markAsRead(tache);
+  };
+
   const getPriorityColor = (priorite: string) => {
     switch (priorite) {
       case 'haute': return 'bg-red-100 text-red-800';
@@ -153,11 +189,23 @@ export function InboxPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-600 rounded-xl">
+          <div className="p-3 bg-blue-600 rounded-xl relative">
             <Inbox className="w-8 h-8 text-white" />
+            {stats.non_lus > 0 && (
+              <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                {stats.non_lus}
+              </div>
+            )}
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Boîte de Réception</h1>
+            <h1 className="text-3xl font-bold">
+              Boîte de Réception
+              {stats.non_lus > 0 && (
+                <span className="ml-2 text-lg text-blue-600">
+                  ({stats.non_lus} non {stats.non_lus === 1 ? 'lu' : 'lus'})
+                </span>
+              )}
+            </h1>
             <p className="text-gray-600">Tâches assignées</p>
           </div>
         </div>
@@ -189,25 +237,41 @@ export function InboxPage() {
           {filteredTaches.length === 0 ? (
             <div className="p-12 text-center text-gray-500">Aucune tâche</div>
           ) : (
-            filteredTaches.map(tache => (
-              <div key={tache.id} onClick={() => setSelectedTask(tache)} className="p-4 hover:bg-gray-50 cursor-pointer">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{tache.titre}</p>
-                    <p className="text-sm text-gray-500">{tache.expediteur_prenom} {tache.expediteur_nom}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 text-xs font-medium rounded ${getPriorityColor(tache.priorite)}`}>
-                      {tache.priorite}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      {getStatusIcon(tache.statut)}
-                      <span className="text-sm text-gray-600">{tache.statut}</span>
+            filteredTaches.map(tache => {
+              const isUnread = tache.assignee_id === appUserId && !tache.lu_par_assignee;
+              return (
+                <div
+                  key={tache.id}
+                  onClick={() => handleOpenTask(tache)}
+                  className={`p-4 hover:bg-gray-50 cursor-pointer ${isUnread ? 'bg-blue-50' : ''}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1">
+                      {isUnread && (
+                        <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" title="Non lu" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-gray-900 truncate ${isUnread ? 'font-bold' : 'font-medium'}`}>
+                          {tache.titre}
+                        </p>
+                        <p className={`text-sm text-gray-500 ${isUnread ? 'font-semibold' : ''}`}>
+                          {tache.expediteur_prenom} {tache.expediteur_nom}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className={`px-3 py-1 text-xs font-medium rounded ${getPriorityColor(tache.priorite)}`}>
+                        {tache.priorite}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {getStatusIcon(tache.statut)}
+                        <span className="text-sm text-gray-600">{tache.statut}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
