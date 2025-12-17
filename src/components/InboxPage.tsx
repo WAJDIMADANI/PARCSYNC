@@ -26,9 +26,9 @@ interface Message {
   contenu: string;
   is_read: boolean;
   created_at: string;
-  auteur_nom: string;
-  auteur_prenom: string;
-  auteur_email: string;
+  auteur_nom?: string;
+  auteur_prenom?: string;
+  auteur_email?: string;
 }
 
 interface TaskStats {
@@ -78,23 +78,11 @@ export function InboxPage() {
 
       if (error) throw error;
 
-      // Récupérer les messages non lus par tâche
-      const { data: unreadMessages } = await supabase
-        .from('messages_tache')
-        .select('tache_id')
-        .eq('is_read', false);
-
-      const unreadMap: { [key: string]: number } = {};
-      unreadMessages?.forEach(msg => {
-        unreadMap[msg.tache_id] = (unreadMap[msg.tache_id] || 0) + 1;
-      });
-
       const formattedTaches = data.map((t: any) => ({
         ...t,
         expediteur_nom: t.expediteur?.nom || '',
         expediteur_prenom: t.expediteur?.prenom || '',
-        expediteur_email: t.expediteur?.email || '',
-        unread_count: unreadMap[t.id] || 0
+        expediteur_email: t.expediteur?.email || ''
       }));
 
       setTaches(formattedTaches);
@@ -312,9 +300,7 @@ export function InboxPage() {
               <div
                 key={tache.id}
                 onClick={() => setSelectedTask(tache)}
-                className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                  (tache.unread_count ?? 0) > 0 ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-                }`}
+                className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
               >
                 <div className="flex items-start gap-4">
                   <div className="flex items-center gap-2 min-w-[200px]">
@@ -333,13 +319,6 @@ export function InboxPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {(tache.unread_count ?? 0) > 0 && (
-                      <div className="flex items-center gap-2 px-3 py-1 bg-red-100 rounded-full">
-                        <Mail className="w-4 h-4 text-red-600" />
-                        <span className="text-xs font-bold text-red-600">{tache.unread_count} non lus</span>
-                      </div>
-                    )}
-
                     <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getPriorityColor(tache.priorite)}`}>
                       {tache.priorite.charAt(0).toUpperCase() + tache.priorite.slice(1)}
                     </span>
@@ -369,10 +348,7 @@ export function InboxPage() {
         <TaskDetailModal
           task={selectedTask}
           appUserId={appUserId}
-          onClose={() => {
-            setSelectedTask(null);
-            fetchTaches();
-          }}
+          onClose={() => setSelectedTask(null)}
           onUpdateStatus={updateTaskStatus}
           onDelete={deleteTask}
         />
@@ -407,15 +383,18 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
 
   useEffect(() => {
     if (!task) return;
-    fetchMessages();
+    
+    setLoadingMessages(true);
+    loadMessages();
 
+    // Subscription temps réel
     const channel = supabase
       .channel(`messages-${task.id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages_tache', filter: `tache_id=eq.${task.id}` },
-        (payload: any) => {
-          fetchMessages();
+        () => {
+          loadMessages();
         }
       )
       .subscribe();
@@ -425,56 +404,34 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
     };
   }, [task]);
 
-  const fetchMessages = async () => {
+  const loadMessages = async () => {
     try {
-      console.log('📥 Chargement des messages pour tache:', task.id);
-      
       const { data, error } = await supabase
         .from('messages_tache')
-        .select(`
-          *,
-          auteur:auteur_id(nom, prenom, email)
-        `)
+        .select('*')
         .eq('tache_id', task.id)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error('❌ Erreur SELECT messages:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('✅ Messages chargés:', data?.length);
+      // Join avec app_utilisateur pour les noms
+      const { data: usersData } = await supabase
+        .from('app_utilisateur')
+        .select('id, nom, prenom, email');
 
-      const formattedMessages = (data || []).map((m: any) => ({
+      const userMap = new Map(usersData?.map(u => [u.id, u]) || []);
+
+      const formattedMessages = (data || []).map(m => ({
         ...m,
-        auteur_nom: m.auteur?.nom || 'Inconnu',
-        auteur_prenom: m.auteur?.prenom || '',
-        auteur_email: m.auteur?.email || ''
+        auteur_nom: userMap.get(m.auteur_id)?.nom || 'Inconnu',
+        auteur_prenom: userMap.get(m.auteur_id)?.prenom || '',
+        auteur_email: userMap.get(m.auteur_id)?.email || ''
       }));
 
       setMessages(formattedMessages);
-
-      // Marquer SEULEMENT les messages reçus (pas les nôtres) comme lus
-      if (formattedMessages.length > 0) {
-        const unreadReceivedMessageIds = formattedMessages
-          .filter(m => !m.is_read && m.auteur_id !== appUserId)
-          .map(m => m.id);
-
-        if (unreadReceivedMessageIds.length > 0) {
-          console.log('🔔 Marquage comme lus:', unreadReceivedMessageIds.length, 'messages');
-          const { error: updateError } = await supabase
-            .from('messages_tache')
-            .update({ is_read: true })
-            .in('id', unreadReceivedMessageIds);
-
-          if (updateError) {
-            console.error('⚠️ Erreur UPDATE is_read:', updateError);
-          }
-        }
-      }
+      setLoadingMessages(false);
     } catch (error) {
-      console.error('❌ Erreur chargement messages:', error);
-    } finally {
+      console.error('Erreur chargement messages:', error);
       setLoadingMessages(false);
     }
   };
@@ -485,43 +442,30 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
     if (!newMessage.trim() || !appUserId) return;
 
     setSendingMessage(true);
-    const messageToSend = newMessage.trim();
-    
     try {
-      console.log('📤 Envoi du message...');
-      
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('messages_tache')
         .insert({
           tache_id: task.id,
           auteur_id: appUserId,
-          contenu: messageToSend,
-          is_read: true  // Les messages qu'on envoie sont déjà lus pour nous
-        })
-        .select();
+          contenu: newMessage.trim(),
+          is_read: true
+        });
 
-      if (error) {
-        console.error('❌ Erreur INSERT:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('✅ Message envoyé:', data);
       setNewMessage('');
-      
-      // Attendre 1 seconde et recharger (pour s'assurer que la DB a le message)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await fetchMessages();
-      
+      await loadMessages();
     } catch (error) {
-      console.error('❌ Erreur complète:', error);
-      alert('Erreur: ' + (error?.message || 'Impossible d\'envoyer le message'));
+      console.error('Erreur envoi message:', error);
+      alert('Erreur lors de l\'envoi du message');
     } finally {
       setSendingMessage(false);
     }
   };
 
   const deleteMessage = async (messageId: string) => {
-    if (!confirm('Voulez-vous vraiment supprimer ce message ?')) return;
+    if (!confirm('Supprimer ce message ?')) return;
 
     try {
       const { error } = await supabase
@@ -533,8 +477,8 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
 
       setMessages(prev => prev.filter(m => m.id !== messageId));
     } catch (error) {
-      console.error('Erreur suppression message:', error);
-      alert('Erreur lors de la suppression du message');
+      console.error('Erreur suppression:', error);
+      alert('Erreur lors de la suppression');
     }
   };
 
@@ -550,104 +494,69 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            <Inbox className="w-6 h-6 text-white" />
-            <h2 className="text-2xl font-bold text-white">Détails de la tâche</h2>
-          </div>
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-white">Détails de la tâche</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+            className="text-white text-2xl hover:opacity-80"
           >
-            <span className="text-white text-2xl">&times;</span>
+            ✕
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6 border-b border-gray-200">
+          <div className="p-6 space-y-4 border-b border-gray-200">
             <div>
               <h3 className="text-2xl font-bold text-gray-900">{task.titre}</h3>
-              <div className="flex items-center gap-3 mt-3">
+              <div className="flex items-center gap-3 mt-2">
                 <span className={`px-3 py-1 text-sm font-medium rounded-full border ${getPriorityColor(task.priorite)}`}>
-                  Priorité : {task.priorite.charAt(0).toUpperCase() + task.priorite.slice(1)}
+                  {task.priorite}
                 </span>
                 <span className="text-sm text-gray-500">
-                  Créé le {new Date(task.created_at).toLocaleDateString('fr-FR')} à{' '}
-                  {new Date(task.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  Créé le {new Date(task.created_at).toLocaleDateString('fr-FR')}
                 </span>
               </div>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <User className="w-4 h-4 text-gray-600" />
-                <p className="text-sm font-medium text-gray-700">De :</p>
-              </div>
-              <p className="text-gray-900 font-medium">
-                {task.expediteur_prenom} {task.expediteur_nom}
-              </p>
-              <p className="text-gray-600 text-sm">{task.expediteur_email}</p>
             </div>
 
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Contenu :</p>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-900 whitespace-pre-wrap">{task.contenu}</p>
-              </div>
+              <p className="text-sm font-medium text-gray-700">De : {task.expediteur_prenom} {task.expediteur_nom}</p>
+              <p className="text-sm text-gray-600">{task.expediteur_email}</p>
+            </div>
+
+            <div className="bg-gray-50 rounded p-3">
+              <p className="text-gray-900 whitespace-pre-wrap">{task.contenu}</p>
             </div>
           </div>
 
-          {/* Messages Thread - Style Gmail */}
+          {/* Messages */}
           <div className="p-6 space-y-4 bg-gray-50">
-            <div className="flex items-center justify-between">
-              <h4 className="text-lg font-semibold text-gray-900">Conversation</h4>
-              <span className="text-sm text-gray-500">{messages.length} message{messages.length !== 1 ? 's' : ''}</span>
-            </div>
+            <h4 className="font-semibold text-gray-900">Conversation ({messages.length})</h4>
 
             {loadingMessages ? (
-              <div className="flex justify-center py-4">
-                <LoadingSpinner size="sm" text="Chargement des messages..." />
-              </div>
+              <LoadingSpinner size="sm" text="Chargement..." />
             ) : messages.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">Aucun message pour l'instant</p>
-              </div>
+              <p className="text-gray-500 text-center py-4">Aucun message</p>
             ) : (
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {messages.map((msg) => (
-                  <div key={msg.id} className={`rounded-lg p-4 border ${msg.is_read ? 'bg-white border-gray-200' : 'bg-blue-50 border-blue-300'}`}>
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className={`font-medium text-sm ${msg.is_read ? 'text-gray-900' : 'text-gray-900 font-bold'}`}>
-                            {msg.auteur_prenom} {msg.auteur_nom}
-                          </p>
-                          {!msg.is_read && (
-                            <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
-                              NOUVEAU
-                            </span>
-                          )}
-                          <span className="text-xs text-gray-500">
-                            {new Date(msg.created_at).toLocaleDateString('fr-FR')} à{' '}
-                            {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-600 mb-2">{msg.auteur_email}</p>
-                        <p className={`text-sm whitespace-pre-wrap ${msg.is_read ? 'text-gray-700' : 'text-gray-900 font-medium'}`}>
-                          {msg.contenu}
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {messages.map(msg => (
+                  <div key={msg.id} className="bg-white rounded p-3 border border-gray-200">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-sm text-gray-900">
+                          {msg.auteur_prenom} {msg.auteur_nom}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(msg.created_at).toLocaleString('fr-FR')}
                         </p>
                       </div>
                       <button
                         onClick={() => deleteMessage(msg.id)}
-                        className="flex-shrink-0 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="Supprimer ce message"
+                        className="text-gray-400 hover:text-red-600"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
+                    <p className="text-sm text-gray-700 mt-2">{msg.contenu}</p>
                   </div>
                 ))}
               </div>
@@ -655,84 +564,60 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
           </div>
         </div>
 
-        {/* Message Input Form */}
+        {/* Form */}
         <div className="border-t border-gray-200 bg-white p-4">
-          <form onSubmit={handleSendMessage} className="flex gap-3">
+          <form onSubmit={handleSendMessage} className="flex gap-2">
             <textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Ajouter un message..."
-              rows={3}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              rows={2}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 resize-none"
             />
             <button
               type="submit"
               disabled={sendingMessage || !newMessage.trim()}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
             >
-              {sendingMessage ? (
-                <LoadingSpinner size="sm" variant="white" />
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Envoyer
-                </>
-              )}
+              <Send className="w-4 h-4" />
+              Envoyer
             </button>
           </form>
         </div>
 
-        {/* Action Buttons */}
-        <div className="border-t border-gray-200 bg-gray-50 p-4">
-          <div className="flex flex-wrap gap-3">
-            {task.statut === 'en_attente' && (
-              <button
-                onClick={() => onUpdateStatus(task.id, 'en_cours')}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                <AlertCircle className="w-4 h-4" />
-                Marquer comme en cours
-              </button>
-            )}
-
-            {task.statut === 'en_cours' && (
-              <button
-                onClick={() => onUpdateStatus(task.id, 'completee')}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-              >
-                <CheckCircle className="w-4 h-4" />
-                Marquer comme complétée
-              </button>
-            )}
-
-            {task.statut === 'completee' && (
-              <button
-                onClick={() => onUpdateStatus(task.id, 'en_attente')}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
-              >
-                <Clock className="w-4 h-4" />
-                Remettre en attente
-              </button>
-            )}
-
+        {/* Actions */}
+        <div className="border-t border-gray-200 bg-gray-50 p-4 flex gap-2">
+          {task.statut === 'en_attente' && (
             <button
-              onClick={() => {
-                onDelete(task.id);
-                onClose();
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              onClick={() => onUpdateStatus(task.id, 'en_cours')}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
             >
-              <Trash2 className="w-4 h-4" />
-              Supprimer
+              Marquer en cours
             </button>
-
+          )}
+          {task.statut === 'en_cours' && (
             <button
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium ml-auto"
+              onClick={() => onUpdateStatus(task.id, 'completee')}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium"
             >
-              Fermer
+              Marquer complétée
             </button>
-          </div>
+          )}
+          <button
+            onClick={() => {
+              onDelete(task.id);
+              onClose();
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium ml-auto"
+          >
+            Supprimer
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-100 text-sm font-medium"
+          >
+            Fermer
+          </button>
         </div>
       </div>
     </div>
@@ -745,7 +630,7 @@ interface CreateTaskModalProps {
 }
 
 function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
-  const { user, appUserId } = useAuth();
+  const { appUserId } = useAuth();
   const [utilisateurs, setUtilisateurs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -753,39 +638,29 @@ function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
     assignee_id: '',
     titre: '',
     contenu: '',
-    priorite: 'normal' as 'haute' | 'normal' | 'basse'
+    priorite: 'normal'
   });
 
   useEffect(() => {
-    fetchUtilisateurs();
+    const fetch = async () => {
+      try {
+        const { data } = await supabase
+          .from('app_utilisateur')
+          .select('id, nom, prenom, email')
+          .order('nom');
+        setUtilisateurs(data || []);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetch();
   }, []);
-
-  const fetchUtilisateurs = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('app_utilisateur')
-        .select('id, nom, prenom, email')
-        .order('nom');
-
-      if (error) throw error;
-      setUtilisateurs(data || []);
-    } catch (error) {
-      console.error('Erreur chargement utilisateurs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.assignee_id || !formData.titre) {
-      alert('Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-
-    if (!appUserId) {
-      alert('Erreur: utilisateur non identifié');
+      alert('Remplissez les champs obligatoires');
       return;
     }
 
@@ -803,11 +678,10 @@ function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
         });
 
       if (error) throw error;
-
       onSuccess();
     } catch (error) {
-      console.error('Erreur création tâche:', error);
-      alert('Erreur lors de la création de la tâche');
+      console.error('Erreur:', error);
+      alert('Erreur lors de la création');
     } finally {
       setSubmitting(false);
     }
@@ -816,7 +690,7 @@ function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl shadow-2xl p-8">
+        <div className="bg-white rounded-xl p-8">
           <LoadingSpinner size="lg" text="Chargement..." />
         </div>
       </div>
@@ -826,17 +700,8 @@ function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
-          <div className="flex items-center gap-3">
-            <Plus className="w-6 h-6 text-white" />
-            <h2 className="text-2xl font-bold text-white">Nouvelle tâche</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
-          >
-            <span className="text-white text-2xl">&times;</span>
-          </button>
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+          <h2 className="text-2xl font-bold text-white">Nouvelle tâche</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -847,13 +712,13 @@ function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             <select
               value={formData.assignee_id}
               onChange={(e) => setFormData({ ...formData, assignee_id: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
               required
             >
-              <option value="">Sélectionner un utilisateur</option>
-              {utilisateurs.map((u) => (
+              <option value="">Sélectionner...</option>
+              {utilisateurs.map(u => (
                 <option key={u.id} value={u.id}>
-                  {u.prenom} {u.nom} ({u.email})
+                  {u.prenom} {u.nom}
                 </option>
               ))}
             </select>
@@ -867,8 +732,7 @@ function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
               type="text"
               value={formData.titre}
               onChange={(e) => setFormData({ ...formData, titre: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Ex: Vérifier les contrats de décembre"
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -880,20 +744,17 @@ function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             <textarea
               value={formData.contenu}
               onChange={(e) => setFormData({ ...formData, contenu: e.target.value })}
-              rows={5}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Décrivez la tâche en détail..."
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Priorité
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Priorité</label>
             <select
               value={formData.priorite}
-              onChange={(e) => setFormData({ ...formData, priorite: e.target.value as any })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => setFormData({ ...formData, priorite: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
             >
               <option value="basse">Basse</option>
               <option value="normal">Normale</option>
@@ -901,25 +762,18 @@ function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             </select>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-4">
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
+              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 font-medium"
             >
-              {submitting ? (
-                <LoadingSpinner size="sm" variant="white" text="Création..." />
-              ) : (
-                <>
-                  <Plus className="w-5 h-5" />
-                  Créer la tâche
-                </>
-              )}
+              {submitting ? 'Création...' : 'Créer'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="px-4 py-3 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-medium"
             >
               Annuler
             </button>
