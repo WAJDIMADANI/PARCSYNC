@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Trash2, Send } from 'lucide-react';
+import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Trash2, Send, Mail } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface Tache {
@@ -16,6 +16,7 @@ interface Tache {
   expediteur_nom: string;
   expediteur_prenom: string;
   expediteur_email: string;
+  unread_count?: number;
 }
 
 interface Message {
@@ -23,6 +24,7 @@ interface Message {
   tache_id: string;
   auteur_id: string;
   contenu: string;
+  is_read: boolean;
   created_at: string;
   auteur_nom: string;
   auteur_prenom: string;
@@ -76,11 +78,24 @@ export function InboxPage() {
 
       if (error) throw error;
 
+      // Récupérer les messages non lus
+      const { data: unreadMessages } = await supabase
+        .from('messages_tache')
+        .select('tache_id')
+        .eq('is_read', false);
+
+      // Créer un map du count des messages non lus par tâche
+      const unreadMap: { [key: string]: number } = {};
+      unreadMessages?.forEach(msg => {
+        unreadMap[msg.tache_id] = (unreadMap[msg.tache_id] || 0) + 1;
+      });
+
       const formattedTaches = data.map((t: any) => ({
         ...t,
         expediteur_nom: t.expediteur?.nom || '',
         expediteur_prenom: t.expediteur?.prenom || '',
-        expediteur_email: t.expediteur?.email || ''
+        expediteur_email: t.expediteur?.email || '',
+        unread_count: unreadMap[t.id] || 0
       }));
 
       setTaches(formattedTaches);
@@ -298,7 +313,9 @@ export function InboxPage() {
               <div
                 key={tache.id}
                 onClick={() => setSelectedTask(tache)}
-                className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                  (tache.unread_count ?? 0) > 0 ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                }`}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex items-center gap-2 min-w-[200px]">
@@ -317,6 +334,13 @@ export function InboxPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
+                    {(tache.unread_count ?? 0) > 0 && (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-red-100 rounded-full">
+                        <Mail className="w-4 h-4 text-red-600" />
+                        <span className="text-xs font-bold text-red-600">{tache.unread_count} non lus</span>
+                      </div>
+                    )}
+
                     <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getPriorityColor(tache.priorite)}`}>
                       {tache.priorite.charAt(0).toUpperCase() + tache.priorite.slice(1)}
                     </span>
@@ -346,7 +370,10 @@ export function InboxPage() {
         <TaskDetailModal
           task={selectedTask}
           appUserId={appUserId}
-          onClose={() => setSelectedTask(null)}
+          onClose={() => {
+            setSelectedTask(null);
+            fetchTaches();
+          }}
           onUpdateStatus={updateTaskStatus}
           onDelete={deleteTask}
         />
@@ -420,6 +447,20 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
       }));
 
       setMessages(formattedMessages);
+
+      // Marquer tous les messages comme lus
+      if (formattedMessages.length > 0) {
+        const unreadMessageIds = formattedMessages
+          .filter(m => !m.is_read)
+          .map(m => m.id);
+
+        if (unreadMessageIds.length > 0) {
+          await supabase
+            .from('messages_tache')
+            .update({ is_read: true })
+            .in('id', unreadMessageIds);
+        }
+      }
     } catch (error) {
       console.error('Erreur chargement messages:', error);
     } finally {
@@ -439,7 +480,8 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
         .insert({
           tache_id: task.id,
           auteur_id: appUserId,
-          contenu: newMessage.trim()
+          contenu: newMessage.trim(),
+          is_read: false
         });
 
       if (error) throw error;
@@ -531,23 +573,30 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
             ) : (
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {messages.map((msg) => (
-                  <div key={msg.id} className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div key={msg.id} className={`rounded-lg p-4 border ${msg.is_read ? 'bg-white border-gray-200' : 'bg-blue-50 border-blue-300'}`}>
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                         <User className="w-4 h-4 text-blue-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-gray-900 text-sm">
+                          <p className={`font-medium text-sm ${msg.is_read ? 'text-gray-900' : 'text-gray-900 font-bold'}`}>
                             {msg.auteur_prenom} {msg.auteur_nom}
                           </p>
+                          {!msg.is_read && (
+                            <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
+                              NOUVEAU
+                            </span>
+                          )}
                           <span className="text-xs text-gray-500">
                             {new Date(msg.created_at).toLocaleDateString('fr-FR')} à{' '}
                             {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                         <p className="text-xs text-gray-600 mb-2">{msg.auteur_email}</p>
-                        <p className="text-gray-700 text-sm whitespace-pre-wrap">{msg.contenu}</p>
+                        <p className={`text-sm whitespace-pre-wrap ${msg.is_read ? 'text-gray-700' : 'text-gray-900 font-medium'}`}>
+                          {msg.contenu}
+                        </p>
                       </div>
                     </div>
                   </div>
