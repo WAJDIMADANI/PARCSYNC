@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar } from 'lucide-react';
+import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Send, Reply } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface Tache {
@@ -16,6 +16,17 @@ interface Tache {
   expediteur_nom: string;
   expediteur_prenom: string;
   expediteur_email: string;
+}
+
+interface TacheMessage {
+  id: string;
+  tache_id: string;
+  auteur_id: string;
+  contenu: string;
+  created_at: string;
+  auteur_nom: string;
+  auteur_prenom: string;
+  auteur_email: string;
 }
 
 interface TaskStats {
@@ -256,48 +267,233 @@ interface TaskModalProps {
 }
 
 function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) {
+  const { appUserId, user } = useAuth();
+  const [messages, setMessages] = useState<TacheMessage[]>([]);
+  const [replyText, setReplyText] = useState('');
+  const [showReply, setShowReply] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(true);
+
+  useEffect(() => {
+    fetchMessages();
+
+    const channel = supabase
+      .channel(`taches_messages:${task.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'taches_messages',
+          filter: `tache_id=eq.${task.id}`
+        },
+        (payload) => {
+          fetchMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [task.id]);
+
+  const fetchMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('taches_messages')
+        .select(`
+          *,
+          auteur:auteur_id(nom, prenom, email)
+        `)
+        .eq('tache_id', task.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const formattedMessages = data.map((m: any) => ({
+        ...m,
+        auteur_nom: m.auteur?.nom || '',
+        auteur_prenom: m.auteur?.prenom || '',
+        auteur_email: m.auteur?.email || ''
+      }));
+
+      setMessages(formattedMessages);
+    } catch (error) {
+      console.error('Erreur chargement messages:', error);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const sendReply = async () => {
+    if (!replyText.trim() || !appUserId) return;
+
+    setSending(true);
+    try {
+      const { error } = await supabase
+        .from('taches_messages')
+        .insert({
+          tache_id: task.id,
+          auteur_id: appUserId,
+          contenu: replyText
+        });
+
+      if (error) throw error;
+
+      setReplyText('');
+      setShowReply(false);
+    } catch (error) {
+      console.error('Erreur envoi message:', error);
+      alert('Erreur lors de l\'envoi du message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const getInitials = (prenom: string, nom: string) => {
+    return `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase();
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+
+    if (hours < 24) {
+      return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: hours > 8760 ? 'numeric' : undefined });
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-2xl">
-        <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold">{task.titre}</h2>
-          <button onClick={onClose} className="text-2xl hover:opacity-80">✕</button>
+      <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <div className="bg-white border-b p-4 flex items-center justify-between rounded-t-xl">
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold text-gray-900">{task.titre}</h2>
+            <div className="flex items-center gap-3 mt-1">
+              <span className={`px-2 py-1 text-xs font-medium rounded ${task.priorite === 'haute' ? 'bg-red-100 text-red-800' : task.priorite === 'normal' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                {task.priorite}
+              </span>
+              <span className={`px-2 py-1 text-xs font-medium rounded ${task.statut === 'completee' ? 'bg-green-100 text-green-800' : task.statut === 'en_cours' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`}>
+                {task.statut.replace('_', ' ')}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">✕</button>
         </div>
 
-        <div className="p-6 space-y-4">
-          <div>
-            <p className="text-sm font-medium text-gray-700">De : {task.expediteur_prenom} {task.expediteur_nom}</p>
-            <p className="text-sm text-gray-600">{task.expediteur_email}</p>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-gray-700">Créé le :</p>
-            <p className="text-sm text-gray-600">{new Date(task.created_at).toLocaleDateString('fr-FR')}</p>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Contenu :</p>
-            <div className="bg-gray-50 p-4 rounded">
-              <p className="text-gray-900 whitespace-pre-wrap">{task.contenu}</p>
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div className="bg-white border rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                {getInitials(task.expediteur_prenom, task.expediteur_nom)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <div>
+                    <p className="font-semibold text-gray-900">{task.expediteur_prenom} {task.expediteur_nom}</p>
+                    <p className="text-sm text-gray-500">{task.expediteur_email}</p>
+                  </div>
+                  <p className="text-xs text-gray-500">{formatDate(task.created_at)}</p>
+                </div>
+                <div className="mt-3 text-gray-700 whitespace-pre-wrap">
+                  {task.contenu || <span className="text-gray-400 italic">Aucun contenu</span>}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="flex gap-2 pt-4">
-            {task.statut === 'en_attente' && (
-              <button onClick={() => onUpdateStatus(task.id, 'en_cours')} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
-                Marquer en cours
-              </button>
-            )}
-            {task.statut === 'en_cours' && (
-              <button onClick={() => onUpdateStatus(task.id, 'completee')} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
-                Marquer complétée
-              </button>
-            )}
-            <button onClick={() => { onDelete(task.id); onClose(); }} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
+          {loadingMessages ? (
+            <div className="flex justify-center py-8">
+              <LoadingSpinner size="sm" />
+            </div>
+          ) : messages.length > 0 ? (
+            <div className="space-y-3">
+              {messages.map((message) => (
+                <div key={message.id} className="bg-gray-50 border rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                      {getInitials(message.auteur_prenom, message.auteur_nom)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <div>
+                          <p className="font-semibold text-gray-900">{message.auteur_prenom} {message.auteur_nom}</p>
+                          <p className="text-sm text-gray-500">{message.auteur_email}</p>
+                        </div>
+                        <p className="text-xs text-gray-500">{formatDate(message.created_at)}</p>
+                      </div>
+                      <div className="mt-2 text-gray-700 whitespace-pre-wrap">
+                        {message.contenu}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {showReply && (
+            <div className="bg-white border rounded-lg p-4">
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder="Écrivez votre réponse..."
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                rows={4}
+                autoFocus
+              />
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  onClick={sendReply}
+                  disabled={sending || !replyText.trim()}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  <Send className="w-4 h-4" />
+                  {sending ? 'Envoi...' : 'Envoyer'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowReply(false);
+                    setReplyText('');
+                  }}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t bg-gray-50 p-4 rounded-b-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              {!showReply && (
+                <button
+                  onClick={() => setShowReply(true)}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium"
+                >
+                  <Reply className="w-4 h-4" />
+                  Répondre
+                </button>
+              )}
+              {task.statut === 'en_attente' && (
+                <button onClick={() => onUpdateStatus(task.id, 'en_cours')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                  Marquer en cours
+                </button>
+              )}
+              {task.statut === 'en_cours' && (
+                <button onClick={() => onUpdateStatus(task.id, 'completee')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                  Marquer complétée
+                </button>
+              )}
+            </div>
+            <button onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete(task.id); onClose(); } }} className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm">
               Supprimer
-            </button>
-            <button onClick={onClose} className="px-4 py-2 border rounded text-sm ml-auto hover:bg-gray-100">
-              Fermer
             </button>
           </div>
         </div>
