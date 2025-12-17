@@ -21,6 +21,7 @@ import {
   CheckSquare,
   MessageSquare,
   User,
+  Inbox,
 } from 'lucide-react';
 
 interface Stats {
@@ -67,6 +68,9 @@ interface Stats {
     total: number;
     en_attente: number;
     urgentes: number;
+  };
+  inbox: {
+    non_lus: number;
   };
 }
 
@@ -148,6 +152,9 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       en_attente: 0,
       urgentes: 0,
     },
+    inbox: {
+      non_lus: 0,
+    },
   });
   const [loading, setLoading] = useState(true);
   const [validationsWithMessages, setValidationsWithMessages] = useState<ValidationWithMessages[]>([]);
@@ -206,6 +213,20 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       })
       .subscribe();
 
+    const tachesChannel = supabase
+      .channel('taches-dashboard-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'taches' }, () => {
+        fetchInboxStats();
+      })
+      .subscribe();
+
+    const tachesMessagesChannel = supabase
+      .channel('taches-messages-dashboard-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'taches_messages' }, () => {
+        fetchInboxStats();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(candidatsChannel);
       supabase.removeChannel(profilsChannel);
@@ -214,6 +235,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       supabase.removeChannel(incidentsChannel);
       supabase.removeChannel(validationsChannel);
       supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(tachesChannel);
+      supabase.removeChannel(tachesMessagesChannel);
     };
   }, []);
 
@@ -227,6 +250,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       fetchDemandesStats(),
       fetchValidationsStats(),
       fetchValidationsWithMessages(),
+      fetchInboxStats(),
     ]);
     setLoading(false);
   };
@@ -641,6 +665,37 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
     }
   };
 
+  const fetchInboxStats = async () => {
+    if (!appUser) return;
+
+    try {
+      const { data: taches } = await supabase
+        .from('taches')
+        .select('lu_par_assignee, lu_par_expediteur, assignee_id, expediteur_id')
+        .or(`assignee_id.eq.${appUser.id},expediteur_id.eq.${appUser.id}`);
+
+      if (!taches) {
+        setStats((prev) => ({
+          ...prev,
+          inbox: { non_lus: 0 },
+        }));
+        return;
+      }
+
+      const non_lus = taches.filter((t) =>
+        (t.assignee_id === appUser.id && !t.lu_par_assignee) ||
+        (t.expediteur_id === appUser.id && !t.lu_par_expediteur)
+      ).length;
+
+      setStats((prev) => ({
+        ...prev,
+        inbox: { non_lus },
+      }));
+    } catch (error) {
+      console.error('Error fetching inbox stats:', error);
+    }
+  };
+
   const fetchValidationsWithMessages = async () => {
     if (!appUser) return;
 
@@ -753,7 +808,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         <button
           onClick={() => onNavigate?.('rh/candidats')}
           className="text-left hover:scale-105 transition-transform"
@@ -796,6 +851,25 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             trend={stats.demandes.urgentes > 0 ? 'up' : 'neutral'}
             trendValue={`${stats.demandes.urgentes} urgentes`}
             color="blue"
+          />
+        </button>
+
+        <button
+          onClick={() => onNavigate?.('inbox')}
+          className="text-left hover:scale-105 transition-transform"
+        >
+          <StatCard
+            icon={<Inbox className="w-6 h-6" />}
+            title="Inbox"
+            value={0}
+            subtitle={
+              <span className="font-bold text-lg">
+                {stats.inbox.non_lus > 0 ? `+${stats.inbox.non_lus}` : '0'}
+              </span>
+            }
+            trend="neutral"
+            trendValue={stats.inbox.non_lus > 0 ? 'messages non lus' : 'Aucun message'}
+            color="purple"
           />
         </button>
 
