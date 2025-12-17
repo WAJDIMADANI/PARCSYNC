@@ -330,12 +330,9 @@ export default function ContractSendModal({
       const typeContratFromTemplate = selectedTemplateObj?.type_contrat;
       
       console.log('🎯 ===== ÉTAPE 0: DÉTERMINATION DU TYPE =====');
-      console.log('📋 Template ID:', selectedTemplate);
       console.log('📋 Template nom:', selectedTemplateObj?.nom);
       console.log('📋 Type contrat (RAW):', typeContratFromTemplate);
-      console.log('📋 Type contrat (typeof):', typeof typeContratFromTemplate);
 
-      // ✅ VALIDATION STRICTE - type_document DOIT être l'une de ces valeurs
       let typeDocument: string;
       let avenantNum: number | null = null;
 
@@ -346,24 +343,19 @@ export default function ContractSendModal({
         return;
       }
 
-      // ✅ Convertir en minuscule et mapper
+      // ✅ MAPPING CORRECT : Le CHECK constraint n'accepte que 'contrat' ou 'avenant'
       const typeNormalized = String(typeContratFromTemplate).trim().toLowerCase();
       
       if (typeNormalized === 'avenant') {
-        typeDocument = 'avenant';
+        typeDocument = 'avenant';  // ✅ Accepté par le CHECK constraint
         avenantNum = await getNextAvenantNumber(profilId);
         console.log('✅ Type AVENANT - Numéro:', avenantNum);
-      } else if (typeNormalized === 'cdd') {
-        typeDocument = 'cdd';
-        console.log('✅ Type CDD');
-      } else if (typeNormalized === 'cdi') {
-        typeDocument = 'cdi';
-        console.log('✅ Type CDI');
+      } else if (typeNormalized === 'cdd' || typeNormalized === 'cdi') {
+        typeDocument = 'contrat';  // ✅ Accepté par le CHECK constraint (pas 'cdd' ni 'cdi')
+        console.log('✅ Type', typeNormalized.toUpperCase(), '→ type_document: "contrat"');
       } else {
-        console.error('❌ ERREUR: Type inconnu:', typeNormalized);
-        alert(`Erreur: Type de contrat inconnu: ${typeNormalized}`);
-        setSending(false);
-        return;
+        typeDocument = 'contrat';  // Par défaut
+        console.log('⚠️ Type inconnu, utilisation de "contrat" par défaut');
       }
 
       console.log('🎯 ===== ÉTAPE 1: PRÉPARATION DES DONNÉES =====');
@@ -371,7 +363,7 @@ export default function ContractSendModal({
       const contractData: any = {
         profil_id: profilId,
         modele_id: selectedTemplate,
-        type_document: typeDocument,  // ✅ JAMAIS undefined
+        type_document: typeDocument,  // ✅ Valeur correcte pour le CHECK constraint
         variables: {
           ...variables,
           nom_salarie: employeeName,
@@ -386,10 +378,8 @@ export default function ContractSendModal({
 
       console.log('📝 Données à envoyer à Supabase:');
       console.log('  - profil_id:', contractData.profil_id);
-      console.log('  - modele_id:', contractData.modele_id);
-      console.log('  - type_document:', contractData.type_document, '(typeof:', typeof contractData.type_document + ')');
+      console.log('  - type_document:', contractData.type_document, '✅');
       console.log('  - avenant_num:', contractData.avenant_num);
-      console.log('  - statut:', contractData.statut);
 
       console.log('🎯 ===== ÉTAPE 2: INSERTION EN BASE =====');
 
