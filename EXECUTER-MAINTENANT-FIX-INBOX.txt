@@ -1,0 +1,34 @@
+═══════════════════════════════════════════════════════════════
+  ✅ ERREUR SQL CORRIGÉE - EXÉCUTEZ MAINTENANT
+═══════════════════════════════════════════════════════════════
+
+L'erreur à la ligne 152 a été corrigée !
+
+INSTRUCTIONS :
+
+1. Dans Supabase SQL Editor, SUPPRIMEZ le contenu actuel
+
+2. Ouvrez le fichier : FIX-INBOX-COMPLET-MAINTENANT.sql
+
+3. Copiez TOUT le contenu
+
+4. Collez-le dans Supabase SQL Editor
+
+5. Cliquez sur "Run" (ou Ctrl+Enter)
+
+6. Attendez 2-3 secondes
+
+7. Vous devriez voir : ✅ INSTALLATION COMPLÈTE !
+
+8. Rafraîchissez l'application (Ctrl+Shift+R)
+
+9. Testez l'envoi d'une tâche entre deux utilisateurs
+
+10. Le bouton "Répondre" doit maintenant apparaître !
+
+═══════════════════════════════════════════════════════════════
+
+Si vous avez une autre erreur, regardez :
+→ CORRECTION-ERREUR-SQL-INBOX.md
+
+═══════════════════════════════════════════════════════════════

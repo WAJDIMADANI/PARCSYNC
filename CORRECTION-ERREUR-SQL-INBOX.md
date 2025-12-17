@@ -1,26 +1,48 @@
+# Correction de l'erreur SQL (ligne 152)
+
+## Problème corrigé
+
+L'erreur était à la ligne 152 :
+```
+erreur de syntaxe à ou près de « NON »
+ALTER PUBLICATION supabase_realtime ADD TABLE IF NOT EXISTS taches;
+```
+
+La syntaxe `IF NOT EXISTS` n'est pas supportée avec `ALTER PUBLICATION` en PostgreSQL.
+
+## Solution appliquée
+
+J'ai modifié le fichier **`FIX-INBOX-COMPLET-MAINTENANT.sql`** pour utiliser une syntaxe correcte avec des blocs `DO $$`.
+
+## Que faire maintenant
+
+1. **Rafraîchissez la page Supabase** dans votre navigateur (F5)
+
+2. **Rechargez le fichier SQL** en copiant à nouveau le contenu de `FIX-INBOX-COMPLET-MAINTENANT.sql`
+
+3. **Exécutez le script** en cliquant sur "Run" (ou Ctrl+Enter)
+
+4. Cette fois ça devrait fonctionner sans erreur !
+
+## Alternative rapide
+
+Si vous ne voulez pas recharger, vous pouvez aussi exécuter directement ce script corrigé :
+
+```sql
 /*
-  # CORRECTION COMPLÈTE DU SYSTÈME INBOX
-
-  Ce script corrige tous les problèmes :
-  1. Politiques RLS sur taches (pour que wajdi reçoive les tâches)
-  2. Création de la table taches_messages (pour les réponses)
-  3. Politiques RLS sur taches_messages
-  4. Activation du real-time
-
-  EXÉCUTEZ CE SCRIPT MAINTENANT DANS SUPABASE SQL EDITOR
+  CORRECTION COMPLÈTE DU SYSTÈME INBOX
 */
 
 -- ===============================================
 -- PARTIE 1 : CORRIGER LES POLITIQUES RLS TACHES
 -- ===============================================
 
--- Supprimer les anciennes politiques
 DROP POLICY IF EXISTS "Users can view tasks assigned to them or sent by them" ON taches;
 DROP POLICY IF EXISTS "Users can create tasks" ON taches;
 DROP POLICY IF EXISTS "Assignee can update their tasks" ON taches;
+DROP POLICY IF EXISTS "Users can update their tasks" ON taches;
 DROP POLICY IF EXISTS "Users can delete tasks they are involved in" ON taches;
 
--- Politique SELECT : Voir les tâches où je suis assignee ou expéditeur
 CREATE POLICY "Users can view tasks assigned to them or sent by them"
   ON taches FOR SELECT
   TO authenticated
@@ -32,7 +54,6 @@ CREATE POLICY "Users can view tasks assigned to them or sent by them"
     )
   );
 
--- Politique INSERT : Tout le monde peut créer une tâche
 CREATE POLICY "Users can create tasks"
   ON taches FOR INSERT
   TO authenticated
@@ -44,7 +65,6 @@ CREATE POLICY "Users can create tasks"
     )
   );
 
--- Politique UPDATE : L'assignee ET l'expéditeur peuvent modifier
 CREATE POLICY "Users can update their tasks"
   ON taches FOR UPDATE
   TO authenticated
@@ -63,7 +83,6 @@ CREATE POLICY "Users can update their tasks"
     )
   );
 
--- Politique DELETE : L'expéditeur ou l'assignee peuvent supprimer
 CREATE POLICY "Users can delete tasks they are involved in"
   ON taches FOR DELETE
   TO authenticated
@@ -79,7 +98,6 @@ CREATE POLICY "Users can delete tasks they are involved in"
 -- PARTIE 2 : CRÉER LA TABLE TACHES_MESSAGES
 -- ===============================================
 
--- Créer la table taches_messages
 CREATE TABLE IF NOT EXISTS taches_messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tache_id uuid REFERENCES taches(id) ON DELETE CASCADE NOT NULL,
@@ -88,7 +106,6 @@ CREATE TABLE IF NOT EXISTS taches_messages (
   created_at timestamptz DEFAULT now() NOT NULL
 );
 
--- Index pour optimiser les requêtes
 CREATE INDEX IF NOT EXISTS idx_taches_messages_tache_id ON taches_messages(tache_id);
 CREATE INDEX IF NOT EXISTS idx_taches_messages_auteur_id ON taches_messages(auteur_id);
 CREATE INDEX IF NOT EXISTS idx_taches_messages_created_at ON taches_messages(created_at DESC);
@@ -97,15 +114,12 @@ CREATE INDEX IF NOT EXISTS idx_taches_messages_created_at ON taches_messages(cre
 -- PARTIE 3 : POLITIQUES RLS TACHES_MESSAGES
 -- ===============================================
 
--- Activer RLS
 ALTER TABLE taches_messages ENABLE ROW LEVEL SECURITY;
 
--- Supprimer les anciennes politiques si elles existent
 DROP POLICY IF EXISTS "Users can view messages of their tasks" ON taches_messages;
 DROP POLICY IF EXISTS "Users can create messages on their tasks" ON taches_messages;
 DROP POLICY IF EXISTS "Users can delete their own messages" ON taches_messages;
 
--- Politique SELECT : Voir les messages des tâches où je suis impliqué
 CREATE POLICY "Users can view messages of their tasks"
   ON taches_messages FOR SELECT
   TO authenticated
@@ -118,7 +132,6 @@ CREATE POLICY "Users can view messages of their tasks"
     )
   );
 
--- Politique INSERT : Créer des messages sur les tâches où je suis impliqué
 CREATE POLICY "Users can create messages on their tasks"
   ON taches_messages FOR INSERT
   TO authenticated
@@ -132,7 +145,6 @@ CREATE POLICY "Users can create messages on their tasks"
     )
   );
 
--- Politique DELETE : Supprimer ses propres messages
 CREATE POLICY "Users can delete their own messages"
   ON taches_messages FOR DELETE
   TO authenticated
@@ -145,10 +157,9 @@ CREATE POLICY "Users can delete their own messages"
   );
 
 -- ===============================================
--- PARTIE 4 : ACTIVER REAL-TIME
+-- PARTIE 4 : ACTIVER REAL-TIME (CORRIGÉ)
 -- ===============================================
 
--- Activer real-time pour les tâches
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -159,7 +170,6 @@ BEGIN
   END IF;
 END $$;
 
--- Activer real-time pour les messages
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -174,7 +184,6 @@ END $$;
 -- VÉRIFICATION FINALE
 -- ===============================================
 
--- Afficher les politiques créées
 SELECT
   tablename,
   policyname,
@@ -183,7 +192,7 @@ FROM pg_policies
 WHERE tablename IN ('taches', 'taches_messages')
 ORDER BY tablename, policyname;
 
--- Message de succès
 SELECT '✅ INSTALLATION COMPLÈTE !' as resultat;
-SELECT '✅ Les tâches devraient maintenant être visibles par les destinataires' as info;
-SELECT '✅ Le bouton Répondre devrait apparaître dans l''interface' as info2;
+```
+
+Copiez ce script ci-dessus et exécutez-le directement dans l'éditeur SQL !
