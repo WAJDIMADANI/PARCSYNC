@@ -71,7 +71,7 @@ export function InboxPage() {
           expediteur:expediteur_id(nom, prenom, email),
           assignee:assignee_id(nom, prenom, email)
         `)
-        .eq('assignee_id', appUserId)
+        .or(`assignee_id.eq.${appUserId},expediteur_id.eq.${appUserId}`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
