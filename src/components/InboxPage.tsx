@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Trash2 } from 'lucide-react';
+import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Trash2, Send } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface Tache {
@@ -16,6 +16,17 @@ interface Tache {
   expediteur_nom: string;
   expediteur_prenom: string;
   expediteur_email: string;
+}
+
+interface Message {
+  id: string;
+  tache_id: string;
+  auteur_id: string;
+  contenu: string;
+  created_at: string;
+  auteur_nom: string;
+  auteur_prenom: string;
+  auteur_email: string;
 }
 
 interface TaskStats {
@@ -334,6 +345,7 @@ export function InboxPage() {
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
+          appUserId={appUserId}
           onClose={() => setSelectedTask(null)}
           onUpdateStatus={updateTaskStatus}
           onDelete={deleteTask}
@@ -355,12 +367,93 @@ export function InboxPage() {
 
 interface TaskDetailModalProps {
   task: Tache;
+  appUserId: string | null;
   onClose: () => void;
   onUpdateStatus: (taskId: string, status: 'en_attente' | 'en_cours' | 'completee') => void;
   onDelete: (taskId: string) => void;
 }
 
-function TaskDetailModal({ task, onClose, onUpdateStatus, onDelete }: TaskDetailModalProps) {
+function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }: TaskDetailModalProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(true);
+  const [newMessage, setNewMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+
+  useEffect(() => {
+    if (!task) return;
+    fetchMessages();
+
+    const channel = supabase
+      .channel(`messages-${task.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages_tache', filter: `tache_id=eq.${task.id}` },
+        (payload: any) => {
+          fetchMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [task]);
+
+  const fetchMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('messages_tache')
+        .select(`
+          *,
+          auteur:auteur_id(nom, prenom, email)
+        `)
+        .eq('tache_id', task.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const formattedMessages = data.map((m: any) => ({
+        ...m,
+        auteur_nom: m.auteur?.nom || '',
+        auteur_prenom: m.auteur?.prenom || '',
+        auteur_email: m.auteur?.email || ''
+      }));
+
+      setMessages(formattedMessages);
+    } catch (error) {
+      console.error('Erreur chargement messages:', error);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!newMessage.trim() || !appUserId) return;
+
+    setSendingMessage(true);
+    try {
+      const { error } = await supabase
+        .from('messages_tache')
+        .insert({
+          tache_id: task.id,
+          auteur_id: appUserId,
+          contenu: newMessage.trim()
+        });
+
+      if (error) throw error;
+
+      setNewMessage('');
+      await fetchMessages();
+    } catch (error) {
+      console.error('Erreur envoi message:', error);
+      alert('Erreur lors de l\'envoi du message');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
   const getPriorityColor = (priorite: string) => {
     switch (priorite) {
       case 'haute': return 'bg-red-100 text-red-800 border-red-300';
@@ -372,8 +465,8 @@ function TaskDetailModal({ task, onClose, onUpdateStatus, onDelete }: TaskDetail
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between z-10 rounded-t-xl">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-3">
             <Inbox className="w-6 h-6 text-white" />
             <h2 className="text-2xl font-bold text-white">Détails de la tâche</h2>
@@ -386,89 +479,161 @@ function TaskDetailModal({ task, onClose, onUpdateStatus, onDelete }: TaskDetail
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
-          <div>
-            <h3 className="text-2xl font-bold text-gray-900">{task.titre}</h3>
-            <div className="flex items-center gap-3 mt-3">
-              <span className={`px-3 py-1 text-sm font-medium rounded-full border ${getPriorityColor(task.priorite)}`}>
-                Priorité : {task.priorite.charAt(0).toUpperCase() + task.priorite.slice(1)}
-              </span>
-              <span className="text-sm text-gray-500">
-                Créé le {new Date(task.created_at).toLocaleDateString('fr-FR')} à{' '}
-                {new Date(task.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-              </span>
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6 border-b border-gray-200">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900">{task.titre}</h3>
+              <div className="flex items-center gap-3 mt-3">
+                <span className={`px-3 py-1 text-sm font-medium rounded-full border ${getPriorityColor(task.priorite)}`}>
+                  Priorité : {task.priorite.charAt(0).toUpperCase() + task.priorite.slice(1)}
+                </span>
+                <span className="text-sm text-gray-500">
+                  Créé le {new Date(task.created_at).toLocaleDateString('fr-FR')} à{' '}
+                  {new Date(task.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <User className="w-4 h-4 text-gray-600" />
-              <p className="text-sm font-medium text-gray-700">De :</p>
-            </div>
-            <p className="text-gray-900 font-medium">
-              {task.expediteur_prenom} {task.expediteur_nom}
-            </p>
-            <p className="text-gray-600 text-sm">{task.expediteur_email}</p>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Contenu :</p>
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-gray-900 whitespace-pre-wrap">{task.contenu}</p>
+              <div className="flex items-center gap-2 mb-2">
+                <User className="w-4 h-4 text-gray-600" />
+                <p className="text-sm font-medium text-gray-700">De :</p>
+              </div>
+              <p className="text-gray-900 font-medium">
+                {task.expediteur_prenom} {task.expediteur_nom}
+              </p>
+              <p className="text-gray-600 text-sm">{task.expediteur_email}</p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Contenu :</p>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-gray-900 whitespace-pre-wrap">{task.contenu}</p>
+              </div>
             </div>
           </div>
 
-          <div className="border-t border-gray-200 pt-6">
-            <p className="text-sm font-medium text-gray-700 mb-3">Actions :</p>
-            <div className="flex flex-wrap gap-3">
-              {task.statut === 'en_attente' && (
-                <button
-                  onClick={() => onUpdateStatus(task.id, 'en_cours')}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                >
-                  <AlertCircle className="w-4 h-4" />
-                  Marquer comme en cours
-                </button>
-              )}
-
-              {task.statut === 'en_cours' && (
-                <button
-                  onClick={() => onUpdateStatus(task.id, 'completee')}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  Marquer comme complétée
-                </button>
-              )}
-
-              {task.statut === 'completee' && (
-                <button
-                  onClick={() => onUpdateStatus(task.id, 'en_attente')}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
-                >
-                  <Clock className="w-4 h-4" />
-                  Remettre en attente
-                </button>
-              )}
-
-              <button
-                onClick={() => {
-                  onDelete(task.id);
-                  onClose();
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-              >
-                <Trash2 className="w-4 h-4" />
-                Supprimer
-              </button>
-
-              <button
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-              >
-                Fermer
-              </button>
+          {/* Messages Thread - Style Gmail */}
+          <div className="p-6 space-y-4 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <h4 className="text-lg font-semibold text-gray-900">Conversation</h4>
+              <span className="text-sm text-gray-500">{messages.length} message{messages.length !== 1 ? 's' : ''}</span>
             </div>
+
+            {loadingMessages ? (
+              <div className="flex justify-center py-4">
+                <LoadingSpinner size="sm" text="Chargement des messages..." />
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Aucun message pour l'instant</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {messages.map((msg) => (
+                  <div key={msg.id} className="bg-white rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900 text-sm">
+                            {msg.auteur_prenom} {msg.auteur_nom}
+                          </p>
+                          <span className="text-xs text-gray-500">
+                            {new Date(msg.created_at).toLocaleDateString('fr-FR')} à{' '}
+                            {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 mb-2">{msg.auteur_email}</p>
+                        <p className="text-gray-700 text-sm whitespace-pre-wrap">{msg.contenu}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Message Input Form */}
+        <div className="border-t border-gray-200 bg-white p-4">
+          <form onSubmit={handleSendMessage} className="flex gap-3">
+            <textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Ajouter un message..."
+              rows={3}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+            <button
+              type="submit"
+              disabled={sendingMessage || !newMessage.trim()}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {sendingMessage ? (
+                <LoadingSpinner size="sm" variant="white" />
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  Envoyer
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="border-t border-gray-200 bg-gray-50 p-4">
+          <div className="flex flex-wrap gap-3">
+            {task.statut === 'en_attente' && (
+              <button
+                onClick={() => onUpdateStatus(task.id, 'en_cours')}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                <AlertCircle className="w-4 h-4" />
+                Marquer comme en cours
+              </button>
+            )}
+
+            {task.statut === 'en_cours' && (
+              <button
+                onClick={() => onUpdateStatus(task.id, 'completee')}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Marquer comme complétée
+              </button>
+            )}
+
+            {task.statut === 'completee' && (
+              <button
+                onClick={() => onUpdateStatus(task.id, 'en_attente')}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
+              >
+                <Clock className="w-4 h-4" />
+                Remettre en attente
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                onDelete(task.id);
+                onClose();
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
+              <Trash2 className="w-4 h-4" />
+              Supprimer
+            </button>
+
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium ml-auto"
+            >
+              Fermer
+            </button>
           </div>
         </div>
       </div>
