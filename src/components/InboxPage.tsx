@@ -482,7 +482,7 @@ interface CreateTaskModalProps {
 }
 
 function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
-  const { user } = useAuth();
+  const { user, appUserId } = useAuth();
   const [utilisateurs, setUtilisateurs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -521,12 +521,17 @@ function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
       return;
     }
 
+    if (!appUserId) {
+      alert('Erreur: utilisateur non identifié');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const { error } = await supabase
         .from('taches')
         .insert({
-          expediteur_id: user?.id,
+          expediteur_id: appUserId,
           assignee_id: formData.assignee_id,
           titre: formData.titre,
           contenu: formData.contenu,
