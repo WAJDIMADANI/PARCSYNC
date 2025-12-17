@@ -41,6 +41,28 @@ interface ContractSendModalProps {
   employeeSSN?: string;
 }
 
+// ✅ Fonction pour récupérer le prochain numéro d'avenant
+const getNextAvenantNumber = async (profilId: string): Promise<number> => {
+  const { data, error } = await supabase
+    .from('contrat')
+    .select('avenant_num')
+    .eq('profil_id', profilId)
+    .eq('type_document', 'avenant')
+    .order('avenant_num', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    console.error('Erreur récupération avenants:', error);
+    return 1;
+  }
+
+  if (!data || data.length === 0) {
+    return 1; // Premier avenant
+  }
+
+  return (data[0].avenant_num || 0) + 1;
+};
+
 export default function ContractSendModal({
   profilId,
   employeeName,
@@ -306,25 +328,60 @@ export default function ContractSendModal({
 
     setSending(true);
     try {
-      // ✅ ÉTAPE 1 : Créer le contrat en base (mais avec statut 'en_attente_signature')
+      // ✅ ÉTAPE 0 : Déterminer le type_document et le numéro d'avenant
+      const selectedTemplateObj = templates.find(t => t.id === selectedTemplate);
+      const typeContrat = selectedTemplateObj?.type_contrat || 'CDD';
+      
+      console.log('📋 Template sélectionné:', selectedTemplateObj?.nom);
+      console.log('📋 Type contrat:', typeContrat);
+
+      let typeDocument: string;
+      let avenantNum: number | null = null;
+
+      if (typeContrat === 'Avenant') {
+        typeDocument = 'avenant';
+        avenantNum = await getNextAvenantNumber(profilId);
+        console.log('✅ Avenant détecté - Numéro:', avenantNum);
+      } else if (typeContrat === 'CDD') {
+        typeDocument = 'cdd';
+        console.log('✅ CDD détecté');
+      } else if (typeContrat === 'CDI') {
+        typeDocument = 'cdi';
+        console.log('✅ CDI détecté');
+      } else {
+        typeDocument = typeContrat.toLowerCase();
+        console.log('✅ Type détecté:', typeDocument);
+      }
+
+      // ✅ ÉTAPE 1 : Créer le contrat en base (avec statut 'en_attente_signature')
+      const contractData: any = {
+        profil_id: profilId,
+        modele_id: selectedTemplate,
+        type_document: typeDocument,
+        variables: {
+          ...variables,
+          nom_salarie: employeeName,
+          email_salarie: employeeEmail
+        },
+        statut: 'en_attente_signature'
+      };
+
+      // Ajouter avenant_num uniquement si c'est un avenant
+      if (avenantNum !== null) {
+        contractData.avenant_num = avenantNum;
+      }
+
+      console.log('📝 Données du contrat à créer:', contractData);
+
       const { data: contrat, error: contratError } = await supabase
         .from('contrat')
-        .insert({
-          profil_id: profilId,
-          modele_id: selectedTemplate,
-          variables: {
-            ...variables,
-            nom_salarie: employeeName,
-            email_salarie: employeeEmail
-          },
-          statut: 'en_attente_signature'  // ✅ CHANGÉ : Pas 'envoye' tout de suite
-        })
+        .insert(contractData)
         .select()
         .single();
 
       if (contratError) throw contratError;
 
-      console.log('Contrat créé:', contrat.id);
+      console.log('✅ Contrat créé:', contrat.id);
 
       // ✅ ÉTAPE 2 : CRÉER LA DEMANDE YOUSIGN AVANT DE MARQUER COMME ENVOYÉ
       let yousignData;
@@ -333,7 +390,7 @@ export default function ContractSendModal({
           contractId: contrat.id
         };
 
-        console.log('Envoi à Yousign - Contract ID:', contrat.id);
+        console.log('📧 Envoi à Yousign - Contract ID:', contrat.id);
 
         const yousignResponse = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
@@ -365,7 +422,7 @@ export default function ContractSendModal({
           }
         } else {
           yousignData = await yousignResponse.json();
-          console.log('Demande de signature Yousign créée:', yousignData);
+          console.log('✅ Demande de signature Yousign créée:', yousignData);
         }
 
         // ✅ ÉTAPE 3 : MAINTENANT, mettre le statut à 'envoye' seulement si Yousign a réussi
@@ -378,10 +435,10 @@ export default function ContractSendModal({
 
         if (updateError) throw updateError;
 
-        console.log('Contrat marqué comme envoyé');
+        console.log('✅ Contrat marqué comme envoyé');
 
       } catch (fetchError: any) {
-        console.error('Erreur lors de l\'appel Yousign:', fetchError);
+        console.error('❌ Erreur lors de l\'appel Yousign:', fetchError);
 
         // ✅ SUPPRIMER LE CONTRAT SI YOUSIGN ÉCHOUE
         await supabase.from('contrat').delete().eq('id', contrat.id);
@@ -416,7 +473,7 @@ export default function ContractSendModal({
         onClose();
       }, 2500);
     } catch (error: any) {
-      console.error('Erreur envoi contrat:', error);
+      console.error('❌ Erreur envoi contrat:', error);
       const errorMessage = error.message || 'Erreur inconnue lors de l\'envoi du contrat';
       alert(`Erreur: ${errorMessage}`);
     } finally {
@@ -727,22 +784,3 @@ export default function ContractSendModal({
     </>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
