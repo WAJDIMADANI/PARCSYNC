@@ -1,0 +1,60 @@
+═══════════════════════════════════════════════════════════════
+  🔴 EXÉCUTER MAINTENANT
+═══════════════════════════════════════════════════════════════
+
+PROBLÈME :
+  ❌ ACCUEIL répond mais vous ne voyez PAS la ligne en gras
+  ❌ Il faut rafraîchir manuellement pour voir les réponses
+
+SOLUTION :
+  ✅ Activer le système temps réel
+  ✅ Les réponses apparaîtront en gras INSTANTANÉMENT
+
+═══════════════════════════════════════════════════════════════
+
+ÉTAPE 1 : EXÉCUTER CE SQL
+
+Allez dans Supabase > SQL Editor
+
+Copiez-collez :
+
+ALTER PUBLICATION supabase_realtime ADD TABLE taches;
+ALTER PUBLICATION supabase_realtime ADD TABLE taches_messages;
+
+Cliquez sur "Run"
+
+═══════════════════════════════════════════════════════════════
+
+ÉTAPE 2 : RAFRAÎCHIR
+
+Dans votre application :
+  → Appuyez sur Ctrl+Shift+R
+  → Ou fermez et rouvrez l'onglet
+
+═══════════════════════════════════════════════════════════════
+
+ÉTAPE 3 : TESTER
+
+1. Demandez à ACCUEIL de répondre à une tâche
+
+2. REGARDEZ : Sans rafraîchir, la ligne devient EN GRAS !
+
+3. Ouvrez la tâche : Elle redevient normale
+
+4. ACCUEIL répond à nouveau : Elle redevient EN GRAS !
+
+═══════════════════════════════════════════════════════════════
+
+RÉSULTAT FINAL :
+
+  AVANT :
+    ACCUEIL répond → ❌ Rien ne se passe → Vous F5 manuellement
+
+  APRÈS :
+    ACCUEIL répond → ✅ GRAS INSTANTANÉ → 0 action manuelle
+
+═══════════════════════════════════════════════════════════════
+
+C'EST TOUT ! 2 lignes SQL et c'est réglé.
+
+═══════════════════════════════════════════════════════════════

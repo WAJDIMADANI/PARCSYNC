@@ -1,0 +1,66 @@
+═══════════════════════════════════════════════════════════════
+  🔴 ACTIVER MAINTENANT - TEMPS RÉEL INBOX
+═══════════════════════════════════════════════════════════════
+
+PROBLÈME :
+  Vous avez dit : "ACCEUIL A REPONDU MAIS JE NE VOIS PAS ICI
+  MESSAGE NON LU"
+
+  → La réponse est bien enregistrée en base
+  → MAIS l'interface ne se met PAS à jour automatiquement
+  → Il faut rafraîchir la page manuellement
+
+═══════════════════════════════════════════════════════════════
+
+SOLUTION EN 2 ÉTAPES :
+
+1. EXÉCUTER CE SQL dans Supabase :
+
+   Fichier : activer-realtime-inbox.sql
+
+   Allez dans l'éditeur SQL de Supabase et exécutez-le
+
+2. RAFRAÎCHIR l'application :
+
+   → Appuyez sur Ctrl+Shift+R
+   → Ou rechargez complètement la page
+
+═══════════════════════════════════════════════════════════════
+
+APRÈS ACTIVATION, VOICI CE QUI SE PASSE :
+
+1. ACCUEIL répond "SALUT TEST"
+
+2. INSTANTANÉMENT (sans rafraîchir) :
+   ✅ La ligne "TEST" devient EN GRAS
+   ✅ Point bleu apparaît
+   ✅ Fond bleu clair
+   ✅ Compteur "Non lus : 1" se met à jour
+
+3. Vous ouvrez la tâche :
+   ✅ Elle redevient normale
+   ✅ Compteur devient "0"
+
+═══════════════════════════════════════════════════════════════
+
+TESTEZ MAINTENANT :
+
+1. Exécutez : activer-realtime-inbox.sql
+2. Rafraîchissez l'application
+3. Demandez à ACCUEIL de répondre à nouveau
+4. REGARDEZ : la ligne devient en gras INSTANTANÉMENT !
+
+═══════════════════════════════════════════════════════════════
+
+IMPORTANT :
+
+Sans cette activation, vous devrez TOUJOURS rafraîchir
+manuellement pour voir les nouvelles réponses.
+
+Avec cette activation, c'est AUTOMATIQUE et INSTANTANÉ !
+
+═══════════════════════════════════════════════════════════════
+
+C'EST TOUT ! Exécutez le SQL maintenant.
+
+═══════════════════════════════════════════════════════════════
