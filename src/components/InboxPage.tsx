@@ -17,6 +17,7 @@ interface Tache {
   expediteur_prenom: string;
   expediteur_email: string;
   lu_par_assignee: boolean;
+  lu_par_expediteur: boolean;
   date_derniere_reponse: string | null;
 }
 
@@ -106,14 +107,16 @@ export function InboxPage() {
         expediteur_nom: t.expediteur?.nom || '',
         expediteur_prenom: t.expediteur?.prenom || '',
         expediteur_email: t.expediteur?.email || '',
-        lu_par_assignee: t.lu_par_assignee ?? false
+        lu_par_assignee: t.lu_par_assignee ?? false,
+        lu_par_expediteur: t.lu_par_expediteur ?? true
       }));
 
       setTaches(formattedTaches);
 
-      // Compter uniquement les tâches non lues où je suis assignee
+      // Compter les tâches non lues : soit assignee non lu, soit expéditeur non lu
       const nonLus = formattedTaches.filter((t: Tache) =>
-        t.assignee_id === appUserId && !t.lu_par_assignee
+        (t.assignee_id === appUserId && !t.lu_par_assignee) ||
+        (t.expediteur_id === appUserId && !t.lu_par_expediteur)
       ).length;
 
       const newStats = {
@@ -165,23 +168,32 @@ export function InboxPage() {
   };
 
   const markAsRead = async (tache: Tache) => {
-    // Marquer comme lu seulement si je suis l'assignee et que ce n'est pas déjà lu
-    if (tache.assignee_id === appUserId && !tache.lu_par_assignee) {
-      try {
+    try {
+      // Si je suis l'assignee et que ce n'est pas déjà lu
+      if (tache.assignee_id === appUserId && !tache.lu_par_assignee) {
         const { error } = await supabase.rpc('mark_task_as_read', { task_uuid: tache.id });
 
         if (!error) {
-          // Mettre à jour l'état local
           setTaches(prev => prev.map(t =>
             t.id === tache.id ? { ...t, lu_par_assignee: true } : t
           ));
-
-          // Mettre à jour les stats
           setStats(prev => ({ ...prev, non_lus: Math.max(0, prev.non_lus - 1) }));
         }
-      } catch (error) {
-        console.error('Erreur marquage lu:', error);
       }
+
+      // Si je suis l'expéditeur et que ce n'est pas déjà lu
+      if (tache.expediteur_id === appUserId && !tache.lu_par_expediteur) {
+        const { error } = await supabase.rpc('mark_task_as_read_by_sender', { task_uuid: tache.id });
+
+        if (!error) {
+          setTaches(prev => prev.map(t =>
+            t.id === tache.id ? { ...t, lu_par_expediteur: true } : t
+          ));
+          setStats(prev => ({ ...prev, non_lus: Math.max(0, prev.non_lus - 1) }));
+        }
+      }
+    } catch (error) {
+      console.error('Erreur marquage lu:', error);
     }
   };
 
@@ -271,7 +283,9 @@ export function InboxPage() {
             <div className="p-12 text-center text-gray-500">Aucune tâche</div>
           ) : (
             filteredTaches.map(tache => {
-              const isUnread = tache.assignee_id === appUserId && !tache.lu_par_assignee;
+              const isUnread =
+                (tache.assignee_id === appUserId && !tache.lu_par_assignee) ||
+                (tache.expediteur_id === appUserId && !tache.lu_par_expediteur);
               return (
                 <div
                   key={tache.id}

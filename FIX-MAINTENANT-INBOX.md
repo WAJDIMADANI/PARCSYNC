@@ -1,162 +1,142 @@
-# FIX URGENT : Messages non reçus et bouton Répondre manquant
+# FIX COMPLET : Système Non Lu Bidirectionnel
 
-## 🔴 Problème
+## Le Problème
 
-1. Wajdi n'a pas reçu le message d'Accueil
-2. Accueil a reçu le message de Wajdi mais ne voit pas comment répondre
+Vous avez dit :
+> "La reponse d accord de suite elle n a pas mis la ligne en gras"
 
-## ✅ Solution (2 minutes)
+**Explication :**
+- ✅ Vous envoyez "APPELEZ MOI" → ACCUEIL voit en gras
+- ❌ ACCUEIL répond "D ACCORD DE SUITE" → Vous ne voyez PAS en gras
 
-### ÉTAPE 1 : Ouvrez Supabase
+## La Solution
 
-1. Allez sur : https://supabase.com/dashboard
-2. Sélectionnez votre projet
-3. Cliquez sur **"SQL Editor"** dans le menu de gauche
+J'ai tout corrigé ! Voici ce qu'il faut faire :
 
-### ÉTAPE 2 : Exécutez le script de correction
+### ÉTAPE 1 : Exécuter ce SQL dans Supabase
 
-1. Dans l'éditeur SQL, collez le contenu du fichier : **`FIX-INBOX-COMPLET-MAINTENANT.sql`**
-2. Cliquez sur **"Run"** (ou Ctrl+Enter)
-3. Attendez quelques secondes
-4. Vous devriez voir : `✅ INSTALLATION COMPLÈTE !`
-
-### ÉTAPE 3 : Rafraîchissez l'application
-
-1. Retournez sur votre application
-2. Appuyez sur **Ctrl+Shift+R** (Windows/Linux) ou **Cmd+Shift+R** (Mac)
-3. Si vous êtes connecté, déconnectez-vous et reconnectez-vous
-
-## ✅ Vérification
-
-### Test 1 : Wajdi reçoit maintenant les messages
-
-1. Connectez-vous avec **Accueil** (acceuil@acceuil.com)
-2. Allez dans **Boîte de Réception**
-3. Cliquez sur **"+ Nouvelle tâche"**
-4. Remplissez :
-   - **Titre** : "Test de réception"
-   - **Assignée à** : Sélectionnez "Wajdi"
-   - **Contenu** : "Test message"
-5. Cliquez sur **"Créer"**
-6. Déconnectez-vous
-7. Connectez-vous avec **Wajdi** (wajdi@madimpact.com)
-8. Allez dans **Boîte de Réception**
-9. ✅ Vous devez voir la tâche "Test de réception"
-
-### Test 2 : Le bouton Répondre apparaît
-
-1. Toujours connecté avec Wajdi
-2. Cliquez sur la tâche "Test de réception" pour l'ouvrir
-3. ✅ En bas de la fenêtre, vous devez voir un bouton **"Répondre"**
-4. Cliquez sur **"Répondre"**
-5. ✅ Une zone de texte doit apparaître
-6. Écrivez : "Merci pour le message"
-7. Cliquez sur **"Envoyer"**
-8. ✅ Votre réponse doit s'afficher immédiatement
-
-### Test 3 : Accueil voit la réponse de Wajdi
-
-1. Déconnectez-vous de Wajdi
-2. Reconnectez-vous avec **Accueil**
-3. Allez dans **Boîte de Réception**
-4. Cliquez sur la tâche "Test de réception"
-5. ✅ Vous devez voir la réponse de Wajdi : "Merci pour le message"
-6. Cliquez sur **"Répondre"**
-7. Écrivez une réponse et envoyez
-8. ✅ Ça fonctionne !
-
-## 🎨 À quoi ça ressemble maintenant
-
-Quand vous ouvrez une tâche dans l'inbox :
-
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  Titre de la tâche                                         ✕  ║
-║  [haute] [en_attente]                                         ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  ┌────────────────────────────────────────────────────┐      ║
-║  │ [AS]  Admin Système                       14:30    │      ║
-║  │       admin@example.com                            │      ║
-║  │                                                     │      ║
-║  │  Bonjour,                                          │      ║
-║  │  Voici le message initial de la tâche              │      ║
-║  └────────────────────────────────────────────────────┘      ║
-║                                                               ║
-║  ┌────────────────────────────────────────────────────┐      ║
-║  │ [WM]  Wajdi Madimpact                     15:45    │      ║
-║  │       wajdi@madimpact.com                          │      ║
-║  │                                                     │      ║
-║  │  Merci pour le message                             │      ║
-║  └────────────────────────────────────────────────────┘      ║
-║                                                               ║
-║  ┌────────────────────────────────────────────────────┐      ║
-║  │ Écrivez votre réponse...                           │      ║
-║  │                                                     │      ║
-║  │                                                     │      ║
-║  │ [📤 Envoyer]  [Annuler]                            │      ║
-║  └────────────────────────────────────────────────────┘      ║
-║                                                               ║
-╠═══════════════════════════════════════════════════════════════╣
-║  [↩️ Répondre]  [Marquer en cours]           [Supprimer]     ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
-## 🚨 Si ça ne marche toujours pas
-
-### Problème : "Je ne vois toujours pas le bouton Répondre"
-
-**Solution :**
-1. Fermez complètement le navigateur
-2. Rouvrez-le
-3. Allez sur l'application
-4. Connectez-vous
-
-### Problème : "J'ai une erreur quand j'exécute le SQL"
-
-**Copiez l'erreur et vérifiez :**
-- Si l'erreur dit "already exists" → C'est normal, continuez
-- Si l'erreur dit "permission denied" → Vérifiez que vous êtes bien admin du projet Supabase
-
-### Problème : "Wajdi ne voit toujours pas les tâches"
-
-**Vérifiez que Wajdi a un compte correctement configuré :**
+Allez dans **Supabase > SQL Editor** et exécutez :
 
 ```sql
--- Exécutez dans Supabase SQL Editor
-SELECT email, nom, prenom, auth_user_id
-FROM app_utilisateur
-WHERE email LIKE '%wajdi%';
+-- 1. Ajouter la colonne lu_par_expediteur
+ALTER TABLE taches
+ADD COLUMN IF NOT EXISTS lu_par_expediteur BOOLEAN DEFAULT true;
+
+UPDATE taches SET lu_par_expediteur = true;
+
+-- 2. Supprimer l'ancien trigger
+DROP TRIGGER IF EXISTS mark_task_as_unread_on_reply_trigger ON taches_messages;
+DROP FUNCTION IF EXISTS mark_task_as_unread_on_reply();
+
+-- 3. Créer le nouveau trigger BIDIRECTIONNEL
+CREATE OR REPLACE FUNCTION mark_task_as_unread_on_reply()
+RETURNS TRIGGER AS $$
+DECLARE
+  task_assignee_id UUID;
+  task_expediteur_id UUID;
+BEGIN
+  SELECT assignee_id, expediteur_id
+  INTO task_assignee_id, task_expediteur_id
+  FROM taches WHERE id = NEW.tache_id;
+
+  -- Si l'expéditeur répond → marquer non lu pour assignee
+  IF NEW.auteur_id = task_expediteur_id THEN
+    UPDATE taches
+    SET lu_par_assignee = false, date_derniere_reponse = NEW.created_at
+    WHERE id = NEW.tache_id;
+  END IF;
+
+  -- Si l'assignee répond → marquer non lu pour expéditeur
+  IF NEW.auteur_id = task_assignee_id THEN
+    UPDATE taches
+    SET lu_par_expediteur = false, date_derniere_reponse = NEW.created_at
+    WHERE id = NEW.tache_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER mark_task_as_unread_on_reply_trigger
+AFTER INSERT ON taches_messages
+FOR EACH ROW
+EXECUTE FUNCTION mark_task_as_unread_on_reply();
+
+-- 4. Fonction pour marquer comme lu (expéditeur)
+CREATE OR REPLACE FUNCTION mark_task_as_read_by_sender(task_uuid UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE taches SET lu_par_expediteur = true WHERE id = task_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-Si `auth_user_id` est NULL :
-1. Exécutez le fichier : `SOLUTION-COMPLETE-AUTH-SYNC.sql`
-2. Cela va synchroniser les comptes
+### ÉTAPE 2 : Rafraîchir l'application
 
-## 📝 Fichiers importants
+1. Fermez complètement l'application
+2. Videz le cache (Ctrl+Shift+Delete)
+3. Rouvrez l'application
+4. Reconnectez-vous
 
-- **`FIX-INBOX-COMPLET-MAINTENANT.sql`** ← EXÉCUTEZ CE FICHIER
-- **`DIAGNOSTIC-INBOX-COMPLET.sql`** ← Pour diagnostiquer
-- **`SOLUTION-INBOX-MESSAGES-MANQUANTS.md`** ← Guide détaillé
+### ÉTAPE 3 : Tester
 
-## 💡 Comment ça marche
+1. **Vous (Admin Système)** : Envoyez "TEST BIDIRECTIONNEL" à ACCUEIL
+   → ACCUEIL voit la ligne **EN GRAS**
 
-### Avant la correction
-- Les politiques RLS ne laissaient pas passer les tâches
-- La table `taches_messages` n'existait pas
-- Pas de système de réponses
+2. **ACCUEIL** : Répond "OK JE TE REPONDS"
+   → **VOUS voyez la ligne EN GRAS** (sans rafraîchir !)
 
-### Après la correction
-- Les politiques RLS permettent à l'assignee ET l'expéditeur de voir la tâche
-- La table `taches_messages` stocke toutes les réponses
-- Interface type Gmail avec thread de conversation
-- Mise à jour en temps réel
+3. **Vous** : Ouvrez la tâche
+   → La ligne redevient normale
 
-## 🎯 Résumé
+4. **Vous** : Répondez "MERCI"
+   → ACCUEIL voit en gras
 
-1. **Exécutez** `FIX-INBOX-COMPLET-MAINTENANT.sql` dans Supabase
-2. **Rafraîchissez** l'application (Ctrl+Shift+R)
-3. **Testez** en envoyant une tâche entre deux utilisateurs
-4. **Répondez** en cliquant sur le bouton "Répondre"
+5. **ACCUEIL** : Répond "DE RIEN"
+   → **Vous voyez en gras**
 
-Ça devrait fonctionner !
+## Ce que j'ai modifié
+
+### Base de données :
+1. Ajout de la colonne `lu_par_expediteur`
+2. Trigger mis à jour pour gérer les deux sens
+3. Nouvelle fonction RPC `mark_task_as_read_by_sender`
+
+### Code frontend (InboxPage.tsx) :
+1. Interface `Tache` : Ajout de `lu_par_expediteur`
+2. `fetchTaches()` : Récupération de la nouvelle colonne
+3. Compteur `non_lus` : Compte les deux types
+4. `isUnread` : Vérifie expéditeur ET assignee
+5. `markAsRead()` : Appelle la bonne fonction selon le rôle
+
+## Résultat Final
+
+**AVANT :**
+```
+Vous → ACCUEIL : ACCUEIL voit en gras ✅
+ACCUEIL → Vous : Vous ne voyez PAS en gras ❌
+```
+
+**APRÈS :**
+```
+Vous → ACCUEIL : ACCUEIL voit en gras ✅
+ACCUEIL → Vous : Vous voyez EN GRAS ✅
+Vous ouvrez : Redevient normale ✅
+ACCUEIL répond : Vous voyez EN GRAS ✅
+```
+
+## Système Temps Réel
+
+Le système temps réel est déjà activé (d'après l'erreur que vous avez eue). 
+
+Les changements apparaîtront **INSTANTANÉMENT** sans rafraîchir :
+- Quand quelqu'un répond, la ligne devient en gras automatiquement
+- Quand vous ouvrez, elle redevient normale automatiquement
+- Le compteur se met à jour en temps réel
+
+## C'EST TOUT !
+
+1. Exécutez le SQL
+2. Rafraîchissez l'app
+3. Testez
+4. Profitez du système bidirectionnel !
