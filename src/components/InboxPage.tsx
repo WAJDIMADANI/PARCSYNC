@@ -473,23 +473,33 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
     if (!newMessage.trim() || !appUserId) return;
 
     setSendingMessage(true);
+    const messageToSend = newMessage.trim();
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('messages_tache')
         .insert({
           tache_id: task.id,
           auteur_id: appUserId,
-          contenu: newMessage.trim(),
-          is_read: false
-        });
+          contenu: messageToSend,
+          is_read: true
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur insertion:', error);
+        throw error;
+      }
 
+      console.log('Message envoyé:', data);
       setNewMessage('');
-      await fetchMessages();
+      
+      // Attendre un peu et recharger
+      setTimeout(() => {
+        fetchMessages();
+      }, 500);
     } catch (error) {
       console.error('Erreur envoi message:', error);
-      alert('Erreur lors de l\'envoi du message');
+      alert('Erreur lors de l\'envoi du message: ' + error.message);
     } finally {
       setSendingMessage(false);
     }
