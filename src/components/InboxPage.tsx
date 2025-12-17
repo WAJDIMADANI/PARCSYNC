@@ -427,6 +427,8 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
 
   const fetchMessages = async () => {
     try {
+      console.log('📥 Chargement des messages pour tache:', task.id);
+      
       const { data, error } = await supabase
         .from('messages_tache')
         .select(`
@@ -436,32 +438,42 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
         .eq('tache_id', task.id)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erreur SELECT messages:', error);
+        throw error;
+      }
 
-      const formattedMessages = data.map((m: any) => ({
+      console.log('✅ Messages chargés:', data?.length);
+
+      const formattedMessages = (data || []).map((m: any) => ({
         ...m,
-        auteur_nom: m.auteur?.nom || '',
+        auteur_nom: m.auteur?.nom || 'Inconnu',
         auteur_prenom: m.auteur?.prenom || '',
         auteur_email: m.auteur?.email || ''
       }));
 
       setMessages(formattedMessages);
 
-      // Marquer SEULEMENT les messages REÇUS (pas les nôtres) comme lus
+      // Marquer SEULEMENT les messages reçus (pas les nôtres) comme lus
       if (formattedMessages.length > 0) {
-        const unreadMessageIds = formattedMessages
+        const unreadReceivedMessageIds = formattedMessages
           .filter(m => !m.is_read && m.auteur_id !== appUserId)
           .map(m => m.id);
 
-        if (unreadMessageIds.length > 0) {
-          await supabase
+        if (unreadReceivedMessageIds.length > 0) {
+          console.log('🔔 Marquage comme lus:', unreadReceivedMessageIds.length, 'messages');
+          const { error: updateError } = await supabase
             .from('messages_tache')
             .update({ is_read: true })
-            .in('id', unreadMessageIds);
+            .in('id', unreadReceivedMessageIds);
+
+          if (updateError) {
+            console.error('⚠️ Erreur UPDATE is_read:', updateError);
+          }
         }
       }
     } catch (error) {
-      console.error('Erreur chargement messages:', error);
+      console.error('❌ Erreur chargement messages:', error);
     } finally {
       setLoadingMessages(false);
     }
@@ -474,32 +486,35 @@ function TaskDetailModal({ task, appUserId, onClose, onUpdateStatus, onDelete }:
 
     setSendingMessage(true);
     const messageToSend = newMessage.trim();
+    
     try {
+      console.log('📤 Envoi du message...');
+      
       const { data, error } = await supabase
         .from('messages_tache')
         .insert({
           tache_id: task.id,
           auteur_id: appUserId,
           contenu: messageToSend,
-          is_read: true
+          is_read: true  // Les messages qu'on envoie sont déjà lus pour nous
         })
         .select();
 
       if (error) {
-        console.error('Erreur insertion:', error);
+        console.error('❌ Erreur INSERT:', error);
         throw error;
       }
 
-      console.log('Message envoyé:', data);
+      console.log('✅ Message envoyé:', data);
       setNewMessage('');
       
-      // Attendre un peu et recharger
-      setTimeout(() => {
-        fetchMessages();
-      }, 500);
+      // Attendre 1 seconde et recharger (pour s'assurer que la DB a le message)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await fetchMessages();
+      
     } catch (error) {
-      console.error('Erreur envoi message:', error);
-      alert('Erreur lors de l\'envoi du message: ' + error.message);
+      console.error('❌ Erreur complète:', error);
+      alert('Erreur: ' + (error?.message || 'Impossible d\'envoyer le message'));
     } finally {
       setSendingMessage(false);
     }
