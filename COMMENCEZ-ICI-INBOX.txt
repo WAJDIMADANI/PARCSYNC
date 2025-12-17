@@ -1,0 +1,40 @@
+═══════════════════════════════════════════════════════════════
+  🔴 FIX URGENT : INBOX ET RÉPONSES
+═══════════════════════════════════════════════════════════════
+
+PROBLÈME :
+- Wajdi ne reçoit pas les messages
+- Le bouton "Répondre" n'apparaît pas
+
+SOLUTION (2 minutes) :
+
+1. Ouvrez Supabase Dashboard
+   → https://supabase.com/dashboard
+
+2. Cliquez sur "SQL Editor"
+
+3. Copiez-collez le contenu du fichier :
+   → FIX-INBOX-COMPLET-MAINTENANT.sql
+
+4. Cliquez sur "Run" (ou Ctrl+Enter)
+
+5. Attendez le message : ✅ INSTALLATION COMPLÈTE !
+
+6. Retournez sur l'application
+
+7. Rafraîchissez (Ctrl+Shift+R)
+
+8. Déconnectez-vous et reconnectez-vous
+
+9. Testez en envoyant une tâche
+
+10. Ouvrez la tâche → Le bouton "Répondre" doit apparaître
+
+═══════════════════════════════════════════════════════════════
+
+C'EST TOUT !
+
+Si vous voulez plus de détails, lisez :
+→ FIX-MAINTENANT-INBOX.md
+
+═══════════════════════════════════════════════════════════════

@@ -352,7 +352,9 @@ function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) 
   };
 
   const getInitials = (prenom: string, nom: string) => {
-    return `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase();
+    const p = prenom?.charAt(0) || '?';
+    const n = nom?.charAt(0) || '?';
+    return `${p}${n}`.toUpperCase();
   };
 
   const formatDate = (dateString: string) => {
