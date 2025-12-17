@@ -47,20 +47,23 @@ const getNextAvenantNumber = async (profilId: string): Promise<number> => {
     .from('contrat')
     .select('avenant_num')
     .eq('profil_id', profilId)
-    .eq('type_document', 'avenant')  // ✅ Minuscule
+    .eq('type_document', 'avenant')
     .order('avenant_num', { ascending: false })
     .limit(1);
 
   if (error) {
-    console.error('Erreur récupération avenants:', error);
+    console.error('❌ Erreur récupération avenants:', error);
     return 1;
   }
 
   if (!data || data.length === 0) {
-    return 1; // Premier avenant
+    console.log('📋 Premier avenant');
+    return 1;
   }
 
-  return (data[0].avenant_num || 0) + 1;
+  const nextNum = (data[0].avenant_num || 0) + 1;
+  console.log('📋 Prochain numéro d\'avenant:', nextNum);
+  return nextNum;
 };
 
 export default function ContractSendModal({
@@ -128,8 +131,8 @@ export default function ContractSendModal({
     heures_semaine: '35',
     taux_horaire: '',
     lieu_travail: '',
-    birthplace: '',        // 🆕 NOUVEAU - Lieu de naissance
-    id_number: ''          // 🆕 NOUVEAU - Numéro de Sécurité Sociale
+    birthplace: '',
+    id_number: ''
   });
 
   useEffect(() => {
@@ -161,12 +164,9 @@ export default function ContractSendModal({
         ...prev,
         date_debut: initialDateDebut
       }));
-    } else {
-      console.log('initialDateDebut is empty or undefined:', initialDateDebut);
     }
   }, [initialDateDebut]);
 
-  // Pré-remplissage automatique des données du salarié depuis le profil
   useEffect(() => {
     const updates: Record<string, string> = {};
 
@@ -187,14 +187,12 @@ export default function ContractSendModal({
     }
   }, [employeeBirthplace, employeeSSN]);
 
-  // Pré-remplissage automatique des champs depuis le modèle de contrat sélectionné
   useEffect(() => {
     if (selectedTemplate && templates.length > 0) {
       const template = templates.find(t => t.id === selectedTemplate);
       if (template && template.variables) {
-        console.log('📋 Pré-remplissage depuis le modèle:', template.nom, template.variables);
+        console.log('📋 Pré-remplissage depuis le modèle:', template.nom);
 
-        // Mapping entre la structure du modèle et les champs du formulaire
         const templateVars = template.variables as any;
 
         setVariables(prev => ({
@@ -313,16 +311,15 @@ export default function ContractSendModal({
       return;
     }
 
-    // Validation de l'email
-    console.log('Validation - employeeName:', employeeName, 'employeeEmail:', employeeEmail);
+    console.log('🔍 VALIDATION - employeeName:', employeeName, 'employeeEmail:', employeeEmail);
 
     if (!employeeEmail || !employeeEmail.includes('@')) {
-      alert('Email du salarié manquant ou invalide. Veuillez mettre à jour le profil du salarié avec un email valide avant d\'envoyer le contrat.');
+      alert('Email du salarié manquant ou invalide.');
       return;
     }
 
     if (!employeeName || employeeName.trim() === '') {
-      alert('Nom du salarié manquant. Veuillez mettre à jour le profil du salarié avant d\'envoyer le contrat.');
+      alert('Nom du salarié manquant.');
       return;
     }
 
@@ -330,35 +327,51 @@ export default function ContractSendModal({
     try {
       // ✅ ÉTAPE 0 : Déterminer le type_document et le numéro d'avenant
       const selectedTemplateObj = templates.find(t => t.id === selectedTemplate);
-      const typeContrat = selectedTemplateObj?.type_contrat || 'CDD';
+      const typeContratFromTemplate = selectedTemplateObj?.type_contrat;
       
-      console.log('📋 Template sélectionné:', selectedTemplateObj?.nom);
-      console.log('📋 Type contrat (template):', typeContrat);
+      console.log('🎯 ===== ÉTAPE 0: DÉTERMINATION DU TYPE =====');
+      console.log('📋 Template ID:', selectedTemplate);
+      console.log('📋 Template nom:', selectedTemplateObj?.nom);
+      console.log('📋 Type contrat (RAW):', typeContratFromTemplate);
+      console.log('📋 Type contrat (typeof):', typeof typeContratFromTemplate);
 
-      // ✅ Convertir en MINUSCULE pour type_document
+      // ✅ VALIDATION STRICTE - type_document DOIT être l'une de ces valeurs
       let typeDocument: string;
       let avenantNum: number | null = null;
 
-      if (typeContrat === 'Avenant') {
-        typeDocument = 'avenant';  // ✅ Minuscule
-        avenantNum = await getNextAvenantNumber(profilId);
-        console.log('✅ Avenant détecté - Numéro:', avenantNum);
-      } else if (typeContrat === 'CDD') {
-        typeDocument = 'cdd';      // ✅ Minuscule
-        console.log('✅ CDD détecté');
-      } else if (typeContrat === 'CDI') {
-        typeDocument = 'cdi';      // ✅ Minuscule
-        console.log('✅ CDI détecté');
-      } else {
-        typeDocument = typeContrat.toLowerCase();  // ✅ Minuscule au cas où
-        console.log('✅ Type détecté:', typeDocument);
+      if (!typeContratFromTemplate) {
+        console.error('❌ ERREUR: type_contrat est undefined!');
+        alert('Erreur: le type de contrat n\'a pas pu être déterminé.');
+        setSending(false);
+        return;
       }
 
-      // ✅ ÉTAPE 1 : Créer le contrat en base (avec statut 'en_attente_signature')
+      // ✅ Convertir en minuscule et mapper
+      const typeNormalized = String(typeContratFromTemplate).trim().toLowerCase();
+      
+      if (typeNormalized === 'avenant') {
+        typeDocument = 'avenant';
+        avenantNum = await getNextAvenantNumber(profilId);
+        console.log('✅ Type AVENANT - Numéro:', avenantNum);
+      } else if (typeNormalized === 'cdd') {
+        typeDocument = 'cdd';
+        console.log('✅ Type CDD');
+      } else if (typeNormalized === 'cdi') {
+        typeDocument = 'cdi';
+        console.log('✅ Type CDI');
+      } else {
+        console.error('❌ ERREUR: Type inconnu:', typeNormalized);
+        alert(`Erreur: Type de contrat inconnu: ${typeNormalized}`);
+        setSending(false);
+        return;
+      }
+
+      console.log('🎯 ===== ÉTAPE 1: PRÉPARATION DES DONNÉES =====');
+      
       const contractData: any = {
         profil_id: profilId,
         modele_id: selectedTemplate,
-        type_document: typeDocument,  // ✅ En minuscule maintenant !
+        type_document: typeDocument,  // ✅ JAMAIS undefined
         variables: {
           ...variables,
           nom_salarie: employeeName,
@@ -367,12 +380,18 @@ export default function ContractSendModal({
         statut: 'en_attente_signature'
       };
 
-      // Ajouter avenant_num uniquement si c'est un avenant
       if (avenantNum !== null) {
         contractData.avenant_num = avenantNum;
       }
 
-      console.log('📝 Données du contrat à créer:', contractData);
+      console.log('📝 Données à envoyer à Supabase:');
+      console.log('  - profil_id:', contractData.profil_id);
+      console.log('  - modele_id:', contractData.modele_id);
+      console.log('  - type_document:', contractData.type_document, '(typeof:', typeof contractData.type_document + ')');
+      console.log('  - avenant_num:', contractData.avenant_num);
+      console.log('  - statut:', contractData.statut);
+
+      console.log('🎯 ===== ÉTAPE 2: INSERTION EN BASE =====');
 
       const { data: contrat, error: contratError } = await supabase
         .from('contrat')
@@ -380,18 +399,22 @@ export default function ContractSendModal({
         .select()
         .single();
 
-      if (contratError) throw contratError;
+      if (contratError) {
+        console.error('❌ Erreur Supabase:', contratError);
+        throw contratError;
+      }
 
       console.log('✅ Contrat créé:', contrat.id);
 
-      // ✅ ÉTAPE 2 : CRÉER LA DEMANDE YOUSIGN AVANT DE MARQUER COMME ENVOYÉ
-      let yousignData;
+      // ✅ ÉTAPE 3 : YOUSIGN
+      console.log('🎯 ===== ÉTAPE 3: YOUSIGN =====');
+      
       try {
         const yousignPayload = {
           contractId: contrat.id
         };
 
-        console.log('📧 Envoi à Yousign - Contract ID:', contrat.id);
+        console.log('📧 Envoi à Yousign...');
 
         const yousignResponse = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
@@ -407,50 +430,38 @@ export default function ContractSendModal({
 
         if (!yousignResponse.ok) {
           const errorText = await yousignResponse.text();
-          console.error('Erreur Yousign (status ' + yousignResponse.status + '):', errorText);
+          console.error('⚠️ Yousign error (status ' + yousignResponse.status + '):', errorText);
 
-          // Si c'est une erreur CORS ou réseau, on continue quand même
           if (yousignResponse.status === 0 || errorText.includes('CORS')) {
-            console.warn('Erreur CORS détectée, le contrat sera marqué comme envoyé mais la signature Yousign peut ne pas être créée');
+            console.warn('⚠️ Erreur CORS, on continue quand même');
           } else {
-            let errorData;
-            try {
-              errorData = JSON.parse(errorText);
-            } catch {
-              throw new Error(`Erreur HTTP ${yousignResponse.status}: ${errorText}`);
-            }
-            throw new Error(`Erreur Yousign: ${errorData.error || 'Impossible de créer la demande de signature'}`);
+            throw new Error(`Yousign error: ${errorText}`);
           }
         } else {
-          yousignData = await yousignResponse.json();
-          console.log('✅ Demande de signature Yousign créée:', yousignData);
+          const yousignData = await yousignResponse.json();
+          console.log('✅ Yousign signature créée:', yousignData);
         }
 
-        // ✅ ÉTAPE 3 : MAINTENANT, mettre le statut à 'envoye' seulement si Yousign a réussi
+        // Marquer comme envoyé
         const { error: updateError } = await supabase
           .from('contrat')
-          .update({
-            statut: 'envoye'
-          })
+          .update({ statut: 'envoye' })
           .eq('id', contrat.id);
 
         if (updateError) throw updateError;
-
-        console.log('✅ Contrat marqué comme envoyé');
+        console.log('✅ Statut contrat: envoye');
 
       } catch (fetchError: any) {
-        console.error('❌ Erreur lors de l\'appel Yousign:', fetchError);
-
-        // ✅ SUPPRIMER LE CONTRAT SI YOUSIGN ÉCHOUE
+        console.error('❌ Erreur Yousign:', fetchError);
         await supabase.from('contrat').delete().eq('id', contrat.id);
-
-        const errorMsg = fetchError.message || 'Erreur réseau lors du renvoi de l\'email';
-        alert(`Erreur lors du renvoi de l'email :\n\n${errorMsg}`);
+        alert(`Erreur Yousign:\n\n${fetchError.message}`);
         setSending(false);
         return;
       }
 
       // ✅ ÉTAPE 4 : Mettre à jour le profil
+      console.log('🎯 ===== ÉTAPE 4: UPDATE PROFIL =====');
+      
       const updateData: any = {
         statut: 'contrat_envoye',
         secteur_id: selectedSecteur
@@ -466,6 +477,9 @@ export default function ContractSendModal({
         .eq('id', profilId);
 
       if (profilError) throw profilError;
+      
+      console.log('✅ Profil mise à jour');
+      console.log('🎉 ===== SUCCÈS =====');
 
       setShowSuccess(true);
 
@@ -474,8 +488,8 @@ export default function ContractSendModal({
         onClose();
       }, 2500);
     } catch (error: any) {
-      console.error('❌ Erreur envoi contrat:', error);
-      const errorMessage = error.message || 'Erreur inconnue lors de l\'envoi du contrat';
+      console.error('❌ ERREUR FINALE:', error);
+      const errorMessage = error.message || 'Erreur inconnue';
       alert(`Erreur: ${errorMessage}`);
     } finally {
       setSending(false);
@@ -522,7 +536,6 @@ export default function ContractSendModal({
               Vous pourrez ensuite uploader la DPAE pour finaliser l'activation.
             </p>
           </div>
-
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -727,7 +740,6 @@ export default function ContractSendModal({
                 )}
               </div>
 
-              {/* 🆕 NOUVEAU - Lieu de naissance */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Lieu de naissance
@@ -741,7 +753,6 @@ export default function ContractSendModal({
                 />
               </div>
 
-              {/* 🆕 NOUVEAU - Numéro de Sécurité Sociale */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Numéro de Sécurité Sociale
