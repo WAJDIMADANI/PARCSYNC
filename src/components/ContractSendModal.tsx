@@ -47,7 +47,7 @@ const getNextAvenantNumber = async (profilId: string): Promise<number> => {
     .from('contrat')
     .select('avenant_num')
     .eq('profil_id', profilId)
-    .eq('type_document', 'avenant')
+    .eq('type_document', 'Avenant')
     .order('avenant_num', { ascending: false })
     .limit(1);
 
@@ -335,29 +335,24 @@ export default function ContractSendModal({
       console.log('📋 Template sélectionné:', selectedTemplateObj?.nom);
       console.log('📋 Type contrat:', typeContrat);
 
-      let typeDocument: string;
+      // ✅ Utiliser DIRECTEMENT la valeur typeContrat (elle est déjà en majuscule)
+      let typeDocument = typeContrat;
       let avenantNum: number | null = null;
 
       if (typeContrat === 'Avenant') {
-        typeDocument = 'avenant';
         avenantNum = await getNextAvenantNumber(profilId);
         console.log('✅ Avenant détecté - Numéro:', avenantNum);
       } else if (typeContrat === 'CDD') {
-        typeDocument = 'cdd';
         console.log('✅ CDD détecté');
       } else if (typeContrat === 'CDI') {
-        typeDocument = 'cdi';
         console.log('✅ CDI détecté');
-      } else {
-        typeDocument = typeContrat.toLowerCase();
-        console.log('✅ Type détecté:', typeDocument);
       }
 
       // ✅ ÉTAPE 1 : Créer le contrat en base (avec statut 'en_attente_signature')
       const contractData: any = {
         profil_id: profilId,
         modele_id: selectedTemplate,
-        type_document: typeDocument,
+        type_document: typeDocument,  // ✅ En majuscule maintenant !
         variables: {
           ...variables,
           nom_salarie: employeeName,
