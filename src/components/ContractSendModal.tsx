@@ -66,6 +66,99 @@ const getNextAvenantNumber = async (profilId: string): Promise<number> => {
   return nextNum;
 };
 
+// ✅ Fonction pour récupérer les dates du dernier CDD
+const fetchPreviousCDDDates = async (profilId: string): Promise<{ date_debut: string; date_fin: string } | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('contrat')
+      .select('date_debut, date_fin, variables')
+      .eq('profil_id', profilId)
+      .eq('type_document', 'contrat')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error('❌ Erreur récupération CDD:', error);
+      return null;
+    }
+
+    if (!data) {
+      console.log('⚠️ Aucun contrat CDD trouvé pour ce salarié');
+      return null;
+    }
+
+    // Essayer d'abord les colonnes directes, puis les variables JSONB
+    let dateDebut = data.date_debut;
+    let dateFin = data.date_fin;
+
+    if (!dateDebut && data.variables) {
+      dateDebut = data.variables.date_debut || data.variables.employees_date_de_debut;
+    }
+
+    if (!dateFin && data.variables) {
+      dateFin = data.variables.date_fin || data.variables.employees_date_de_fin;
+    }
+
+    if (dateDebut && dateFin) {
+      console.log('✅ Dates CDD récupérées:', { date_debut: dateDebut, date_fin: dateFin });
+      return { date_debut: dateDebut, date_fin: dateFin };
+    }
+
+    console.log('⚠️ Dates CDD incomplètes');
+    return null;
+  } catch (error) {
+    console.error('❌ Erreur fetchPreviousCDDDates:', error);
+    return null;
+  }
+};
+
+// ✅ Fonction pour récupérer les dates de l'avenant 1
+const fetchAvenantOneDates = async (profilId: string): Promise<{ date_debut: string; date_fin: string } | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('contrat')
+      .select('date_debut, date_fin, variables')
+      .eq('profil_id', profilId)
+      .eq('type_document', 'avenant')
+      .eq('avenant_num', 1)
+      .maybeSingle();
+
+    if (error) {
+      console.error('❌ Erreur récupération avenant 1:', error);
+      return null;
+    }
+
+    if (!data) {
+      console.log('⚠️ Aucun avenant 1 trouvé pour ce salarié');
+      return null;
+    }
+
+    // Essayer d'abord les colonnes directes, puis les variables JSONB
+    let dateDebut = data.date_debut;
+    let dateFin = data.date_fin;
+
+    if (!dateDebut && data.variables) {
+      dateDebut = data.variables.date_debut || data.variables.employees_date_de_debut___av1;
+    }
+
+    if (!dateFin && data.variables) {
+      dateFin = data.variables.date_fin || data.variables.employees_date_de_fin__av1;
+    }
+
+    if (dateDebut && dateFin) {
+      console.log('✅ Dates avenant 1 récupérées:', { date_debut: dateDebut, date_fin: dateFin });
+      return { date_debut: dateDebut, date_fin: dateFin };
+    }
+
+    console.log('⚠️ Dates avenant 1 incomplètes');
+    return null;
+  } catch (error) {
+    console.error('❌ Erreur fetchAvenantOneDates:', error);
+    return null;
+  }
+};
+
 export default function ContractSendModal({
   profilId,
   employeeName,
@@ -122,6 +215,8 @@ export default function ContractSendModal({
 
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [selectedSecteur, setSelectedSecteur] = useState('');
+  const [avenantType, setAvenantType] = useState<'none' | 'avenant1' | 'avenant2'>('none');
+  const [loadingDates, setLoadingDates] = useState(false);
   const [variables, setVariables] = useState({
     poste: '',
     salaire: '',
@@ -132,7 +227,12 @@ export default function ContractSendModal({
     taux_horaire: '',
     lieu_travail: '',
     birthplace: '',
-    id_number: ''
+    id_number: '',
+    contract_start: '',
+    contract_end: '',
+    employees_date_de_debut___av1: '',
+    employees_date_de_fin__av1: '',
+    employees_date_de_fin__av2: ''
   });
 
   useEffect(() => {
@@ -208,6 +308,78 @@ export default function ContractSendModal({
       }
     }
   }, [selectedTemplate, templates]);
+
+  useEffect(() => {
+    const detectAvenantTypeAndFetchDates = async () => {
+      if (!selectedTemplate || templates.length === 0) {
+        setAvenantType('none');
+        return;
+      }
+
+      const template = templates.find(t => t.id === selectedTemplate);
+      if (!template) return;
+
+      const templateName = template.nom.toLowerCase();
+
+      console.log('🔍 Détection du type d\'avenant:', templateName);
+
+      if (templateName.includes('avenant 1') || templateName.includes('avenant n°1') || templateName.includes('avenant n° 1')) {
+        console.log('✅ Détecté: AVENANT 1');
+        setAvenantType('avenant1');
+        setLoadingDates(true);
+
+        const cddDates = await fetchPreviousCDDDates(profilId);
+
+        if (cddDates) {
+          setVariables(prev => ({
+            ...prev,
+            contract_start: cddDates.date_debut,
+            contract_end: cddDates.date_fin
+          }));
+          console.log('✅ Dates CDD pré-remplies');
+        } else {
+          console.warn('⚠️ Aucune date CDD trouvée');
+        }
+
+        setLoadingDates(false);
+      } else if (templateName.includes('avenant 2') || templateName.includes('avenant n°2') || templateName.includes('avenant n° 2')) {
+        console.log('✅ Détecté: AVENANT 2');
+        setAvenantType('avenant2');
+        setLoadingDates(true);
+
+        const [cddDates, avenant1Dates] = await Promise.all([
+          fetchPreviousCDDDates(profilId),
+          fetchAvenantOneDates(profilId)
+        ]);
+
+        const updates: Record<string, string> = {};
+
+        if (cddDates) {
+          updates.contract_start = cddDates.date_debut;
+          updates.contract_end = cddDates.date_fin;
+        }
+
+        if (avenant1Dates) {
+          updates.employees_date_de_debut___av1 = avenant1Dates.date_debut;
+          updates.employees_date_de_fin__av1 = avenant1Dates.date_fin;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          setVariables(prev => ({ ...prev, ...updates }));
+          console.log('✅ Dates CDD et Avenant 1 pré-remplies');
+        } else {
+          console.warn('⚠️ Aucune date trouvée');
+        }
+
+        setLoadingDates(false);
+      } else {
+        console.log('ℹ️ Type: Contrat classique');
+        setAvenantType('none');
+      }
+    };
+
+    detectAvenantTypeAndFetchDates();
+  }, [selectedTemplate, templates, profilId]);
 
   const fetchData = async () => {
     try {
@@ -309,6 +481,36 @@ export default function ContractSendModal({
     if (!variables.poste) {
       alert('Veuillez remplir au minimum le poste');
       return;
+    }
+
+    if (avenantType === 'avenant1' && !variables.employees_date_de_fin__av1) {
+      alert('Veuillez saisir la date de fin de l\'avenant 1');
+      return;
+    }
+
+    if (avenantType === 'avenant2' && !variables.employees_date_de_fin__av2) {
+      alert('Veuillez saisir la date de fin de l\'avenant 2');
+      return;
+    }
+
+    if (avenantType === 'avenant1' && variables.contract_end && variables.employees_date_de_fin__av1) {
+      const contractEnd = new Date(variables.contract_end);
+      const avenant1End = new Date(variables.employees_date_de_fin__av1);
+
+      if (avenant1End <= contractEnd) {
+        alert('La date de fin de l\'avenant 1 doit être postérieure à la date de fin du CDD initial');
+        return;
+      }
+    }
+
+    if (avenantType === 'avenant2' && variables.employees_date_de_fin__av1 && variables.employees_date_de_fin__av2) {
+      const avenant1End = new Date(variables.employees_date_de_fin__av1);
+      const avenant2End = new Date(variables.employees_date_de_fin__av2);
+
+      if (avenant2End <= avenant1End) {
+        alert('La date de fin de l\'avenant 2 doit être postérieure à la date de fin de l\'avenant 1');
+        return;
+      }
     }
 
     console.log('🔍 VALIDATION - employeeName:', employeeName, 'employeeEmail:', employeeEmail);
@@ -671,6 +873,136 @@ export default function ContractSendModal({
                 />
               </div>
             </div>
+
+            {avenantType === 'avenant1' && (
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Dates du CDD initial (pré-remplies automatiquement)
+                </h4>
+                {loadingDates ? (
+                  <p className="text-sm text-blue-700">Chargement des dates...</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">
+                        Date début CDD
+                      </label>
+                      <input
+                        type="date"
+                        value={variables.contract_start}
+                        disabled
+                        className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-blue-100 text-gray-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">
+                        Date fin CDD
+                      </label>
+                      <input
+                        type="date"
+                        value={variables.contract_end}
+                        disabled
+                        className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-blue-100 text-gray-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">
+                        Date fin avenant 1 *
+                      </label>
+                      <input
+                        type="date"
+                        value={variables.employees_date_de_fin__av1}
+                        onChange={(e) => setVariables({...variables, employees_date_de_fin__av1: e.target.value})}
+                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                        placeholder="Nouvelle date de fin"
+                      />
+                    </div>
+                  </div>
+                )}
+                {!variables.contract_start && !loadingDates && (
+                  <p className="text-xs text-orange-600 mt-2">
+                    ⚠️ Aucun CDD initial trouvé. Veuillez saisir les dates manuellement.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {avenantType === 'avenant2' && (
+              <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Dates du CDD et de l'avenant 1 (pré-remplies automatiquement)
+                </h4>
+                {loadingDates ? (
+                  <p className="text-sm text-purple-700">Chargement des dates...</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-purple-700 mb-1">
+                        Date début CDD
+                      </label>
+                      <input
+                        type="date"
+                        value={variables.contract_start}
+                        disabled
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg bg-purple-100 text-gray-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-purple-700 mb-1">
+                        Date fin CDD
+                      </label>
+                      <input
+                        type="date"
+                        value={variables.contract_end}
+                        disabled
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg bg-purple-100 text-gray-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-purple-700 mb-1">
+                        Date début avenant 1
+                      </label>
+                      <input
+                        type="date"
+                        value={variables.employees_date_de_debut___av1}
+                        disabled
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg bg-purple-100 text-gray-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-purple-700 mb-1">
+                        Date fin avenant 1
+                      </label>
+                      <input
+                        type="date"
+                        value={variables.employees_date_de_fin__av1}
+                        disabled
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg bg-purple-100 text-gray-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-purple-700 mb-1">
+                        Date fin avenant 2 *
+                      </label>
+                      <input
+                        type="date"
+                        value={variables.employees_date_de_fin__av2}
+                        onChange={(e) => setVariables({...variables, employees_date_de_fin__av2: e.target.value})}
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-sm"
+                        placeholder="Nouvelle date de fin"
+                      />
+                    </div>
+                  </div>
+                )}
+                {(!variables.contract_start || !variables.employees_date_de_debut___av1) && !loadingDates && (
+                  <p className="text-xs text-orange-600 mt-2">
+                    ⚠️ CDD initial ou avenant 1 manquant. Veuillez saisir les dates manuellement.
+                  </p>
+                )}
+              </div>
+            )}
 
             {selectedTemplate && templates.find(t => t.id === selectedTemplate)?.type_contrat === 'CDI' && (
               <div className="mt-4">
