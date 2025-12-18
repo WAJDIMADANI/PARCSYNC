@@ -675,7 +675,7 @@ function CreateModal({ onClose, onSuccess }: CreateModalProps) {
       setFilteredUsers(allUsers);
     } else {
       const filtered = allUsers.filter(user =>
-        user.pole_id === selectedPole || user.pole_id === null
+        user.pole_id === selectedPole
       );
       setFilteredUsers(filtered);
     }
