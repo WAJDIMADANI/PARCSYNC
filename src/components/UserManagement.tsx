@@ -4,6 +4,7 @@ import { PermissionGuard } from './PermissionGuard';
 import { Users, UserPlus, X, Save, Trash2, CheckCircle, XCircle, Edit2, Shield, Upload, FolderOpen, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { AuthUsersImport } from './AuthUsersImport';
+import { ExternalDemandLink } from './ExternalDemandLink';
 
 interface Pole {
   id: string;
@@ -475,6 +476,8 @@ export function UserManagement() {
             <p className="text-sm text-red-800">{error}</p>
           </div>
         )}
+
+        <ExternalDemandLink />
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-4">
