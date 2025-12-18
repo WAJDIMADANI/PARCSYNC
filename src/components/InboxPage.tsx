@@ -16,6 +16,7 @@ interface Tache {
   expediteur_nom: string;
   expediteur_prenom: string;
   expediteur_email: string;
+  expediteur_pole_nom: string;
   lu_par_assignee: boolean;
   lu_par_expediteur: boolean;
   date_derniere_reponse: string | null;
@@ -94,7 +95,7 @@ export function InboxPage() {
         .from('taches')
         .select(`
           *,
-          expediteur:expediteur_id(nom, prenom, email),
+          expediteur:expediteur_id(nom, prenom, email, pole_id, pole:pole_id(nom)),
           assignee:assignee_id(nom, prenom, email)
         `)
         .or(`assignee_id.eq.${appUserId},expediteur_id.eq.${appUserId}`)
@@ -107,6 +108,7 @@ export function InboxPage() {
         expediteur_nom: t.expediteur?.nom || '',
         expediteur_prenom: t.expediteur?.prenom || '',
         expediteur_email: t.expediteur?.email || '',
+        expediteur_pole_nom: t.expediteur?.pole?.nom || 'Admin',
         lu_par_assignee: t.lu_par_assignee ?? false,
         lu_par_expediteur: t.lu_par_expediteur ?? true
       }));
@@ -298,11 +300,11 @@ export function InboxPage() {
                         <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" title="Non lu" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className={`text-gray-900 truncate ${isUnread ? 'font-bold' : 'font-medium'}`}>
-                          {tache.titre}
+                        <p className={`text-blue-600 truncate ${isUnread ? 'font-bold' : 'font-semibold'}`}>
+                          {tache.expediteur_pole_nom}
                         </p>
-                        <p className={`text-sm text-gray-500 ${isUnread ? 'font-semibold' : ''}`}>
-                          {tache.expediteur_prenom} {tache.expediteur_nom}
+                        <p className={`text-sm text-gray-600 truncate ${isUnread ? 'font-medium' : ''}`}>
+                          {tache.titre}
                         </p>
                       </div>
                     </div>
