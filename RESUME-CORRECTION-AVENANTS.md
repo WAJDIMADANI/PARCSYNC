@@ -23,15 +23,25 @@ Les contrats générés avaient 3 bugs :
 **AVANT :**
 ```
 ┌─────────────────────────────────────┐
-│ Date de début         │ 20/12/2025  │  ← Supprimé
-│ Date de fin (si CDD)  │ 19/12/2025  │  ← Supprimé
+│ Date de début         │ 20/12/2025  │  Même pour tous
+│ Date de fin (si CDD)  │ 19/12/2025  │  Même pour tous
 └─────────────────────────────────────┘
 ```
 
 **APRÈS :**
+
+**Pour CDD/CDI normaux :**
+```
+┌─────────────────────────────────────┐
+│ Date de début         │ 20/12/2025  │  ✏️ Éditable
+│ Date de fin (si CDD)  │ 19/12/2025  │  ✏️ Éditable
+└─────────────────────────────────────┘
+```
+
+**Pour Avenants uniquement :**
 ```
 ┌────────────────────────────────────────────────┐
-│ SECTION AVENANT (si c'est un avenant)         │
+│ SECTION AVENANT (section spéciale bleue)      │
 │                                                 │
 │ Date début CDD     │ 01/09/2025 │ ✏️ Éditable │
 │ Date fin CDD       │ 19/12/2025 │ ✏️ Éditable │
@@ -40,9 +50,10 @@ Les contrats générés avaient 3 bugs :
 ```
 
 **Modifications :**
-- ✅ Champs date_debut et date_fin supprimés du formulaire principal
-- ✅ Section spéciale pour avenants avec dates CDD pré-remplies
-- ✅ Dates CDD éditables (plus `disabled`)
+- ✅ Champs date_debut et date_fin AFFICHÉS pour CDD/CDI normaux
+- ✅ Champs date_debut et date_fin MASQUÉS pour les avenants
+- ✅ Section spéciale bleue pour avenants avec contract_start/contract_end
+- ✅ Mapping automatique : date_debut → contract_start pour CDD normaux
 - ✅ Date fin avenant 1 conservée
 
 ### 2. Formatage Automatique des Dates ✅

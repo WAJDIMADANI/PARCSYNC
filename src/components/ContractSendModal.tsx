@@ -561,13 +561,22 @@ export default function ContractSendModal({
       }
 
       console.log('🎯 ===== ÉTAPE 1: PRÉPARATION DES DONNÉES =====');
-      
+
+      // ✅ Pour les CDD normaux, mapper date_debut et date_fin vers contract_start et contract_end
+      const preparedVariables = { ...variables };
+      if (avenantType === 'none' && variables.date_debut) {
+        preparedVariables.contract_start = variables.date_debut;
+      }
+      if (avenantType === 'none' && variables.date_fin) {
+        preparedVariables.contract_end = variables.date_fin;
+      }
+
       const contractData: any = {
         profil_id: profilId,
         modele_id: selectedTemplate,
         type_document: typeDocument,  // ✅ Valeur correcte pour le CHECK constraint
         variables: {
-          ...variables,
+          ...preparedVariables,
           nom_salarie: employeeName,
           email_salarie: employeeEmail
         },
@@ -847,6 +856,36 @@ export default function ContractSendModal({
                   placeholder="Ex: 11.65€"
                 />
               </div>
+
+              {/* Afficher les champs date UNIQUEMENT si ce n'est PAS un avenant */}
+              {avenantType === 'none' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Calendar className="w-4 h-4 inline mr-1" />
+                      Date de début
+                    </label>
+                    <input
+                      type="date"
+                      value={variables.date_debut}
+                      onChange={(e) => setVariables({...variables, date_debut: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Date de fin (si CDD)
+                    </label>
+                    <input
+                      type="date"
+                      value={variables.date_fin}
+                      onChange={(e) => setVariables({...variables, date_fin: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             {avenantType === 'avenant1' && (
