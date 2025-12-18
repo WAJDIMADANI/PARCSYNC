@@ -873,17 +873,21 @@ export default function ContractSendModal({
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date de fin (si CDD)
-                    </label>
-                    <input
-                      type="date"
-                      value={variables.date_fin}
-                      onChange={(e) => setVariables({...variables, date_fin: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
+                  {/* Date de fin UNIQUEMENT pour CDD (pas pour CDI) */}
+                  {selectedTemplate && templates.find(t => t.id === selectedTemplate)?.type_contrat !== 'CDI' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date de fin CDD *
+                      </label>
+                      <input
+                        type="date"
+                        value={variables.date_fin}
+                        onChange={(e) => setVariables({...variables, date_fin: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </div>
