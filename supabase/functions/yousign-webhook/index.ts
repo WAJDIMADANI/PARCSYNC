@@ -7,8 +7,14 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req: Request) => {
+  // LOG IMMÉDIAT - AVANT TOUT
+  console.log("🚨 WEBHOOK YOUSIGN APPELÉ - TIMESTAMP:", new Date().toISOString());
+  console.log("🚨 URL:", req.url);
+  console.log("🚨 METHOD:", req.method);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
+    console.log("🚨 OPTIONS request - retour immédiat");
     return new Response(null, {
       status: 200,
       headers: corsHeaders,
@@ -444,8 +450,11 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
+    console.error("🚨🚨🚨 ERREUR FATALE DANS LE WEBHOOK 🚨🚨🚨");
     console.error("Erreur fatale dans le webhook:", error);
     console.error("Stack:", error.stack);
+    console.error("Type d'erreur:", typeof error);
+    console.error("Message:", error?.message);
 
     return new Response(
       JSON.stringify({
