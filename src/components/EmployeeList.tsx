@@ -126,10 +126,16 @@ function getLatestActiveContract(employeeId: string, contracts: Contract[]): str
     return null;
   }
 
-  // Trier par date_debut (plus récent d'abord)
+  // Trier d'abord les CDI (date_fin NULL), puis par date_fin DESC
   const sortedContracts = [...employeeContracts].sort((a, b) => {
-    const dateA = a.date_debut ? new Date(a.date_debut).getTime() : 0;
-    const dateB = b.date_debut ? new Date(b.date_debut).getTime() : 0;
+    // Les CDI (date_fin NULL) en premier
+    if (!a.date_fin && b.date_fin) return -1;
+    if (a.date_fin && !b.date_fin) return 1;
+    if (!a.date_fin && !b.date_fin) return 0;
+
+    // Sinon, trier par date_fin décroissant (plus tard en premier)
+    const dateA = new Date(a.date_fin!).getTime();
+    const dateB = new Date(b.date_fin!).getTime();
     return dateB - dateA;
   });
 
