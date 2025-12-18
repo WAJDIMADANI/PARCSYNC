@@ -101,6 +101,7 @@ function AppContent() {
     };
   }, [user?.id]);
 
+  // Routes publiques accessibles sans authentification
   if (path === '/apply' || path.startsWith('/apply/')) {
     return <Apply />;
   }
@@ -121,7 +122,7 @@ function AppContent() {
     return <UploadAllMissingDocuments />;
   }
 
-  if (path === '/demande-externe') {
+  if (path === '/demande-externe' || path.startsWith('/demande-externe')) {
     return <DemandeExterne />;
   }
 
