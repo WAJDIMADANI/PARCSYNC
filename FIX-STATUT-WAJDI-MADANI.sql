@@ -62,29 +62,23 @@ LIMIT 20;
 -- ÉTAPE 2 : CORRECTION MANUELLE
 -- ============================================
 
--- Mettre à jour le statut du contrat le plus récent de WAJDI MADANI
--- ATTENTION : Exécutez cette requête UNIQUEMENT après avoir vérifié les résultats ci-dessus
+-- Mettre à jour le statut du contrat de WAJDI MADANI
+-- ID du contrat: 8b99ce51-2c85-4e27-8ab6-62c49fb4a952
 
 UPDATE contrat
 SET
   statut = 'signé',
+  date_signature = NOW(),
+  yousign_signed_at = NOW(),
   updated_at = NOW()
-WHERE id IN (
-  SELECT c.id
-  FROM contrat c
-  JOIN profil p ON c.profil_id = p.id
-  WHERE p.nom = 'MADANI'
-    AND p.prenom = 'WAJDI'
-    AND c.statut = 'envoyé'
-  ORDER BY c.created_at DESC
-  LIMIT 1
-)
+WHERE id = '8b99ce51-2c85-4e27-8ab6-62c49fb4a952'
 RETURNING
   id,
   type,
   statut,
   date_debut,
-  date_fin;
+  date_fin,
+  date_signature;
 
 -- ============================================
 -- ÉTAPE 3 : VÉRIFICATION APRÈS CORRECTION
