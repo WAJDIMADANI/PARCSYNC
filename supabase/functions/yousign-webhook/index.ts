@@ -7,14 +7,8 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req: Request) => {
-  // LOG IMMÉDIAT - AVANT TOUT
-  console.log("🚨 WEBHOOK YOUSIGN APPELÉ - TIMESTAMP:", new Date().toISOString());
-  console.log("🚨 URL:", req.url);
-  console.log("🚨 METHOD:", req.method);
-
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    console.log("🚨 OPTIONS request - retour immédiat");
     return new Response(null, {
       status: 200,
       headers: corsHeaders,
@@ -101,122 +95,6 @@ Deno.serve(async (req: Request) => {
 
     console.log("Mise à jour du contrat:", externalId);
 
-    // ========================================
-    // RÉCUPÉRER LES DONNÉES DU CONTRAT POUR EXTRACTION TYPE ET DATES
-    // ========================================
-    console.log("Récupération des détails du contrat pour mise à jour complète...");
-    const contractDataResponse = await fetch(
-      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${externalId}&select=id,profil_id,modele_id,variables,type,date_debut,date_fin,modeles_contrats(type_contrat),profil(avenant_1_date_fin,avenant_2_date_fin)`,
-      {
-        headers: {
-          "Authorization": `Bearer ${SERVICE_KEY}`,
-          "apikey": SERVICE_KEY || "",
-        },
-      }
-    );
-
-    if (!contractDataResponse.ok) {
-      console.error("Erreur lors de la récupération du contrat");
-      return new Response(
-        JSON.stringify({ ok: false, error: "Failed to fetch contract data" }),
-        {
-          status: contractDataResponse.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    const contractDataList = await contractDataResponse.json();
-    const contractData = contractDataList && contractDataList.length > 0 ? contractDataList[0] : null;
-
-    if (!contractData) {
-      console.error("Contrat non trouvé");
-      return new Response(
-        JSON.stringify({ ok: false, error: "Contract not found" }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // Extraction des données
-    const variables = typeof contractData.variables === 'string'
-      ? JSON.parse(contractData.variables)
-      : (contractData.variables || {});
-
-    const modeleType = contractData.modeles_contrats?.type_contrat;
-    const variablesType = variables?.type_contrat;
-    const variablesDateFin = variables?.date_fin;
-    const variablesDateDebut = variables?.date_debut;
-    const profilAv1Date = contractData.profil?.avenant_1_date_fin;
-    const profilAv2Date = contractData.profil?.avenant_2_date_fin;
-
-    console.log("Données extraites:");
-    console.log("  - Modèle type:", modeleType);
-    console.log("  - Variables type:", variablesType);
-    console.log("  - Variables date_debut:", variablesDateDebut);
-    console.log("  - Variables date_fin:", variablesDateFin);
-    console.log("  - Profil avenant_1_date_fin:", profilAv1Date);
-    console.log("  - Profil avenant_2_date_fin:", profilAv2Date);
-
-    // Déterminer le type de contrat
-    let contractType = contractData.type || modeleType || variablesType || 'CDI';
-
-    // Pour les avenants, extraire le type de base
-    if (contractType === 'Avenant' || contractType.startsWith('Avenant')) {
-      if (variablesType === 'Avenant 1' || variablesType === 'Avenant 2') {
-        contractType = 'CDD'; // Les avenants sont des prolongations de CDD
-      }
-    }
-
-    console.log("Type de contrat déterminé:", contractType);
-
-    // Déterminer la date de fin selon le type
-    let dateFin = contractData.date_fin || null;
-
-    if (contractType === 'CDD') {
-      // Pour un CDD classique
-      if (variablesDateFin) {
-        dateFin = variablesDateFin;
-        console.log("Date fin CDD depuis variables:", dateFin);
-      }
-    } else if (modeleType === 'Avenant') {
-      // Pour un avenant
-      if (variablesType === 'Avenant 1') {
-        dateFin = variablesDateFin || profilAv1Date;
-        console.log("Date fin Avenant 1:", dateFin);
-      } else if (variablesType === 'Avenant 2') {
-        dateFin = variablesDateFin || profilAv2Date;
-        console.log("Date fin Avenant 2:", dateFin);
-      }
-    }
-
-    // Date de début
-    let dateDebut = contractData.date_debut || variablesDateDebut || new Date().toISOString().split('T')[0];
-    console.log("Date début déterminée:", dateDebut);
-    console.log("Date fin déterminée:", dateFin);
-
-    // Préparer les données de mise à jour
-    const updateData: any = {
-      statut: "signé", // Statut correct après signature
-      date_signature: new Date().toISOString(),
-      yousign_signed_at: new Date().toISOString(),
-    };
-
-    // Mettre à jour type et dates seulement si elles n'existent pas déjà
-    if (!contractData.type) {
-      updateData.type = contractType;
-    }
-    if (!contractData.date_debut) {
-      updateData.date_debut = dateDebut;
-    }
-    if (!contractData.date_fin && dateFin) {
-      updateData.date_fin = dateFin;
-    }
-
-    console.log("Données de mise à jour:", JSON.stringify(updateData, null, 2));
-
     const updateResponse = await fetch(
       `${SUPABASE_URL}/rest/v1/contrat?id=eq.${externalId}`,
       {
@@ -227,7 +105,11 @@ Deno.serve(async (req: Request) => {
           "apikey": SERVICE_KEY || "",
           "Prefer": "return=representation",
         },
-        body: JSON.stringify(updateData),
+        body: JSON.stringify({
+          statut: "signe",
+          date_signature: new Date().toISOString(),
+          yousign_signed_at: new Date().toISOString(),
+        }),
       }
     );
 
@@ -245,123 +127,6 @@ Deno.serve(async (req: Request) => {
 
     const updated = await updateResponse.json();
     console.log("Contrat mis à jour avec succès:", updated);
-
-    // ========================================
-    // Génération automatique notification/incident
-    // ========================================
-    let notificationResult = null;
-    if (updated && updated.length > 0) {
-      const contractId = updated[0].id;
-      console.log("=== Tentative de création automatique de notification/incident ===");
-      console.log("Contract ID:", contractId);
-
-      try {
-        // Récupérer le contrat avec toutes ses relations pour vérifier l'éligibilité
-        const contractDetailsResponse = await fetch(
-          `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=id,profil_id,modele_id,variables,modeles_contrats(type_contrat),profil(avenant_1_date_fin,avenant_2_date_fin)`,
-          {
-            headers: {
-              "Authorization": `Bearer ${SERVICE_KEY}`,
-              "apikey": SERVICE_KEY || "",
-            },
-          }
-        );
-
-        if (contractDetailsResponse.ok) {
-          const contracts = await contractDetailsResponse.json();
-          if (contracts && contracts.length > 0) {
-            const contract = contracts[0];
-            const modeleType = contract.modeles_contrats?.type_contrat;
-            const variablesType = contract.variables?.type_contrat;
-            const variablesDateFin = contract.variables?.date_fin;
-            const profilAv1Date = contract.profil?.avenant_1_date_fin;
-            const profilAv2Date = contract.profil?.avenant_2_date_fin;
-
-            console.log("Détails du contrat récupérés:");
-            console.log("  - Modèle type:", modeleType);
-            console.log("  - Variables type:", variablesType);
-            console.log("  - Variables date_fin:", variablesDateFin);
-            console.log("  - Profil avenant_1_date_fin:", profilAv1Date);
-            console.log("  - Profil avenant_2_date_fin:", profilAv2Date);
-
-            // Vérifier l'éligibilité
-            let isEligible = false;
-
-            if (modeleType === "CDD" && variablesDateFin) {
-              isEligible = true;
-              console.log("✓ Éligible: CDD avec date_fin dans variables");
-            } else if (modeleType === "Avenant") {
-              if (variablesType === "Avenant 1" && (variablesDateFin || profilAv1Date)) {
-                isEligible = true;
-                console.log("✓ Éligible: Avenant 1 avec date_fin disponible");
-              } else if (variablesType === "Avenant 2" && (variablesDateFin || profilAv2Date)) {
-                isEligible = true;
-                console.log("✓ Éligible: Avenant 2 avec date_fin disponible");
-              } else {
-                console.log("✗ Non éligible: Avenant sans date_fin ou type inconnu");
-              }
-            } else {
-              console.log("✗ Non éligible: Type de contrat non supporté ou date manquante");
-            }
-
-            if (isEligible) {
-              console.log("Appel de la fonction SQL create_notification_or_incident_for_contract...");
-
-              // Appeler la fonction SQL via RPC
-              const rpcResponse = await fetch(
-                `${SUPABASE_URL}/rest/v1/rpc/create_notification_or_incident_for_contract`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${SERVICE_KEY}`,
-                    "apikey": SERVICE_KEY || "",
-                  },
-                  body: JSON.stringify({
-                    p_contract_id: contractId,
-                  }),
-                }
-              );
-
-              if (rpcResponse.ok) {
-                notificationResult = await rpcResponse.json();
-                console.log("Résultat de la création:", JSON.stringify(notificationResult, null, 2));
-
-                if (notificationResult.success) {
-                  console.log("✓ Succès:", notificationResult.message);
-                  console.log("  - Type créé:", notificationResult.type_created);
-                  console.log("  - Notification type:", notificationResult.notification_type);
-                  console.log("  - ID:", notificationResult.id);
-                  console.log("  - Date fin utilisée:", notificationResult.date_fin_utilisee);
-                  console.log("  - Source date:", notificationResult.source_date);
-                  console.log("  - Jours avant expiration:", notificationResult.days_until_expiry);
-                } else {
-                  console.log("✗ Échec:", notificationResult.error);
-                }
-              } else {
-                const errorText = await rpcResponse.text();
-                console.error("Erreur lors de l'appel RPC:", errorText);
-                notificationResult = { success: false, error: errorText };
-              }
-            } else {
-              console.log("Contrat non éligible pour notification/incident automatique");
-              notificationResult = { success: false, skipped: true, reason: "Non éligible" };
-            }
-          } else {
-            console.log("Aucun contrat trouvé avec cet ID");
-          }
-        } else {
-          const errorText = await contractDetailsResponse.text();
-          console.error("Erreur lors de la récupération des détails du contrat:", errorText);
-        }
-      } catch (notifError) {
-        console.error("Erreur lors de la génération de notification/incident:", notifError);
-        console.error("Stack:", notifError.stack);
-        notificationResult = { success: false, error: String(notifError) };
-      }
-
-      console.log("=== Fin de la création automatique ===");
-    }
 
     // Mettre à jour le profil si nécessaire
     if (updated && updated.length > 0) {
@@ -442,7 +207,6 @@ Deno.serve(async (req: Request) => {
         ok: true,
         message: "Contrat mis à jour avec succès",
         contractId: externalId,
-        notificationCreation: notificationResult,
       }),
       {
         status: 200,
@@ -450,11 +214,8 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
-    console.error("🚨🚨🚨 ERREUR FATALE DANS LE WEBHOOK 🚨🚨🚨");
     console.error("Erreur fatale dans le webhook:", error);
     console.error("Stack:", error.stack);
-    console.error("Type d'erreur:", typeof error);
-    console.error("Message:", error?.message);
 
     return new Response(
       JSON.stringify({
