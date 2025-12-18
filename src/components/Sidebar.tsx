@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { supabase } from '../lib/supabase';
@@ -40,7 +40,8 @@ export type View =
   | 'admin/modeles-contrats'
   | 'admin/import-salarie'
   | 'admin/import-bulk'
-  | 'admin/utilisateurs';
+  | 'admin/utilisateurs'
+  | 'admin/demandes-externes';
 
 interface SidebarProps {
   currentView: View;
@@ -192,6 +193,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'admin/import-salarie', label: 'Import Salarié Test', icon: UserPlus, enabled: true },
         { id: 'admin/import-bulk', label: 'Import en Masse', icon: Upload, enabled: true },
         { id: 'admin/utilisateurs', label: 'Utilisateurs', icon: Users, enabled: true },
+        { id: 'admin/demandes-externes', label: 'Demandes Externes', icon: ExternalLink, enabled: true },
       ]
     },
   ];

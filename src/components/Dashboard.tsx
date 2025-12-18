@@ -35,6 +35,7 @@ import { GeneratedLettersList } from './GeneratedLettersList';
 import { MissingDocuments } from './MissingDocuments';
 import { GenerateLetterPage } from './GenerateLetterPage';
 import { InboxPage } from './InboxPage';
+import { DemandesExternesManager } from './DemandesExternesManager';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('dashboards/rh');
@@ -118,6 +119,8 @@ export function Dashboard() {
         return <ImportSalariesBulk />;
       case 'admin/utilisateurs':
         return <UserManagement />;
+      case 'admin/demandes-externes':
+        return <DemandesExternesManager />;
       default:
         return <CandidateList />;
     }
@@ -163,6 +166,7 @@ export function Dashboard() {
                 {view === 'admin/import-salarie' && 'Import Salarié Test'}
                 {view === 'admin/import-bulk' && 'Import en Masse'}
                 {view === 'admin/utilisateurs' && 'Gestion des Utilisateurs'}
+                {view === 'admin/demandes-externes' && 'Demandes Externes'}
               </h2>
             </div>
 
