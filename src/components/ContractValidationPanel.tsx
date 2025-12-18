@@ -174,7 +174,7 @@ export default function ContractValidationPanel({
       const { error: contratError } = await supabase
         .from('contrat')
         .update({
-          statut: 'valide',
+          statut: 'actif',
           date_validation: new Date().toISOString()
         })
         .eq('id', contract.id);
