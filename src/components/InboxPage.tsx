@@ -667,7 +667,18 @@ function CreateModal({ onClose, onSuccess }: CreateModalProps) {
       setAllUsers(usersWithPole);
       setFilteredUsers(usersWithPole);
     };
+
     fetchData();
+
+    const handlePolesUpdate = () => {
+      fetchData();
+    };
+
+    window.addEventListener('poles-updated', handlePolesUpdate);
+
+    return () => {
+      window.removeEventListener('poles-updated', handlePolesUpdate);
+    };
   }, []);
 
   useEffect(() => {
