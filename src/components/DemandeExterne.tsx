@@ -253,16 +253,16 @@ export function DemandeExterne() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-3 sm:p-4">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl max-w-md w-full p-6 sm:p-8 text-center">
           <div className="mb-6">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-12 h-12 text-green-600" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2">
               Demande envoyée avec succès!
             </h2>
-            <p className="text-slate-600">
+            <p className="text-sm sm:text-base text-slate-600">
               Notre équipe va l'examiner rapidement.
             </p>
           </div>
@@ -278,46 +278,46 @@ export function DemandeExterne() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-4 sm:py-8 md:py-12 px-3 sm:px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">
+        <div className="text-center mb-4 sm:mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-2">
             Demande Externe
           </h1>
-          <p className="text-slate-600">
+          <p className="text-sm sm:text-base text-slate-600">
             Envoyez une demande à nos équipes
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="mb-8">
-            <label className="block text-sm font-semibold text-slate-700 mb-3">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 md:p-8">
+          <div className="mb-6 sm:mb-8">
+            <label className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3">
               Entrez votre matricule TCA *
             </label>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <input
                 type="text"
                 value={matricule}
                 onChange={(e) => setMatricule(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && searchChauffeur()}
                 placeholder="Ex: 928"
-                className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
                 disabled={loading || !!chauffeur}
               />
               <button
                 onClick={searchChauffeur}
                 disabled={loading || !!chauffeur}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 {loading ? (
                   <>
                     <Loader className="w-5 h-5 animate-spin" />
-                    Recherche...
+                    <span>Recherche...</span>
                   </>
                 ) : (
                   <>
                     <Search className="w-5 h-5" />
-                    Rechercher
+                    <span>Rechercher</span>
                   </>
                 )}
               </button>
@@ -333,28 +333,28 @@ export function DemandeExterne() {
 
           {chauffeur && (
             <>
-              <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-xl">
+              <div className="mb-6 sm:mb-8 p-4 sm:p-6 bg-blue-50 border border-blue-200 rounded-xl">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-white" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900">Vos informations</h3>
-                    <p className="text-sm text-slate-600">Matricule: {chauffeur.matricule_tca}</p>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Vos informations</h3>
+                    <p className="text-xs sm:text-sm text-slate-600">Matricule: {chauffeur.matricule_tca}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Nom</label>
-                    <p className="font-semibold text-slate-900">{chauffeur.prenom} {chauffeur.nom}</p>
+                    <p className="font-semibold text-slate-900 text-sm sm:text-base break-words">{chauffeur.prenom} {chauffeur.nom}</p>
                   </div>
-                  <div>
+                  <div className="sm:col-span-2 md:col-span-1">
                     <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
-                    <p className="font-semibold text-slate-900">{chauffeur.email}</p>
+                    <p className="font-semibold text-slate-900 text-sm sm:text-base break-all">{chauffeur.email}</p>
                   </div>
-                  <div>
+                  <div className="sm:col-span-2 md:col-span-1">
                     <label className="block text-xs font-medium text-slate-600 mb-1">Poste</label>
-                    <p className="font-semibold text-slate-900">{chauffeur.poste || 'Non spécifié'}</p>
+                    <p className="font-semibold text-slate-900 text-sm sm:text-base break-words">{chauffeur.poste || 'Non spécifié'}</p>
                   </div>
                 </div>
                 <button
@@ -485,17 +485,17 @@ export function DemandeExterne() {
                 <button
                   type="submit"
                   disabled={submitting || !chauffeur || !poleId || !sujet || contenu.length < 10}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg shadow-lg"
+                  className="w-full px-6 py-3 sm:py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base sm:text-lg shadow-lg"
                 >
                   {submitting ? (
                     <>
-                      <Loader className="w-6 h-6 animate-spin" />
-                      Envoi en cours...
+                      <Loader className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
+                      <span>Envoi en cours...</span>
                     </>
                   ) : (
                     <>
-                      <Send className="w-6 h-6" />
-                      Envoyer la demande
+                      <Send className="w-5 h-5 sm:w-6 sm:h-6" />
+                      <span>Envoyer la demande</span>
                     </>
                   )}
                 </button>
