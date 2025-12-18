@@ -108,7 +108,7 @@ export function InboxPage() {
         expediteur_nom: t.expediteur?.nom || '',
         expediteur_prenom: t.expediteur?.prenom || '',
         expediteur_email: t.expediteur?.email || '',
-        expediteur_pole_nom: t.expediteur?.pole?.nom || 'Admin',
+        expediteur_pole_nom: t.expediteur?.pole?.nom || 'Sans pôle',
         lu_par_assignee: t.lu_par_assignee ?? false,
         lu_par_expediteur: t.lu_par_expediteur ?? true
       }));
