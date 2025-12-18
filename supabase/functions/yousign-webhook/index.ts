@@ -193,7 +193,7 @@ Deno.serve(async (req: Request) => {
 
     // Préparer les données de mise à jour
     const updateData: any = {
-      statut: "actif", // Changé de "signe" à "actif" pour correspondre à la fonction de détection
+      statut: "signé", // Statut correct après signature
       date_signature: new Date().toISOString(),
       yousign_signed_at: new Date().toISOString(),
     };
