@@ -244,7 +244,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
         supabase
           .from('contrat')
           .select('id, profil_id, statut, date_signature, yousign_signed_at, created_at, modele_id, date_debut, date_fin, type, modeles_contrats:modele_id(nom)')
-          .order('created_at', { ascending: false }),
+          .order('date_fin', { ascending: false, nullsFirst: true }),
         supabase.from('site').select('*').order('nom'),
         supabase.from('secteur').select('*').order('nom')
       ]);
