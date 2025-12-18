@@ -620,19 +620,67 @@ interface CreateModalProps {
   onSuccess: () => void;
 }
 
+interface Pole {
+  id: string;
+  nom: string;
+  description: string | null;
+  actif: boolean;
+}
+
+interface AppUser {
+  id: string;
+  nom: string;
+  prenom: string;
+  pole_id: string | null;
+  pole_nom?: string;
+}
+
 function CreateModal({ onClose, onSuccess }: CreateModalProps) {
   const { appUserId } = useAuth();
-  const [users, setUsers] = useState<any[]>([]);
+  const [poles, setPoles] = useState<Pole[]>([]);
+  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<AppUser[]>([]);
+  const [selectedPole, setSelectedPole] = useState<string>('all');
   const [form, setForm] = useState({ assignee_id: '', titre: '', contenu: '', priorite: 'normal' });
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase.from('app_utilisateur').select('id, nom, prenom').order('nom');
-      setUsers(data || []);
+    const fetchData = async () => {
+      const [polesResult, usersResult] = await Promise.all([
+        supabase.from('poles').select('*').eq('actif', true).order('nom'),
+        supabase.from('app_utilisateur').select('id, nom, prenom, pole_id').eq('actif', true).order('nom')
+      ]);
+
+      const polesData = polesResult.data || [];
+      const usersData = usersResult.data || [];
+
+      setPoles(polesData);
+
+      const usersWithPole = usersData.map((user: any) => {
+        const pole = polesData.find((p: Pole) => p.id === user.pole_id);
+        return {
+          ...user,
+          pole_nom: pole ? pole.nom : 'Admin'
+        };
+      });
+
+      setAllUsers(usersWithPole);
+      setFilteredUsers(usersWithPole);
     };
-    fetch();
+    fetchData();
   }, []);
+
+  useEffect(() => {
+    if (selectedPole === 'all') {
+      setFilteredUsers(allUsers);
+    } else {
+      const filtered = allUsers.filter(user =>
+        user.pole_id === selectedPole || user.pole_id === null
+      );
+      setFilteredUsers(filtered);
+    }
+    setForm(prev => ({ ...prev, assignee_id: '' }));
+  }, [selectedPole, allUsers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -667,33 +715,78 @@ function CreateModal({ onClose, onSuccess }: CreateModalProps) {
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Assigner à *</label>
-            <select value={form.assignee_id} onChange={(e) => setForm({...form, assignee_id: e.target.value})} className="w-full px-3 py-2 border rounded" required>
-              <option value="">Sélectionner...</option>
-              {users.map(u => <option key={u.id} value={u.id}>{u.prenom} {u.nom}</option>)}
+            <label className="block text-sm font-medium text-slate-700 mb-2">Pôle</label>
+            <select
+              value={selectedPole}
+              onChange={(e) => setSelectedPole(e.target.value)}
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+            >
+              <option value="all">Tous les pôles</option>
+              {poles.map(pole => (
+                <option key={pole.id} value={pole.id}>{pole.nom}</option>
+              ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Titre *</label>
-            <input type="text" value={form.titre} onChange={(e) => setForm({...form, titre: e.target.value})} className="w-full px-3 py-2 border rounded" required />
+            <label className="block text-sm font-medium text-slate-700 mb-2">Assigner à *</label>
+            <select
+              value={form.assignee_id}
+              onChange={(e) => setForm({...form, assignee_id: e.target.value})}
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              required
+            >
+              <option value="">Sélectionner un utilisateur...</option>
+              {filteredUsers.map(user => (
+                <option key={user.id} value={user.id}>
+                  {user.prenom} {user.nom} ({user.pole_nom})
+                </option>
+              ))}
+            </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Contenu</label>
-            <textarea value={form.contenu} onChange={(e) => setForm({...form, contenu: e.target.value})} rows={3} className="w-full px-3 py-2 border rounded" />
+            <label className="block text-sm font-medium text-slate-700 mb-2">Titre *</label>
+            <input
+              type="text"
+              value={form.titre}
+              onChange={(e) => setForm({...form, titre: e.target.value})}
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Priorité</label>
-            <select value={form.priorite} onChange={(e) => setForm({...form, priorite: e.target.value})} className="w-full px-3 py-2 border rounded">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Contenu</label>
+            <textarea
+              value={form.contenu}
+              onChange={(e) => setForm({...form, contenu: e.target.value})}
+              rows={3}
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Priorité</label>
+            <select
+              value={form.priorite}
+              onChange={(e) => setForm({...form, priorite: e.target.value})}
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+            >
               <option value="basse">Basse</option>
               <option value="normal">Normale</option>
               <option value="haute">Haute</option>
             </select>
           </div>
-          <div className="flex gap-2">
-            <button type="submit" disabled={sending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              disabled={sending}
+              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
+            >
               {sending ? 'Création...' : 'Créer'}
             </button>
-            <button type="button" onClick={onClose} className="px-4 py-2 border rounded hover:bg-gray-50">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
+            >
               Annuler
             </button>
           </div>
