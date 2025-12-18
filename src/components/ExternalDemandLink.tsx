@@ -6,7 +6,8 @@ export function ExternalDemandLink() {
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const baseUrl = window.location.origin;
+  // Utilise l'URL de production depuis les variables d'environnement
+  const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
   const demandLink = `${baseUrl}/demande-externe`;
 
   const copyToClipboard = async () => {
