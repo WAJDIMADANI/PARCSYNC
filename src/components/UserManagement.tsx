@@ -195,6 +195,8 @@ export function UserManagement() {
       setPoleNom('');
       setPoleDescription('');
       await fetchPoles();
+
+      window.location.reload();
     } catch (err: any) {
       console.error('Error adding pole:', err);
       setError(err.message);
@@ -225,6 +227,8 @@ export function UserManagement() {
       setPoleDescription('');
       setSelectedPole(null);
       await fetchPoles();
+
+      window.location.reload();
     } catch (err: any) {
       console.error('Error renaming pole:', err);
       setError(err.message);
@@ -254,6 +258,8 @@ export function UserManagement() {
       setShowDeletePoleModal(false);
       setSelectedPole(null);
       await fetchAllData();
+
+      window.location.reload();
     } catch (err: any) {
       console.error('Error deleting pole:', err);
       setError(err.message);
