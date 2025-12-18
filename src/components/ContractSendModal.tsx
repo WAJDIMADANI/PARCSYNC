@@ -847,31 +847,6 @@ export default function ContractSendModal({
                   placeholder="Ex: 11.65€"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Date de début
-                </label>
-                <input
-                  type="date"
-                  value={variables.date_debut}
-                  onChange={(e) => setVariables({...variables, date_debut: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date de fin (si CDD)
-                </label>
-                <input
-                  type="date"
-                  value={variables.date_fin}
-                  onChange={(e) => setVariables({...variables, date_fin: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
             </div>
 
             {avenantType === 'avenant1' && (
@@ -891,8 +866,8 @@ export default function ContractSendModal({
                       <input
                         type="date"
                         value={variables.contract_start}
-                        disabled
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-blue-100 text-gray-700 text-sm"
+                        onChange={(e) => setVariables({...variables, contract_start: e.target.value})}
+                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 text-sm"
                       />
                     </div>
                     <div>
@@ -902,8 +877,8 @@ export default function ContractSendModal({
                       <input
                         type="date"
                         value={variables.contract_end}
-                        disabled
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-blue-100 text-gray-700 text-sm"
+                        onChange={(e) => setVariables({...variables, contract_end: e.target.value})}
+                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 text-sm"
                       />
                     </div>
                     <div>

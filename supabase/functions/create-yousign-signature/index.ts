@@ -9,6 +9,55 @@ interface SignatureRequest {
   contractId: string;
 }
 
+// ✅ Fonction pour formater une date en français
+function formatDateFR(dateStr: string | undefined): string {
+  if (!dateStr) return '';
+
+  try {
+    const date = new Date(dateStr);
+    const options: Intl.DateTimeFormatOptions = {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    };
+    return date.toLocaleDateString('fr-FR', options);
+  } catch (error) {
+    console.error('Error formatting date:', dateStr, error);
+    return dateStr;
+  }
+}
+
+// ✅ Fonction pour préparer et formater les variables avant génération
+function prepareVariables(variables: Record<string, any>): Record<string, any> {
+  const prepared: Record<string, any> = {};
+
+  Object.entries(variables).forEach(([key, value]) => {
+    let processedValue = value;
+
+    // ✅ Formater les dates en français
+    if (key.includes('date') || key.includes('Date') ||
+        key === 'contract_start' || key === 'contract_end' ||
+        key === 'employees_date_de_debut___av1' ||
+        key === 'employees_date_de_fin__av1' ||
+        key === 'employees_date_de_fin__av2') {
+
+      if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        processedValue = formatDateFR(value);
+        console.log(`Formatted ${key}: ${value} → ${processedValue}`);
+      }
+    }
+
+    // ✅ Nettoyer les valeurs vides ou undefined
+    if (processedValue === undefined || processedValue === null) {
+      processedValue = '';
+    }
+
+    prepared[key] = processedValue;
+  });
+
+  return prepared;
+}
+
 // ✅ Fonction pour générer l'HTML du contrat avec les variables
 async function generateContractHTML(contract: any): Promise<string> {
   let html = contract.modele.contenu_html;
@@ -16,11 +65,17 @@ async function generateContractHTML(contract: any): Promise<string> {
     ? JSON.parse(contract.variables)
     : contract.variables;
 
+  // ✅ Préparer et formater les variables
+  const preparedVars = prepareVariables(variables);
+
   // Remplacer les variables {{variable}} par les vraies valeurs
-  Object.entries(variables).forEach(([key, value]) => {
+  Object.entries(preparedVars).forEach(([key, value]) => {
     const regex = new RegExp(`{{${key}}}`, 'g');
     html = html.replace(regex, String(value || ''));
   });
+
+  // ✅ Nettoyer les accolades restantes (pour les variables non définies)
+  html = html.replace(/{{[^}]+}}/g, '');
 
   return html;
 }
@@ -66,6 +121,10 @@ async function convertWordToPDF(
 
   console.log("Starting CloudConvert Word → PDF conversion...");
 
+  // ✅ Préparer et formater les variables AVANT de les envoyer
+  const preparedVariables = prepareVariables(variables);
+  console.log("Variables prepared for CloudConvert:", preparedVariables);
+
   // Étape 1: Créer un job de conversion
   const jobResponse = await fetch("https://api.cloudconvert.com/v2/jobs", {
     method: "POST",
@@ -83,7 +142,7 @@ async function convertWordToPDF(
           operation: "merge",
           input: "import-word",
           output_format: "docx",
-          variables: variables
+          variables: preparedVariables
         },
         "convert-to-pdf": {
           operation: "convert",
