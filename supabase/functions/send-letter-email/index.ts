@@ -95,7 +95,7 @@ Deno.serve(async (req: Request) => {
               <p style="margin-top: 20px;">Si vous avez des questions ou besoin d'aide, n'hésitez pas à nous contacter.</p>
 
               <p style="margin-top: 30px;">Cordialement,<br>
-              <strong>PARC SYNC - Service des Ressources Humaines</strong></p>
+              <strong><span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span> - Service des Ressources Humaines</strong></p>
             </div>
             <div class="footer">
               <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
@@ -115,7 +115,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         sender: {
-          name: "PARC SYNC",
+          name: "TRANSPORT CLASSE AFFAIRE",
           email: "pierre.chopar12@gmail.com",
         },
         to: [
