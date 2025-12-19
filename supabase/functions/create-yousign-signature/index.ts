@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import JSZip from "npm:jszip@3.10.1";
+import { PDFDocument } from "npm:pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -437,29 +438,52 @@ Deno.serve(async (req: Request) => {
 
       console.log("📊 Variables from contract:", JSON.stringify(variables, null, 2).substring(0, 500));
 
-      // ✅ Enrichir les variables avec les données du profil
-      const enrichedVariables = {
-        ...variables,
-        // Données personnelles du profil
+      // ✅ A) Créer un objet PLAT avec toutes les variables (profil + contract.variables)
+      const profilVars: Record<string, any> = {
         nom_salarie: employeeName,
         first_name: contract.profil?.prenom || '',
         last_name: contract.profil?.nom || '',
-        birthday: contract.profil?.date_naissance || variables.birthday || '',
-        birthplace: contract.profil?.lieu_naissance || variables.birthplace || '',
-        nationality: contract.profil?.nationalite || variables.nationality || '',
-        address_1: contract.profil?.adresse || variables.address_1 || '',
-        city: contract.profil?.ville || variables.city || '',
-        zip: contract.profil?.code_postal || variables.zip || '',
-        id_number: contract.profil?.numero_piece_identite || variables.id_number || '',
-        // Données du contrat
-        contract_start: contract.date_debut || variables.contract_start || variables.date_debut || '',
-        contract_end: contract.date_fin || variables.contract_end || variables.date_fin || '',
-        // Autres variables
+        birthday: contract.profil?.date_naissance || '',
+        birthplace: contract.profil?.lieu_naissance || '',
+        nationality: contract.profil?.nationalite || '',
+        address_1: contract.profil?.adresse || '',
+        city: contract.profil?.ville || '',
+        zip: contract.profil?.code_postal || '',
+        id_number: contract.profil?.numero_piece_identite || '',
         email_salarie: employeeEmail,
-        signature: '', // Zone de signature (vide)
+        signature: '',
       };
 
-      console.log("✅ Enriched variables:", JSON.stringify(enrichedVariables, null, 2).substring(0, 800));
+      // B) Fusionner avec les variables du contrat (inclut date_debut, date_fin, variables avenant, etc.)
+      const templateVars: Record<string, any> = {
+        ...profilVars,
+        ...variables,
+        // Override avec les valeurs de la table contrat si elles existent
+        contract_start: contract.date_debut || variables.contract_start || variables.date_debut || '',
+        contract_end: contract.date_fin || variables.contract_end || variables.date_fin || '',
+        date_debut: contract.date_debut || variables.date_debut || '',
+        date_fin: contract.date_fin || variables.date_fin || '',
+      };
+
+      // C) Remplacer tous les null/undefined par "" (string vide)
+      Object.keys(templateVars).forEach(key => {
+        if (templateVars[key] === null || templateVars[key] === undefined) {
+          templateVars[key] = '';
+        }
+      });
+
+      // D) Logs pour debug
+      console.log("🔑 DOCX templateVars keys:", Object.keys(templateVars));
+      console.log("📋 DOCX sample values:", {
+        contract_start: templateVars.contract_start,
+        employees_date_de_fin__av1: templateVars.employees_date_de_fin__av1,
+        first_name: templateVars.first_name,
+        last_name: templateVars.last_name,
+        date_debut: templateVars.date_debut,
+        date_fin: templateVars.date_fin,
+      });
+
+      const enrichedVariables = templateVars;
 
       pdfArrayBuffer = await convertWordToPDF(contract.modele.fichier_url, enrichedVariables);
       console.log("Word → PDF conversion completed");
@@ -539,6 +563,23 @@ Deno.serve(async (req: Request) => {
     const documentId = documentData.id;
     console.log("Document uploaded with ID:", documentId);
 
+    // ✅ B) FIX SIGNATURE : Analyser le PDF pour obtenir le nombre de pages et positionner sur la dernière
+    console.log("Step 3.5: Analyzing PDF with pdf-lib...");
+    const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
+    const pageCount = pdfDoc.getPageCount();
+    const lastPage = pdfDoc.getPage(pageCount - 1);
+    const { width: pageWidth, height: pageHeight } = lastPage.getSize();
+
+    console.log(`📄 PDF has ${pageCount} pages, last page size: ${pageWidth}x${pageHeight}`);
+
+    // Position dans le quart bas-droit de la dernière page (coordonnées RELATIVES)
+    const signatureX = Math.round(pageWidth * 0.62);
+    const signatureY = Math.round(pageHeight * 0.12);
+    const signatureWidth = Math.round(pageWidth * 0.30);
+    const signatureHeight = 70;
+
+    console.log(`✍️ Signature position on page ${pageCount}: x=${signatureX}, y=${signatureY}, width=${signatureWidth}, height=${signatureHeight}`);
+
     // Étape 4: Ajouter le signataire
     console.log("Step 4: Adding signer...");
     const nameParts = employeeName.trim().split(' ');
@@ -566,9 +607,11 @@ Deno.serve(async (req: Request) => {
             {
               document_id: documentId,
               type: "signature",
-              page: 1,
-              x: 77,
-              y: 581,
+              page: pageCount,  // ✅ Dernière page dynamique
+              x: signatureX,
+              y: signatureY,
+              width: signatureWidth,
+              height: signatureHeight,
             }
           ]
         }),
