@@ -936,42 +936,48 @@ export default function ContractSendModal({
                 {loadingDates ? (
                   <p className="text-sm text-blue-700">Chargement des dates...</p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-blue-700 mb-1">
-                        Date début CDD
-                      </label>
-                      <input
-                        type="date"
-                        value={variables.contract_start}
-                        onChange={(e) => setVariables({...variables, contract_start: e.target.value})}
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 text-sm"
-                      />
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-xs font-medium text-blue-700 mb-1">
+                          Date début CDD
+                        </label>
+                        <input
+                          type="date"
+                          value={variables.contract_start}
+                          onChange={(e) => setVariables({...variables, contract_start: e.target.value})}
+                          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-blue-700 mb-1">
+                          Date fin CDD
+                        </label>
+                        <input
+                          type="date"
+                          value={variables.contract_end}
+                          onChange={(e) => setVariables({...variables, contract_end: e.target.value})}
+                          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 text-sm"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-blue-700 mb-1">
-                        Date fin CDD
-                      </label>
-                      <input
-                        type="date"
-                        value={variables.contract_end}
-                        onChange={(e) => setVariables({...variables, contract_end: e.target.value})}
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-blue-700 mb-1">
-                        Date fin avenant 1 *
+                    <div className="pt-3 border-t border-blue-200">
+                      <label className="block text-sm font-medium text-blue-900 mb-2">
+                        📅 Date de fin d'avenant 1 *
                       </label>
                       <input
                         type="date"
                         value={variables.employees_date_de_fin__av1}
                         onChange={(e) => setVariables({...variables, employees_date_de_fin__av1: e.target.value})}
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                        className="w-full px-4 py-3 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
                         placeholder="Nouvelle date de fin"
+                        required
                       />
+                      <p className="text-xs text-blue-600 mt-1">
+                        Cette date doit être postérieure à la date de fin du CDD initial
+                      </p>
                     </div>
-                  </div>
+                  </>
                 )}
                 {!variables.contract_start && !loadingDates && (
                   <p className="text-xs text-orange-600 mt-2">
