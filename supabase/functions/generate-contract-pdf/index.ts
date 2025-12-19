@@ -253,7 +253,7 @@ function generateContractHTML(contract: any): string {
   <h2>ENTRE LES SOUSSIGNÉS :</h2>
 
   <div class="info-box">
-    <p><strong>L'Employeur :</strong> PARC SYNC</p>
+    <p><strong>L'Employeur :</strong> <span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span></p>
     <p><strong>Représenté par :</strong> [Nom du représentant]</p>
   </div>
 
@@ -267,7 +267,7 @@ function generateContractHTML(contract: any): string {
   <h2>ARTICLE 1 : OBJET DU CONTRAT</h2>
   <p>
     Le présent contrat a pour objet de définir les conditions d'emploi et de rémunération
-    du salarié au sein de la société PARC SYNC.
+    du salarié au sein de la société <span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span>.
   </p>
 
   <h2>ARTICLE 2 : POSTE ET FONCTIONS</h2>
@@ -347,7 +347,7 @@ function generateContractHTML(contract: any): string {
   </div>
 
   <div class="footer">
-    <p>Document généré automatiquement par PARC SYNC - ${formatDateDDMMYYYY(new Date().toISOString().split('T')[0])}</p>
+    <p>Document généré automatiquement par <span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span> - ${formatDateDDMMYYYY(new Date().toISOString().split('T')[0])}</p>
     <p>Ce contrat fait foi entre les parties signataires.</p>
   </div>
 </body>

@@ -61,7 +61,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         sender: {
-          name: "PARC SYNC",
+          name: "TRANSPORT CLASSE AFFAIRE",
           email: "pierre.chopar12@gmail.com",
         },
         to: [
@@ -131,7 +131,7 @@ Deno.serve(async (req: Request) => {
                   <p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
 
                   <p>Cordialement,<br>
-                  <strong>L'équipe PARC SYNC</strong></p>
+                  <strong>L'équipe <span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span></strong></p>
                 </div>
                 <div class="footer">
                   <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>

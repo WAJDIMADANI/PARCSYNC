@@ -38,7 +38,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         sender: {
-          name: "PARC SYNC",
+          name: "TRANSPORT CLASSE AFFAIRE",
           email: "pierre.chopar12@gmail.com",
         },
         to: [
@@ -46,7 +46,7 @@ Deno.serve(async (req: Request) => {
             email: candidateEmail,
           },
         ],
-        subject: "Postulez chez PARC SYNC - Formulaire de candidature",
+        subject: "Postulez chez TRANSPORT CLASSE AFFAIRE - Formulaire de candidature",
         tags: ["application"],
         htmlContent: `
           <!DOCTYPE html>
@@ -65,12 +65,12 @@ Deno.serve(async (req: Request) => {
             <body>
               <div class="container">
                 <div class="header">
-                  <h1>🚀 Rejoignez PARC SYNC</h1>
+                  <h1>🚀 Rejoignez <span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span></h1>
                 </div>
                 <div class="content">
                   <p>Bonjour,</p>
 
-                  <p>Nous vous invitons à postuler chez <strong>PARC SYNC</strong> !</p>
+                  <p>Nous vous invitons à postuler chez <strong><span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span></strong> !</p>
 
                   <p>Pour soumettre votre candidature, cliquez sur le bouton ci-dessous et remplissez le formulaire :</p>
 
@@ -94,7 +94,7 @@ Deno.serve(async (req: Request) => {
                   <p>Nous avons hâte de recevoir votre candidature !</p>
 
                   <p>Cordialement,<br>
-                  <strong>L'équipe PARC SYNC</strong></p>
+                  <strong>L'équipe <span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span></strong></p>
                 </div>
                 <div class="footer">
                   <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
