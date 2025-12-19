@@ -493,23 +493,30 @@ export default function ContractSendModal({
       return;
     }
 
-    if (avenantType === 'avenant1' && variables.contract_end && variables.employees_date_de_fin__av1) {
-      const contractEnd = new Date(variables.contract_end);
-      const avenant1End = new Date(variables.employees_date_de_fin__av1);
+    // ✅ Vérifier si c'est un CDI (pas de validation de dates pour les CDI)
+    const selectedTemplateData = templates.find(t => t.id === selectedTemplate);
+    const isCDI = selectedTemplateData?.type_contrat === 'CDI';
 
-      if (avenant1End <= contractEnd) {
-        alert('La date de fin de l\'avenant 1 doit être postérieure à la date de fin du CDD initial');
-        return;
+    // Validations des dates uniquement pour les CDD (pas pour les CDI)
+    if (!isCDI) {
+      if (avenantType === 'avenant1' && variables.contract_end && variables.employees_date_de_fin__av1) {
+        const contractEnd = new Date(variables.contract_end);
+        const avenant1End = new Date(variables.employees_date_de_fin__av1);
+
+        if (avenant1End <= contractEnd) {
+          alert('La date de fin de l\'avenant 1 doit être postérieure à la date de fin du CDD initial');
+          return;
+        }
       }
-    }
 
-    if (avenantType === 'avenant2' && variables.employees_date_de_fin__av1 && variables.employees_date_de_fin__av2) {
-      const avenant1End = new Date(variables.employees_date_de_fin__av1);
-      const avenant2End = new Date(variables.employees_date_de_fin__av2);
+      if (avenantType === 'avenant2' && variables.employees_date_de_fin__av1 && variables.employees_date_de_fin__av2) {
+        const avenant1End = new Date(variables.employees_date_de_fin__av1);
+        const avenant2End = new Date(variables.employees_date_de_fin__av2);
 
-      if (avenant2End <= avenant1End) {
-        alert('La date de fin de l\'avenant 2 doit être postérieure à la date de fin de l\'avenant 1');
-        return;
+        if (avenant2End <= avenant1End) {
+          alert('La date de fin de l\'avenant 2 doit être postérieure à la date de fin de l\'avenant 1');
+          return;
+        }
       }
     }
 
