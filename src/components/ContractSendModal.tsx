@@ -362,9 +362,10 @@ export default function ContractSendModal({
           setVariables(prev => ({
             ...prev,
             contract_start: cddDates.date_debut,
-            contract_end: cddDates.date_fin
+            contract_end: cddDates.date_fin,
+            employees_date_de_debut___av1: cddDates.date_fin // Date début avenant 1 = date fin CDD
           }));
-          console.log('✅ Dates CDD pré-remplies');
+          console.log('✅ Dates CDD pré-remplies + date début avenant 1');
         } else {
           console.warn('⚠️ Aucune date CDD trouvée');
         }
@@ -607,7 +608,9 @@ export default function ContractSendModal({
         preparedVariables.date_fin = variables.employees_date_de_fin__av1;
         console.log('✅ Avenant 1 mapping:', {
           date_debut: preparedVariables.date_debut,
-          date_fin: preparedVariables.date_fin
+          date_fin: preparedVariables.date_fin,
+          employees_date_de_debut___av1: preparedVariables.employees_date_de_debut___av1,
+          employees_date_de_fin__av1: preparedVariables.employees_date_de_fin__av1
         });
       }
 
@@ -1001,19 +1004,35 @@ export default function ContractSendModal({
                       </div>
                     </div>
                     <div className="pt-3 border-t border-blue-200">
-                      <label className="block text-sm font-medium text-blue-900 mb-2">
-                        📅 Date de fin d'avenant 1 *
-                      </label>
-                      <input
-                        type="date"
-                        value={variables.employees_date_de_fin__av1}
-                        onChange={(e) => setVariables({...variables, employees_date_de_fin__av1: e.target.value})}
-                        className="w-full px-4 py-3 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
-                        placeholder="Nouvelle date de fin"
-                        required
-                      />
-                      <p className="text-xs text-blue-600 mt-1">
-                        Cette date doit être postérieure à la date de fin du CDD initial
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-blue-900 mb-2">
+                            📅 Date de début d'avenant 1
+                          </label>
+                          <input
+                            type="date"
+                            value={variables.employees_date_de_debut___av1}
+                            onChange={(e) => setVariables({...variables, employees_date_de_debut___av1: e.target.value})}
+                            className="w-full px-4 py-3 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
+                            placeholder="Date de début avenant"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-blue-900 mb-2">
+                            📅 Date de fin d'avenant 1 *
+                          </label>
+                          <input
+                            type="date"
+                            value={variables.employees_date_de_fin__av1}
+                            onChange={(e) => setVariables({...variables, employees_date_de_fin__av1: e.target.value})}
+                            className="w-full px-4 py-3 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
+                            placeholder="Nouvelle date de fin"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-blue-600 mt-2">
+                        La date de fin doit être postérieure à la date de fin du CDD initial
                       </p>
                     </div>
                   </>
