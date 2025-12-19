@@ -275,7 +275,9 @@ export default function ContractSendModal({
   const templateHasTrialVar = JSON.stringify(selectedTemplateObj?.variables ?? {}).includes('trial_period_text');
 
   // B) Applicabilité de la période d'essai (calculé après trialPeriodInfo)
-  const trialIsApplicable = !!trialPeriodInfo?.description &&
+  const trialIsApplicable =
+    !!trialPeriodInfo?.endDate &&
+    !!trialPeriodInfo?.description &&
     !trialPeriodInfo.description.toLowerCase().includes('aucune période d\'essai');
 
   useEffect(() => {
@@ -625,8 +627,8 @@ export default function ContractSendModal({
 
       // D) Gestion de trial_period_text
       if (templateHasTrialVar) {
-        preparedVariables.trial_period_text = (trialIsApplicable && trialPeriodInfo?.endDate)
-          ? formatDateFR(trialPeriodInfo.endDate)
+        preparedVariables.trial_period_text = trialIsApplicable
+          ? formatDateFR(trialPeriodInfo!.endDate)
           : "";
       } else {
         delete preparedVariables.trial_period_text;
@@ -741,8 +743,8 @@ export default function ContractSendModal({
       };
 
       // E) Mise à jour conditionnelle de date_fin_periode_essai
-      if (templateHasTrialVar && trialIsApplicable && trialPeriodInfo?.endDate) {
-        updateData.date_fin_periode_essai = trialPeriodInfo.endDate;
+      if (trialIsApplicable) {
+        updateData.date_fin_periode_essai = trialPeriodInfo!.endDate;
       }
 
       const { error: profilError } = await supabase
@@ -1114,17 +1116,15 @@ export default function ContractSendModal({
               </div>
             )}
 
-            {/* UI: Afficher le calcul de période d'essai dès qu'il existe */}
-            {trialPeriodInfo && (
-              <div className={`mt-4 border rounded-lg p-4 ${trialIsApplicable ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-                <h4 className={`text-sm font-semibold mb-2 ${trialIsApplicable ? 'text-green-900' : 'text-gray-700'}`}>
+            {/* UI: Afficher le calcul de période d'essai uniquement si applicable */}
+            {trialIsApplicable && (
+              <div className="mt-4 border rounded-lg p-4 bg-green-50 border-green-200">
+                <h4 className="text-sm font-semibold mb-2 text-green-900">
                   Période d'essai calculée
                 </h4>
-                <div className={`text-sm ${trialIsApplicable ? 'text-green-800' : 'text-gray-600'}`}>
-                  <p><strong>Durée :</strong> {trialPeriodInfo.description}</p>
-                  {trialPeriodInfo.endDate && (
-                    <p><strong>Date de fin :</strong> {formatDateFR(trialPeriodInfo.endDate)} ({trialPeriodInfo.endDate})</p>
-                  )}
+                <div className="text-sm text-green-800">
+                  <p><strong>Durée :</strong> {trialPeriodInfo!.description}</p>
+                  <p><strong>Date de fin :</strong> {formatDateFR(trialPeriodInfo!.endDate)} ({trialPeriodInfo!.endDate})</p>
                 </div>
               </div>
             )}
