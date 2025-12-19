@@ -37,7 +37,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         sender: {
-          name: "PARC SYNC",
+          name: "TRANSPORT CLASSE AFFAIRE",
           email: "pierre.chopar12@gmail.com",
         },
         to: [
@@ -46,7 +46,7 @@ Deno.serve(async (req: Request) => {
             name: candidateName,
           },
         ],
-        subject: "Votre candidature chez PARC SYNC",
+        subject: "Votre candidature chez TRANSPORT CLASSE AFFAIRE",
         htmlContent: `
           <!DOCTYPE html>
           <html>
@@ -63,12 +63,12 @@ Deno.serve(async (req: Request) => {
             <body>
               <div class="container">
                 <div class="header">
-                  <h1>Votre candidature chez PARC SYNC</h1>
+                  <h1>Votre candidature chez <span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span></h1>
                 </div>
                 <div class="content">
                   <p>Bonjour ${candidateName},</p>
 
-                  <p>Nous vous remercions de l'intérêt que vous portez à <strong>PARC SYNC</strong> et du temps que vous avez consacré à votre candidature.</p>
+                  <p>Nous vous remercions de l'intérêt que vous portez à <strong><span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span></strong> et du temps que vous avez consacré à votre candidature.</p>
 
                   <p>Après un examen attentif de votre profil, nous avons le regret de vous informer que nous ne pouvons pas donner une suite favorable à votre candidature pour le moment.</p>
 
@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
                   <p>Nous vous souhaitons beaucoup de succès dans vos recherches.</p>
 
                   <p>Cordialement,<br>
-                  <strong>L'équipe PARC SYNC</strong></p>
+                  <strong>L'équipe <span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span></strong></p>
                 </div>
                 <div class="footer">
                   <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>

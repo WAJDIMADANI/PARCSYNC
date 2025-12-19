@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         sender: {
-          name: "PARC SYNC",
+          name: "TRANSPORT CLASSE AFFAIRE",
           email: "pierre.chopar12@gmail.com",
         },
         to: [
@@ -49,7 +49,7 @@ Deno.serve(async (req: Request) => {
             name: candidateName,
           },
         ],
-        subject: "Bienvenue chez PARC SYNC - Complétez votre dossier d'embauche",
+        subject: "Bienvenue chez TRANSPORT CLASSE AFFAIRE - Complétez votre dossier d'embauche",
         htmlContent: `
           <!DOCTYPE html>
           <html>
@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
                 <div class="content">
                   <p>Bonjour ${candidateName},</p>
 
-                  <p>Nous sommes ravis de vous accueillir chez <strong>PARC SYNC</strong> !</p>
+                  <p>Nous sommes ravis de vous accueillir chez <strong><span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span></strong> !</p>
 
                   <p>Pour finaliser votre embauche, merci de compléter votre dossier en cliquant sur le bouton ci-dessous :</p>
 
@@ -94,7 +94,7 @@ Deno.serve(async (req: Request) => {
                   <p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
 
                   <p>À très bientôt,<br>
-                  <strong>L'équipe PARC SYNC</strong></p>
+                  <strong>L'équipe <span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span></strong></p>
                 </div>
                 <div class="footer">
                   <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
