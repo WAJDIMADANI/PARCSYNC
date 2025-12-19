@@ -597,6 +597,32 @@ export default function ContractSendModal({
         preparedVariables.contract_end = variables.date_fin;
       }
 
+      // ✅ Pour avenant 1 : mapper correctement date_debut et date_fin
+      if (avenantType === 'avenant1') {
+        // date_debut = date début du CDD initial
+        preparedVariables.date_debut = variables.contract_start;
+        // date_fin = nouvelle date de fin de l'avenant 1
+        preparedVariables.date_fin = variables.employees_date_de_fin__av1;
+        console.log('✅ Avenant 1 mapping:', {
+          date_debut: preparedVariables.date_debut,
+          date_fin: preparedVariables.date_fin
+        });
+      }
+
+      // ✅ Pour avenant 2 : mapper correctement toutes les dates
+      if (avenantType === 'avenant2') {
+        // date_debut = date début du CDD initial
+        preparedVariables.date_debut = variables.contract_start;
+        // date_fin = nouvelle date de fin de l'avenant 2
+        preparedVariables.date_fin = variables.employees_date_de_fin__av2;
+        console.log('✅ Avenant 2 mapping:', {
+          date_debut: preparedVariables.date_debut,
+          date_fin: preparedVariables.date_fin,
+          employees_date_de_debut___av1: preparedVariables.employees_date_de_debut___av1,
+          employees_date_de_fin__av1: preparedVariables.employees_date_de_fin__av1
+        });
+      }
+
       // D) Gestion de trial_period_text
       if (templateHasTrialVar) {
         preparedVariables.trial_period_text = (trialIsApplicable && trialPeriodInfo?.endDate)
@@ -620,6 +646,17 @@ export default function ContractSendModal({
 
       if (avenantNum !== null) {
         contractData.avenant_num = avenantNum;
+      }
+
+      // ✅ Ajouter les colonnes date_debut et date_fin dans la table contrat
+      if (avenantType === 'avenant1' || avenantType === 'avenant2') {
+        contractData.date_debut = variables.contract_start;
+        contractData.date_fin = avenantType === 'avenant1'
+          ? variables.employees_date_de_fin__av1
+          : variables.employees_date_de_fin__av2;
+      } else if (avenantType === 'none') {
+        if (variables.date_debut) contractData.date_debut = variables.date_debut;
+        if (variables.date_fin) contractData.date_fin = variables.date_fin;
       }
 
       console.log('📝 Données à envoyer à Supabase:');
