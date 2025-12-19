@@ -1,6 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import Docxtemplater from "npm:docxtemplater@3.50.0";
-import PizZip from "npm:pizzip@3.1.7";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -110,7 +108,7 @@ async function generatePDF(htmlContent: string): Promise<ArrayBuffer> {
   return await response.arrayBuffer();
 }
 
-// ✅ NEW: Fonction pour convertir Word avec variables → PDF
+// ✅ NEW: Fonction pour convertir Word → PDF via CloudConvert
 async function convertWordToPDF(
   wordFileUrl: string,
   variables: Record<string, any>
@@ -121,172 +119,108 @@ async function convertWordToPDF(
     throw new Error("CLOUDCONVERT_API_KEY not configured");
   }
 
-  console.log("Starting Word → PDF conversion with variable replacement...");
+  console.log("Starting CloudConvert Word → PDF conversion...");
 
-  // Étape 1: Télécharger le fichier Word depuis Supabase
-  console.log("Step 1: Downloading Word template from:", wordFileUrl);
-  const wordResponse = await fetch(wordFileUrl);
-  if (!wordResponse.ok) {
-    throw new Error(`Failed to download Word template: ${wordResponse.statusText}`);
-  }
-
-  const wordArrayBuffer = await wordResponse.arrayBuffer();
-  console.log("Word template downloaded, size:", wordArrayBuffer.byteLength, "bytes");
-
-  // Étape 2: Remplacer les variables avec docxtemplater
-  console.log("Step 2: Replacing variables in Word template...");
+  // ✅ Préparer et formater les variables AVANT de les envoyer
   const preparedVariables = prepareVariables(variables);
-  console.log("Variables to replace:", Object.keys(preparedVariables));
+  console.log("Variables prepared for CloudConvert:", preparedVariables);
 
-  try {
-    const zip = new PizZip(wordArrayBuffer);
-    const doc = new Docxtemplater(zip, {
-      paragraphLoop: true,
-      linebreaks: true,
-      nullGetter: () => "", // Remplacer les valeurs null par une chaîne vide
-    });
-
-    doc.render(preparedVariables);
-
-    const outputBuffer = doc.getZip().generate({
-      type: "arraybuffer",
-      compression: "DEFLATE",
-    });
-
-    console.log("Variables replaced successfully, new file size:", outputBuffer.byteLength, "bytes");
-
-    // Étape 3: Uploader le fichier Word modifié vers CloudConvert et le convertir en PDF
-    console.log("Step 3: Converting modified Word to PDF via CloudConvert...");
-
-    const jobResponse = await fetch("https://api.cloudconvert.com/v2/jobs", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${CLOUDCONVERT_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        tasks: {
-          "upload-docx": {
-            operation: "import/upload"
-          },
-          "convert-to-pdf": {
-            operation: "convert",
-            input: "upload-docx",
-            output_format: "pdf"
-          },
-          "export-pdf": {
-            operation: "export/url",
-            input: "convert-to-pdf"
-          }
+  // Étape 1: Créer un job de conversion
+  const jobResponse = await fetch("https://api.cloudconvert.com/v2/jobs", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${CLOUDCONVERT_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      tasks: {
+        "import-word": {
+          operation: "import/url",
+          url: wordFileUrl
+        },
+        "convert-to-pdf": {
+          operation: "convert",
+          input: "import-word",
+          output_format: "pdf"
+        },
+        "export-pdf": {
+          operation: "export/url",
+          input: "convert-to-pdf"
         }
-      })
-    });
-
-    if (!jobResponse.ok) {
-      const errorText = await jobResponse.text();
-      throw new Error(`CloudConvert job creation error: ${errorText}`);
-    }
-
-    const jobData = await jobResponse.json();
-    const jobId = jobData.data.id;
-    console.log("CloudConvert job created:", jobId);
-
-    // Étape 4: Uploader le fichier Word modifié
-    const uploadTask = jobData.data.tasks.find((t: any) => t.name === "upload-docx");
-    if (!uploadTask || !uploadTask.result?.form?.url) {
-      throw new Error("Upload task URL not found in CloudConvert response");
-    }
-
-    const uploadUrl = uploadTask.result.form.url;
-    const uploadParams = uploadTask.result.form.parameters;
-
-    console.log("Step 4: Uploading modified Word file to CloudConvert...");
-
-    const formData = new FormData();
-    Object.entries(uploadParams).forEach(([key, value]) => {
-      formData.append(key, value as string);
-    });
-    formData.append("file", new Blob([outputBuffer]), "contract.docx");
-
-    const uploadResponse = await fetch(uploadUrl, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!uploadResponse.ok) {
-      throw new Error(`Failed to upload Word file to CloudConvert: ${uploadResponse.statusText}`);
-    }
-
-    console.log("Word file uploaded successfully");
-
-    // Étape 5: Attendre la fin de la conversion (polling)
-    console.log("Step 5: Waiting for PDF conversion...");
-    let jobStatus = jobData.data.status;
-    let attempts = 0;
-    const maxAttempts = 30;
-    let finalStatusData = jobData;
-
-    while (jobStatus !== "finished" && jobStatus !== "error" && attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const statusResponse = await fetch(`https://api.cloudconvert.com/v2/jobs/${jobId}`, {
-        headers: {
-          "Authorization": `Bearer ${CLOUDCONVERT_API_KEY}`
-        }
-      });
-
-      if (!statusResponse.ok) {
-        throw new Error("Failed to check CloudConvert job status");
       }
+    })
+  });
 
-      finalStatusData = await statusResponse.json();
-      jobStatus = finalStatusData.data.status;
-      attempts++;
-
-      console.log(`CloudConvert job status: ${jobStatus} (attempt ${attempts}/${maxAttempts})`);
-    }
-
-    if (jobStatus === "error") {
-      console.error("CloudConvert job detailed errors:", JSON.stringify(finalStatusData, null, 2));
-
-      const errorTasks = finalStatusData.data.tasks?.filter((t: any) => t.status === "error") || [];
-      if (errorTasks.length > 0) {
-        const errorMessages = errorTasks.map((t: any) =>
-          `Task "${t.name}": ${t.message || "Unknown error"}`
-        ).join(", ");
-        throw new Error(`CloudConvert job failed: ${errorMessages}`);
-      }
-
-      throw new Error("CloudConvert job failed with unknown error");
-    }
-
-    if (jobStatus !== "finished") {
-      throw new Error(`CloudConvert job timeout after ${attempts} attempts`);
-    }
-
-    // Étape 6: Récupérer l'URL du PDF depuis les données de statut finales
-    const exportTask = finalStatusData.data.tasks?.find((t: any) => t.name === "export-pdf");
-    if (!exportTask || !exportTask.result?.files?.[0]?.url) {
-      console.error("Export task not found or has no URL. All tasks:", JSON.stringify(finalStatusData.data.tasks, null, 2));
-      throw new Error("CloudConvert export task not found or has no download URL");
-    }
-
-    const pdfUrl = exportTask.result.files[0].url;
-    console.log("PDF generated at:", pdfUrl);
-
-    // Étape 7: Télécharger le PDF
-    const pdfResponse = await fetch(pdfUrl);
-    if (!pdfResponse.ok) {
-      throw new Error("Failed to download converted PDF");
-    }
-
-    console.log("PDF download successful");
-    return await pdfResponse.arrayBuffer();
-
-  } catch (docxError: any) {
-    console.error("Error during Word template processing:", docxError);
-    throw new Error(`Word template processing failed: ${docxError.message}`);
+  if (!jobResponse.ok) {
+    const errorText = await jobResponse.text();
+    throw new Error(`CloudConvert job creation error: ${errorText}`);
   }
+
+  const jobData = await jobResponse.json();
+  const jobId = jobData.data.id;
+  console.log("CloudConvert job created:", jobId);
+
+  // Étape 2: Attendre la fin du job (polling)
+  let jobStatus = jobData.data.status;
+  let attempts = 0;
+  const maxAttempts = 30;
+  let finalStatusData = jobData;
+
+  while (jobStatus !== "finished" && jobStatus !== "error" && attempts < maxAttempts) {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const statusResponse = await fetch(`https://api.cloudconvert.com/v2/jobs/${jobId}`, {
+      headers: {
+        "Authorization": `Bearer ${CLOUDCONVERT_API_KEY}`
+      }
+    });
+
+    if (!statusResponse.ok) {
+      throw new Error("Failed to check CloudConvert job status");
+    }
+
+    finalStatusData = await statusResponse.json();
+    jobStatus = finalStatusData.data.status;
+    attempts++;
+
+    console.log(`CloudConvert job status: ${jobStatus} (attempt ${attempts}/${maxAttempts})`);
+  }
+
+  if (jobStatus === "error") {
+    console.error("CloudConvert job detailed errors:", JSON.stringify(finalStatusData, null, 2));
+
+    const errorTasks = finalStatusData.data.tasks?.filter((t: any) => t.status === "error") || [];
+    if (errorTasks.length > 0) {
+      const errorMessages = errorTasks.map((t: any) =>
+        `Task "${t.name}": ${t.message || "Unknown error"}`
+      ).join(", ");
+      throw new Error(`CloudConvert job failed: ${errorMessages}`);
+    }
+
+    throw new Error("CloudConvert job failed with unknown error");
+  }
+
+  if (jobStatus !== "finished") {
+    throw new Error(`CloudConvert job timeout after ${attempts} attempts`);
+  }
+
+  // Étape 3: Récupérer l'URL du PDF depuis les données de statut finales
+  const exportTask = finalStatusData.data.tasks?.find((t: any) => t.name === "export-pdf");
+  if (!exportTask || !exportTask.result?.files?.[0]?.url) {
+    console.error("Export task not found or has no URL. All tasks:", JSON.stringify(finalStatusData.data.tasks, null, 2));
+    throw new Error("CloudConvert export task not found or has no download URL");
+  }
+
+  const pdfUrl = exportTask.result.files[0].url;
+  console.log("PDF generated at:", pdfUrl);
+
+  // Étape 4: Télécharger le PDF
+  const pdfResponse = await fetch(pdfUrl);
+  if (!pdfResponse.ok) {
+    throw new Error("Failed to download converted PDF");
+  }
+
+  return await pdfResponse.arrayBuffer();
 }
 
 Deno.serve(async (req: Request) => {
