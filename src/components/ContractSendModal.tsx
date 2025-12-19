@@ -473,8 +473,8 @@ export default function ContractSendModal({
   };
 
   const handleSend = async () => {
-    if (!selectedTemplate || !selectedSecteur) {
-      alert('Veuillez sélectionner un modèle de contrat et un secteur');
+    if (!selectedTemplate) {
+      alert('Veuillez sélectionner un modèle de contrat');
       return;
     }
 
@@ -662,10 +662,10 @@ export default function ContractSendModal({
 
       // ✅ ÉTAPE 4 : Mettre à jour le profil
       console.log('🎯 ===== ÉTAPE 4: UPDATE PROFIL =====');
-      
+
       const updateData: any = {
         statut: 'contrat_envoye',
-        secteur_id: selectedSecteur
+        secteur_id: selectedSecteur || null
       };
 
       if (trialPeriodInfo?.endDate) {
@@ -775,13 +775,12 @@ export default function ContractSendModal({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Building className="w-4 h-4 inline mr-1" />
-                Secteur *
+                Secteur
               </label>
               <select
                 value={selectedSecteur}
                 onChange={(e) => setSelectedSecteur(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
               >
                 <option value="">Sélectionner un secteur</option>
                 {secteurs.map(secteur => (
@@ -1117,7 +1116,7 @@ export default function ContractSendModal({
             </button>
             <button
               onClick={handleSend}
-              disabled={sending || !selectedTemplate || !selectedSecteur}
+              disabled={sending || !selectedTemplate}
               className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
             >
               {sending ? (
