@@ -962,8 +962,8 @@ export default function ContractSendModal({
                       <input
                         type="date"
                         value={variables.contract_start}
-                        disabled
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg bg-purple-100 text-gray-700 text-sm"
+                        onChange={(e) => setVariables({...variables, contract_start: e.target.value})}
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
                       />
                     </div>
                     <div>
@@ -973,8 +973,8 @@ export default function ContractSendModal({
                       <input
                         type="date"
                         value={variables.contract_end}
-                        disabled
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg bg-purple-100 text-gray-700 text-sm"
+                        onChange={(e) => setVariables({...variables, contract_end: e.target.value})}
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
                       />
                     </div>
                     <div>
@@ -984,8 +984,8 @@ export default function ContractSendModal({
                       <input
                         type="date"
                         value={variables.employees_date_de_debut___av1}
-                        disabled
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg bg-purple-100 text-gray-700 text-sm"
+                        onChange={(e) => setVariables({...variables, employees_date_de_debut___av1: e.target.value})}
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
                       />
                     </div>
                     <div>
@@ -995,8 +995,8 @@ export default function ContractSendModal({
                       <input
                         type="date"
                         value={variables.employees_date_de_fin__av1}
-                        disabled
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg bg-purple-100 text-gray-700 text-sm"
+                        onChange={(e) => setVariables({...variables, employees_date_de_fin__av1: e.target.value})}
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
                       />
                     </div>
                     <div>
