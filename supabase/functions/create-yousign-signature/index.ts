@@ -49,9 +49,17 @@ function prepareVariables(variables: Record<string, any>): Record<string, any> {
     prepared[key] = processedValue;
   });
 
+  // ✅ Calculer la date de fin de période d'essai si elle n'existe pas
+  if (!variables.trial_end_date && variables.contract_start) {
+    const contractStart = new Date(variables.contract_start);
+    const trialEnd = new Date(contractStart);
+    trialEnd.setDate(trialEnd.getDate() + 30); // 30 jours de période d'essai
+    prepared.trial_end_date = trialEnd.toISOString().split('T')[0];
+  }
+
   // ✅ Gérer la phrase de période d'essai conditionnellement
-  if (variables.trial_end_date && typeof variables.trial_end_date === 'string' && variables.trial_end_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    const formattedDate = formatDateFR(variables.trial_end_date);
+  if (prepared.trial_end_date && typeof prepared.trial_end_date === 'string' && prepared.trial_end_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const formattedDate = formatDateFR(prepared.trial_end_date);
     prepared.trial_period_text = `Le Salarié sera soumis à une période d'essai qui prendra fin le : ${formattedDate}`;
   } else {
     prepared.trial_period_text = '';
@@ -373,9 +381,35 @@ Deno.serve(async (req: Request) => {
 
       const variables = typeof contract.variables === 'string'
         ? JSON.parse(contract.variables)
-        : contract.variables;
+        : contract.variables || {};
 
-      pdfArrayBuffer = await convertWordToPDF(contract.modele.fichier_url, variables);
+      console.log("📊 Variables from contract:", JSON.stringify(variables, null, 2).substring(0, 500));
+
+      // ✅ Enrichir les variables avec les données du profil
+      const enrichedVariables = {
+        ...variables,
+        // Données personnelles du profil
+        nom_salarie: employeeName,
+        first_name: contract.profil?.prenom || '',
+        last_name: contract.profil?.nom || '',
+        birthday: contract.profil?.date_naissance || variables.birthday || '',
+        birthplace: contract.profil?.lieu_naissance || variables.birthplace || '',
+        nationality: contract.profil?.nationalite || variables.nationality || '',
+        address_1: contract.profil?.adresse || variables.address_1 || '',
+        city: contract.profil?.ville || variables.city || '',
+        zip: contract.profil?.code_postal || variables.zip || '',
+        id_number: contract.profil?.numero_piece_identite || variables.id_number || '',
+        // Données du contrat
+        contract_start: contract.date_debut || variables.contract_start || variables.date_debut || '',
+        contract_end: contract.date_fin || variables.contract_end || variables.date_fin || '',
+        // Autres variables
+        email_salarie: employeeEmail,
+        signature: '', // Zone de signature (vide)
+      };
+
+      console.log("✅ Enriched variables:", JSON.stringify(enrichedVariables, null, 2).substring(0, 800));
+
+      pdfArrayBuffer = await convertWordToPDF(contract.modele.fichier_url, enrichedVariables);
       console.log("Word → PDF conversion completed");
 
     } else if (contract.modele?.contenu_html) {
