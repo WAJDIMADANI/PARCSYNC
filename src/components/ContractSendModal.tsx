@@ -1071,13 +1071,17 @@ export default function ContractSendModal({
               </div>
             )}
 
-            {/* UI: Afficher uniquement si le modèle prévoit trial_period_text ET que la période est applicable */}
-            {templateHasTrialVar && trialIsApplicable && trialPeriodInfo?.endDate && (
-              <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-green-900 mb-2">Période d'essai calculée</h4>
-                <div className="text-sm text-green-800">
+            {/* UI: Afficher le calcul de période d'essai dès qu'il existe */}
+            {trialPeriodInfo && (
+              <div className={`mt-4 border rounded-lg p-4 ${trialIsApplicable ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                <h4 className={`text-sm font-semibold mb-2 ${trialIsApplicable ? 'text-green-900' : 'text-gray-700'}`}>
+                  Période d'essai calculée
+                </h4>
+                <div className={`text-sm ${trialIsApplicable ? 'text-green-800' : 'text-gray-600'}`}>
                   <p><strong>Durée :</strong> {trialPeriodInfo.description}</p>
-                  <p><strong>Date de fin :</strong> {formatDateFR(trialPeriodInfo.endDate)} ({trialPeriodInfo.endDate})</p>
+                  {trialPeriodInfo.endDate && (
+                    <p><strong>Date de fin :</strong> {formatDateFR(trialPeriodInfo.endDate)} ({trialPeriodInfo.endDate})</p>
+                  )}
                 </div>
               </div>
             )}
