@@ -9,18 +9,16 @@ interface SignatureRequest {
   contractId: string;
 }
 
-// ✅ Fonction pour formater une date en français
+// ✅ Fonction pour formater une date en français (format DD-MM-YYYY)
 function formatDateFR(dateStr: string | undefined): string {
   if (!dateStr) return '';
 
   try {
     const date = new Date(dateStr);
-    const options: Intl.DateTimeFormatOptions = {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    };
-    return date.toLocaleDateString('fr-FR', options);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
   } catch (error) {
     console.error('Error formatting date:', dateStr, error);
     return dateStr;
@@ -54,6 +52,14 @@ function prepareVariables(variables: Record<string, any>): Record<string, any> {
 
     prepared[key] = processedValue;
   });
+
+  // ✅ Gérer la phrase de période d'essai conditionnellement
+  if (variables.trial_end_date && typeof variables.trial_end_date === 'string' && variables.trial_end_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const formattedDate = formatDateFR(variables.trial_end_date);
+    prepared.trial_period_text = `Le Salarié sera soumis à une période d'essai qui prendra fin le : ${formattedDate}`;
+  } else {
+    prepared.trial_period_text = '';
+  }
 
   return prepared;
 }

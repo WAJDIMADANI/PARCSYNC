@@ -5,6 +5,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
 };
 
+// Fonction helper pour formater les dates au format DD-MM-YYYY
+function formatDateDDMMYYYY(dateStr: string): string {
+  try {
+    const date = new Date(dateStr);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  } catch (error) {
+    return dateStr;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -271,7 +284,7 @@ Deno.serve(async (req) => {
                         <p style="margin: 0;"><strong>📄 Votre contrat signé est prêt</strong></p>
                         ${finalVariables.poste ? `<p style="margin: 10px 0 0 0;"><strong>📋 Poste :</strong> ${finalVariables.poste}</p>` : ''}
                         ${finalVariables.salaire ? `<p style="margin: 5px 0 0 0;"><strong>💰 Salaire brut mensuel :</strong> ${finalVariables.salaire}</p>` : ''}
-                        ${finalVariables.date_debut ? `<p style="margin: 5px 0 0 0;"><strong>📅 Date de début :</strong> ${new Date(finalVariables.date_debut).toLocaleDateString('fr-FR')}</p>` : ''}
+                        ${finalVariables.date_debut ? `<p style="margin: 5px 0 0 0;"><strong>📅 Date de début :</strong> ${formatDateDDMMYYYY(finalVariables.date_debut)}</p>` : ''}
                       </div>
 
                       <div style="text-align: center; margin: 30px 0;">

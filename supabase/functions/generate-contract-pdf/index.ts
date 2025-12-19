@@ -7,6 +7,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
+// Fonction helper pour formater les dates au format DD-MM-YYYY
+function formatDateDDMMYYYY(dateStr: string): string {
+  try {
+    const date = new Date(dateStr);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  } catch (error) {
+    return dateStr;
+  }
+}
+
 interface ContractData {
   variables: {
     prenom?: string;
@@ -265,7 +278,7 @@ function generateContractHTML(contract: any): string {
     </tr>
     <tr>
       <th>Date de début</th>
-      <td>${vars.date_debut ? new Date(vars.date_debut).toLocaleDateString('fr-FR') : '[Date à définir]'}</td>
+      <td>${vars.date_debut ? formatDateDDMMYYYY(vars.date_debut) : '[Date à définir]'}</td>
     </tr>
     <tr>
       <th>Durée hebdomadaire</th>
@@ -317,7 +330,7 @@ function generateContractHTML(contract: any): string {
   <div class="signature-section">
     <div class="signature-box">
       <p><strong>Fait à :</strong> ${vars.lieu_signature || '[Lieu]'}</p>
-      <p><strong>Le :</strong> ${vars.date_signature ? new Date(vars.date_signature).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')}</p>
+      <p><strong>Le :</strong> ${vars.date_signature ? formatDateDDMMYYYY(vars.date_signature) : formatDateDDMMYYYY(new Date().toISOString().split('T')[0])}</p>
       <div class="signature-line">
         <p>Signature de l'employeur</p>
         <p>(Précédée de la mention "Lu et approuvé")</p>
@@ -325,7 +338,7 @@ function generateContractHTML(contract: any): string {
     </div>
     <div class="signature-box">
       <p><strong>Fait à :</strong> ${vars.lieu_signature || '[Lieu]'}</p>
-      <p><strong>Le :</strong> ${vars.date_signature ? new Date(vars.date_signature).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')}</p>
+      <p><strong>Le :</strong> ${vars.date_signature ? formatDateDDMMYYYY(vars.date_signature) : formatDateDDMMYYYY(new Date().toISOString().split('T')[0])}</p>
       <div class="signature-line">
         <p>Signature du salarié</p>
         <p>(Précédée de la mention "Lu et approuvé")</p>
@@ -334,7 +347,7 @@ function generateContractHTML(contract: any): string {
   </div>
 
   <div class="footer">
-    <p>Document généré automatiquement par PARC SYNC - ${new Date().toLocaleDateString('fr-FR')}</p>
+    <p>Document généré automatiquement par PARC SYNC - ${formatDateDDMMYYYY(new Date().toISOString().split('T')[0])}</p>
     <p>Ce contrat fait foi entre les parties signataires.</p>
   </div>
 </body>
