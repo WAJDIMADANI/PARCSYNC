@@ -3777,16 +3777,14 @@ function EmployeeDetailModal({
 
               {/* Boutons d'action */}
               <div className="flex flex-col sm:flex-row gap-3">
-                {activeContractWithEndDate && (
-                  <button
-                    onClick={() => setShowCreateContractModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
-                    title="Créer un nouveau contrat"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Créer un contrat
-                  </button>
-                )}
+                <button
+                  onClick={() => setShowCreateContractModal(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
+                  title="Créer un nouveau contrat à n'importe quel moment"
+                >
+                  <FileText className="w-4 h-4" />
+                  Créer un contrat
+                </button>
                 <button
                   onClick={() => setShowManualContractModal(true)}
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
