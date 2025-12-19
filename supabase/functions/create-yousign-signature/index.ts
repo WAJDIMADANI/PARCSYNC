@@ -32,17 +32,11 @@ function prepareVariables(variables: Record<string, any>): Record<string, any> {
   Object.entries(variables).forEach(([key, value]) => {
     let processedValue = value;
 
-    // ✅ Formater les dates en français
-    if (key.includes('date') || key.includes('Date') ||
-        key === 'contract_start' || key === 'contract_end' ||
-        key === 'employees_date_de_debut___av1' ||
-        key === 'employees_date_de_fin__av1' ||
-        key === 'employees_date_de_fin__av2') {
-
-      if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        processedValue = formatDateFR(value);
-        console.log(`Formatted ${key}: ${value} → ${processedValue}`);
-      }
+    // ✅ Formater TOUTES les dates au format ISO (YYYY-MM-DD) en français (DD-MM-YYYY)
+    // On détecte automatiquement si la valeur est une date ISO, peu importe le nom de la clé
+    if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      processedValue = formatDateFR(value);
+      console.log(`✅ Date formatée: ${key}: ${value} → ${processedValue}`);
     }
 
     // ✅ Nettoyer les valeurs vides ou undefined
