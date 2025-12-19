@@ -252,17 +252,9 @@ export default function ContractSendModal({
     employees_date_de_fin__av2: ''
   });
 
-  // A) Nouvelles variables pour la gestion de trial_period_text
-  const selectedTemplateObj = templates.find(t => t.id === selectedTemplate) || null;
-  const templateHasTrialVar = selectedTemplateObj
-    ? JSON.stringify(selectedTemplateObj.variables).includes('trial_period_text')
-    : false;
-  const trialIsApplicable = trialPeriodInfo !== null &&
-    !trialPeriodInfo.description.toLowerCase().includes('aucune période d\'essai');
-
-  // B) Modifier le useEffect de calcul trialPeriodInfo
+  // Calcul de trialPeriodInfo : toujours calculer si les conditions de base sont remplies
   useEffect(() => {
-    if (selectedTemplate && variables.date_debut && templateHasTrialVar) {
+    if (selectedTemplate && variables.date_debut) {
       const template = templates.find(t => t.id === selectedTemplate);
       if (template) {
         const result = calculateTrialEndDate(
@@ -276,7 +268,15 @@ export default function ContractSendModal({
     } else {
       setTrialPeriodInfo(null);
     }
-  }, [selectedTemplate, variables.date_debut, variables.date_fin, renewTrial, templates, templateHasTrialVar]);
+  }, [selectedTemplate, variables.date_debut, variables.date_fin, renewTrial, templates]);
+
+  // A) Détection de la variable trial_period_text dans le modèle
+  const selectedTemplateObj = templates.find(t => t.id === selectedTemplate) || null;
+  const templateHasTrialVar = JSON.stringify(selectedTemplateObj?.variables ?? {}).includes('trial_period_text');
+
+  // B) Applicabilité de la période d'essai (calculé après trialPeriodInfo)
+  const trialIsApplicable = !!trialPeriodInfo?.description &&
+    !trialPeriodInfo.description.toLowerCase().includes('aucune période d\'essai');
 
   useEffect(() => {
     fetchData();
@@ -1071,8 +1071,8 @@ export default function ContractSendModal({
               </div>
             )}
 
-            {/* C) Modifier le rendu UI */}
-            {templateHasTrialVar && trialIsApplicable && trialPeriodInfo && (
+            {/* UI: Afficher uniquement si le modèle prévoit trial_period_text ET que la période est applicable */}
+            {templateHasTrialVar && trialIsApplicable && trialPeriodInfo?.endDate && (
               <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
                 <h4 className="text-sm font-semibold text-green-900 mb-2">Période d'essai calculée</h4>
                 <div className="text-sm text-green-800">
