@@ -1114,20 +1114,32 @@ export default function ContractSendModal({
             >
               Annuler
             </button>
-            <button
-              onClick={handleSend}
-              disabled={sending || !selectedTemplate}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
-            >
-              {sending ? (
-                <LoadingSpinner size="sm" text="Envoi en cours..." />
-              ) : (
-                <>
-                  <Send className="w-5 h-5" />
-                  Envoyer le contrat
-                </>
-              )}
-            </button>
+            {(() => {
+              const selectedTemplateData = templates.find(t => t.id === selectedTemplate);
+              const isCDI = selectedTemplateData?.type_contrat === 'CDI';
+
+              // Ne pas afficher le bouton pour les CDI
+              if (isCDI) {
+                return null;
+              }
+
+              return (
+                <button
+                  onClick={handleSend}
+                  disabled={sending || !selectedTemplate}
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
+                >
+                  {sending ? (
+                    <LoadingSpinner size="sm" text="Envoi en cours..." />
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5" />
+                      Envoyer le contrat
+                    </>
+                  )}
+                </button>
+              );
+            })()}
           </div>
         </div>
       </div>
