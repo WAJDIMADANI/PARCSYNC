@@ -217,7 +217,24 @@ export default function ContractSendModal({
   const [selectedSecteur, setSelectedSecteur] = useState('');
   const [avenantType, setAvenantType] = useState<'none' | 'avenant1' | 'avenant2'>('none');
   const [loadingDates, setLoadingDates] = useState(false);
-  const [variables, setVariables] = useState({
+  const [variables, setVariables] = useState<{
+    poste: string;
+    salaire: string;
+    coefficient: string;
+    date_debut: string;
+    date_fin: string;
+    heures_semaine: string;
+    taux_horaire: string;
+    lieu_travail: string;
+    birthplace: string;
+    id_number: string;
+    contract_start: string;
+    contract_end: string;
+    employees_date_de_debut___av1: string;
+    employees_date_de_fin__av1: string;
+    employees_date_de_fin__av2: string;
+    trial_period_text?: string;
+  }>({
     poste: '',
     salaire: '',
     coefficient: '',
@@ -235,8 +252,17 @@ export default function ContractSendModal({
     employees_date_de_fin__av2: ''
   });
 
+  // A) Nouvelles variables pour la gestion de trial_period_text
+  const selectedTemplateObj = templates.find(t => t.id === selectedTemplate) || null;
+  const templateHasTrialVar = selectedTemplateObj
+    ? JSON.stringify(selectedTemplateObj.variables).includes('trial_period_text')
+    : false;
+  const trialIsApplicable = trialPeriodInfo !== null &&
+    !trialPeriodInfo.description.toLowerCase().includes('aucune période d\'essai');
+
+  // B) Modifier le useEffect de calcul trialPeriodInfo
   useEffect(() => {
-    if (selectedTemplate && variables.date_debut) {
+    if (selectedTemplate && variables.date_debut && templateHasTrialVar) {
       const template = templates.find(t => t.id === selectedTemplate);
       if (template) {
         const result = calculateTrialEndDate(
@@ -250,7 +276,7 @@ export default function ContractSendModal({
     } else {
       setTrialPeriodInfo(null);
     }
-  }, [selectedTemplate, variables.date_debut, variables.date_fin, renewTrial, templates]);
+  }, [selectedTemplate, variables.date_debut, variables.date_fin, renewTrial, templates, templateHasTrialVar]);
 
   useEffect(() => {
     fetchData();
@@ -571,6 +597,15 @@ export default function ContractSendModal({
         preparedVariables.contract_end = variables.date_fin;
       }
 
+      // D) Gestion de trial_period_text
+      if (templateHasTrialVar) {
+        preparedVariables.trial_period_text = (trialIsApplicable && trialPeriodInfo?.endDate)
+          ? formatDateFR(trialPeriodInfo.endDate)
+          : "";
+      } else {
+        delete preparedVariables.trial_period_text;
+      }
+
       const contractData: any = {
         profil_id: profilId,
         modele_id: selectedTemplate,
@@ -668,7 +703,8 @@ export default function ContractSendModal({
         secteur_id: selectedSecteur || null
       };
 
-      if (trialPeriodInfo?.endDate) {
+      // E) Mise à jour conditionnelle de date_fin_periode_essai
+      if (templateHasTrialVar && trialIsApplicable && trialPeriodInfo?.endDate) {
         updateData.date_fin_periode_essai = trialPeriodInfo.endDate;
       }
 
@@ -1035,7 +1071,8 @@ export default function ContractSendModal({
               </div>
             )}
 
-            {trialPeriodInfo && (
+            {/* C) Modifier le rendu UI */}
+            {templateHasTrialVar && trialIsApplicable && trialPeriodInfo && (
               <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
                 <h4 className="text-sm font-semibold text-green-900 mb-2">Période d'essai calculée</h4>
                 <div className="text-sm text-green-800">
