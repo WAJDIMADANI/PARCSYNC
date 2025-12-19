@@ -170,6 +170,7 @@ async function convertWordToPDF(
   let jobStatus = jobData.data.status;
   let attempts = 0;
   const maxAttempts = 30;
+  let finalStatusData = jobData;
 
   while (jobStatus !== "finished" && jobStatus !== "error" && attempts < maxAttempts) {
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -184,25 +185,36 @@ async function convertWordToPDF(
       throw new Error("Failed to check CloudConvert job status");
     }
 
-    const statusData = await statusResponse.json();
-    jobStatus = statusData.data.status;
+    finalStatusData = await statusResponse.json();
+    jobStatus = finalStatusData.data.status;
     attempts++;
 
-    console.log(`CloudConvert job status: ${jobStatus} (attempt ${attempts})`);
+    console.log(`CloudConvert job status: ${jobStatus} (attempt ${attempts}/${maxAttempts})`);
   }
 
   if (jobStatus === "error") {
-    throw new Error("CloudConvert job failed");
+    console.error("CloudConvert job detailed errors:", JSON.stringify(finalStatusData, null, 2));
+
+    const errorTasks = finalStatusData.data.tasks?.filter((t: any) => t.status === "error") || [];
+    if (errorTasks.length > 0) {
+      const errorMessages = errorTasks.map((t: any) =>
+        `Task "${t.name}": ${t.message || "Unknown error"}`
+      ).join(", ");
+      throw new Error(`CloudConvert job failed: ${errorMessages}`);
+    }
+
+    throw new Error("CloudConvert job failed with unknown error");
   }
 
   if (jobStatus !== "finished") {
-    throw new Error("CloudConvert job timeout");
+    throw new Error(`CloudConvert job timeout after ${attempts} attempts`);
   }
 
-  // Étape 3: Récupérer l'URL du PDF
-  const exportTask = jobData.data.tasks.find((t: any) => t.name === "export-pdf");
+  // Étape 3: Récupérer l'URL du PDF depuis les données de statut finales
+  const exportTask = finalStatusData.data.tasks?.find((t: any) => t.name === "export-pdf");
   if (!exportTask || !exportTask.result?.files?.[0]?.url) {
-    throw new Error("CloudConvert export task not found");
+    console.error("Export task not found or has no URL. All tasks:", JSON.stringify(finalStatusData.data.tasks, null, 2));
+    throw new Error("CloudConvert export task not found or has no download URL");
   }
 
   const pdfUrl = exportTask.result.files[0].url;
