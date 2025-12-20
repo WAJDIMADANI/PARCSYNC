@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Send, Reply, FileText, Download } from 'lucide-react';
+import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Send, Reply, FileText, Download, MessageSquare } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface Tache {
@@ -382,18 +382,18 @@ export function InboxPage() {
 
   const getPriorityColor = (priorite: string) => {
     switch (priorite) {
-      case 'haute': return 'bg-red-100 text-red-800';
-      case 'normal': return 'bg-blue-100 text-blue-800';
-      case 'basse': return 'bg-gray-100 text-gray-800';
+      case 'haute': return 'bg-gradient-to-r from-red-100 to-orange-100 text-red-800 border border-red-200';
+      case 'normal': return 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-200';
+      case 'basse': return 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 border border-gray-200';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusIcon = (statut: string) => {
     switch (statut) {
-      case 'en_attente': return <Clock className="w-4 h-4 text-orange-500" />;
-      case 'en_cours': return <AlertCircle className="w-4 h-4 text-blue-500" />;
-      case 'completee': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'en_attente': return <Clock className="w-4 h-4 text-orange-600" />;
+      case 'en_cours': return <AlertCircle className="w-4 h-4 text-amber-600" />;
+      case 'completee': return <CheckCircle className="w-4 h-4 text-emerald-600" />;
       default: return null;
     }
   };
@@ -416,10 +416,10 @@ export function InboxPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-600 rounded-xl relative">
+          <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl relative shadow-md">
             <Inbox className="w-8 h-8 text-white" />
             {stats.non_lus > 0 && (
-              <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+              <div className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg animate-pulse">
                 {stats.non_lus}
               </div>
             )}
@@ -428,8 +428,8 @@ export function InboxPage() {
             <h1 className="text-3xl font-bold">
               Boîte de Réception
               {stats.non_lus > 0 && (
-                <span className="ml-2 text-lg text-blue-600">
-                  ({stats.non_lus} non {stats.non_lus === 1 ? 'lu' : 'lus'})
+                <span className="ml-2 px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm font-bold rounded-full shadow-lg animate-pulse">
+                  {stats.non_lus} non {stats.non_lus === 1 ? 'lu' : 'lus'}
                 </span>
               )}
             </h1>
@@ -438,7 +438,7 @@ export function InboxPage() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 shadow-md hover:shadow-lg transition-all duration-200 font-semibold"
         >
           <Plus className="w-5 h-5" />
           Nouvelle tâche
@@ -446,21 +446,21 @@ export function InboxPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Total" value={stats.total} icon={<Inbox className="w-10 h-10 text-gray-400" />} />
-        <StatCard label="En attente" value={stats.en_attente} icon={<Clock className="w-10 h-10 text-orange-400" />} />
-        <StatCard label="En cours" value={stats.en_cours} icon={<AlertCircle className="w-10 h-10 text-blue-400" />} />
-        <StatCard label="Complétées" value={stats.completee} icon={<CheckCircle className="w-10 h-10 text-green-400" />} />
+        <StatCard label="Total" value={stats.total} icon={<Inbox className="w-10 h-10 text-gray-500" />} />
+        <StatCard label="En attente" value={stats.en_attente} icon={<Clock className="w-10 h-10 text-orange-500" />} />
+        <StatCard label="En cours" value={stats.en_cours} icon={<AlertCircle className="w-10 h-10 text-amber-500" />} />
+        <StatCard label="Complétées" value={stats.completee} icon={<CheckCircle className="w-10 h-10 text-emerald-500" />} />
       </div>
 
-      <div className="bg-white rounded-xl shadow">
-        <div className="border-b p-4 flex gap-2">
+      <div className="bg-white rounded-xl shadow-md border border-gray-100">
+        <div className="border-b bg-gradient-to-r from-gray-50 to-white p-4 flex gap-3 flex-wrap">
           <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>Toutes ({stats.total})</FilterButton>
           <FilterButton active={filter === 'en_attente'} onClick={() => setFilter('en_attente')}>En attente ({stats.en_attente})</FilterButton>
           <FilterButton active={filter === 'en_cours'} onClick={() => setFilter('en_cours')}>En cours ({stats.en_cours})</FilterButton>
           <FilterButton active={filter === 'completee'} onClick={() => setFilter('completee')}>Complétées ({stats.completee})</FilterButton>
         </div>
 
-        <div className="divide-y">
+        <div className="py-2">
           {filteredItems.length === 0 ? (
             <div className="p-12 text-center text-gray-500">Aucun message</div>
           ) : (
@@ -474,29 +474,45 @@ export function InboxPage() {
                   <div
                     key={`tache-${tache.id}`}
                     onClick={() => handleOpenTask(tache)}
-                    className={`p-4 hover:bg-gray-50 cursor-pointer ${isUnread ? 'bg-blue-50' : ''}`}
+                    className={`mx-4 my-3 p-5 rounded-lg cursor-pointer transition-all duration-200 ${
+                      isUnread
+                        ? 'bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-400 shadow-lg hover:shadow-xl hover:from-orange-100 hover:to-amber-100'
+                        : 'bg-white border border-gray-200 shadow-sm hover:shadow-md hover:bg-gray-50'
+                    }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        {isUnread && (
-                          <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" title="Non lu" />
-                        )}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className={`mt-1 p-2 rounded-lg flex-shrink-0 ${
+                          isUnread ? 'bg-orange-100' : 'bg-gray-100'
+                        }`}>
+                          <MessageSquare className={`w-5 h-5 ${isUnread ? 'text-orange-600' : 'text-gray-500'}`} />
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-blue-600 truncate ${isUnread ? 'font-bold' : 'font-semibold'}`}>
-                            {tache.expediteur_pole_nom}
-                          </p>
-                          <p className={`text-sm text-gray-600 truncate ${isUnread ? 'font-medium' : ''}`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            {isUnread && (
+                              <span className="px-2.5 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full uppercase tracking-wide animate-pulse">
+                                Nouveau
+                              </span>
+                            )}
+                            <p className={`text-sm font-semibold ${isUnread ? 'text-orange-900' : 'text-gray-600'}`}>
+                              {tache.expediteur_pole_nom}
+                            </p>
+                          </div>
+                          <p className={`text-base truncate mb-2 ${isUnread ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>
                             {tache.titre}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Par {tache.expediteur_prenom} {tache.expediteur_nom}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className={`px-3 py-1 text-xs font-medium rounded ${getPriorityColor(tache.priorite)}`}>
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                        <span className={`px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm ${getPriorityColor(tache.priorite)}`}>
                           {tache.priorite}
                         </span>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg">
                           {getStatusIcon(tache.statut)}
-                          <span className="text-sm text-gray-600">{tache.statut}</span>
+                          <span className="text-xs font-medium text-gray-700">{tache.statut}</span>
                         </div>
                       </div>
                     </div>
@@ -509,30 +525,42 @@ export function InboxPage() {
                   <div
                     key={`demande-${demande.id}`}
                     onClick={() => handleOpenDemandeExterne(demande)}
-                    className={`p-4 hover:bg-gray-50 cursor-pointer ${isUnread ? 'bg-blue-50' : ''}`}
+                    className={`mx-4 my-3 p-5 rounded-lg cursor-pointer transition-all duration-200 ${
+                      isUnread
+                        ? 'bg-gradient-to-r from-rose-50 to-orange-50 border-2 border-rose-400 shadow-lg hover:shadow-xl hover:from-rose-100 hover:to-orange-100'
+                        : 'bg-white border border-gray-200 shadow-sm hover:shadow-md hover:bg-gray-50'
+                    }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        {isUnread && (
-                          <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" title="Non lu" />
-                        )}
-                        <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className={`mt-1 p-2 rounded-lg flex-shrink-0 ${
+                          isUnread ? 'bg-rose-100' : 'bg-gray-100'
+                        }`}>
+                          <FileText className={`w-5 h-5 ${isUnread ? 'text-rose-600' : 'text-gray-500'}`} />
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-green-600 truncate ${isUnread ? 'font-bold' : 'font-semibold'}`}>
-                            {demande.pole?.nom || 'Demande externe'}
-                          </p>
-                          <p className={`text-sm text-gray-600 truncate ${isUnread ? 'font-medium' : ''}`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            {isUnread && (
+                              <span className="px-2.5 py-0.5 bg-rose-500 text-white text-xs font-bold rounded-full uppercase tracking-wide animate-pulse">
+                                Nouveau
+                              </span>
+                            )}
+                            <p className={`text-sm font-semibold ${isUnread ? 'text-rose-900' : 'text-gray-600'}`}>
+                              {demande.pole?.nom || 'Demande externe'}
+                            </p>
+                          </div>
+                          <p className={`text-base truncate mb-2 ${isUnread ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>
                             {demande.titre}
                           </p>
-                          <p className="text-xs text-gray-500 truncate">
+                          <p className="text-sm text-gray-500 line-clamp-2">
                             {demande.description}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className={`px-3 py-1 text-xs font-medium rounded ${
-                          demande.statut === 'traite' ? 'bg-green-100 text-green-800' :
-                          demande.statut === 'consulte' ? 'bg-blue-100 text-blue-800' :
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                        <span className={`px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm ${
+                          demande.statut === 'traite' ? 'bg-emerald-100 text-emerald-800' :
+                          demande.statut === 'consulte' ? 'bg-sky-100 text-sky-800' :
                           'bg-orange-100 text-orange-800'
                         }`}>
                           {demande.statut}
@@ -579,13 +607,15 @@ export function InboxPage() {
 
 function StatCard({ label, value, icon }: any) {
   return (
-    <div className="bg-white rounded-xl shadow p-5">
+    <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-100">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-600">{label}</p>
-          <p className="text-3xl font-bold">{value}</p>
+          <p className="text-sm font-semibold text-gray-600 mb-1">{label}</p>
+          <p className="text-4xl font-bold text-gray-900">{value}</p>
         </div>
-        {icon}
+        <div className="bg-gradient-to-br from-gray-50 to-white p-3 rounded-xl shadow-sm">
+          {icon}
+        </div>
       </div>
     </div>
   );
@@ -595,7 +625,11 @@ function FilterButton({ active, onClick, children }: any) {
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 rounded font-medium ${active ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+      className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
+        active
+          ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
+          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:shadow-sm'
+      }`}
     >
       {children}
     </button>
