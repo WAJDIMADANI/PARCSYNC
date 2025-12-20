@@ -515,43 +515,43 @@ export function CandidateList() {
           <p className="text-gray-600">Aucun candidat trouvé</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
+          <table className="w-full divide-y divide-gray-100 table-fixed">
+            <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
               <tr>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
                   Nom
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
                   Prénom
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[14%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
                   Poste
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
                   Site
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[7%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   CP
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[8%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[7%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Docs
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[13%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[10%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Code
                 </th>
-                <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[5%] px-2 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-50">
               {filteredCandidates.map((candidate) => {
                 const site = sites.find(s => s.id === candidate.site_id);
                 const statutCandidature = candidate.statut_candidature || 'candidature_recue';
@@ -561,46 +561,46 @@ export function CandidateList() {
                 return (
                   <tr
                     key={candidate.id}
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50 cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg"
                     onClick={() => setEditingCandidate(candidate)}
                   >
-                    <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <div className="truncate max-w-[120px]" title={candidate.nom}>{candidate.nom}</div>
+                    <td className="px-3 py-3 text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors">
+                      <div className="truncate" title={candidate.nom}>{candidate.nom}</div>
                     </td>
-                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                      <div className="truncate max-w-[100px]" title={candidate.prenom}>{candidate.prenom}</div>
+                    <td className="px-3 py-3 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">
+                      <div className="truncate" title={candidate.prenom}>{candidate.prenom}</div>
                     </td>
-                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600">
-                      <div className="truncate max-w-[150px]" title={candidate.poste || '-'}>
+                    <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
+                      <div className="truncate" title={candidate.poste || '-'}>
                         {candidate.poste || '-'}
                       </div>
                     </td>
-                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600">
-                      <div className="truncate max-w-[100px]" title={site?.nom || '-'}>{site?.nom || '-'}</div>
+                    <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
+                      <div className="truncate" title={site?.nom || '-'}>{site?.nom || '-'}</div>
                     </td>
-                    <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
+                    <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
                       {candidate.code_postal || '-'}
                     </td>
-                    <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
+                    <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
                       {new Date(candidate.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                     </td>
-                    <td className="px-2 py-3 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-2 py-3 text-sm" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => setEditingCandidate(candidate)}
-                        className={`px-2 py-1 rounded text-xs font-medium ${
+                        className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 ${
                           hasDocuments
-                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                            : 'bg-gray-100 text-gray-500'
-                        } transition-colors`}
+                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
                       >
                         {hasDocuments ? 'Voir' : '-'}
                       </button>
                     </td>
-                    <td className="px-3 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                       <select
                         value={statutCandidature}
                         onChange={(e) => handleStatutChange(candidate.id, e.target.value)}
-                        className="text-xs border border-gray-300 rounded px-1 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                        className="text-xs border-2 border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 bg-white shadow-sm hover:shadow-md transition-all duration-300 w-full font-medium truncate"
                       >
                         {STATUT_CANDIDATURE.map(s => (
                           <option key={s.value} value={s.value}>{s.label}</option>
@@ -610,7 +610,7 @@ export function CandidateList() {
                     <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => openCodeCouleurModal(candidate)}
-                        className="flex items-center gap-2 text-sm border border-gray-300 rounded px-3 py-1.5 min-w-[120px] bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="flex items-center gap-1 text-xs border-2 border-gray-200 rounded-lg px-2 py-1.5 w-full bg-white hover:bg-blue-50 hover:border-blue-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 shadow-sm hover:shadow-md transition-all duration-300 truncate font-medium"
                       >
                         <div className={`w-4 h-4 rounded-full flex-shrink-0 ${
                           candidate.code_couleur_rh
@@ -622,15 +622,15 @@ export function CandidateList() {
                         </span>
                       </button>
                     </td>
-                    <td className="px-2 py-3 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
+                    <td className="px-2 py-3 text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5">
                         {statutCandidature === 'salarie' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setConvertingCandidate(candidate);
                             }}
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                            className="p-2 text-white bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-110"
                             title="Convertir en salarié"
                           >
                             <UserPlus className="w-3.5 h-3.5" />
@@ -641,7 +641,7 @@ export function CandidateList() {
                             e.stopPropagation();
                             setEditingCandidate(candidate);
                           }}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          className="p-2 text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-110"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -650,7 +650,7 @@ export function CandidateList() {
                             e.stopPropagation();
                             confirmDelete(candidate.id);
                           }}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                          className="p-2 text-white bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-110"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

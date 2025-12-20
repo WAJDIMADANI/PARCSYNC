@@ -41,7 +41,7 @@ export function ContractBadge({ type, value, showFullText = false }: ContractBad
 
     return (
       <span
-        className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-extrabold border-2 shadow-md hover:shadow-lg transform hover:scale-110 transition-all duration-300 ${bgColor}`}
+        className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold border-2 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 ${bgColor}`}
         title={value}
       >
         {label}
@@ -71,7 +71,7 @@ export function ContractBadge({ type, value, showFullText = false }: ContractBad
     }
 
     return (
-      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-extrabold hover:shadow-lg transform hover:scale-110 transition-all duration-300 ${bgColor}`}>
+      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold hover:shadow-lg transform hover:scale-105 transition-all duration-300 ${bgColor}`}>
         {label}
       </span>
     );

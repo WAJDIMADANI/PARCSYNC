@@ -667,83 +667,83 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-6 border border-gray-100">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100">
+          <div>
+            <table className="w-full divide-y divide-gray-100 table-fixed">
               <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
                 <tr>
                   <th
                     onClick={() => handleSort('matricule_tca')}
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[8%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
-                      Matricule TCA
+                    <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
+                      Matricule
                       {getSortIcon('matricule_tca')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('prenom')}
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
+                    <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Prénom
                       {getSortIcon('prenom')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('nom')}
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
+                    <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Nom
                       {getSortIcon('nom')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('email')}
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[18%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
+                    <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Email
                       {getSortIcon('email')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('type_contrat')}
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
-                      Type Contrat
+                    <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
+                      Type
                       {getSortIcon('type_contrat')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('date_entree')}
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
-                      Date Début
+                    <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
+                      Début
                       {getSortIcon('date_entree')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('statut_contrat')}
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
-                      Statut Contrat
+                    <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
+                      Statut
                       {getSortIcon('statut_contrat')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('secteur')}
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
+                    <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Secteur
                       {getSortIcon('secteur')}
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -755,40 +755,40 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                     onClick={() => setSelectedEmployee(employee)}
                     className="hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50 cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg relative"
                   >
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-900 whitespace-nowrap group-hover:text-blue-900 transition-colors">
+                    <td className="px-3 py-3 text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors truncate">
                       {employee.matricule_tca || '-'}
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap group-hover:text-blue-900 transition-colors">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors truncate">
                       {employee.prenom}
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap group-hover:text-blue-900 transition-colors">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors truncate">
                       {employee.nom}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap group-hover:text-blue-800 transition-colors">
+                    <td className="px-3 py-3 text-sm text-gray-700 group-hover:text-blue-800 transition-colors truncate" title={employee.email}>
                       {employee.email}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
+                    <td className="px-3 py-3 text-sm text-gray-900">
                       <ContractBadge type="type" value={getLatestActiveContract(employee.id, contracts) || employee.modele_contrat || undefined} />
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-700 whitespace-nowrap group-hover:text-blue-800 transition-colors">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors truncate">
                       {formatDate(employee.date_entree)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
+                    <td className="px-3 py-3 text-sm text-gray-900">
                       <ContractBadge type="status" value={getActualContractStatus(employee)} />
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-700 whitespace-nowrap group-hover:text-blue-800 transition-colors">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors truncate">
                       {employee.secteur?.nom || '-'}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedEmployee(employee);
                         }}
-                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-xl transform hover:scale-110 hover:-translate-y-0.5"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-bold rounded-lg transition-all duration-300 shadow-md hover:shadow-xl transform hover:scale-110"
                       >
-                        <Eye className="w-4 h-4" />
-                        Détails
+                        <Eye className="w-3.5 h-3.5" />
+                        Voir
                       </button>
                     </td>
                   </tr>
