@@ -81,9 +81,9 @@ export function InboxPage() {
   useEffect(() => {
     fetchTaches();
 
-    // Abonnement temps réel pour les mises à jour de tâches
+    // Abonnement temps réel pour les mises à jour de tâches et demandes externes
     const subscription = supabase
-      .channel('taches_changes')
+      .channel('inbox_changes')
       .on(
         'postgres_changes',
         {
@@ -108,6 +108,30 @@ export function InboxPage() {
           fetchTaches();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'inbox',
+        },
+        () => {
+          // Recharger quand il y a une nouvelle demande externe
+          fetchTaches();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'demandes_externes',
+        },
+        () => {
+          // Recharger quand une demande externe est modifiée
+          fetchTaches();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -119,7 +143,7 @@ export function InboxPage() {
     if (!user || !appUserId) return;
 
     try {
-      const [tachesResult, demandesResult] = await Promise.all([
+      const [tachesResult, inboxResult] = await Promise.all([
         supabase
           .from('taches')
           .select(`
@@ -132,30 +156,13 @@ export function InboxPage() {
 
         supabase
           .from('inbox')
-          .select(`
-            id,
-            type,
-            titre,
-            description,
-            contenu,
-            reference_id,
-            statut,
-            lu,
-            created_at,
-            demande:reference_id!inner(
-              id,
-              profil:profil_id(prenom, nom, email, matricule_tca, poste),
-              pole:pole_id(nom),
-              fichiers
-            )
-          `)
+          .select('*')
           .eq('utilisateur_id', appUserId)
           .eq('reference_type', 'demande_externe')
           .order('created_at', { ascending: false })
       ]);
 
       if (tachesResult.error) throw tachesResult.error;
-      if (demandesResult.error) console.warn('Erreur chargement demandes externes:', demandesResult.error);
 
       const formattedTaches: (Tache & { itemType: 'tache' })[] = (tachesResult.data || []).map((t: any) => ({
         ...t,
@@ -168,21 +175,60 @@ export function InboxPage() {
         lu_par_expediteur: t.lu_par_expediteur ?? true
       }));
 
-      const formattedDemandes: (DemandeExterne & { itemType: 'demande_externe' })[] = (demandesResult.data || []).map((d: any) => ({
-        id: d.id,
-        itemType: 'demande_externe' as const,
-        type: 'demande_externe' as const,
-        titre: d.titre,
-        description: d.description,
-        contenu: d.contenu,
-        reference_id: d.reference_id,
-        statut: d.statut,
-        lu: d.lu ?? false,
-        created_at: d.created_at,
-        profil: d.demande?.profil,
-        pole: d.demande?.pole,
-        fichiers: d.demande?.fichiers || []
-      }));
+      let formattedDemandes: (DemandeExterne & { itemType: 'demande_externe' })[] = [];
+
+      console.log('Chargement demandes externes...');
+      console.log('Inbox result:', inboxResult.data?.length || 0, 'entrées', inboxResult.error);
+
+      if (inboxResult.error) {
+        console.warn('Erreur chargement inbox demandes externes:', inboxResult.error);
+      } else if (inboxResult.data && inboxResult.data.length > 0) {
+        const demandeIds = inboxResult.data.map((i: any) => i.reference_id);
+        console.log('IDs des demandes à charger:', demandeIds);
+
+        const { data: demandesData, error: demandesError } = await supabase
+          .from('demandes_externes')
+          .select(`
+            id,
+            profil_id,
+            pole_id,
+            fichiers,
+            profil:profil_id(prenom, nom, email, matricule_tca, poste),
+            pole:pole_id(nom)
+          `)
+          .in('id', demandeIds);
+
+        console.log('Détails demandes chargés:', demandesData?.length || 0, 'demandes', demandesError);
+
+        if (demandesError) {
+          console.warn('Erreur chargement détails demandes externes:', demandesError);
+        } else {
+          const demandesMap = new Map((demandesData || []).map((d: any) => [d.id, d]));
+
+          formattedDemandes = inboxResult.data.map((inbox: any) => {
+            const demandeDetails = demandesMap.get(inbox.reference_id);
+            return {
+              id: inbox.id,
+              itemType: 'demande_externe' as const,
+              type: 'demande_externe' as const,
+              titre: inbox.titre,
+              description: inbox.description,
+              contenu: inbox.contenu,
+              reference_id: inbox.reference_id,
+              statut: inbox.statut || 'nouveau',
+              lu: inbox.lu ?? false,
+              created_at: inbox.created_at,
+              profil: demandeDetails?.profil,
+              pole: demandeDetails?.pole,
+              fichiers: demandeDetails?.fichiers || []
+            };
+          });
+
+          console.log('Demandes externes formatées:', formattedDemandes.length);
+        }
+      } else {
+        console.log('Aucune demande externe trouvée dans inbox');
+      }
 
       setTaches(formattedTaches);
       setDemandesExternes(formattedDemandes);
