@@ -156,17 +156,11 @@ function mapVariablesToWordFormat(vars: Record<string, any>) {
     vars.avenant_1_date_fin
   );
 
-  // début AV1 = toujours la date de fin du CDD (même date, pas +1 jour)
-  const computedAv1StartISO = cddEndRaw || "";
-  const av1StartFinal = pickFirst(computedAv1StartISO, av1StartRaw);
-  const av1EndFinal = av1EndRaw;
-
-  mapped["employees_date_de_debut___av1"] = av1StartFinal ? formatDateFR(av1StartFinal) : "";
-  mapped["employees_date_de_fin__av1"] = av1EndFinal ? formatDateFR(av1EndFinal) : "";
+  mapped["employees_date_de_debut___av1"] = av1StartRaw ? formatDateFR(av1StartRaw) : "";
+  mapped["employees_date_de_fin__av1"] = av1EndRaw ? formatDateFR(av1EndRaw) : "";
 
   // ---------------------------------------------------
   // ✅ AVENANT 2
-  // début AV2 = toujours la date de fin de l'AV1 (même date, pas +1 jour)
   // ---------------------------------------------------
   const av2StartRaw = pickFirst(
     vars.employees_date_de_debut___av2,
@@ -184,22 +178,15 @@ function mapVariablesToWordFormat(vars: Record<string, any>) {
     vars.avenant_2_date_fin
   );
 
-  const computedAv2StartISO = av1EndRaw || "";
-  const av2StartFinal = pickFirst(computedAv2StartISO, av2StartRaw);
-
-  mapped["employees_date_de_debut___av2"] = av2StartFinal ? formatDateFR(av2StartFinal) : "";
+  mapped["employees_date_de_debut___av2"] = av2StartRaw ? formatDateFR(av2StartRaw) : "";
   mapped["employees_date_de_fin__av2"] = av2EndRaw ? formatDateFR(av2EndRaw) : "";
 
   console.log("🧪 MAPPING CHECK:", {
     cddStartRaw,
     cddEndRaw,
     av1StartRaw,
-    computedAv1StartISO,
-    av1StartFinal,
     av1EndRaw,
     av2StartRaw,
-    computedAv2StartISO,
-    av2StartFinal,
     av2EndRaw,
     trialEndRaw,
     mapped_contract_start: mapped["contract_start"],
