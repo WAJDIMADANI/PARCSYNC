@@ -1021,53 +1021,72 @@ export default function ContractSendModal({
                 {loadingDates ? (
                   <p className="text-sm text-blue-700">Chargement des dates...</p>
                 ) : (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-xs font-medium text-blue-700 mb-1">
-                          Date début CDD
-                        </label>
-                        <input
-                          type="date"
-                          value={variables.contract_start}
-                          onChange={(e) => setVariables({...variables, contract_start: e.target.value})}
-                          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-blue-700 mb-1">
-                          Date fin CDD
-                        </label>
-                        <input
-                          type="date"
-                          value={variables.contract_end}
-                          onChange={(e) => setVariables({...variables, contract_end: e.target.value})}
-                          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 text-sm"
-                        />
+                  <div className="space-y-4">
+                    {/* Section CDD initial */}
+                    <div className="p-3 bg-white border border-blue-200 rounded">
+                      <h5 className="text-xs font-semibold text-blue-900 mb-2">Contrat CDD initial</h5>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-blue-700 mb-1">
+                            Date début CDD
+                          </label>
+                          <input
+                            type="date"
+                            value={variables.contract_start}
+                            onChange={(e) => setVariables({...variables, contract_start: e.target.value})}
+                            className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-blue-700 mb-1">
+                            Date fin CDD
+                          </label>
+                          <input
+                            type="date"
+                            value={variables.contract_end}
+                            onChange={(e) => setVariables({...variables, contract_end: e.target.value})}
+                            className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div className="pt-3 border-t border-blue-200">
-                      <div className="mb-2 p-2 bg-blue-50 rounded text-xs text-blue-700">
-                        Date début AV1 = calculée auto (lendemain fin CDD)
+
+                    {/* Section Avenant 1 */}
+                    <div className="p-3 bg-blue-100 border-2 border-blue-400 rounded">
+                      <h5 className="text-xs font-semibold text-blue-900 mb-2">Avenant 1 (nouveau)</h5>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-blue-700 mb-1">
+                            Date début avenant 1
+                          </label>
+                          <div className="px-3 py-2 border border-blue-300 rounded-lg bg-blue-50 text-gray-700 text-sm">
+                            {variables.contract_end ? (() => {
+                              const date = new Date(variables.contract_end);
+                              date.setDate(date.getDate() + 1);
+                              return date.toLocaleDateString('fr-FR');
+                            })() : 'Calculée automatiquement'}
+                          </div>
+                          <p className="text-xs text-blue-600 mt-1">Calculé: lendemain fin CDD</p>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-blue-700 mb-1">
+                            Date fin avenant 1 *
+                          </label>
+                          <input
+                            type="date"
+                            value={variables.employees_date_de_fin__av1}
+                            onChange={(e) => setVariables({...variables, employees_date_de_fin__av1: e.target.value})}
+                            className="w-full px-3 py-2 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
+                            placeholder="Nouvelle date de fin"
+                            required
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-blue-900 mb-2">
-                          📅 Date de fin d'avenant 1 *
-                        </label>
-                        <input
-                          type="date"
-                          value={variables.employees_date_de_fin__av1}
-                          onChange={(e) => setVariables({...variables, employees_date_de_fin__av1: e.target.value})}
-                          className="w-full px-4 py-3 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
-                          placeholder="Nouvelle date de fin"
-                          required
-                        />
-                      </div>
-                      <p className="text-xs text-blue-600 mt-2">
+                      <p className="text-xs text-blue-700 mt-2 italic">
                         La date de fin doit être postérieure à la date de fin du CDD initial
                       </p>
                     </div>
-                  </>
+                  </div>
                 )}
                 {!variables.contract_start && !loadingDates && (
                   <p className="text-xs text-orange-600 mt-2">
@@ -1086,45 +1105,98 @@ export default function ContractSendModal({
                 {loadingDates ? (
                   <p className="text-sm text-purple-700">Chargement des dates...</p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-purple-700 mb-1">
-                        Date début CDD
-                      </label>
-                      <input
-                        type="date"
-                        value={variables.contract_start}
-                        onChange={(e) => setVariables({...variables, contract_start: e.target.value})}
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
-                      />
+                  <div className="space-y-4">
+                    {/* Section CDD initial */}
+                    <div className="p-3 bg-white border border-purple-200 rounded">
+                      <h5 className="text-xs font-semibold text-purple-900 mb-2">Contrat CDD initial</h5>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-purple-700 mb-1">
+                            Date début CDD
+                          </label>
+                          <input
+                            type="date"
+                            value={variables.contract_start}
+                            onChange={(e) => setVariables({...variables, contract_start: e.target.value})}
+                            className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-purple-700 mb-1">
+                            Date fin CDD
+                          </label>
+                          <input
+                            type="date"
+                            value={variables.contract_end}
+                            onChange={(e) => setVariables({...variables, contract_end: e.target.value})}
+                            className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-purple-700 mb-1">
-                        Date fin CDD
-                      </label>
-                      <input
-                        type="date"
-                        value={variables.contract_end}
-                        onChange={(e) => setVariables({...variables, contract_end: e.target.value})}
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
-                      />
+
+                    {/* Section Avenant 1 */}
+                    <div className="p-3 bg-white border border-purple-200 rounded">
+                      <h5 className="text-xs font-semibold text-purple-900 mb-2">Avenant 1</h5>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-purple-700 mb-1">
+                            Date début avenant 1
+                          </label>
+                          <div className="px-3 py-2 border border-purple-200 rounded-lg bg-purple-50 text-gray-700 text-sm">
+                            {variables.contract_end ? (() => {
+                              const date = new Date(variables.contract_end);
+                              date.setDate(date.getDate() + 1);
+                              return date.toLocaleDateString('fr-FR');
+                            })() : 'Calculée automatiquement'}
+                          </div>
+                          <p className="text-xs text-purple-600 mt-1">Calculé: lendemain fin CDD</p>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-purple-700 mb-1">
+                            Date fin avenant 1
+                          </label>
+                          <input
+                            type="date"
+                            value={variables.employees_date_de_fin__av1}
+                            onChange={(e) => setVariables({...variables, employees_date_de_fin__av1: e.target.value})}
+                            className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="mb-3 p-2 bg-purple-50 rounded text-xs text-purple-700">
-                      <strong>Dates calculées automatiquement :</strong><br/>
-                      • Date début AV1 = lendemain fin CDD<br/>
-                      • Date début AV2 = lendemain fin AV1
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-purple-700 mb-1">
-                        Date fin avenant 2 *
-                      </label>
-                      <input
-                        type="date"
-                        value={variables.employees_date_de_fin__av2}
-                        onChange={(e) => setVariables({...variables, employees_date_de_fin__av2: e.target.value})}
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-sm"
-                        placeholder="Nouvelle date de fin"
-                      />
+
+                    {/* Section Avenant 2 */}
+                    <div className="p-3 bg-purple-100 border-2 border-purple-400 rounded">
+                      <h5 className="text-xs font-semibold text-purple-900 mb-2">Avenant 2 (nouveau)</h5>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-purple-700 mb-1">
+                            Date début avenant 2
+                          </label>
+                          <div className="px-3 py-2 border border-purple-300 rounded-lg bg-purple-50 text-gray-700 text-sm">
+                            {variables.employees_date_de_fin__av1 ? (() => {
+                              const date = new Date(variables.employees_date_de_fin__av1);
+                              date.setDate(date.getDate() + 1);
+                              return date.toLocaleDateString('fr-FR');
+                            })() : 'Calculée automatiquement'}
+                          </div>
+                          <p className="text-xs text-purple-600 mt-1">Calculé: lendemain fin AV1</p>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-purple-700 mb-1">
+                            Date fin avenant 2 *
+                          </label>
+                          <input
+                            type="date"
+                            value={variables.employees_date_de_fin__av2}
+                            onChange={(e) => setVariables({...variables, employees_date_de_fin__av2: e.target.value})}
+                            className="w-full px-3 py-2 border-2 border-purple-400 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-sm font-medium"
+                            placeholder="Nouvelle date de fin"
+                            required
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
