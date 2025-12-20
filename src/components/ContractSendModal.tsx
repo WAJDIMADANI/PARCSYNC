@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase';
 import { X, Send, FileText, Building, DollarSign, Calendar, Clock, Award, CheckCircle, XCircle, Mail, Eye } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { SuccessNotification } from './SuccessNotification';
+import { ErrorModal } from './ErrorModal';
+import { translateError } from '../utils/errorTranslator';
 import { calculateTrialEndDate, formatDateFR } from '../lib/trialPeriodCalculator';
 
 interface ContractTemplate {
@@ -182,6 +184,7 @@ export default function ContractSendModal({
   const [showSuccess, setShowSuccess] = useState(false);
   const [renewTrial, setRenewTrial] = useState(false);
   const [trialPeriodInfo, setTrialPeriodInfo] = useState<{ endDate: string; description: string } | null>(null);
+  const [errorInfo, setErrorInfo] = useState<{ title: string; message: string } | null>(null);
 
   const searchAddress = async (query: string) => {
     if (query.length < 3) {
@@ -507,24 +510,28 @@ export default function ContractSendModal({
     }
   };
 
+  const showError = (title: string, message: string) => {
+    setErrorInfo({ title, message });
+  };
+
   const handleSend = async () => {
     if (!selectedTemplate) {
-      alert('Veuillez sélectionner un modèle de contrat');
+      showError('Modèle manquant', 'Veuillez sélectionner un modèle de contrat.');
       return;
     }
 
     if (!variables.poste) {
-      alert('Veuillez remplir au minimum le poste');
+      showError('Poste manquant', 'Veuillez remplir au minimum le poste.');
       return;
     }
 
     if (avenantType === 'avenant1' && !variables.employees_date_de_fin__av1) {
-      alert('Veuillez saisir la date de fin de l\'avenant 1');
+      showError('Date manquante', 'Veuillez saisir la date de fin de l\'avenant 1.');
       return;
     }
 
     if (avenantType === 'avenant2' && !variables.employees_date_de_fin__av2) {
-      alert('Veuillez saisir la date de fin de l\'avenant 2');
+      showError('Date manquante', 'Veuillez saisir la date de fin de l\'avenant 2.');
       return;
     }
 
@@ -533,7 +540,7 @@ export default function ContractSendModal({
       const avenant1End = new Date(variables.employees_date_de_fin__av1);
 
       if (avenant1End <= contractEnd) {
-        alert('La date de fin de l\'avenant 1 doit être postérieure à la date de fin du CDD initial');
+        showError('Date invalide', 'La date de fin de l\'avenant 1 doit être postérieure à la date de fin du CDD initial.');
         return;
       }
     }
@@ -543,7 +550,7 @@ export default function ContractSendModal({
       const avenant2End = new Date(variables.employees_date_de_fin__av2);
 
       if (avenant2End <= avenant1End) {
-        alert('La date de fin de l\'avenant 2 doit être postérieure à la date de fin de l\'avenant 1');
+        showError('Date invalide', 'La date de fin de l\'avenant 2 doit être postérieure à la date de fin de l\'avenant 1.');
         return;
       }
     }
@@ -551,12 +558,12 @@ export default function ContractSendModal({
     console.log('🔍 VALIDATION - employeeName:', employeeName, 'employeeEmail:', employeeEmail);
 
     if (!employeeEmail || !employeeEmail.includes('@')) {
-      alert('Email du salarié manquant ou invalide.');
+      showError('Email invalide', 'L\'email du salarié est manquant ou invalide.');
       return;
     }
 
     if (!employeeName || employeeName.trim() === '') {
-      alert('Nom du salarié manquant.');
+      showError('Nom manquant', 'Le nom du salarié est manquant.');
       return;
     }
 
@@ -575,7 +582,7 @@ export default function ContractSendModal({
 
       if (!typeContratFromTemplate) {
         console.error('❌ ERREUR: type_contrat est undefined!');
-        alert('Erreur: le type de contrat n\'a pas pu être déterminé.');
+        showError('Type de contrat manquant', 'Le type de contrat n\'a pas pu être déterminé.');
         setSending(false);
         return;
       }
@@ -651,13 +658,20 @@ export default function ContractSendModal({
         });
       }
 
-      // D) Gestion de trial_period_text
+      // D) Gestion de trial_period_text ET trial_end_date
       if (templateHasTrialVar) {
-        preparedVariables.trial_period_text = trialIsApplicable
-          ? formatDateFR(trialPeriodInfo!.endDate)
-          : "";
+        if (trialIsApplicable) {
+          // Envoyer la date brute (ISO) pour que Yousign puisse la formatter
+          preparedVariables.trial_end_date = trialPeriodInfo!.endDate;
+          // Envoyer aussi le texte complet déjà formaté
+          preparedVariables.trial_period_text = `Le Salarié sera soumis à une période d'essai qui prendra fin le : ${formatDateFR(trialPeriodInfo!.endDate)}`;
+        } else {
+          preparedVariables.trial_end_date = "";
+          preparedVariables.trial_period_text = "";
+        }
       } else {
         delete preparedVariables.trial_period_text;
+        delete preparedVariables.trial_end_date;
       }
 
       const contractData: any = {
@@ -775,7 +789,8 @@ export default function ContractSendModal({
       } catch (fetchError: any) {
         console.error('❌ Erreur Yousign:', fetchError);
         await supabase.from('contrat').delete().eq('id', contrat.id);
-        alert(`Erreur Yousign:\n\n${fetchError.message}`);
+        const errorTranslated = translateError(fetchError);
+        showError(errorTranslated.title, errorTranslated.message);
         setSending(false);
         return;
       }
@@ -811,8 +826,8 @@ export default function ContractSendModal({
       }, 2500);
     } catch (error: any) {
       console.error('❌ ERREUR FINALE:', error);
-      const errorMessage = error.message || 'Erreur inconnue';
-      alert(`Erreur: ${errorMessage}`);
+      const errorTranslated = translateError(error);
+      showError(errorTranslated.title, errorTranslated.message);
     } finally {
       setSending(false);
     }
@@ -834,6 +849,13 @@ export default function ContractSendModal({
         <SuccessNotification
           message="Contrat envoyé avec succès"
           onClose={() => setShowSuccess(false)}
+        />
+      )}
+      {errorInfo && (
+        <ErrorModal
+          title={errorInfo.title}
+          message={errorInfo.message}
+          onClose={() => setErrorInfo(null)}
         />
       )}
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
