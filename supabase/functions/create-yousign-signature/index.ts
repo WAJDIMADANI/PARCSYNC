@@ -11,7 +11,7 @@ interface SignatureRequest {
   contractId: string;
 }
 
-// ✅ Fonction pour formater une date en français (format DD-MM-YYYY)
+// ✅ Fonction pour formater une date en français (format DD/MM/YYYY)
 function formatDateFR(dateStr: string | undefined): string {
   if (!dateStr) return '';
 
@@ -20,7 +20,7 @@ function formatDateFR(dateStr: string | undefined): string {
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
+    return `${day}/${month}/${year}`;
   } catch (error) {
     console.error('Error formatting date:', dateStr, error);
     return dateStr;
@@ -152,6 +152,7 @@ async function replaceVariablesInWord(
   console.log("✅ Mapped keys - Variables d'avenant formatées:", {
     employees_date_de_debut___av1: preparedVariables.employees_date_de_debut___av1,
     employees_date_de_fin__av1: preparedVariables.employees_date_de_fin__av1,
+    employees_date_de_fin__av2: preparedVariables.employees_date_de_fin__av2,
   });
   console.log("✅ Mapped keys - Autres dates formatées:", {
     contract_start: preparedVariables.contract_start,
@@ -465,35 +466,50 @@ Deno.serve(async (req: Request) => {
       };
 
       // B) Fusionner avec les variables du contrat (inclut date_debut, date_fin, variables avenant, etc.)
-      const templateVars: Record<string, any> = {
+      const rawVars: Record<string, any> = {
         ...profilVars,
         ...variables,
-        // Override avec les valeurs de la table contrat si elles existent
-        contract_start: contract.date_debut || variables.contract_start || variables.date_debut || '',
-        contract_end: contract.date_fin || variables.contract_end || variables.date_fin || '',
-        date_debut: contract.date_debut || variables.date_debut || '',
-        date_fin: contract.date_fin || variables.date_fin || '',
-        // ✅ MAPPING EXPLICITE DES VARIABLES D'AVENANT AVEC FORMATAGE FR
-        employees_date_de_debut___av1: variables.employees_date_de_debut___av1 || '',
-        employees_date_de_fin__av1: variables.employees_date_de_fin__av1 || '',
       };
 
-      // C) Remplacer tous les null/undefined par "" (string vide)
+      // ✅ LOG DES RAW VARS AVANT FORMATAGE
+      console.log("🧪 rawVars dates (before formatting):", {
+        contract_start: rawVars.contract_start,
+        contract_end: rawVars.contract_end,
+        employees_date_de_debut___av1: rawVars.employees_date_de_debut___av1,
+        employees_date_de_fin__av1: rawVars.employees_date_de_fin__av1,
+        employees_date_de_fin__av2: rawVars.employees_date_de_fin__av2,
+      });
+
+      // C) Créer templateVars avec priorité correcte (ne PAS écraser les dates historiques)
+      const templateVars: Record<string, any> = {
+        ...rawVars,
+        // ✅ PRIORITÉ AUX DATES HISTORIQUES : contract_start/end viennent de rawVars EN PRIORITÉ
+        // (ne pas écraser avec contract.date_debut/fin qui sont les nouvelles dates de l'avenant)
+        contract_start: rawVars.contract_start || contract.date_debut || rawVars.date_debut || '',
+        contract_end: rawVars.contract_end || contract.date_fin || rawVars.date_fin || '',
+        date_debut: contract.date_debut || rawVars.date_debut || '',
+        date_fin: contract.date_fin || rawVars.date_fin || '',
+        // ✅ MAPPING EXPLICITE DES VARIABLES D'AVENANT (avec 3 underscores)
+        employees_date_de_debut___av1: rawVars.employees_date_de_debut___av1 || '',
+        employees_date_de_fin__av1: rawVars.employees_date_de_fin__av1 || '',
+        employees_date_de_fin__av2: rawVars.employees_date_de_fin__av2 || '',
+      };
+
+      // D) Remplacer tous les null/undefined par "" (string vide)
       Object.keys(templateVars).forEach(key => {
         if (templateVars[key] === null || templateVars[key] === undefined) {
           templateVars[key] = '';
         }
       });
 
-      // D) Logs pour debug des RAW VARS avant formatage
+      // E) Logs pour debug des variables AVANT formatage
       console.log("🔑 DOCX templateVars keys:", Object.keys(templateVars));
-      console.log("📋 RAW VARS AV1 (before formatting):", {
-        employees_date_de_debut___av1: templateVars.employees_date_de_debut___av1,
-        employees_date_de_fin__av1: templateVars.employees_date_de_fin__av1,
-      });
-      console.log("📋 DOCX sample values (before formatting):", {
+      console.log("📋 Template values (before formatting):", {
         contract_start: templateVars.contract_start,
         contract_end: templateVars.contract_end,
+        employees_date_de_debut___av1: templateVars.employees_date_de_debut___av1,
+        employees_date_de_fin__av1: templateVars.employees_date_de_fin__av1,
+        employees_date_de_fin__av2: templateVars.employees_date_de_fin__av2,
         first_name: templateVars.first_name,
         last_name: templateVars.last_name,
         date_debut: templateVars.date_debut,
