@@ -148,6 +148,16 @@ async function replaceVariablesInWord(
   const preparedVariables = prepareVariables(variables);
   console.log("📋 Variables to replace:", Object.keys(preparedVariables));
 
+  // ✅ LOGS EXPLICITES pour les variables d'avenant APRÈS formatage
+  console.log("✅ Mapped keys - Variables d'avenant formatées:", {
+    employees_date_de_debut___av1: preparedVariables.employees_date_de_debut___av1,
+    employees_date_de_fin__av1: preparedVariables.employees_date_de_fin__av1,
+  });
+  console.log("✅ Mapped keys - Autres dates formatées:", {
+    contract_start: preparedVariables.contract_start,
+    contract_end: preparedVariables.contract_end,
+  });
+
   try {
     const zip = new JSZip();
     const loaded = await zip.loadAsync(wordArrayBuffer);
@@ -463,6 +473,9 @@ Deno.serve(async (req: Request) => {
         contract_end: contract.date_fin || variables.contract_end || variables.date_fin || '',
         date_debut: contract.date_debut || variables.date_debut || '',
         date_fin: contract.date_fin || variables.date_fin || '',
+        // ✅ MAPPING EXPLICITE DES VARIABLES D'AVENANT AVEC FORMATAGE FR
+        employees_date_de_debut___av1: variables.employees_date_de_debut___av1 || '',
+        employees_date_de_fin__av1: variables.employees_date_de_fin__av1 || '',
       };
 
       // C) Remplacer tous les null/undefined par "" (string vide)
@@ -472,13 +485,15 @@ Deno.serve(async (req: Request) => {
         }
       });
 
-      // D) Logs pour debug
+      // D) Logs pour debug des RAW VARS avant formatage
       console.log("🔑 DOCX templateVars keys:", Object.keys(templateVars));
-      console.log("📋 DOCX sample values:", {
-        contract_start: templateVars.contract_start,
-        contract_end: templateVars.contract_end,
+      console.log("📋 RAW VARS AV1 (before formatting):", {
         employees_date_de_debut___av1: templateVars.employees_date_de_debut___av1,
         employees_date_de_fin__av1: templateVars.employees_date_de_fin__av1,
+      });
+      console.log("📋 DOCX sample values (before formatting):", {
+        contract_start: templateVars.contract_start,
+        contract_end: templateVars.contract_end,
         first_name: templateVars.first_name,
         last_name: templateVars.last_name,
         date_debut: templateVars.date_debut,
