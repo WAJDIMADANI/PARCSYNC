@@ -10,11 +10,14 @@ const corsHeaders = {
 // Fonction helper pour formater les dates au format DD-MM-YYYY
 function formatDateDDMMYYYY(dateStr: string): string {
   try {
-    const date = new Date(dateStr);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
+    // Parse manuel pour éviter les problèmes de fuseau horaire
+    // Format attendu: YYYY-MM-DD ou YYYY-MM-DDTHH:MM:SS
+    const dateOnly = dateStr.split('T')[0]; // Prend seulement la partie date
+    const [year, month, day] = dateOnly.split('-');
+
+    if (!year || !month || !day) return dateStr;
+
+    return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`;
   } catch (error) {
     return dateStr;
   }

@@ -27,11 +27,14 @@ function escapeXML(str: string): string {
 function formatDateFR(dateStr?: string): string {
   if (!dateStr) return "";
   try {
-    const d = new Date(dateStr);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
+    // Parse manuel pour éviter les problèmes de fuseau horaire
+    // Format attendu: YYYY-MM-DD ou YYYY-MM-DDTHH:MM:SS
+    const dateOnly = dateStr.split('T')[0]; // Prend seulement la partie date
+    const [year, month, day] = dateOnly.split('-');
+
+    if (!year || !month || !day) return dateStr;
+
+    return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`;
   } catch {
     return dateStr;
   }
