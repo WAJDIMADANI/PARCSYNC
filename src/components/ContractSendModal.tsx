@@ -659,19 +659,21 @@ export default function ContractSendModal({
       }
 
       // D) Gestion de trial_period_text ET trial_end_date
-      if (templateHasTrialVar) {
-        if (trialIsApplicable) {
-          // Envoyer la date brute (ISO) pour que Yousign puisse la formatter
-          preparedVariables.trial_end_date = trialPeriodInfo!.endDate;
-          // Envoyer aussi le texte complet déjà formaté
-          preparedVariables.trial_period_text = `Le Salarié sera soumis à une période d'essai qui prendra fin le : ${formatDateFR(trialPeriodInfo!.endDate)}`;
-        } else {
-          preparedVariables.trial_end_date = "";
-          preparedVariables.trial_period_text = "";
-        }
+      // ✅ CORRECTION : Toujours envoyer si on a les données, peu importe le template
+      if (trialPeriodInfo?.endDate) {
+        // Envoyer la date brute (ISO) pour que Yousign puisse la formatter
+        preparedVariables.trial_end_date = trialPeriodInfo.endDate;
+        // Envoyer aussi le texte complet déjà formaté (juste la date)
+        preparedVariables.trial_period_text = formatDateFR(trialPeriodInfo.endDate);
+
+        console.log('✅ Période d\'essai envoyée:', {
+          trial_end_date: preparedVariables.trial_end_date,
+          trial_period_text: preparedVariables.trial_period_text
+        });
       } else {
-        delete preparedVariables.trial_period_text;
-        delete preparedVariables.trial_end_date;
+        // Pas de période d'essai
+        preparedVariables.trial_end_date = "";
+        preparedVariables.trial_period_text = "";
       }
 
       const contractData: any = {
@@ -686,8 +688,20 @@ export default function ContractSendModal({
         statut: 'en_attente_signature'
       };
 
+      console.log('📋 Variables complètes envoyées au contrat:', {
+        trial_end_date: contractData.variables.trial_end_date,
+        trial_period_text: contractData.variables.trial_period_text,
+        date_fin_periode_essai: contractData.variables.date_fin_periode_essai,
+        allVariables: contractData.variables
+      });
+
       if (avenantNum !== null) {
         contractData.avenant_num = avenantNum;
+      }
+
+      // ✅ Ajouter date_fin_periode_essai dans la table contrat
+      if (trialPeriodInfo?.endDate) {
+        contractData.date_fin_periode_essai = trialPeriodInfo.endDate;
       }
 
       // ✅ Ajouter les colonnes date_debut et date_fin dans la table contrat
@@ -804,8 +818,10 @@ export default function ContractSendModal({
       };
 
       // E) Mise à jour conditionnelle de date_fin_periode_essai
-      if (trialIsApplicable) {
-        updateData.date_fin_periode_essai = trialPeriodInfo!.endDate;
+      // ✅ CORRECTION : Toujours sauvegarder si on a la date
+      if (trialPeriodInfo?.endDate) {
+        updateData.date_fin_periode_essai = trialPeriodInfo.endDate;
+        console.log('✅ Date fin période d\'essai sauvegardée dans profil:', trialPeriodInfo.endDate);
       }
 
       const { error: profilError } = await supabase
