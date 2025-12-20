@@ -666,128 +666,128 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           <p className="text-gray-600">Aucun employé trouvé</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-6 border border-gray-100">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
                 <tr>
                   <th
                     onClick={() => handleSort('matricule_tca')}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
                       Matricule TCA
                       {getSortIcon('matricule_tca')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('prenom')}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
                       Prénom
                       {getSortIcon('prenom')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('nom')}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
                       Nom
                       {getSortIcon('nom')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('email')}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
                       Email
                       {getSortIcon('email')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('type_contrat')}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
                       Type Contrat
                       {getSortIcon('type_contrat')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('date_entree')}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
                       Date Début
                       {getSortIcon('date_entree')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('statut_contrat')}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
                       Statut Contrat
                       {getSortIcon('statut_contrat')}
                     </div>
                   </th>
                   <th
                     onClick={() => handleSort('secteur')}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 group-hover:text-blue-700 transition-colors">
                       Secteur
                       {getSortIcon('secteur')}
                     </div>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-50">
                 {paginatedEmployees.map((employee) => (
                   <tr
                     key={employee.id}
                     onClick={() => setSelectedEmployee(employee)}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    className="hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50 cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg relative"
                   >
-                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm font-semibold text-gray-900 whitespace-nowrap group-hover:text-blue-900 transition-colors">
                       {employee.matricule_tca || '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap group-hover:text-blue-900 transition-colors">
                       {employee.prenom}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap group-hover:text-blue-900 transition-colors">
                       {employee.nom}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap group-hover:text-blue-800 transition-colors">
                       {employee.email}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
                       <ContractBadge type="type" value={getLatestActiveContract(employee.id, contracts) || employee.modele_contrat || undefined} />
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-700 whitespace-nowrap group-hover:text-blue-800 transition-colors">
                       {formatDate(employee.date_entree)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
                       <ContractBadge type="status" value={getActualContractStatus(employee)} />
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-700 whitespace-nowrap group-hover:text-blue-800 transition-colors">
                       {employee.secteur?.nom || '-'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-6 py-4">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedEmployee(employee);
                         }}
-                        className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-xl transform hover:scale-110 hover:-translate-y-0.5"
                       >
-                        <Eye className="w-3 h-3" />
+                        <Eye className="w-4 h-4" />
                         Détails
                       </button>
                     </td>
@@ -799,55 +799,55 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="font-medium">Affichage de {startIndex + 1} à {endIndex}</span>
-                <span className="text-gray-400">sur</span>
-                <span className="font-medium">{totalItems}</span>
+            <div className="px-6 py-5 bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50 border-t border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-bold text-gray-800">Affichage de {startIndex + 1} à {endIndex}</span>
+                <span className="text-gray-500">sur</span>
+                <span className="font-bold text-blue-600">{totalItems}</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={() => handlePageChange(1)}
                   disabled={currentPage === 1}
-                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+                  className="p-2.5 rounded-xl bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105"
                   title="Première page"
                 >
-                  <ChevronsLeft className="w-5 h-5" />
+                  <ChevronsLeft className="w-5 h-5 text-gray-700" />
                 </button>
 
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+                  className="p-2.5 rounded-xl bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105"
                   title="Page précédente"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-5 h-5 text-gray-700" />
                 </button>
 
-                <div className="flex items-center gap-2 px-4">
-                  <span className="text-sm font-medium text-gray-700">Page</span>
-                  <span className="px-3 py-1 bg-blue-600 text-white rounded-lg font-bold text-sm">{currentPage}</span>
+                <div className="flex items-center gap-3 px-5 py-2.5 bg-white rounded-xl shadow-md border-2 border-gray-200">
+                  <span className="text-sm font-semibold text-gray-700">Page</span>
+                  <span className="px-4 py-1.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg font-bold text-sm shadow-sm">{currentPage}</span>
                   <span className="text-sm text-gray-500">sur</span>
-                  <span className="text-sm font-medium text-gray-700">{totalPages}</span>
+                  <span className="text-sm font-bold text-gray-800">{totalPages}</span>
                 </div>
 
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+                  className="p-2.5 rounded-xl bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105"
                   title="Page suivante"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-5 h-5 text-gray-700" />
                 </button>
 
                 <button
                   onClick={() => handlePageChange(totalPages)}
                   disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+                  className="p-2.5 rounded-xl bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105"
                   title="Dernière page"
                 >
-                  <ChevronsRight className="w-5 h-5" />
+                  <ChevronsRight className="w-5 h-5 text-gray-700" />
                 </button>
               </div>
             </div>
