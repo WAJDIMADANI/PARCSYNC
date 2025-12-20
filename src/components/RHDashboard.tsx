@@ -801,7 +801,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         </div>
         <button
           onClick={fetchStats}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white rounded-full hover:from-orange-600 hover:to-amber-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
         >
           <Clock className="w-4 h-4" />
           Actualiser
@@ -920,13 +920,13 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       </div>
 
       {validationsWithMessages.length > 0 && (
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-xl shadow-sm border border-blue-200 p-6 mb-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-            <div className="p-2 bg-blue-600 rounded-lg">
+        <div className="bg-gradient-to-br from-sky-50 via-blue-50 to-sky-100 rounded-xl shadow-lg border-2 border-sky-300 p-6 mb-6">
+          <h3 className="text-xl font-extrabold text-gray-900 mb-4 flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl shadow-lg">
               <MessageSquare className="w-6 h-6 text-white" />
             </div>
             Validations avec nouveaux messages
-            <span className="ml-2 px-3 py-1 bg-blue-600 text-white text-sm font-bold rounded-full">
+            <span className="ml-2 px-4 py-1.5 bg-gradient-to-r from-sky-500 via-blue-500 to-sky-600 text-white text-sm font-extrabold rounded-full shadow-lg animate-pulse">
               {validationsWithMessages.length}
             </span>
           </h3>
@@ -935,35 +935,35 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
               <button
                 key={validation.id}
                 onClick={() => setSelectedValidation(validation)}
-                className="bg-white rounded-lg p-4 border-l-4 border-blue-500 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left relative"
+                className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-5 border-l-4 border-sky-500 hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer text-left relative shadow-md"
               >
                 <div className="absolute top-3 right-3">
-                  <span className="inline-flex items-center justify-center w-8 h-8 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">
+                  <span className="inline-flex items-center justify-center w-9 h-9 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-extrabold rounded-full animate-pulse shadow-lg ring-2 ring-red-300">
                     +{validation.unread_count}
                   </span>
                 </div>
-                <div className="pr-10">
-                  <p className="text-sm text-gray-600 mb-1 font-medium">
+                <div className="pr-12">
+                  <p className="text-sm text-gray-600 mb-2 font-bold">
                     {validation.prenom_salarie} {validation.nom_salarie}
                   </p>
-                  <p className="text-lg font-bold text-blue-600 mb-2">
+                  <p className="text-lg font-extrabold text-sky-600 mb-3">
                     {validation.type_demande}
                   </p>
-                  <div className="flex items-center gap-2 mb-2">
-                    <User className="w-4 h-4 text-gray-400" />
-                    <p className="text-xs text-gray-600">
+                  <div className="flex items-center gap-2 mb-2 bg-gray-100 px-3 py-1.5 rounded-lg">
+                    <User className="w-4 h-4 text-gray-500" />
+                    <p className="text-xs font-semibold text-gray-700">
                       {validation.demandeur_prenom} {validation.demandeur_nom}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-gray-400" />
-                    <p className="text-xs text-gray-600">
+                  <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg">
+                    <Clock className="w-4 h-4 text-gray-500" />
+                    <p className="text-xs font-semibold text-gray-700">
                       {new Date(validation.created_at).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
                   {validation.priorite === 'urgente' && (
-                    <div className="mt-2">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                    <div className="mt-3">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold bg-gradient-to-r from-red-500 to-orange-600 text-white shadow-md">
                         <AlertCircle className="w-3.5 h-3.5" />
                         Urgent
                       </span>
@@ -974,7 +974,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             ))}
           </div>
           <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm font-semibold text-gray-700 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full inline-block">
               Cliquez sur une carte pour voir les messages et répondre
             </p>
           </div>
@@ -984,19 +984,21 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       {stats.employees.documents_manquants > 0 && (
         <div
           onClick={() => onNavigate?.('rh/documents-manquants')}
-          className="bg-gradient-to-br from-red-50 to-red-100/30 rounded-xl shadow-md p-6 border-l-4 border-red-500 cursor-pointer hover:shadow-lg transition-all"
+          className="bg-gradient-to-br from-red-50 via-orange-50 to-red-100 rounded-xl shadow-lg p-6 border-l-4 border-red-500 cursor-pointer hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-2 border-red-300"
         >
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold text-red-900 flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
+              <h3 className="text-lg font-extrabold text-red-900 flex items-center gap-3 mb-3">
+                <div className="p-2 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl shadow-lg">
+                  <AlertTriangle className="w-6 h-6 text-white" />
+                </div>
                 Documents manquants par salarié
               </h3>
-              <p className="text-red-700">
-                <span className="text-2xl font-bold">{stats.employees.documents_manquants}</span> salarié
+              <p className="text-red-800 font-bold">
+                <span className="text-3xl font-extrabold">{stats.employees.documents_manquants}</span> salarié
                 {stats.employees.documents_manquants > 1 ? 's' : ''} avec documents manquants
               </p>
-              <p className="text-sm text-red-600 mt-1">
+              <p className="text-sm font-semibold text-red-700 mt-2 bg-white/50 backdrop-blur-sm px-3 py-1.5 rounded-lg inline-block">
                 Cliquez pour voir le détail et contacter les salariés concernés
               </p>
             </div>
@@ -1006,9 +1008,11 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-500" />
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-lg transition-all border border-gray-100 p-6">
+          <h3 className="text-lg font-extrabold text-gray-900 mb-5 flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg shadow-md">
+              <Users className="w-5 h-5 text-white" />
+            </div>
             Répartition des candidatures
           </h3>
           <div className="space-y-3">
@@ -1043,9 +1047,11 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-green-500" />
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-lg transition-all border border-gray-100 p-6">
+          <h3 className="text-lg font-extrabold text-gray-900 mb-5 flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg shadow-md">
+              <UserPlus className="w-5 h-5 text-white" />
+            </div>
             Informations salariés
           </h3>
           <div className="space-y-4">
@@ -1077,17 +1083,19 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-lg transition-all border border-gray-100 p-6">
+          <h3 className="text-lg font-extrabold text-gray-900 mb-5 flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-red-500 to-rose-600 rounded-lg shadow-md">
+              <AlertTriangle className="w-5 h-5 text-white" />
+            </div>
             Incidents par type
           </h3>
           {stats.incidents.par_type.length > 0 ? (
             <div className="space-y-3">
               {stats.incidents.par_type.map((item) => (
-                <div key={item.type} className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">{item.type}</span>
-                  <span className="text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">
+                <div key={item.type} className="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg hover:shadow-md transition-all">
+                  <span className="text-sm font-bold text-gray-700">{item.type}</span>
+                  <span className="text-sm font-extrabold text-white bg-gradient-to-r from-red-500 to-rose-600 px-4 py-1.5 rounded-full shadow-md">
                     {item.count}
                   </span>
                 </div>
@@ -1098,19 +1106,21 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-amber-500" />
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-lg transition-all border border-gray-100 p-6">
+          <h3 className="text-lg font-extrabold text-gray-900 mb-5 flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg shadow-md">
+              <FileText className="w-5 h-5 text-white" />
+            </div>
             Top 5 incidents par salarié
           </h3>
           {stats.incidents.top_employes.length > 0 ? (
             <div className="space-y-3">
               {stats.incidents.top_employes.map((emp, idx) => (
-                <div key={idx} className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">
+                <div key={idx} className="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg hover:shadow-md transition-all">
+                  <span className="text-sm font-bold text-gray-700">
                     {emp.prenom} {emp.nom}
                   </span>
-                  <span className="text-sm font-bold text-red-600 bg-red-50 px-3 py-1 rounded-lg">
+                  <span className="text-sm font-extrabold text-white bg-gradient-to-r from-red-500 to-rose-600 px-4 py-1.5 rounded-full shadow-md">
                     {emp.count}
                   </span>
                 </div>
@@ -1122,8 +1132,11 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         </div>
       </div>
 
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-sm p-6 text-white">
-        <h3 className="text-xl font-bold mb-4">Actions rapides</h3>
+      <div className="bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 rounded-xl shadow-lg p-6 text-white border-2 border-orange-300">
+        <h3 className="text-xl font-extrabold mb-5 flex items-center gap-3">
+          <div className="w-2 h-8 bg-white rounded-full"></div>
+          Actions rapides
+        </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <QuickActionButton
             label="Candidatures"
@@ -1175,32 +1188,33 @@ function StatCard({
   icon: React.ReactNode;
   title: string;
   value: number;
-  subtitle: string;
+  subtitle: string | React.ReactNode;
   trend: 'up' | 'down' | 'neutral';
   trendValue: string;
-  color: 'blue' | 'green' | 'amber' | 'red';
+  color: 'blue' | 'green' | 'amber' | 'red' | 'purple';
 }) {
   const colorClasses = {
-    blue: 'bg-blue-500 text-blue-500',
-    green: 'bg-green-500 text-green-500',
-    amber: 'bg-amber-500 text-amber-500',
-    red: 'bg-red-500 text-red-500',
+    blue: 'bg-gradient-to-br from-sky-500 to-blue-600',
+    green: 'bg-gradient-to-br from-emerald-500 to-green-600',
+    amber: 'bg-gradient-to-br from-orange-500 to-amber-600',
+    red: 'bg-gradient-to-br from-red-500 to-rose-600',
+    purple: 'bg-gradient-to-br from-purple-500 to-pink-600',
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-6 transition-all duration-300 transform hover:scale-105">
       <div className="flex items-start justify-between mb-4">
-        <div className={`p-3 rounded-xl bg-opacity-10 ${colorClasses[color]}`}>
+        <div className={`p-3 rounded-xl shadow-lg ${colorClasses[color]} text-white`}>
           {icon}
         </div>
-        {trend === 'up' && <TrendingUp className="w-5 h-5 text-green-500" />}
-        {trend === 'down' && <TrendingDown className="w-5 h-5 text-red-500" />}
+        {trend === 'up' && <TrendingUp className="w-5 h-5 text-emerald-500" />}
+        {trend === 'down' && <TrendingDown className="w-5 h-5 text-rose-500" />}
       </div>
       <div>
-        <p className="text-sm font-medium text-slate-600 mb-1">{title}</p>
-        <p className="text-3xl font-bold text-slate-900 mb-2">{value}</p>
-        <p className="text-sm text-slate-500">{subtitle}</p>
-        <p className="text-xs text-slate-400 mt-1">{trendValue}</p>
+        <p className="text-sm font-bold text-gray-600 mb-2">{title}</p>
+        <p className="text-4xl font-extrabold text-gray-900 mb-3">{value}</p>
+        <p className="text-sm font-semibold text-gray-700 mb-1">{subtitle}</p>
+        <p className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full inline-block">{trendValue}</p>
       </div>
     </div>
   );
@@ -1221,26 +1235,28 @@ function ProgressBar({
 }) {
   const percentage = total > 0 ? (value / total) * 100 : 0;
   const colorClasses = {
-    blue: 'bg-blue-500',
-    amber: 'bg-amber-500',
-    green: 'bg-green-500',
-    red: 'bg-red-500',
+    blue: 'bg-gradient-to-r from-sky-500 to-blue-600',
+    amber: 'bg-gradient-to-r from-orange-500 to-amber-600',
+    green: 'bg-gradient-to-r from-emerald-500 to-green-600',
+    red: 'bg-gradient-to-r from-red-500 to-rose-600',
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
+    <div className="bg-gray-50 p-3 rounded-lg">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          {icon}
-          <span className="text-sm font-medium text-slate-700">{label}</span>
+          <div className="p-1 bg-white rounded-md shadow-sm">
+            {icon}
+          </div>
+          <span className="text-sm font-bold text-gray-700">{label}</span>
         </div>
-        <span className="text-sm font-bold text-slate-900">
+        <span className="text-sm font-extrabold text-gray-900 bg-white px-3 py-1 rounded-full shadow-sm">
           {value} ({percentage.toFixed(0)}%)
         </span>
       </div>
-      <div className="w-full bg-slate-100 rounded-full h-2">
+      <div className="w-full bg-white rounded-full h-3 shadow-inner">
         <div
-          className={`h-2 rounded-full ${colorClasses[color]}`}
+          className={`h-3 rounded-full shadow-md ${colorClasses[color]} transition-all duration-500`}
           style={{ width: `${percentage}%` }}
         />
       </div>
@@ -1258,12 +1274,14 @@ function InfoRow({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        {icon}
-        <span className="text-sm font-medium text-slate-700">{label}</span>
+    <div className="flex items-center justify-between bg-gradient-to-r from-gray-50 to-white px-4 py-3 rounded-lg hover:shadow-md transition-all">
+      <div className="flex items-center gap-3">
+        <div className="p-1.5 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg">
+          {icon}
+        </div>
+        <span className="text-sm font-bold text-gray-700">{label}</span>
       </div>
-      <span className="text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">
+      <span className="text-sm font-extrabold text-gray-900 bg-gradient-to-br from-gray-100 to-slate-100 px-4 py-1.5 rounded-full shadow-sm">
         {value}
       </span>
     </div>
@@ -1282,10 +1300,10 @@ function QuickActionButton({
   return (
     <button
       onClick={onClick}
-      className="bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl p-4 transition-all text-left"
+      className="bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl p-5 transition-all duration-300 text-left shadow-lg hover:shadow-xl transform hover:scale-105 border border-white/30"
     >
-      <p className="text-2xl font-bold mb-1">{count}</p>
-      <p className="text-sm opacity-90">{label}</p>
+      <p className="text-3xl font-extrabold mb-2">{count}</p>
+      <p className="text-sm font-bold">{label}</p>
     </button>
   );
 }
