@@ -861,14 +861,10 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           <StatCard
             icon={<Inbox className="w-6 h-6" />}
             title="Inbox"
-            value={0}
-            subtitle={
-              <span className="font-bold text-lg">
-                {stats.inbox.non_lus > 0 ? `+${stats.inbox.non_lus}` : '0'}
-              </span>
-            }
-            trend="neutral"
-            trendValue={stats.inbox.non_lus > 0 ? 'messages non lus' : 'Aucun message'}
+            value={stats.inbox.non_lus}
+            subtitle={stats.inbox.non_lus > 0 ? `+${stats.inbox.non_lus} non lus` : 'Aucun message'}
+            trend={stats.inbox.non_lus > 0 ? 'up' : 'neutral'}
+            trendValue={stats.inbox.non_lus > 0 ? 'Nouveau' : 'Boîte vide'}
             color="purple"
           />
         </button>
