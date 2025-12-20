@@ -920,7 +920,7 @@ export function Apply() {
                   className="mt-1 w-5 h-5 rounded border-slate-300 text-primary-500 focus:ring-2 focus:ring-primary-500 cursor-pointer"
                 />
                 <span className="text-sm text-slate-700 font-medium">
-                  Oui, PARCSYNC peut m'ajouter au vivier de talents et me contacter au sujet de futures opportunités d'emploi.
+                  TCA peut m'ajouter au vivier de talents et me contacter au sujet de futures opportunités d'emploi.
                 </span>
               </label>
             </div>
