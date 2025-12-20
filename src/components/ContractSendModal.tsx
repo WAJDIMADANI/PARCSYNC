@@ -359,13 +359,19 @@ export default function ContractSendModal({
         const cddDates = await fetchPreviousCDDDates(profilId);
 
         if (cddDates) {
+          // Calculer le lendemain de la date de fin du CDD comme date de début de l'avenant
+          const cddEndDate = new Date(cddDates.date_fin);
+          const avenantStartDate = new Date(cddEndDate);
+          avenantStartDate.setDate(avenantStartDate.getDate() + 1);
+          const avenantStartISO = avenantStartDate.toISOString().split('T')[0];
+
           setVariables(prev => ({
             ...prev,
             contract_start: cddDates.date_debut,
             contract_end: cddDates.date_fin,
-            employees_date_de_debut___av1: cddDates.date_fin // Date début avenant 1 = date fin CDD
+            employees_date_de_debut___av1: avenantStartISO // Date début avenant 1 = lendemain fin CDD
           }));
-          console.log('✅ Dates CDD pré-remplies + date début avenant 1');
+          console.log('✅ Dates CDD pré-remplies + date début avenant 1:', avenantStartISO);
         } else {
           console.warn('⚠️ Aucune date CDD trouvée');
         }
