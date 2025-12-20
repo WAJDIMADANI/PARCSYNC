@@ -20,6 +20,21 @@ import { ConfirmInvalidIbanModal } from './ConfirmInvalidIbanModal';
 import { validateIban, cleanIban } from '../utils/ibanValidator';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 
+// Fonction utilitaire pour formater les dates sans problème de fuseau horaire
+function formatDateFR(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  try {
+    // Parse manuel pour éviter les problèmes de fuseau horaire
+    const dateOnly = dateStr.split('T')[0];
+    const [year, month, day] = dateOnly.split('-');
+    if (!year || !month || !day) return dateStr;
+
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  } catch {
+    return dateStr;
+  }
+}
+
 interface Document {
   id: string;
   type: string;
@@ -3282,9 +3297,9 @@ function EmployeeDetailModal({
                         </div>
                         <p className="text-sm text-gray-900">
                           {contractDateDebut
-                            ? new Date(contractDateDebut).toLocaleDateString('fr-FR')
+                            ? formatDateFR(contractDateDebut)
                             : currentEmployee.date_entree
-                            ? new Date(currentEmployee.date_entree).toLocaleDateString('fr-FR')
+                            ? formatDateFR(currentEmployee.date_entree)
                             : '-'}
                         </p>
                       </div>
@@ -3295,7 +3310,7 @@ function EmployeeDetailModal({
                         </div>
                         <p className="text-sm text-gray-900">
                           {contractDateFin
-                            ? new Date(contractDateFin).toLocaleDateString('fr-FR')
+                            ? formatDateFR(contractDateFin)
                             : '-'}
                         </p>
                       </div>
@@ -3916,12 +3931,12 @@ function EmployeeDetailModal({
                               <p>Créé le {new Date(dateCreation).toLocaleDateString('fr-FR')}</p>
                               {contractDateDebut && (
                                 <p className="text-gray-700 font-medium">
-                                  📅 Début: {new Date(contractDateDebut).toLocaleDateString('fr-FR')}
+                                  📅 Début: {formatDateFR(contractDateDebut)}
                                 </p>
                               )}
                               {contractDateFin && (
                                 <p className="text-gray-700 font-medium">
-                                  📅 Fin: {new Date(contractDateFin).toLocaleDateString('fr-FR')}
+                                  📅 Fin: {formatDateFR(contractDateFin)}
                                 </p>
                               )}
                             </div>
