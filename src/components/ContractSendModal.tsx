@@ -511,101 +511,6 @@ export default function ContractSendModal({
     setErrorInfo({ title, message });
   };
 
-  const handleCreateCDI = async () => {
-    if (!selectedTemplate) {
-      showError('Modèle manquant', 'Veuillez sélectionner un modèle de contrat.');
-      return;
-    }
-
-    if (!variables.poste) {
-      showError('Poste manquant', 'Veuillez remplir au minimum le poste.');
-      return;
-    }
-
-    setSending(true);
-    try {
-      console.log('🎯 ===== CRÉATION CDI DIRECT =====');
-
-      const selectedTemplateData = templates.find(t => t.id === selectedTemplate);
-      if (!selectedTemplateData) {
-        throw new Error('Template non trouvé');
-      }
-
-      const avenantType = selectedTemplateData.nom.toLowerCase().includes('avenant')
-        ? (selectedTemplateData.nom.includes('1') ? 'avenant1' : 'avenant2')
-        : 'none';
-
-      let avenantNum = null;
-      if (avenantType !== 'none') {
-        avenantNum = await getNextAvenantNumber(profilId);
-      }
-
-      const preparedVariables = { ...variables };
-      if (avenantType === 'none' && variables.date_debut) {
-        preparedVariables.contract_start = variables.date_debut;
-      }
-      if (avenantType === 'none' && variables.date_fin) {
-        preparedVariables.contract_end = variables.date_fin;
-      }
-
-      const contractData: any = {
-        profil_id: profilId,
-        template_id: selectedTemplate,
-        variables: preparedVariables,
-        statut: 'actif',
-        type_document: avenantType !== 'none' ? 'avenant' : 'contrat',
-        source: 'manuel',
-        date_debut: preparedVariables.date_debut || preparedVariables.contract_start,
-        date_fin: preparedVariables.date_fin || preparedVariables.contract_end,
-        date_fin_periode_essai: preparedVariables.date_fin_periode_essai,
-        allVariables: preparedVariables
-      };
-
-      if (avenantNum !== null) {
-        contractData.avenant_num = avenantNum;
-      }
-
-      console.log('📝 Création CDI direct:', contractData);
-
-      const { data: contrat, error: contratError } = await supabase
-        .from('contrat')
-        .insert(contractData)
-        .select()
-        .single();
-
-      if (contratError) {
-        console.error('❌ Erreur création CDI:', contratError);
-        throw contratError;
-      }
-
-      console.log('✅ CDI créé avec succès:', contrat.id);
-
-      if (variables.date_fin_periode_essai) {
-        const { error: profileError } = await supabase
-          .from('profil')
-          .update({ date_fin_periode_essai: variables.date_fin_periode_essai })
-          .eq('id', profilId);
-
-        if (profileError) {
-          console.warn('⚠️ Erreur mise à jour profil:', profileError);
-        }
-      }
-
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        onSuccess();
-        onClose();
-      }, 2000);
-
-    } catch (error: any) {
-      console.error('❌ Erreur création CDI:', error);
-      showError('Erreur création CDI', translateError(error.message));
-    } finally {
-      setSending(false);
-    }
-  };
-
   const handleSend = async () => {
     if (!selectedTemplate) {
       showError('Modèle manquant', 'Veuillez sélectionner un modèle de contrat.');
@@ -1438,27 +1343,23 @@ export default function ContractSendModal({
               const selectedTemplateData = templates.find(t => t.id === selectedTemplate);
               const isCDI = selectedTemplateData?.type_contrat === 'CDI';
 
+              // Ne pas afficher le bouton pour les CDI
+              if (isCDI) {
+                return null;
+              }
+
               return (
                 <button
-                  onClick={isCDI ? handleCreateCDI : handleSend}
+                  onClick={handleSend}
                   disabled={sending || !selectedTemplate}
                   className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
                 >
                   {sending ? (
-                    <LoadingSpinner size="sm" text={isCDI ? "Création en cours..." : "Envoi en cours..."} />
+                    <LoadingSpinner size="sm" text="Envoi en cours..." />
                   ) : (
                     <>
-                      {isCDI ? (
-                        <>
-                          <CheckCircle className="w-5 h-5" />
-                          Créer le contrat CDI
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-5 h-5" />
-                          Envoyer le contrat
-                        </>
-                      )}
+                      <Send className="w-5 h-5" />
+                      Envoyer le contrat
                     </>
                   )}
                 </button>
