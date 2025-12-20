@@ -153,8 +153,8 @@ function mapVariablesToWordFormat(vars: Record<string, any>) {
     vars.avenant_1_date_fin
   );
 
-  // si début AV1 absent => lendemain fin CDD
-  const computedAv1StartISO = cddEndRaw ? addDaysISO(cddEndRaw, 1) : "";
+  // si début AV1 absent => date de fin du CDD (pas le lendemain)
+  const computedAv1StartISO = cddEndRaw || "";
   const av1StartFinal = pickFirst(av1StartRaw, computedAv1StartISO);
   const av1EndFinal = av1EndRaw;
 

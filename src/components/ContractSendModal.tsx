@@ -642,11 +642,9 @@ export default function ContractSendModal({
         // date_fin = nouvelle date de fin de l'avenant 2
         preparedVariables.date_fin = variables.employees_date_de_fin__av2;
 
-        // Calculer automatiquement employees_date_de_debut___av1 (lendemain fin CDD)
+        // employees_date_de_debut___av1 = date de FIN du CDD initial (pas le lendemain)
         if (variables.contract_end) {
-          const cddEndDate = new Date(variables.contract_end);
-          cddEndDate.setDate(cddEndDate.getDate() + 1);
-          preparedVariables.employees_date_de_debut___av1 = cddEndDate.toISOString().split('T')[0];
+          preparedVariables.employees_date_de_debut___av1 = variables.contract_end;
         }
 
         console.log('✅ Avenant 2 mapping:', {
