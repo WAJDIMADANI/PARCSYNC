@@ -612,6 +612,14 @@ export default function ContractSendModal({
         preparedVariables.date_debut = variables.contract_start;
         // date_fin = nouvelle date de fin de l'avenant 1
         preparedVariables.date_fin = variables.employees_date_de_fin__av1;
+
+        // Calculer automatiquement employees_date_de_debut___av1 (lendemain fin CDD)
+        if (variables.contract_end) {
+          const cddEndDate = new Date(variables.contract_end);
+          cddEndDate.setDate(cddEndDate.getDate() + 1);
+          preparedVariables.employees_date_de_debut___av1 = cddEndDate.toISOString().split('T')[0];
+        }
+
         console.log('✅ Avenant 1 mapping:', {
           date_debut: preparedVariables.date_debut,
           date_fin: preparedVariables.date_fin,
@@ -626,6 +634,14 @@ export default function ContractSendModal({
         preparedVariables.date_debut = variables.contract_start;
         // date_fin = nouvelle date de fin de l'avenant 2
         preparedVariables.date_fin = variables.employees_date_de_fin__av2;
+
+        // Calculer automatiquement employees_date_de_debut___av1 (lendemain fin CDD)
+        if (variables.contract_end) {
+          const cddEndDate = new Date(variables.contract_end);
+          cddEndDate.setDate(cddEndDate.getDate() + 1);
+          preparedVariables.employees_date_de_debut___av1 = cddEndDate.toISOString().split('T')[0];
+        }
+
         console.log('✅ Avenant 2 mapping:', {
           date_debut: preparedVariables.date_debut,
           date_fin: preparedVariables.date_fin,
@@ -662,8 +678,14 @@ export default function ContractSendModal({
 
       // ✅ Ajouter les colonnes date_debut et date_fin dans la table contrat
       if (avenantType === 'avenant1') {
-        // Avenant 1 : date_debut = date début avenant 1, date_fin = date fin avenant 1
-        contractData.date_debut = variables.employees_date_de_debut___av1 || variables.contract_start;
+        // Avenant 1 : date_debut = lendemain fin CDD, date_fin = date fin avenant 1
+        if (variables.contract_end) {
+          const cddEndDate = new Date(variables.contract_end);
+          cddEndDate.setDate(cddEndDate.getDate() + 1);
+          contractData.date_debut = cddEndDate.toISOString().split('T')[0];
+        } else {
+          contractData.date_debut = variables.contract_start;
+        }
         contractData.date_fin = variables.employees_date_de_fin__av1;
       } else if (avenantType === 'avenant2') {
         // Avenant 2 : date_debut calculée auto (lendemain fin AV1), date_fin = date fin avenant 2
@@ -1025,32 +1047,21 @@ export default function ContractSendModal({
                       </div>
                     </div>
                     <div className="pt-3 border-t border-blue-200">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-blue-900 mb-2">
-                            📅 Date de début d'avenant 1
-                          </label>
-                          <input
-                            type="date"
-                            value={variables.employees_date_de_debut___av1}
-                            onChange={(e) => setVariables({...variables, employees_date_de_debut___av1: e.target.value})}
-                            className="w-full px-4 py-3 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
-                            placeholder="Date de début avenant"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-blue-900 mb-2">
-                            📅 Date de fin d'avenant 1 *
-                          </label>
-                          <input
-                            type="date"
-                            value={variables.employees_date_de_fin__av1}
-                            onChange={(e) => setVariables({...variables, employees_date_de_fin__av1: e.target.value})}
-                            className="w-full px-4 py-3 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
-                            placeholder="Nouvelle date de fin"
-                            required
-                          />
-                        </div>
+                      <div className="mb-2 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                        Date début AV1 = calculée auto (lendemain fin CDD)
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-blue-900 mb-2">
+                          📅 Date de fin d'avenant 1 *
+                        </label>
+                        <input
+                          type="date"
+                          value={variables.employees_date_de_fin__av1}
+                          onChange={(e) => setVariables({...variables, employees_date_de_fin__av1: e.target.value})}
+                          className="w-full px-4 py-3 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium"
+                          placeholder="Nouvelle date de fin"
+                          required
+                        />
                       </div>
                       <p className="text-xs text-blue-600 mt-2">
                         La date de fin doit être postérieure à la date de fin du CDD initial
@@ -1098,27 +1109,10 @@ export default function ContractSendModal({
                         className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-purple-700 mb-1">
-                        Date début avenant 1
-                      </label>
-                      <input
-                        type="date"
-                        value={variables.employees_date_de_debut___av1}
-                        onChange={(e) => setVariables({...variables, employees_date_de_debut___av1: e.target.value})}
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-purple-700 mb-1">
-                        Date fin avenant 1
-                      </label>
-                      <input
-                        type="date"
-                        value={variables.employees_date_de_fin__av1}
-                        onChange={(e) => setVariables({...variables, employees_date_de_fin__av1: e.target.value})}
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
-                      />
+                    <div className="mb-3 p-2 bg-purple-50 rounded text-xs text-purple-700">
+                      <strong>Dates calculées automatiquement :</strong><br/>
+                      • Date début AV1 = lendemain fin CDD<br/>
+                      • Date début AV2 = lendemain fin AV1
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-purple-700 mb-1">
@@ -1131,13 +1125,12 @@ export default function ContractSendModal({
                         className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-sm"
                         placeholder="Nouvelle date de fin"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Date début AV2 = calculée auto (lendemain fin AV1)</p>
                     </div>
                   </div>
                 )}
-                {(!variables.contract_start || !variables.employees_date_de_debut___av1) && !loadingDates && (
+                {!variables.contract_start && !loadingDates && (
                   <p className="text-xs text-orange-600 mt-2">
-                    ⚠️ CDD initial ou avenant 1 manquant. Veuillez saisir les dates manuellement.
+                    ⚠️ CDD initial manquant. Veuillez saisir les dates manuellement.
                   </p>
                 )}
               </div>
