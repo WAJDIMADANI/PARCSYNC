@@ -3,734 +3,719 @@ import JSZip from "npm:jszip@3.10.1";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface SignatureRequest {
+interface Body {
   contractId: string;
 }
 
-// ✅ Fonction pour formater une date en français (format DD/MM/YYYY)
-function formatDateFR(dateStr: string | undefined): string {
-  if (!dateStr) return '';
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
+function escapeXML(str: string): string {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function formatDateFR(dateStr?: string): string {
+  if (!dateStr) return "";
   try {
-    const date = new Date(dateStr);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  } catch (error) {
-    console.error('Error formatting date:', dateStr, error);
+    const d = new Date(dateStr);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  } catch {
     return dateStr;
   }
 }
 
-// ✅ Fonction pour préparer et formater les variables avant génération
-function prepareVariables(variables: Record<string, any>): Record<string, any> {
-  const prepared: Record<string, any> = {};
-
-  Object.entries(variables).forEach(([key, value]) => {
-    let processedValue = value;
-
-    // ✅ Formater TOUTES les dates au format ISO (YYYY-MM-DD) en français (DD-MM-YYYY)
-    // On détecte automatiquement si la valeur est une date ISO, peu importe le nom de la clé
-    if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      processedValue = formatDateFR(value);
-      console.log(`✅ Date formatée: ${key}: ${value} → ${processedValue}`);
-    }
-
-    // ✅ Nettoyer les valeurs vides ou undefined
-    if (processedValue === undefined || processedValue === null) {
-      processedValue = '';
-    }
-
-    prepared[key] = processedValue;
-  });
-
-  // ✅ Calculer la date de fin de période d'essai si elle n'existe pas
-  if (!variables.trial_end_date && variables.contract_start) {
-    const contractStart = new Date(variables.contract_start);
-    const trialEnd = new Date(contractStart);
-    trialEnd.setDate(trialEnd.getDate() + 30); // 30 jours de période d'essai
-    prepared.trial_end_date = trialEnd.toISOString().split('T')[0];
-  }
-
-  // ✅ Gérer la phrase de période d'essai conditionnellement
-  if (prepared.trial_end_date && typeof prepared.trial_end_date === 'string' && prepared.trial_end_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    const formattedDate = formatDateFR(prepared.trial_end_date);
-    prepared.trial_period_text = `Le Salarié sera soumis à une période d'essai qui prendra fin le : ${formattedDate}`;
-  } else {
-    prepared.trial_period_text = '';
-  }
-
-  return prepared;
+async function getPdfPageCount(pdfBytes: ArrayBuffer): Promise<number> {
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+  return pdfDoc.getPageCount();
 }
 
-// ✅ Fonction pour générer l'HTML du contrat avec les variables
-async function generateContractHTML(contract: any): Promise<string> {
-  let html = contract.modele.contenu_html;
-  const variables = typeof contract.variables === 'string'
-    ? JSON.parse(contract.variables)
-    : contract.variables;
-
-  // ✅ Préparer et formater les variables
-  const preparedVars = prepareVariables(variables);
-
-  // Remplacer les variables {{variable}} par les vraies valeurs
-  Object.entries(preparedVars).forEach(([key, value]) => {
-    const regex = new RegExp(`{{${key}}}`, 'g');
-    html = html.replace(regex, String(value || ''));
-  });
-
-  // ✅ Nettoyer les accolades restantes (pour les variables non définies)
-  html = html.replace(/{{[^}]+}}/g, '');
-
-  return html;
+// ✅ util: prend la première valeur non vide
+function pickFirst(...vals: any[]) {
+  for (const v of vals) {
+    if (v === null || v === undefined) continue;
+    const s = String(v).trim();
+    if (s !== "" && s !== "undefined" && s !== "null") return s;
+  }
+  return "";
 }
 
-// ✅ Fonction pour générer le PDF via PDFShift (pour les modèles HTML)
-async function generatePDF(htmlContent: string): Promise<ArrayBuffer> {
-  const PDFSHIFT_API_KEY = Deno.env.get("PDFSHIFT_API_KEY");
-
-  if (!PDFSHIFT_API_KEY) {
-    throw new Error("PDFSHIFT_API_KEY not configured");
+// ✅ util: ajouter X jours à une date ISO
+function addDaysISO(dateStr: string, days: number) {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    d.setDate(d.getDate() + days);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  } catch {
+    return "";
   }
-
-  const response = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${PDFSHIFT_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      source: htmlContent,
-      sandbox: true
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`PDFShift API error: ${errorText}`);
-  }
-
-  return await response.arrayBuffer();
 }
 
-// ✅ Fonction pour nettoyer les tags XML cassés dans le Word
-function cleanXMLVariables(xmlContent: string, key: string): string {
-  const pattern = new RegExp(
-    `{{[^{}]*?${key}[^{}]*?}}`,
-    'gi'
+/** Map app vars -> Word placeholders (sans signature) */
+function mapVariablesToWordFormat(vars: Record<string, any>) {
+  const mapped: Record<string, string> = {};
+
+  mapped["first_name"] = String(vars.first_name || "");
+  mapped["last_name"] = String(vars.last_name || "");
+
+  if ((!mapped.first_name || !mapped.last_name) && vars.nom_salarie) {
+    const parts = String(vars.nom_salarie).trim().split(/\s+/);
+    mapped["first_name"] = mapped["first_name"] || (parts[0] || "");
+    mapped["last_name"] = mapped["last_name"] || (parts.slice(1).join(" ") || parts[0] || "");
+  }
+
+  mapped["birthday"] = vars.birthday ? formatDateFR(vars.birthday) : "";
+  mapped["birthplace"] = String(vars.birthplace || "");
+  mapped["nationality"] = String(vars.nationality || "");
+  mapped["address_1"] = String(vars.address_1 || "");
+  mapped["zip"] = String(vars.zip || "");
+  mapped["city"] = String(vars.city || "");
+  mapped["id_number"] = String(vars.id_number || "");
+
+  // ---------------------------------------------------
+  // ✅ CDD (ancien) : contract_start / contract_end
+  // (on veut les dates du CDD d'origine)
+  // ---------------------------------------------------
+  const cddStartRaw = pickFirst(
+    vars.cdd_contract_start,
+    vars.contract_start_original,
+    vars.contract_start_cdd,
+    vars.date_debut_cdd,
+    vars.cdd_date_debut,
+    vars.contract_start,
+    vars.date_debut
   );
 
-  let cleaned = xmlContent.replace(pattern, `{{${key}}}`);
+  const cddEndRaw = pickFirst(
+    vars.cdd_contract_end,
+    vars.contract_end_original,
+    vars.contract_end_cdd,
+    vars.date_fin_cdd,
+    vars.cdd_date_fin,
+    vars.contract_end,
+    vars.date_fin
+  );
 
-  if (cleaned === xmlContent) {
-    const aggressivePattern = new RegExp(
-      `{{[\\s\\S]*?${key}[\\s\\S]*?}}`,
-      'gi'
-    );
-    cleaned = xmlContent.replace(aggressivePattern, `{{${key}}}`);
-  }
+  mapped["contract_start"] = cddStartRaw ? formatDateFR(cddStartRaw) : "";
+  mapped["contract_end"] = cddEndRaw ? formatDateFR(cddEndRaw) : "";
 
-  return cleaned;
+  // ---------------------------------------------------
+  // ✅ TRIAL (FIX)
+  // Objectif: {{trial_period_text}} = une DATE (dd-mm-yyyy)
+  // Si trial_period_text est vide, on fallback sur trial_end_date / date_fin_periode_essai
+  // ---------------------------------------------------
+  const trialEndRaw = pickFirst(
+    vars.trial_end_date,
+    vars.trialEndDate,
+    vars.date_fin_periode_essai,
+    vars.trial_end,
+    vars.trial_end_iso
+  );
+
+  const trialPeriodTextFromEnd = trialEndRaw ? formatDateFR(trialEndRaw) : "";
+  mapped["trial_period_text"] = pickFirst(vars.trial_period_text, trialPeriodTextFromEnd);
+
+  // ---------------------------------------------------
+  // ✅ AVENANT 1
+  // Placeholders Word:
+  // {{employees_date_de_debut___av1}}  (3 underscores)
+  // {{employees_date_de_fin__av1}}     (2 underscores)
+  // ---------------------------------------------------
+  const av1StartRaw = pickFirst(
+    vars.employees_date_de_debut___av1,
+    vars.date_de_debut___av1,
+    vars.date_debut_av1,
+    vars.avenant1_date_debut,
+    vars.avenant_1_date_debut
+  );
+
+  const av1EndRaw = pickFirst(
+    vars.employees_date_de_fin__av1,
+    vars.date_de_fin__av1,
+    vars.date_fin_av1,
+    vars.avenant1_date_fin,
+    vars.avenant_1_date_fin
+  );
+
+  // si début AV1 absent => lendemain fin CDD
+  const computedAv1StartISO = cddEndRaw ? addDaysISO(cddEndRaw, 1) : "";
+  const av1StartFinal = pickFirst(av1StartRaw, computedAv1StartISO);
+  const av1EndFinal = av1EndRaw;
+
+  mapped["employees_date_de_debut___av1"] = av1StartFinal ? formatDateFR(av1StartFinal) : "";
+  mapped["employees_date_de_fin__av1"] = av1EndFinal ? formatDateFR(av1EndFinal) : "";
+
+  // ---------------------------------------------------
+  // ✅ AVENANT 2
+  // ---------------------------------------------------
+  const av2StartRaw = pickFirst(
+    vars.employees_date_de_debut___av2,
+    vars.date_de_debut___av2,
+    vars.date_debut_av2,
+    vars.avenant2_date_debut,
+    vars.avenant_2_date_debut
+  );
+
+  const av2EndRaw = pickFirst(
+    vars.employees_date_de_fin__av2,
+    vars.date_de_fin__av2,
+    vars.date_fin_av2,
+    vars.avenant2_date_fin,
+    vars.avenant_2_date_fin
+  );
+
+  mapped["employees_date_de_debut___av2"] = av2StartRaw ? formatDateFR(av2StartRaw) : "";
+  mapped["employees_date_de_fin__av2"] = av2EndRaw ? formatDateFR(av2EndRaw) : "";
+
+  console.log("🧪 MAPPING CHECK:", {
+    cddStartRaw,
+    cddEndRaw,
+    av1StartRaw,
+    computedAv1StartISO,
+    av1EndRaw,
+    av2StartRaw,
+    av2EndRaw,
+    trialEndRaw,
+    mapped_contract_start: mapped["contract_start"],
+    mapped_contract_end: mapped["contract_end"],
+    mapped_trial_period_text: mapped["trial_period_text"],
+    mapped_av1_start: mapped["employees_date_de_debut___av1"],
+    mapped_av1_end: mapped["employees_date_de_fin__av1"],
+    mapped_av2_start: mapped["employees_date_de_debut___av2"],
+    mapped_av2_end: mapped["employees_date_de_fin__av2"],
+  });
+
+  return mapped;
 }
 
-// ✅ Fonction pour remplacer les variables dans le fichier Word
-async function replaceVariablesInWord(
-  wordArrayBuffer: ArrayBuffer,
-  variables: Record<string, any>
-): Promise<ArrayBuffer> {
-  console.log("🔵 Replacing variables in Word file with JSZip...");
+/**
+ * Remplace {{key}} même si Word a cassé le token en plusieurs <w:t>.
+ */
+function replaceAcrossWT(xml: string, replacements: Record<string, string>) {
+  const re = /(<w:t\b[^>]*>)([\s\S]*?)(<\/w:t>)/g;
+  const matches = [...xml.matchAll(re)];
+  if (matches.length === 0) return xml;
 
-  const preparedVariables = prepareVariables(variables);
-  console.log("📋 Variables to replace:", Object.keys(preparedVariables));
+  type Node = {
+    start: number;
+    end: number;
+    open: string;
+    text: string;
+    close: string;
+    rangeStart: number;
+    rangeEnd: number;
+  };
 
-  // ✅ LOGS EXPLICITES pour les variables d'avenant APRÈS formatage
-  console.log("✅ Mapped keys - Variables d'avenant formatées:", {
-    employees_date_de_debut___av1: preparedVariables.employees_date_de_debut___av1,
-    employees_date_de_fin__av1: preparedVariables.employees_date_de_fin__av1,
-    employees_date_de_fin__av2: preparedVariables.employees_date_de_fin__av2,
-  });
-  console.log("✅ Mapped keys - Autres dates formatées:", {
-    contract_start: preparedVariables.contract_start,
-    contract_end: preparedVariables.contract_end,
-  });
+  const nodes: Node[] = [];
+  let fullText = "";
+  let cursorText = 0;
 
-  try {
-    const zip = new JSZip();
-    const loaded = await zip.loadAsync(wordArrayBuffer);
-    console.log("✅ Word file loaded as ZIP");
+  for (const m of matches) {
+    const idx = m.index ?? 0;
+    const open = m[1];
+    const text = m[2] ?? "";
+    const close = m[3];
 
-    const filesToModify = [
-      'word/document.xml',
-      'word/document2.xml',
-      'word/header1.xml',
-      'word/header2.xml',
-      'word/footer1.xml',
-      'word/footer2.xml'
-    ];
+    const rangeStart = cursorText;
+    const rangeEnd = cursorText + text.length;
+    cursorText = rangeEnd;
 
-    for (const filePath of filesToModify) {
-      if (!loaded.file(filePath)) continue;
+    nodes.push({
+      start: idx,
+      end: idx + m[0].length,
+      open,
+      text,
+      close,
+      rangeStart,
+      rangeEnd,
+    });
 
-      let xmlContent = await loaded.file(filePath).async('string');
-      console.log(`📝 Processing ${filePath}`);
+    fullText += text;
+  }
 
-      Object.entries(preparedVariables).forEach(([key, value]) => {
-        const stringValue = String(value || '');
+  type Occ = { start: number; end: number; value: string; token: string };
+  const occs: Occ[] = [];
 
-        const cleaned = cleanXMLVariables(xmlContent, key);
-        if (cleaned !== xmlContent) {
-          console.log(`✅ Cleaned broken variable: {{${key}}}`);
-          xmlContent = cleaned;
-        }
-
-        const variableName = `{{${key}}}`;
-        const occurrences = (xmlContent.match(new RegExp(variableName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-
-        if (occurrences > 0) {
-          xmlContent = xmlContent.replaceAll(variableName, stringValue);
-          console.log(`✅ Replaced {{${key}}} (${occurrences}x) with: "${stringValue.substring(0, 50)}"`);
-        }
-      });
-
-      xmlContent = xmlContent.replace(/{{[^}]+}}/g, '');
-      loaded.file(filePath, xmlContent);
+  for (const [k, v] of Object.entries(replacements)) {
+    const token = `{{${k}}}`;
+    let from = 0;
+    while (true) {
+      const pos = fullText.indexOf(token, from);
+      if (pos === -1) break;
+      occs.push({ start: pos, end: pos + token.length, value: v, token });
+      from = pos + token.length;
     }
-
-    const modifiedDocx = await loaded.generateAsync({ type: 'arraybuffer' });
-    console.log("✅ Word file recompressed, size:", modifiedDocx.byteLength, "bytes");
-
-    return modifiedDocx;
-
-  } catch (error) {
-    console.error("❌ Error processing Word file:", error);
-    throw new Error(`Failed to process Word file: ${error.message}`);
   }
+
+  if (occs.length === 0) return xml;
+  occs.sort((a, b) => b.start - a.start);
+
+  const findNodeIndex = (pos: number) => {
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].rangeEnd > pos) return i;
+    }
+    return nodes.length - 1;
+  };
+
+  for (const o of occs) {
+    const iStart = findNodeIndex(o.start);
+    const iEnd = findNodeIndex(o.end - 1);
+
+    const nStart = nodes[iStart];
+    const nEnd = nodes[iEnd];
+
+    const localStart = o.start - nStart.rangeStart;
+    const localEndInEnd = o.end - nEnd.rangeStart;
+
+    const prefix = nStart.text.slice(0, Math.max(0, localStart));
+    const suffix = nEnd.text.slice(Math.max(0, localEndInEnd));
+
+    nStart.text = prefix + o.value + suffix;
+
+    for (let i = iStart + 1; i <= iEnd; i++) nodes[i].text = "";
+  }
+
+  let out = "";
+  let last = 0;
+
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    out += xml.slice(last, n.start);
+    out += `${n.open}${n.text}${n.close}`;
+    last = n.end;
+  }
+  out += xml.slice(last);
+
+  return out;
 }
 
-// ✅ NEW: Fonction pour convertir Word avec variables → PDF
-async function convertWordToPDF(
-  wordFileUrl: string,
-  variables: Record<string, any>
-): Promise<ArrayBuffer> {
+async function replaceVariablesInDocxRobust(docx: ArrayBuffer, variables: Record<string, any>) {
+  const mappedRaw = mapVariablesToWordFormat(variables);
+  const mapped: Record<string, string> = {};
+  for (const [k, v] of Object.entries(mappedRaw)) mapped[k] = escapeXML(String(v ?? ""));
+
+  console.log("✅ Mapped keys:", Object.keys(mapped));
+
+  const zip = new JSZip();
+  const loaded = await zip.loadAsync(docx);
+
+  const targets = [
+    "word/document.xml",
+    "word/header1.xml",
+    "word/header2.xml",
+    "word/footer1.xml",
+    "word/footer2.xml",
+  ];
+
+  for (const filePath of targets) {
+    const file = loaded.file(filePath);
+    if (!file) continue;
+
+    let xml = await file.async("string");
+    const before = xml;
+
+    xml = replaceAcrossWT(xml, mapped);
+
+    if (xml !== before) console.log(`✅ Replaced placeholders in ${filePath}`);
+    loaded.file(filePath, xml);
+  }
+
+  const out = await loaded.generateAsync({ type: "arraybuffer", compression: "DEFLATE" });
+  if (!out || out.byteLength === 0) throw new Error("DOCX modified is empty");
+
+  const zipCheck = new JSZip();
+  await zipCheck.loadAsync(out);
+  if (!zipCheck.file("word/document.xml")) throw new Error("DOCX corrupted (document.xml missing)");
+
+  console.log("✅ Modified DOCX size:", out.byteLength);
+  return out;
+}
+
+async function convertDocxToPdfCloudConvert(docxUrl: string, variables: Record<string, any>) {
   const CLOUDCONVERT_API_KEY = Deno.env.get("CLOUDCONVERT_API_KEY");
+  if (!CLOUDCONVERT_API_KEY) throw new Error("CLOUDCONVERT_API_KEY missing");
 
-  if (!CLOUDCONVERT_API_KEY) {
-    throw new Error("CLOUDCONVERT_API_KEY not configured");
-  }
+  console.log("📥 Downloading DOCX:", docxUrl);
+  const resp = await fetch(docxUrl);
+  if (!resp.ok) throw new Error(`DOCX download failed: ${resp.status} ${resp.statusText}`);
+  let docx = await resp.arrayBuffer();
+  console.log("✅ Downloaded DOCX size:", docx.byteLength);
 
-  console.log("🔵 Starting Word → PDF conversion with variable replacement...");
-  console.log("📄 Word file URL:", wordFileUrl);
+  console.log("🔧 Replacing variables in DOCX (ROBUST)...");
+  docx = await replaceVariablesInDocxRobust(docx, variables);
 
-  console.log("📥 Step 1: Downloading Word template...");
-  const wordResponse = await fetch(wordFileUrl);
-  if (!wordResponse.ok) {
-    throw new Error(`Failed to download Word template: ${wordResponse.statusText}`);
-  }
-
-  const wordArrayBuffer = await wordResponse.arrayBuffer();
-  console.log("✅ Word template downloaded, size:", wordArrayBuffer.byteLength, "bytes");
-
-  console.log("🔧 Step 2: Replacing variables in Word...");
-  const modifiedWordBuffer = await replaceVariablesInWord(wordArrayBuffer, variables);
-  console.log("✅ Variables replaced, size:", modifiedWordBuffer.byteLength, "bytes");
-
-  console.log("📤 Step 3: Creating CloudConvert job...");
-  const jobResponse = await fetch("https://api.cloudconvert.com/v2/jobs", {
+  console.log("📤 Creating CloudConvert job...");
+  const jobResp = await fetch("https://api.cloudconvert.com/v2/jobs", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${CLOUDCONVERT_API_KEY}`,
-      "Content-Type": "application/json"
+      Authorization: `Bearer ${CLOUDCONVERT_API_KEY}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       tasks: {
-        "upload-word": {
-          operation: "import/upload"
-        },
+        "upload-docx": { operation: "import/upload" },
         "convert-to-pdf": {
           operation: "convert",
-          input: "upload-word",
-          output_format: "pdf"
+          input: ["upload-docx"],
+          output_format: "pdf",
+          engine: "office",
         },
-        "export-pdf": {
-          operation: "export/url",
-          input: "convert-to-pdf"
-        }
-      }
-    })
+        "export-pdf": { operation: "export/url", input: ["convert-to-pdf"] },
+      },
+    }),
   });
 
-  if (!jobResponse.ok) {
-    const errorText = await jobResponse.text();
-    console.error("❌ CloudConvert job creation error:", errorText);
-    throw new Error(`CloudConvert job creation error: ${errorText}`);
+  const jobData = await jobResp.json();
+  if (!jobResp.ok) {
+    console.error("❌ CloudConvert job create failed:", jobData);
+    throw new Error(`CloudConvert job create failed: ${jobResp.status}`);
   }
 
-  const jobData = await jobResponse.json();
   const jobId = jobData.data.id;
-  console.log("✅ CloudConvert job created:", jobId);
+  console.log("✅ CloudConvert jobId:", jobId);
 
-  console.log("📤 Step 4: Uploading modified Word file...");
-  const uploadTask = jobData.data.tasks.find((t: any) => t.name === "upload-word");
-  if (!uploadTask || !uploadTask.result?.form?.url) {
-    throw new Error("Upload task URL not found in CloudConvert response");
-  }
-
+  const uploadTask = jobData.data.tasks.find((t: any) => t.name === "upload-docx");
   const uploadUrl = uploadTask.result.form.url;
   const uploadParams = uploadTask.result.form.parameters;
 
-  const formData = new FormData();
-  Object.entries(uploadParams).forEach(([key, value]) => {
-    formData.append(key, value as string);
-  });
-  formData.append("file", new Blob([modifiedWordBuffer]), "contract_modified.docx");
+  const form = new FormData();
+  for (const [k, v] of Object.entries(uploadParams)) form.append(k, String(v));
+  form.append("file", new Blob([docx]), "contract.docx");
 
-  const uploadResponse = await fetch(uploadUrl, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!uploadResponse.ok) {
-    console.error("❌ Upload failed:", uploadResponse.statusText);
-    throw new Error(`Failed to upload Word file to CloudConvert: ${uploadResponse.statusText}`);
+  console.log("📤 Uploading DOCX to CloudConvert...");
+  const up = await fetch(uploadUrl, { method: "POST", body: form });
+  if (!up.ok) {
+    const t = await up.text();
+    console.error("❌ CloudConvert upload failed:", up.status, t);
+    throw new Error(`CloudConvert upload failed: ${up.status}`);
   }
 
-  console.log("✅ Word file uploaded successfully");
-
-  console.log("⏳ Step 5: Waiting for PDF conversion...");
-  let jobStatus = jobData.data.status;
+  let status = jobData.data.status;
   let attempts = 0;
-  const maxAttempts = 30;
-  let finalStatusData = jobData;
+  let finalData = jobData;
 
-  while (jobStatus !== "finished" && jobStatus !== "error" && attempts < maxAttempts) {
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const statusResponse = await fetch(`https://api.cloudconvert.com/v2/jobs/${jobId}`, {
-      headers: {
-        "Authorization": `Bearer ${CLOUDCONVERT_API_KEY}`
-      }
+  while (status !== "finished" && status !== "error" && attempts < 30) {
+    await sleep(2000);
+    const s = await fetch(`https://api.cloudconvert.com/v2/jobs/${jobId}`, {
+      headers: { Authorization: `Bearer ${CLOUDCONVERT_API_KEY}` },
     });
-
-    if (!statusResponse.ok) {
-      throw new Error("Failed to check CloudConvert job status");
-    }
-
-    finalStatusData = await statusResponse.json();
-    jobStatus = finalStatusData.data.status;
+    finalData = await s.json();
+    status = finalData.data.status;
     attempts++;
-
-    console.log(`⏳ Job status: ${jobStatus} (attempt ${attempts}/${maxAttempts})`);
+    console.log(`⏳ CloudConvert status: ${status} (${attempts}/30)`);
   }
 
-  if (jobStatus === "error") {
-    console.error("❌ CloudConvert job failed");
-    const errorTasks = finalStatusData.data.tasks?.filter((t: any) => t.status === "error") || [];
-    if (errorTasks.length > 0) {
-      const errorMessages = errorTasks.map((t: any) =>
-        `Task "${t.name}": ${t.message || "Unknown error"}`
-      ).join(", ");
-      throw new Error(`CloudConvert failed: ${errorMessages}`);
-    }
-    throw new Error("CloudConvert job failed with unknown error");
+  if (status === "error") {
+    console.error("❌ CloudConvert error:", JSON.stringify(finalData, null, 2));
+    const convertTask = finalData?.data?.tasks?.find((t: any) => t.name === "convert-to-pdf");
+    const code = convertTask?.code || "UNKNOWN";
+    const msg = convertTask?.message || "Unknown CloudConvert error";
+    throw new Error(`CloudConvert conversion failed: ${code} - ${msg}`);
   }
 
-  if (jobStatus !== "finished") {
-    throw new Error(`CloudConvert job timeout after ${attempts} attempts`);
+  const exportTask = finalData.data.tasks.find((t: any) => t.name === "export-pdf");
+  const pdfUrl = exportTask?.result?.files?.[0]?.url;
+  if (!pdfUrl) throw new Error("PDF URL missing (CloudConvert)");
+
+  console.log("📥 Downloading PDF:", pdfUrl);
+  const pdfResp = await fetch(pdfUrl);
+  if (!pdfResp.ok) throw new Error(`PDF download failed: ${pdfResp.status} ${pdfResp.statusText}`);
+  const pdf = await pdfResp.arrayBuffer();
+  console.log("✅ PDF size:", pdf.byteLength);
+
+  return pdf;
+}
+
+async function yousignFetch(url: string, init: RequestInit) {
+  const r = await fetch(url, init);
+  const txt = await r.text();
+  let json: any = null;
+  try {
+    json = txt ? JSON.parse(txt) : null;
+  } catch {
+    // ignore
   }
 
-  console.log("📥 Step 6: Retrieving PDF...");
-  const exportTask = finalStatusData.data.tasks?.find((t: any) => t.name === "export-pdf");
-  if (!exportTask || !exportTask.result?.files?.[0]?.url) {
-    throw new Error("CloudConvert export task not found or has no download URL");
+  if (!r.ok) {
+    console.error("❌ Yousign API error:", r.status, txt);
+    throw new Error(`Yousign API failed ${r.status}: ${txt}`);
   }
+  return json ?? txt;
+}
 
-  const pdfUrl = exportTask.result.files[0].url;
-  console.log("✅ PDF URL:", pdfUrl);
-
-  const pdfResponse = await fetch(pdfUrl);
-  if (!pdfResponse.ok) {
-    throw new Error("Failed to download converted PDF");
-  }
-
-  console.log("✅ PDF downloaded successfully");
-  return await pdfResponse.arrayBuffer();
+function buildPublicStorageUrl(supabaseUrl: string, storagePath: string) {
+  const parts = storagePath.split("/").filter(Boolean);
+  const bucket = parts.shift();
+  const objectPath = parts.join("/");
+  if (!bucket || !objectPath) throw new Error(`storage_path invalide: ${storagePath}`);
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${objectPath}`;
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
   try {
-    const body = await req.json().catch(() => null);
-
-    if (!body) {
-      return new Response(
-        JSON.stringify({ error: "Invalid JSON body", success: false }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+    const { contractId } = (await req.json()) as Body;
+    if (!contractId) {
+      return new Response(JSON.stringify({ success: false, error: "contractId missing" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const { contractId }: SignatureRequest = body;
-
-    console.log("Received request:", { contractId });
-
-    const YOUSIGN_API_KEY = Deno.env.get("YOUSIGN_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const YOUSIGN_API_KEY = Deno.env.get("YOUSIGN_API_KEY");
+    const YOUSIGN_BASE_URL = Deno.env.get("YOUSIGN_BASE_URL") ?? "https://api-sandbox.yousign.app/v3";
 
-    if (!YOUSIGN_API_KEY) {
-      throw new Error("YOUSIGN_API_KEY not configured");
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !YOUSIGN_API_KEY) {
+      throw new Error("Missing env: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / YOUSIGN_API_KEY");
     }
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Supabase configuration missing");
-    }
+    console.log("🟢 contractId:", contractId);
 
-    // Récupérer le contrat avec le modèle
-    console.log("Fetching contract with ID:", contractId);
-    const contractResponse = await fetch(
-      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,modele:modele_id(*),profil:profil_id(*)`,
+    const contractResp = await fetch(
+      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,profil:profil_id(*),modele:modele_id(*)`,
       {
         headers: {
-          "apikey": SUPABASE_SERVICE_ROLE_KEY,
-          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          "Accept": "application/json",
-          "Content-Type": "application/json"
-        }
-      }
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          Accept: "application/json",
+        },
+      },
     );
 
-    if (!contractResponse.ok) {
-      throw new Error(`Failed to fetch contract: ${contractResponse.statusText}`);
-    }
+    const arr = await contractResp.json();
+    const contract = arr?.[0];
+    if (!contract) throw new Error("Contract not found");
 
-    const contracts = await contractResponse.json();
-    const contract = contracts[0];
+    let docxUrl: string | null = null;
+    if (contract.modele?.fichier_url) docxUrl = contract.modele.fichier_url;
+    else if (contract.fichier_contrat_url) docxUrl = contract.fichier_contrat_url;
+    else if (contract.storage_path) docxUrl = buildPublicStorageUrl(SUPABASE_URL, contract.storage_path);
 
-    if (!contract) {
-      throw new Error("Contract not found");
-    }
+    if (!docxUrl) throw new Error("Aucun modèle DOCX trouvé (modele_id / fichier_contrat_url / storage_path vides)");
+    console.log("📄 Using DOCX URL:", docxUrl);
 
-    // Récupérer l'email et le nom depuis le profil
-    const employeeEmail = contract.profil?.email || contract.variables?.email_salarie || '';
+    const rawVars =
+      typeof contract.variables === "string"
+        ? JSON.parse(contract.variables || "{}")
+        : (contract.variables || {});
+
+    const employeeEmail = contract.profil?.email || "";
     const employeeName = contract.profil
-      ? `${contract.profil.prenom} ${contract.profil.nom}`
-      : contract.variables?.nom_salarie || 'Salarié';
+      ? `${contract.profil.prenom ?? ""} ${contract.profil.nom ?? ""}`.trim()
+      : "Salarié";
 
-    console.log("Employee data:", { employeeEmail, employeeName });
+    if (!employeeEmail || !employeeEmail.includes("@")) throw new Error("Email salarié invalide");
 
-    if (!employeeEmail || !employeeEmail.includes('@')) {
-      throw new Error("Email employé invalide ou manquant dans le profil");
-    }
+    // ✅ TRIAL (FIX): récupère la date depuis profil.date_fin_periode_essai
+    const trialEndISO = pickFirst(
+      rawVars.trial_end_date,
+      rawVars.date_fin_periode_essai,
+      contract.date_fin_periode_essai,
+      contract.profil?.date_fin_periode_essai, // ✅ ton champ est là !
+    );
 
-    // ✅ DÉCISION : PDF ou Word ?
-    let pdfArrayBuffer: ArrayBuffer;
-    const isWordFile = contract.modele?.fichier_nom?.toLowerCase().endsWith('.docx');
+    console.log("🧪 TRIAL DEBUG:", {
+      raw_trial_end_date: rawVars?.trial_end_date,
+      raw_date_fin_periode_essai: rawVars?.date_fin_periode_essai,
+      contract_date_fin_periode_essai: contract?.date_fin_periode_essai,
+      profil_date_fin_periode_essai: contract?.profil?.date_fin_periode_essai,
+      trialEndISO,
+    });
 
-    if (isWordFile && contract.modele?.fichier_url) {
-      // ✅ OPTION 1 : Fichier Word → CloudConvert
-      console.log("Detected Word file, using CloudConvert...");
+    const enriched = {
+      ...rawVars,
 
-      const variables = typeof contract.variables === 'string'
-        ? JSON.parse(contract.variables)
-        : contract.variables || {};
+      nom_salarie: employeeName,
+      first_name: contract.profil?.prenom || rawVars.first_name || "",
+      last_name: contract.profil?.nom || rawVars.last_name || "",
+      birthday: contract.profil?.date_naissance || rawVars.birthday || "",
+      birthplace: contract.profil?.lieu_naissance || rawVars.birthplace || "",
+      nationality: contract.profil?.nationalite || rawVars.nationality || "",
+      address_1: contract.profil?.adresse || rawVars.address_1 || "",
+      city: contract.profil?.ville || rawVars.city || "",
+      zip: contract.profil?.code_postal || rawVars.zip || "",
+      id_number: contract.profil?.numero_piece_identite || rawVars.id_number || "",
 
-      console.log("📊 Variables from contract:", JSON.stringify(variables, null, 2).substring(0, 500));
+      contract_start: pickFirst(rawVars.contract_start, rawVars.cdd_contract_start, rawVars.contract_start_original, contract.date_debut),
+      contract_end: pickFirst(rawVars.contract_end, rawVars.cdd_contract_end, rawVars.contract_end_original),
 
-      // ✅ A) Créer un objet PLAT avec toutes les variables (profil + contract.variables)
-      const profilVars: Record<string, any> = {
-        nom_salarie: employeeName,
-        first_name: contract.profil?.prenom || '',
-        last_name: contract.profil?.nom || '',
-        birthday: contract.profil?.date_naissance || '',
-        birthplace: contract.profil?.lieu_naissance || '',
-        nationality: contract.profil?.nationalite || '',
-        address_1: contract.profil?.adresse || '',
-        city: contract.profil?.ville || '',
-        zip: contract.profil?.code_postal || '',
-        id_number: contract.profil?.numero_piece_identite || '',
-        email_salarie: employeeEmail,
-        signature: '',
-      };
+      avenant_1_date_debut: pickFirst(contract.profil?.avenant_1_date_debut, rawVars.avenant_1_date_debut),
+      avenant_1_date_fin: pickFirst(contract.profil?.avenant_1_date_fin, rawVars.avenant_1_date_fin),
 
-      // B) Fusionner avec les variables du contrat (inclut date_debut, date_fin, variables avenant, etc.)
-      const rawVars: Record<string, any> = {
-        ...profilVars,
-        ...variables,
-      };
+      avenant_2_date_debut: pickFirst(contract.profil?.avenant_2_date_debut, rawVars.avenant_2_date_debut),
+      avenant_2_date_fin: pickFirst(contract.profil?.avenant_2_date_fin, rawVars.avenant_2_date_fin),
 
-      // ✅ LOG DES RAW VARS AVANT FORMATAGE
-      console.log("🧪 rawVars dates (before formatting):", {
-        contract_start: rawVars.contract_start,
-        contract_end: rawVars.contract_end,
-        employees_date_de_debut___av1: rawVars.employees_date_de_debut___av1,
-        employees_date_de_fin__av1: rawVars.employees_date_de_fin__av1,
-        employees_date_de_fin__av2: rawVars.employees_date_de_fin__av2,
-      });
+      // ✅ TRIAL (FIX): on pousse un champ "trial_end_date" lisible par le mapping
+      trial_end_date: trialEndISO,
 
-      // C) Créer templateVars avec priorité correcte (ne PAS écraser les dates historiques)
-      const templateVars: Record<string, any> = {
-        ...rawVars,
-        // ✅ PRIORITÉ AUX DATES HISTORIQUES : contract_start/end viennent de rawVars EN PRIORITÉ
-        // (ne pas écraser avec contract.date_debut/fin qui sont les nouvelles dates de l'avenant)
-        contract_start: rawVars.contract_start || contract.date_debut || rawVars.date_debut || '',
-        contract_end: rawVars.contract_end || contract.date_fin || rawVars.date_fin || '',
-        date_debut: contract.date_debut || rawVars.date_debut || '',
-        date_fin: contract.date_fin || rawVars.date_fin || '',
-        // ✅ MAPPING EXPLICITE DES VARIABLES D'AVENANT (avec 3 underscores)
-        employees_date_de_debut___av1: rawVars.employees_date_de_debut___av1 || '',
-        employees_date_de_fin__av1: rawVars.employees_date_de_fin__av1 || '',
-        employees_date_de_fin__av2: rawVars.employees_date_de_fin__av2 || '',
-      };
+      // si ton front l’envoie déjà, ok, sinon le mapping fallback sur trial_end_date
+      trial_period_text: rawVars.trial_period_text || "",
+    };
 
-      // D) Remplacer tous les null/undefined par "" (string vide)
-      Object.keys(templateVars).forEach(key => {
-        if (templateVars[key] === null || templateVars[key] === undefined) {
-          templateVars[key] = '';
-        }
-      });
+    console.log("✅ employeeName:", employeeName);
+    console.log("✅ employeeEmail:", employeeEmail);
 
-      // E) Logs pour debug des variables AVANT formatage
-      console.log("🔑 DOCX templateVars keys:", Object.keys(templateVars));
-      console.log("📋 Template values (before formatting):", {
-        contract_start: templateVars.contract_start,
-        contract_end: templateVars.contract_end,
-        employees_date_de_debut___av1: templateVars.employees_date_de_debut___av1,
-        employees_date_de_fin__av1: templateVars.employees_date_de_fin__av1,
-        employees_date_de_fin__av2: templateVars.employees_date_de_fin__av2,
-        first_name: templateVars.first_name,
-        last_name: templateVars.last_name,
-        date_debut: templateVars.date_debut,
-        date_fin: templateVars.date_fin,
-      });
+    const pdf = await convertDocxToPdfCloudConvert(docxUrl, enriched);
 
-      const enrichedVariables = templateVars;
+    const pageCount = await getPdfPageCount(pdf);
+    console.log("📄 PDF pageCount:", pageCount);
 
-      pdfArrayBuffer = await convertWordToPDF(contract.modele.fichier_url, enrichedVariables);
-      console.log("Word → PDF conversion completed");
+    const pdfBlob = new Blob([pdf], { type: "application/pdf" });
 
-    } else if (contract.modele?.contenu_html) {
-      // ✅ OPTION 2 : HTML → PDF (méthode classique)
-      console.log("Using HTML → PDF conversion...");
-      const htmlContent = await generateContractHTML(contract);
-      pdfArrayBuffer = await generatePDF(htmlContent);
-      console.log("HTML → PDF conversion completed");
+    const exp = new Date();
+    exp.setHours(exp.getHours() + 48);
 
-    } else {
-      throw new Error("Le modèle de contrat n'a ni fichier Word ni contenu HTML");
-    }
-
-    const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
-    console.log("PDF ready for Yousign, size:", pdfBlob.size, "bytes");
-
-    // Calculer la date d'expiration (48h)
-    const expirationDate = new Date();
-    expirationDate.setHours(expirationDate.getHours() + 48);
-    const formattedExpiration = expirationDate.toISOString().split('T')[0];
-    console.log("Setting expiration to 48h:", formattedExpiration);
-
-    // ✅ ÉTAPE 1 : Créer une signature request
-    console.log("Step 1: Creating signature request...");
-    const signatureRequestResponse = await fetch("https://api-sandbox.yousign.app/v3/signature_requests", {
+    const signatureRequest = await yousignFetch(`${YOUSIGN_BASE_URL}/signature_requests`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${YOUSIGN_API_KEY}`,
+        Authorization: `Bearer ${YOUSIGN_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         name: `Contrat de travail - ${employeeName}`,
         delivery_mode: "email",
         timezone: "Europe/Paris",
-        expiration_date: formattedExpiration,
+        expiration_date: exp.toISOString().split("T")[0],
         external_id: contractId,
       }),
     });
 
-    if (!signatureRequestResponse.ok) {
-      const errorText = await signatureRequestResponse.text();
-      console.error("Yousign signature request error:", errorText);
-      throw new Error(`Yousign signature request error: ${errorText}`);
-    }
+    const signatureRequestId = signatureRequest.id;
+    console.log("✅ Signature request created:", signatureRequestId);
 
-    const signatureRequestData = await signatureRequestResponse.json();
-    const signatureRequestId = signatureRequestData.id;
-    console.log("Signature request created with ID:", signatureRequestId);
+    const uploadForm = new FormData();
+    uploadForm.append("nature", "signable_document");
+    uploadForm.append("parse_anchors", "true");
+    uploadForm.append("file", pdfBlob, `contrat_${employeeName.replace(/\s+/g, "_")}.pdf`);
 
-    // ✅ ÉTAPE 2 : Uploader le document vers la signature request
-    console.log("Step 2: Uploading document to signature request...");
-    const formData = new FormData();
-    formData.append("nature", "signable_document");
-    formData.append("parse_anchors", "true");
-    formData.append("file", pdfBlob, `contrat_${employeeName.replace(/\s+/g, '_')}.pdf`);
-
-    const uploadResponse = await fetch(
-      `https://api-sandbox.yousign.app/v3/signature_requests/${signatureRequestId}/documents`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${YOUSIGN_API_KEY}`,
-        },
-        body: formData,
-      }
+    const documentData = await yousignFetch(
+      `${YOUSIGN_BASE_URL}/signature_requests/${signatureRequestId}/documents`,
+      { method: "POST", headers: { Authorization: `Bearer ${YOUSIGN_API_KEY}` }, body: uploadForm },
     );
 
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error("Yousign upload error:", errorText);
-      throw new Error(`Yousign upload error: ${errorText}`);
-    }
-
-    const documentData = await uploadResponse.json();
     const documentId = documentData.id;
-    console.log("Document uploaded with ID:", documentId);
+    console.log("✅ Document uploaded:", documentId);
 
-    // ✅ B) FIX SIGNATURE : Analyser le PDF pour obtenir le nombre de pages et positionner sur la dernière
-    console.log("Step 3.5: Analyzing PDF with pdf-lib...");
-    const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
-    const pageCount = pdfDoc.getPageCount();
-    const lastPage = pdfDoc.getPage(pageCount - 1);
-    const { width: pageWidth, height: pageHeight } = lastPage.getSize();
+    let anchorsDetected = false;
+    try {
+      const fields = await yousignFetch(
+        `${YOUSIGN_BASE_URL}/signature_requests/${signatureRequestId}/documents/${documentId}/fields`,
+        { method: "GET", headers: { Authorization: `Bearer ${YOUSIGN_API_KEY}` } },
+      );
+      anchorsDetected = Array.isArray(fields) ? fields.length > 0 : (fields?.data?.length ?? 0) > 0;
+      console.log("🔎 Anchors detected via fields:", anchorsDetected);
+    } catch (e) {
+      console.log(
+        "⚠️ Could not read fields endpoint, fallback to manual if needed:",
+        String((e as any)?.message || e),
+      );
+      anchorsDetected = false;
+    }
 
-    console.log(`📄 PDF has ${pageCount} pages, last page size: ${pageWidth}x${pageHeight}`);
+    const parts = employeeName.trim().split(/\s+/);
+    const firstName = parts[0] || employeeName;
+    const lastName = parts.slice(1).join(" ") || firstName;
 
-    // Position dans le quart bas-droit de la dernière page (coordonnées RELATIVES)
-    const signatureX = Math.round(pageWidth * 0.62);
-    const signatureY = Math.round(pageHeight * 0.12);
-    const signatureWidth = Math.round(pageWidth * 0.30);
-    const signatureHeight = 70;
+    const signX = Number(Deno.env.get("YOUSIGN_SIGN_X") || "400");
+    const signY = Number(Deno.env.get("YOUSIGN_SIGN_Y") || "650");
+    const signW = Number(Deno.env.get("YOUSIGN_SIGN_W") || "180");
 
-    console.log(`✍️ Signature position on page ${pageCount}: x=${signatureX}, y=${signatureY}, width=${signatureWidth}, height=${signatureHeight}`);
+    const envPageRaw = Number(Deno.env.get("YOUSIGN_SIGN_PAGE") || "");
+    let signPage = Number.isFinite(envPageRaw) && envPageRaw > 0 ? envPageRaw : pageCount;
+    if (signPage > pageCount) {
+      console.log(`⚠️ YOUSIGN_SIGN_PAGE=${signPage} > pageCount=${pageCount}. Using last page.`);
+      signPage = pageCount;
+    }
+    if (signPage < 1) signPage = 1;
 
-    // Étape 4: Ajouter le signataire
-    console.log("Step 4: Adding signer...");
-    const nameParts = employeeName.trim().split(' ');
-    const firstName = nameParts[0] || employeeName;
-    const lastName = nameParts.slice(1).join(' ') || firstName;
+    const signerPayload: any = {
+      info: { first_name: firstName, last_name: lastName, email: employeeEmail, locale: "fr" },
+      signature_level: "electronic_signature",
+      signature_authentication_mode: "no_otp",
+    };
 
-    const signerResponse = await fetch(
-      `https://api-sandbox.yousign.app/v3/signature_requests/${signatureRequestId}/signers`,
+    if (!anchorsDetected) {
+      signerPayload.fields = [
+        { document_id: documentId, type: "signature", page: signPage, width: signW, x: signX, y: signY },
+      ];
+      console.log("🧷 Using MANUAL signature field:", signerPayload.fields[0], "pageCount:", pageCount);
+    } else {
+      console.log("🧷 Using SMART ANCHORS (no manual fields)");
+    }
+
+    const signerData = await yousignFetch(
+      `${YOUSIGN_BASE_URL}/signature_requests/${signatureRequestId}/signers`,
       {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${YOUSIGN_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          info: {
-            first_name: firstName,
-            last_name: lastName,
-            email: employeeEmail,
-            locale: "fr",
-          },
-          signature_level: "electronic_signature",
-          signature_authentication_mode: "no_otp",
-          fields: [
-            {
-              document_id: documentId,
-              type: "signature",
-              page: pageCount,  // ✅ Dernière page dynamique
-              x: signatureX,
-              y: signatureY,
-              width: signatureWidth,
-              height: signatureHeight,
-            }
-          ]
-        }),
-      }
+        headers: { Authorization: `Bearer ${YOUSIGN_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify(signerPayload),
+      },
     );
 
-    if (!signerResponse.ok) {
-      const errorText = await signerResponse.text();
-      console.error("Yousign signer error:", errorText);
-      throw new Error(`Yousign signer error: ${errorText}`);
-    }
+    console.log("✅ Signer added:", signerData.id);
 
-    const signerData = await signerResponse.json();
-    console.log("Signer added with ID:", signerData.id);
-
-    // Étape 5: Activer la signature request
-    console.log("Step 5: Activating signature request...");
-    const activateResponse = await fetch(
-      `https://api-sandbox.yousign.app/v3/signature_requests/${signatureRequestId}/activate`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${YOUSIGN_API_KEY}`,
-        },
-      }
+    const activated = await yousignFetch(
+      `${YOUSIGN_BASE_URL}/signature_requests/${signatureRequestId}/activate`,
+      { method: "POST", headers: { Authorization: `Bearer ${YOUSIGN_API_KEY}` } },
     );
 
-    if (!activateResponse.ok) {
-      const errorText = await activateResponse.text();
-      console.error("Yousign activate error:", errorText);
-      throw new Error(`Yousign activate error: ${errorText}`);
-    }
+    console.log("✅ Activated");
 
-    console.log("Signature request activated successfully");
+    const signatureLink = activated?.signers?.[0]?.signature_link ?? null;
 
-    // Mettre à jour le contrat dans Supabase
-    const updateResponse = await fetch(
-      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}`,
-      {
-        method: "PATCH",
-        headers: {
-          "apikey": SUPABASE_SERVICE_ROLE_KEY,
-          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          "Content-Type": "application/json",
-          "Prefer": "return=minimal"
-        },
-        body: JSON.stringify({
-          yousign_signature_request_id: signatureRequestId,
-          yousign_signer_id: signerData.id,
-          statut: 'en_attente_signature'
-        })
-      }
-    );
-
-    if (!updateResponse.ok) {
-      console.error("Supabase update error:", await updateResponse.text());
-    }
+    await fetch(`${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}`, {
+      method: "PATCH",
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        yousign_signature_request_id: signatureRequestId,
+        yousign_signer_id: signerData.id,
+        statut: "en_attente_signature",
+        yousign_document_url: signatureLink,
+      }),
+    });
 
     return new Response(
       JSON.stringify({
         success: true,
-        signatureRequestId: signatureRequestId,
+        signatureRequestId,
         signerId: signerData.id,
-        message: "Demande de signature créée et activée avec succès"
+        documentId,
+        signatureLink,
+        anchorsDetected,
+        pageCount,
+        usedManualPage: !anchorsDetected ? signPage : null,
       }),
-      {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-  } catch (error) {
-    console.error("Error in create-yousign-signature:", error);
-    return new Response(
-      JSON.stringify({
-        error: error.message,
-        success: false
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+  } catch (e) {
+    console.error("❌ Error:", (e as any)?.message || e);
+    return new Response(JSON.stringify({ success: false, error: String((e as any)?.message || e) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
