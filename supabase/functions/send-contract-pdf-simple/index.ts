@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     console.log("Signature request ID:", signatureRequestId);
 
     const srResponse = await fetch(
-      `https://api-sandbox.yousign.app/v3/signature_requests/${signatureRequestId}`,
+      `https://api.yousign.app/v3/signature_requests/${signatureRequestId}`,
       {
         headers: {
           "Authorization": `Bearer ${YOUSIGN_API_KEY}`,
@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
     const documentId = documents[0].id;
     console.log("Document ID:", documentId);
 
-    const downloadUrl = `https://api-sandbox.yousign.app/v3/signature_requests/${signatureRequestId}/documents/${documentId}/download`;
+    const downloadUrl = `https://api.yousign.app/v3/signature_requests/${signatureRequestId}/documents/${documentId}/download`;
     console.log("Downloading from:", downloadUrl);
 
     const pdfResponse = await fetch(downloadUrl, {

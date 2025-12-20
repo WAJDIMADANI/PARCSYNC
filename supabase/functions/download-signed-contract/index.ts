@@ -57,7 +57,7 @@ Deno.serve(async (req: Request) => {
     // Récupérer les détails de la signature request pour obtenir le document ID
     console.log("Fetching signature request details...");
     const signatureRequestResponse = await fetch(
-      `https://api-sandbox.yousign.app/v3/signature_requests/${signatureRequestId}`,
+      `https://api.yousign.app/v3/signature_requests/${signatureRequestId}`,
       {
         headers: {
           "Authorization": `Bearer ${YOUSIGN_API_KEY}`,
@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
 
     // Télécharger le document signé
     console.log("Downloading signed document...");
-    const downloadUrl = `https://api-sandbox.yousign.app/v3/signature_requests/${signatureRequestId}/documents/${documentId}/download`;
+    const downloadUrl = `https://api.yousign.app/v3/signature_requests/${signatureRequestId}/documents/${documentId}/download`;
 
     const downloadResponse = await fetch(downloadUrl, {
       headers: {

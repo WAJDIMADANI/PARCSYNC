@@ -482,7 +482,7 @@ Deno.serve(async (req: Request) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const YOUSIGN_API_KEY = Deno.env.get("YOUSIGN_API_KEY");
-    const YOUSIGN_BASE_URL = Deno.env.get("YOUSIGN_BASE_URL") ?? "https://api-sandbox.yousign.app/v3";
+    const YOUSIGN_BASE_URL = Deno.env.get("YOUSIGN_BASE_URL") ?? "https://api.yousign.app/v3";
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !YOUSIGN_API_KEY) {
       throw new Error("Missing env: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / YOUSIGN_API_KEY");
