@@ -518,7 +518,7 @@ export function InboxPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             {isUnread && (
-                              <span className="px-3 py-1 bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white text-xs font-extrabold rounded-full uppercase tracking-widest shadow-lg animate-pulse ring-2 ring-orange-300 ring-offset-2">
+                              <span className="px-2 py-0.5 bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white text-xs font-extrabold rounded-full uppercase tracking-tight shadow-lg animate-pulse">
                                 Nouveau
                               </span>
                             )}
@@ -534,13 +534,13 @@ export function InboxPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        <span className={`px-4 py-1.5 text-xs font-extrabold rounded-full uppercase tracking-wide ${getPriorityColor(tache.priorite)}`}>
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-2">
+                        <span className={`px-2 py-1 text-xs font-extrabold rounded-full uppercase tracking-wide ${getPriorityColor(tache.priorite)}`}>
                           {tache.priorite}
                         </span>
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${getStatusBadgeClass(tache.statut)}`}>
+                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${getStatusBadgeClass(tache.statut)}`}>
                           {getStatusIcon(tache.statut)}
-                          <span className="text-xs font-bold uppercase tracking-wide">{tache.statut.replace('_', ' ')}</span>
+                          <span className="text-xs font-bold uppercase tracking-tight whitespace-nowrap">{tache.statut.replace('_', ' ')}</span>
                         </div>
                       </div>
                     </div>
@@ -569,7 +569,7 @@ export function InboxPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             {isUnread && (
-                              <span className="px-3 py-1 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white text-xs font-extrabold rounded-full uppercase tracking-widest shadow-lg animate-pulse ring-2 ring-rose-300 ring-offset-2">
+                              <span className="px-2 py-0.5 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white text-xs font-extrabold rounded-full uppercase tracking-tight shadow-lg animate-pulse">
                                 Nouveau
                               </span>
                             )}
@@ -585,8 +585,8 @@ export function InboxPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        <span className={`px-4 py-2 text-xs font-extrabold rounded-full uppercase tracking-wide ${getDemandeStatusBadgeClass(demande.statut)}`}>
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-2">
+                        <span className={`px-2 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight whitespace-nowrap ${getDemandeStatusBadgeClass(demande.statut)}`}>
                           {demande.statut}
                         </span>
                       </div>
@@ -776,15 +776,15 @@ function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) 
         <div className="bg-white border-b p-4 flex items-center justify-between rounded-t-xl">
           <div className="flex-1">
             <h2 className="text-xl font-semibold text-gray-900">{task.titre}</h2>
-            <div className="flex items-center gap-3 mt-2">
-              <span className={`px-4 py-1.5 text-xs font-extrabold rounded-full uppercase tracking-wide shadow-md ${
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <span className={`px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight shadow-md ${
                 task.priorite === 'haute' ? 'bg-gradient-to-r from-red-500 to-orange-600 text-white' :
                 task.priorite === 'normal' ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white' :
                 'bg-gradient-to-r from-slate-400 to-gray-500 text-white'
               }`}>
                 {task.priorite}
               </span>
-              <span className={`px-4 py-1.5 text-xs font-extrabold rounded-full uppercase tracking-wide shadow-md ${
+              <span className={`px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight shadow-md ${
                 task.statut === 'completee' ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white' :
                 task.statut === 'en_cours' ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-white' :
                 'bg-gradient-to-r from-orange-500 to-amber-600 text-white'
@@ -857,13 +857,13 @@ function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) 
                 rows={4}
                 autoFocus
               />
-              <div className="flex items-center gap-2 mt-3">
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
                 <button
                   onClick={sendReply}
                   disabled={sending || !replyText.trim()}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3 h-3" />
                   {sending ? 'Envoi...' : 'Envoyer'}
                 </button>
                 <button
@@ -871,7 +871,7 @@ function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) 
                     setShowReply(false);
                     setReplyText('');
                   }}
-                  className="px-5 py-2.5 bg-gradient-to-r from-gray-200 to-slate-200 text-gray-700 rounded-full hover:from-gray-300 hover:to-slate-300 text-sm font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+                  className="px-3 py-2 bg-gradient-to-r from-gray-200 to-slate-200 text-gray-700 rounded-full hover:from-gray-300 hover:to-slate-300 text-xs font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                 >
                   Annuler
                 </button>
@@ -881,37 +881,37 @@ function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) 
         </div>
 
         <div className="border-t bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-b-xl">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex gap-2 flex-wrap">
               {!showReply && (
                 <button
                   onClick={() => setShowReply(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-full hover:from-sky-600 hover:to-blue-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-full hover:from-sky-600 hover:to-blue-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
-                  <Reply className="w-4 h-4" />
+                  <Reply className="w-3 h-3" />
                   Répondre
                 </button>
               )}
               {task.statut === 'en_attente' && (
                 <button
                   onClick={() => onUpdateStatus(task.id, 'en_cours')}
-                  className="px-5 py-2.5 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white rounded-full hover:from-amber-600 hover:to-yellow-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  className="px-3 py-2 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white rounded-full hover:from-amber-600 hover:to-yellow-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
-                  Marquer en cours
+                  En cours
                 </button>
               )}
               {task.statut === 'en_cours' && (
                 <button
                   onClick={() => onUpdateStatus(task.id, 'completee')}
-                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  className="px-3 py-2 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
-                  Marquer complétée
+                  Complétée
                 </button>
               )}
             </div>
             <button
               onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete(task.id); onClose(); } }}
-              className="px-5 py-2.5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-full hover:from-red-600 hover:to-rose-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              className="px-3 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-full hover:from-red-600 hover:to-rose-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
             >
               Supprimer
             </button>
@@ -1021,7 +1021,7 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExtern
               </div>
               <div>
                 <span className="text-sm text-gray-600">Statut actuel:</span>
-                <span className={`inline-block ml-2 px-4 py-1.5 text-xs font-extrabold rounded-full uppercase tracking-wide shadow-md ${
+                <span className={`inline-block ml-2 px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight shadow-md ${
                   demande.statut === 'traite' ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white' :
                   demande.statut === 'consulte' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white' :
                   'bg-gradient-to-r from-orange-500 to-amber-600 text-white'
@@ -1056,10 +1056,10 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExtern
                     </div>
                     <button
                       onClick={() => handleDownloadFile(file.path, file.name)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-full text-xs hover:from-sky-600 hover:to-blue-700 flex-shrink-0 font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+                      className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-full text-xs hover:from-sky-600 hover:to-blue-700 flex-shrink-0 font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                     >
                       <Download className="w-3 h-3" />
-                      Télécharger
+                      <span className="hidden sm:inline">Télécharger</span>
                     </button>
                   </div>
                 ))}
@@ -1069,28 +1069,28 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExtern
         </div>
 
         <div className="border-t bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-b-xl">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex gap-2 flex-wrap">
               {demande.statut === 'nouveau' && (
                 <button
                   onClick={() => onUpdateStatus(demande.id, 'consulte')}
-                  className="px-5 py-2.5 bg-gradient-to-r from-sky-500 via-blue-500 to-sky-600 text-white rounded-full hover:from-sky-600 hover:to-blue-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  className="px-3 py-2 bg-gradient-to-r from-sky-500 via-blue-500 to-sky-600 text-white rounded-full hover:from-sky-600 hover:to-blue-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
-                  Marquer consulté
+                  Consulté
                 </button>
               )}
               {demande.statut === 'consulte' && (
                 <button
                   onClick={() => onUpdateStatus(demande.id, 'traite')}
-                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  className="px-3 py-2 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
-                  Marquer traité
+                  Traité
                 </button>
               )}
             </div>
             <button
               onClick={onClose}
-              className="px-5 py-2.5 bg-gradient-to-r from-gray-200 to-slate-200 text-gray-700 rounded-full hover:from-gray-300 hover:to-slate-300 text-sm font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+              className="px-3 py-2 bg-gradient-to-r from-gray-200 to-slate-200 text-gray-700 rounded-full hover:from-gray-300 hover:to-slate-300 text-xs font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
             >
               Fermer
             </button>
