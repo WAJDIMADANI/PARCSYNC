@@ -362,19 +362,14 @@ export default function ContractSendModal({
         const cddDates = await fetchPreviousCDDDates(profilId);
 
         if (cddDates) {
-          // Calculer le lendemain de la date de fin du CDD comme date de début de l'avenant
-          const cddEndDate = new Date(cddDates.date_fin);
-          const avenantStartDate = new Date(cddEndDate);
-          avenantStartDate.setDate(avenantStartDate.getDate() + 1);
-          const avenantStartISO = avenantStartDate.toISOString().split('T')[0];
-
+          // employees_date_de_debut___av1 = même date que la fin du CDD (pas le lendemain)
           setVariables(prev => ({
             ...prev,
             contract_start: cddDates.date_debut,
             contract_end: cddDates.date_fin,
-            employees_date_de_debut___av1: avenantStartISO // Date début avenant 1 = lendemain fin CDD
+            employees_date_de_debut___av1: cddDates.date_fin // Date début avenant 1 = même date que fin CDD
           }));
-          console.log('✅ Dates CDD pré-remplies + date début avenant 1:', avenantStartISO);
+          console.log('✅ Dates CDD pré-remplies + date début avenant 1:', cddDates.date_fin);
         } else {
           console.warn('⚠️ Aucune date CDD trouvée');
         }
@@ -620,11 +615,9 @@ export default function ContractSendModal({
         // date_fin = nouvelle date de fin de l'avenant 1
         preparedVariables.date_fin = variables.employees_date_de_fin__av1;
 
-        // Calculer automatiquement employees_date_de_debut___av1 (lendemain fin CDD)
+        // employees_date_de_debut___av1 = même date que la fin du CDD (pas le lendemain)
         if (variables.contract_end) {
-          const cddEndDate = new Date(variables.contract_end);
-          cddEndDate.setDate(cddEndDate.getDate() + 1);
-          preparedVariables.employees_date_de_debut___av1 = cddEndDate.toISOString().split('T')[0];
+          preparedVariables.employees_date_de_debut___av1 = variables.contract_end;
         }
 
         console.log('✅ Avenant 1 mapping:', {
@@ -705,21 +698,17 @@ export default function ContractSendModal({
 
       // ✅ Ajouter les colonnes date_debut et date_fin dans la table contrat
       if (avenantType === 'avenant1') {
-        // Avenant 1 : date_debut = lendemain fin CDD, date_fin = date fin avenant 1
+        // Avenant 1 : date_debut = même date que fin CDD, date_fin = date fin avenant 1
         if (variables.contract_end) {
-          const cddEndDate = new Date(variables.contract_end);
-          cddEndDate.setDate(cddEndDate.getDate() + 1);
-          contractData.date_debut = cddEndDate.toISOString().split('T')[0];
+          contractData.date_debut = variables.contract_end;
         } else {
           contractData.date_debut = variables.contract_start;
         }
         contractData.date_fin = variables.employees_date_de_fin__av1;
       } else if (avenantType === 'avenant2') {
-        // Avenant 2 : date_debut calculée auto (lendemain fin AV1), date_fin = date fin avenant 2
+        // Avenant 2 : date_debut = même date que fin AV1, date_fin = date fin avenant 2
         if (variables.employees_date_de_fin__av1) {
-          const av1End = new Date(variables.employees_date_de_fin__av1);
-          av1End.setDate(av1End.getDate() + 1);
-          contractData.date_debut = av1End.toISOString().split('T')[0];
+          contractData.date_debut = variables.employees_date_de_fin__av1;
         } else {
           contractData.date_debut = variables.contract_start;
         }
@@ -1099,11 +1088,10 @@ export default function ContractSendModal({
                           <div className="px-3 py-2 border border-blue-300 rounded-lg bg-blue-50 text-gray-700 text-sm">
                             {variables.contract_end ? (() => {
                               const date = new Date(variables.contract_end);
-                              date.setDate(date.getDate() + 1);
                               return date.toLocaleDateString('fr-FR');
                             })() : 'Calculée automatiquement'}
                           </div>
-                          <p className="text-xs text-blue-600 mt-1">Calculé: lendemain fin CDD</p>
+                          <p className="text-xs text-blue-600 mt-1">Calculé: même date que fin CDD</p>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-blue-700 mb-1">
@@ -1183,11 +1171,10 @@ export default function ContractSendModal({
                           <div className="px-3 py-2 border border-purple-200 rounded-lg bg-purple-50 text-gray-700 text-sm">
                             {variables.contract_end ? (() => {
                               const date = new Date(variables.contract_end);
-                              date.setDate(date.getDate() + 1);
                               return date.toLocaleDateString('fr-FR');
                             })() : 'Calculée automatiquement'}
                           </div>
-                          <p className="text-xs text-purple-600 mt-1">Calculé: lendemain fin CDD</p>
+                          <p className="text-xs text-purple-600 mt-1">Calculé: même date que fin CDD</p>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-purple-700 mb-1">
@@ -1214,11 +1201,10 @@ export default function ContractSendModal({
                           <div className="px-3 py-2 border border-purple-300 rounded-lg bg-purple-50 text-gray-700 text-sm">
                             {variables.employees_date_de_fin__av1 ? (() => {
                               const date = new Date(variables.employees_date_de_fin__av1);
-                              date.setDate(date.getDate() + 1);
                               return date.toLocaleDateString('fr-FR');
                             })() : 'Calculée automatiquement'}
                           </div>
-                          <p className="text-xs text-purple-600 mt-1">Calculé: lendemain fin AV1</p>
+                          <p className="text-xs text-purple-600 mt-1">Calculé: même date que fin AV1</p>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-purple-700 mb-1">
