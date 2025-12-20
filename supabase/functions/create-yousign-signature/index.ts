@@ -476,6 +476,8 @@ Deno.serve(async (req: Request) => {
       console.log("🔑 DOCX templateVars keys:", Object.keys(templateVars));
       console.log("📋 DOCX sample values:", {
         contract_start: templateVars.contract_start,
+        contract_end: templateVars.contract_end,
+        employees_date_de_debut___av1: templateVars.employees_date_de_debut___av1,
         employees_date_de_fin__av1: templateVars.employees_date_de_fin__av1,
         first_name: templateVars.first_name,
         last_name: templateVars.last_name,

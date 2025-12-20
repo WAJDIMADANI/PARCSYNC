@@ -668,6 +668,10 @@ export default function ContractSendModal({
       console.log('  - profil_id:', contractData.profil_id);
       console.log('  - type_document:', contractData.type_document, '✅');
       console.log('  - avenant_num:', contractData.avenant_num);
+      console.log('  - variables.employees_date_de_debut___av1:', contractData.variables.employees_date_de_debut___av1);
+      console.log('  - variables.employees_date_de_fin__av1:', contractData.variables.employees_date_de_fin__av1);
+      console.log('  - date_debut (colonne):', contractData.date_debut);
+      console.log('  - date_fin (colonne):', contractData.date_fin);
 
       console.log('🎯 ===== ÉTAPE 2: INSERTION EN BASE =====');
 
