@@ -663,16 +663,19 @@ export default function ContractSendModal({
       if (trialPeriodInfo?.endDate) {
         // Envoyer la date brute (ISO) pour que Yousign puisse la formatter
         preparedVariables.trial_end_date = trialPeriodInfo.endDate;
+        preparedVariables.date_fin_periode_essai = trialPeriodInfo.endDate;
         // Envoyer aussi le texte complet déjà formaté (juste la date)
         preparedVariables.trial_period_text = formatDateFR(trialPeriodInfo.endDate);
 
         console.log('✅ Période d\'essai envoyée:', {
           trial_end_date: preparedVariables.trial_end_date,
+          date_fin_periode_essai: preparedVariables.date_fin_periode_essai,
           trial_period_text: preparedVariables.trial_period_text
         });
       } else {
         // Pas de période d'essai
         preparedVariables.trial_end_date = "";
+        preparedVariables.date_fin_periode_essai = "";
         preparedVariables.trial_period_text = "";
       }
 
@@ -699,10 +702,8 @@ export default function ContractSendModal({
         contractData.avenant_num = avenantNum;
       }
 
-      // ✅ Ajouter date_fin_periode_essai dans la table contrat
-      if (trialPeriodInfo?.endDate) {
-        contractData.date_fin_periode_essai = trialPeriodInfo.endDate;
-      }
+      // Note : date_fin_periode_essai est dans variables et sera aussi sauvegardée dans profil
+      // La colonne date_fin_periode_essai n'existe PAS dans la table contrat
 
       // ✅ Ajouter les colonnes date_debut et date_fin dans la table contrat
       if (avenantType === 'avenant1') {
