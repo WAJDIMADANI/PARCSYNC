@@ -382,19 +382,47 @@ export function InboxPage() {
 
   const getPriorityColor = (priorite: string) => {
     switch (priorite) {
-      case 'haute': return 'bg-gradient-to-r from-red-100 to-orange-100 text-red-800 border border-red-200';
-      case 'normal': return 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-200';
-      case 'basse': return 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 border border-gray-200';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'haute':
+        return 'bg-gradient-to-br from-red-500 via-orange-500 to-red-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 backdrop-blur-sm';
+      case 'normal':
+        return 'bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-400 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 backdrop-blur-sm';
+      case 'basse':
+        return 'bg-gradient-to-br from-slate-400 via-gray-400 to-slate-500 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 backdrop-blur-sm';
+      default:
+        return 'bg-gradient-to-br from-gray-400 to-gray-500 text-white shadow-md';
     }
   };
 
   const getStatusIcon = (statut: string) => {
     switch (statut) {
-      case 'en_attente': return <Clock className="w-4 h-4 text-orange-600" />;
-      case 'en_cours': return <AlertCircle className="w-4 h-4 text-amber-600" />;
-      case 'completee': return <CheckCircle className="w-4 h-4 text-emerald-600" />;
+      case 'en_attente': return <Clock className="w-4 h-4 text-white drop-shadow-sm" />;
+      case 'en_cours': return <AlertCircle className="w-4 h-4 text-white drop-shadow-sm" />;
+      case 'completee': return <CheckCircle className="w-4 h-4 text-white drop-shadow-sm" />;
       default: return null;
+    }
+  };
+
+  const getStatusBadgeClass = (statut: string) => {
+    switch (statut) {
+      case 'en_attente':
+        return 'bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
+      case 'en_cours':
+        return 'bg-gradient-to-br from-amber-500 via-yellow-500 to-amber-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
+      case 'completee':
+        return 'bg-gradient-to-br from-emerald-500 via-green-500 to-emerald-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
+      default:
+        return 'bg-gradient-to-br from-gray-500 to-gray-600 text-white shadow-md';
+    }
+  };
+
+  const getDemandeStatusBadgeClass = (statut: string) => {
+    switch (statut) {
+      case 'traite':
+        return 'bg-gradient-to-br from-emerald-500 via-green-500 to-emerald-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
+      case 'consulte':
+        return 'bg-gradient-to-br from-sky-500 via-blue-500 to-sky-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
+      default:
+        return 'bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
     }
   };
 
@@ -428,7 +456,7 @@ export function InboxPage() {
             <h1 className="text-3xl font-bold">
               Boîte de Réception
               {stats.non_lus > 0 && (
-                <span className="ml-2 px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm font-bold rounded-full shadow-lg animate-pulse">
+                <span className="ml-2 px-4 py-1.5 bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white text-sm font-extrabold rounded-full shadow-lg animate-pulse ring-2 ring-orange-300 ring-offset-2">
                   {stats.non_lus} non {stats.non_lus === 1 ? 'lu' : 'lus'}
                 </span>
               )}
@@ -438,7 +466,7 @@ export function InboxPage() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 shadow-md hover:shadow-lg transition-all duration-200 font-semibold"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white rounded-full hover:from-orange-600 hover:via-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transition-all duration-300 font-bold transform hover:scale-105 ring-2 ring-orange-300 ring-offset-2"
         >
           <Plus className="w-5 h-5" />
           Nouvelle tâche
@@ -490,7 +518,7 @@ export function InboxPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             {isUnread && (
-                              <span className="px-2.5 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full uppercase tracking-wide animate-pulse">
+                              <span className="px-3 py-1 bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white text-xs font-extrabold rounded-full uppercase tracking-widest shadow-lg animate-pulse ring-2 ring-orange-300 ring-offset-2">
                                 Nouveau
                               </span>
                             )}
@@ -507,12 +535,12 @@ export function InboxPage() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        <span className={`px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm ${getPriorityColor(tache.priorite)}`}>
+                        <span className={`px-4 py-1.5 text-xs font-extrabold rounded-full uppercase tracking-wide ${getPriorityColor(tache.priorite)}`}>
                           {tache.priorite}
                         </span>
-                        <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg">
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${getStatusBadgeClass(tache.statut)}`}>
                           {getStatusIcon(tache.statut)}
-                          <span className="text-xs font-medium text-gray-700">{tache.statut}</span>
+                          <span className="text-xs font-bold uppercase tracking-wide">{tache.statut.replace('_', ' ')}</span>
                         </div>
                       </div>
                     </div>
@@ -541,7 +569,7 @@ export function InboxPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             {isUnread && (
-                              <span className="px-2.5 py-0.5 bg-rose-500 text-white text-xs font-bold rounded-full uppercase tracking-wide animate-pulse">
+                              <span className="px-3 py-1 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white text-xs font-extrabold rounded-full uppercase tracking-widest shadow-lg animate-pulse ring-2 ring-rose-300 ring-offset-2">
                                 Nouveau
                               </span>
                             )}
@@ -558,11 +586,7 @@ export function InboxPage() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        <span className={`px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm ${
-                          demande.statut === 'traite' ? 'bg-emerald-100 text-emerald-800' :
-                          demande.statut === 'consulte' ? 'bg-sky-100 text-sky-800' :
-                          'bg-orange-100 text-orange-800'
-                        }`}>
+                        <span className={`px-4 py-2 text-xs font-extrabold rounded-full uppercase tracking-wide ${getDemandeStatusBadgeClass(demande.statut)}`}>
                           {demande.statut}
                         </span>
                       </div>
@@ -625,10 +649,10 @@ function FilterButton({ active, onClick, children }: any) {
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
+      className={`px-5 py-2.5 rounded-full font-bold transition-all duration-300 transform ${
         active
-          ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:shadow-sm'
+          ? 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-lg scale-105 ring-2 ring-orange-300 ring-offset-2'
+          : 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 hover:from-gray-200 hover:to-slate-200 hover:shadow-md hover:scale-102 border border-gray-300'
       }`}
     >
       {children}
@@ -752,11 +776,19 @@ function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) 
         <div className="bg-white border-b p-4 flex items-center justify-between rounded-t-xl">
           <div className="flex-1">
             <h2 className="text-xl font-semibold text-gray-900">{task.titre}</h2>
-            <div className="flex items-center gap-3 mt-1">
-              <span className={`px-2 py-1 text-xs font-medium rounded ${task.priorite === 'haute' ? 'bg-red-100 text-red-800' : task.priorite === 'normal' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+            <div className="flex items-center gap-3 mt-2">
+              <span className={`px-4 py-1.5 text-xs font-extrabold rounded-full uppercase tracking-wide shadow-md ${
+                task.priorite === 'haute' ? 'bg-gradient-to-r from-red-500 to-orange-600 text-white' :
+                task.priorite === 'normal' ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white' :
+                'bg-gradient-to-r from-slate-400 to-gray-500 text-white'
+              }`}>
                 {task.priorite}
               </span>
-              <span className={`px-2 py-1 text-xs font-medium rounded ${task.statut === 'completee' ? 'bg-green-100 text-green-800' : task.statut === 'en_cours' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`}>
+              <span className={`px-4 py-1.5 text-xs font-extrabold rounded-full uppercase tracking-wide shadow-md ${
+                task.statut === 'completee' ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white' :
+                task.statut === 'en_cours' ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-white' :
+                'bg-gradient-to-r from-orange-500 to-amber-600 text-white'
+              }`}>
                 {task.statut.replace('_', ' ')}
               </span>
             </div>
@@ -829,7 +861,7 @@ function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) 
                 <button
                   onClick={sendReply}
                   disabled={sending || !replyText.trim()}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
                   <Send className="w-4 h-4" />
                   {sending ? 'Envoi...' : 'Envoyer'}
@@ -839,7 +871,7 @@ function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) 
                     setShowReply(false);
                     setReplyText('');
                   }}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
+                  className="px-5 py-2.5 bg-gradient-to-r from-gray-200 to-slate-200 text-gray-700 rounded-full hover:from-gray-300 hover:to-slate-300 text-sm font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                 >
                   Annuler
                 </button>
@@ -848,30 +880,39 @@ function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) 
           )}
         </div>
 
-        <div className="border-t bg-gray-50 p-4 rounded-b-xl">
+        <div className="border-t bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-b-xl">
           <div className="flex items-center justify-between">
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               {!showReply && (
                 <button
                   onClick={() => setShowReply(true)}
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-full hover:from-sky-600 hover:to-blue-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
                   <Reply className="w-4 h-4" />
                   Répondre
                 </button>
               )}
               {task.statut === 'en_attente' && (
-                <button onClick={() => onUpdateStatus(task.id, 'en_cours')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                <button
+                  onClick={() => onUpdateStatus(task.id, 'en_cours')}
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white rounded-full hover:from-amber-600 hover:to-yellow-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                >
                   Marquer en cours
                 </button>
               )}
               {task.statut === 'en_cours' && (
-                <button onClick={() => onUpdateStatus(task.id, 'completee')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                <button
+                  onClick={() => onUpdateStatus(task.id, 'completee')}
+                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                >
                   Marquer complétée
                 </button>
               )}
             </div>
-            <button onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete(task.id); onClose(); } }} className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm">
+            <button
+              onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete(task.id); onClose(); } }}
+              className="px-5 py-2.5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-full hover:from-red-600 hover:to-rose-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            >
               Supprimer
             </button>
           </div>
@@ -929,13 +970,13 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExtern
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <div className="bg-green-600 text-white p-4 flex items-center justify-between rounded-t-xl">
+      <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+        <div className="bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white p-5 flex items-center justify-between rounded-t-xl">
           <div className="flex-1">
-            <h2 className="text-xl font-semibold">{demande.titre}</h2>
-            <p className="text-green-100 text-sm mt-1">{demande.description}</p>
+            <h2 className="text-xl font-extrabold">{demande.titre}</h2>
+            <p className="text-green-50 text-sm mt-1 font-medium">{demande.description}</p>
           </div>
-          <button onClick={onClose} className="text-white hover:text-green-100 text-2xl font-light">✕</button>
+          <button onClick={onClose} className="text-white hover:text-green-50 text-2xl font-light transition-colors">✕</button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -980,10 +1021,10 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExtern
               </div>
               <div>
                 <span className="text-sm text-gray-600">Statut actuel:</span>
-                <span className={`inline-block ml-2 px-3 py-1 text-xs font-medium rounded ${
-                  demande.statut === 'traite' ? 'bg-green-100 text-green-800' :
-                  demande.statut === 'consulte' ? 'bg-blue-100 text-blue-800' :
-                  'bg-orange-100 text-orange-800'
+                <span className={`inline-block ml-2 px-4 py-1.5 text-xs font-extrabold rounded-full uppercase tracking-wide shadow-md ${
+                  demande.statut === 'traite' ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white' :
+                  demande.statut === 'consulte' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white' :
+                  'bg-gradient-to-r from-orange-500 to-amber-600 text-white'
                 }`}>
                   {demande.statut}
                 </span>
@@ -1015,7 +1056,7 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExtern
                     </div>
                     <button
                       onClick={() => handleDownloadFile(file.path, file.name)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex-shrink-0"
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-full text-xs hover:from-sky-600 hover:to-blue-700 flex-shrink-0 font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                     >
                       <Download className="w-3 h-3" />
                       Télécharger
@@ -1027,13 +1068,13 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExtern
           )}
         </div>
 
-        <div className="border-t bg-gray-50 p-4 rounded-b-xl">
+        <div className="border-t bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-b-xl">
           <div className="flex items-center justify-between">
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               {demande.statut === 'nouveau' && (
                 <button
                   onClick={() => onUpdateStatus(demande.id, 'consulte')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                  className="px-5 py-2.5 bg-gradient-to-r from-sky-500 via-blue-500 to-sky-600 text-white rounded-full hover:from-sky-600 hover:to-blue-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
                   Marquer consulté
                 </button>
@@ -1041,7 +1082,7 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExtern
               {demande.statut === 'consulte' && (
                 <button
                   onClick={() => onUpdateStatus(demande.id, 'traite')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
                   Marquer traité
                 </button>
@@ -1049,7 +1090,7 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExtern
             </div>
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium"
+              className="px-5 py-2.5 bg-gradient-to-r from-gray-200 to-slate-200 text-gray-700 rounded-full hover:from-gray-300 hover:to-slate-300 text-sm font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
             >
               Fermer
             </button>
@@ -1165,9 +1206,9 @@ function CreateModal({ onClose, onSuccess }: CreateModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-2xl">
-        <div className="bg-blue-600 text-white p-4">
-          <h2 className="text-xl font-bold">Nouvelle tâche</h2>
+      <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl">
+        <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white p-5 rounded-t-xl">
+          <h2 className="text-xl font-extrabold">Nouvelle tâche</h2>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
@@ -1234,14 +1275,14 @@ function CreateModal({ onClose, onSuccess }: CreateModalProps) {
             <button
               type="submit"
               disabled={sending}
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               {sending ? 'Création...' : 'Créer'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
+              className="px-6 py-3 bg-gradient-to-r from-gray-200 to-slate-200 text-gray-700 rounded-full hover:from-gray-300 hover:to-slate-300 transition-all duration-300 font-bold shadow-md hover:shadow-lg transform hover:scale-105"
             >
               Annuler
             </button>
