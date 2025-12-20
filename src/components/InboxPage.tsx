@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Send, Reply } from 'lucide-react';
+import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Send, Reply, FileText, Download } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface Tache {
@@ -21,6 +21,31 @@ interface Tache {
   lu_par_expediteur: boolean;
   date_derniere_reponse: string | null;
 }
+
+interface DemandeExterne {
+  id: string;
+  type: 'demande_externe';
+  titre: string;
+  description: string;
+  contenu: string;
+  reference_id: string;
+  statut: 'nouveau' | 'consulte' | 'traite';
+  lu: boolean;
+  created_at: string;
+  profil?: {
+    prenom: string;
+    nom: string;
+    email: string;
+    matricule_tca: string;
+    poste: string | null;
+  };
+  pole?: {
+    nom: string;
+  };
+  fichiers?: Array<{ path: string; name: string; size: number }>;
+}
+
+type InboxItem = (Tache & { itemType: 'tache' }) | (DemandeExterne & { itemType: 'demande_externe' });
 
 interface TacheMessage {
   id: string;
@@ -44,9 +69,12 @@ interface TaskStats {
 export function InboxPage() {
   const { user, appUserId } = useAuth();
   const [taches, setTaches] = useState<Tache[]>([]);
+  const [demandesExternes, setDemandesExternes] = useState<DemandeExterne[]>([]);
+  const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<TaskStats>({ en_attente: 0, en_cours: 0, completee: 0, total: 0, non_lus: 0 });
   const [selectedTask, setSelectedTask] = useState<Tache | null>(null);
+  const [selectedDemandeExterne, setSelectedDemandeExterne] = useState<DemandeExterne | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'en_attente' | 'en_cours' | 'completee'>('all');
 
@@ -91,20 +119,47 @@ export function InboxPage() {
     if (!user || !appUserId) return;
 
     try {
-      const { data, error } = await supabase
-        .from('taches')
-        .select(`
-          *,
-          expediteur:expediteur_id(nom, prenom, email, pole_id, pole:pole_id(nom)),
-          assignee:assignee_id(nom, prenom, email)
-        `)
-        .or(`assignee_id.eq.${appUserId},expediteur_id.eq.${appUserId}`)
-        .order('date_derniere_reponse', { ascending: false, nullsFirst: false });
+      const [tachesResult, demandesResult] = await Promise.all([
+        supabase
+          .from('taches')
+          .select(`
+            *,
+            expediteur:expediteur_id(nom, prenom, email, pole_id, pole:pole_id(nom)),
+            assignee:assignee_id(nom, prenom, email)
+          `)
+          .or(`assignee_id.eq.${appUserId},expediteur_id.eq.${appUserId}`)
+          .order('date_derniere_reponse', { ascending: false, nullsFirst: false }),
 
-      if (error) throw error;
+        supabase
+          .from('inbox')
+          .select(`
+            id,
+            type,
+            titre,
+            description,
+            contenu,
+            reference_id,
+            statut,
+            lu,
+            created_at,
+            demande:reference_id!inner(
+              id,
+              profil:profil_id(prenom, nom, email, matricule_tca, poste),
+              pole:pole_id(nom),
+              fichiers
+            )
+          `)
+          .eq('utilisateur_id', appUserId)
+          .eq('reference_type', 'demande_externe')
+          .order('created_at', { ascending: false })
+      ]);
 
-      const formattedTaches = data.map((t: any) => ({
+      if (tachesResult.error) throw tachesResult.error;
+      if (demandesResult.error) console.warn('Erreur chargement demandes externes:', demandesResult.error);
+
+      const formattedTaches: (Tache & { itemType: 'tache' })[] = (tachesResult.data || []).map((t: any) => ({
         ...t,
+        itemType: 'tache' as const,
         expediteur_nom: t.expediteur?.nom || '',
         expediteur_prenom: t.expediteur?.prenom || '',
         expediteur_email: t.expediteur?.email || '',
@@ -113,24 +168,48 @@ export function InboxPage() {
         lu_par_expediteur: t.lu_par_expediteur ?? true
       }));
 
-      setTaches(formattedTaches);
+      const formattedDemandes: (DemandeExterne & { itemType: 'demande_externe' })[] = (demandesResult.data || []).map((d: any) => ({
+        id: d.id,
+        itemType: 'demande_externe' as const,
+        type: 'demande_externe' as const,
+        titre: d.titre,
+        description: d.description,
+        contenu: d.contenu,
+        reference_id: d.reference_id,
+        statut: d.statut,
+        lu: d.lu ?? false,
+        created_at: d.created_at,
+        profil: d.demande?.profil,
+        pole: d.demande?.pole,
+        fichiers: d.demande?.fichiers || []
+      }));
 
-      // Compter les tâches non lues : soit assignee non lu, soit expéditeur non lu
-      const nonLus = formattedTaches.filter((t: Tache) =>
+      setTaches(formattedTaches);
+      setDemandesExternes(formattedDemandes);
+
+      const allItems = [...formattedTaches, ...formattedDemandes].sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA;
+      });
+      setInboxItems(allItems);
+
+      const nonLusTaches = formattedTaches.filter((t) =>
         (t.assignee_id === appUserId && !t.lu_par_assignee) ||
         (t.expediteur_id === appUserId && !t.lu_par_expediteur)
       ).length;
+      const nonLusDemandes = formattedDemandes.filter(d => !d.lu).length;
 
       const newStats = {
-        en_attente: formattedTaches.filter((t: Tache) => t.statut === 'en_attente').length,
-        en_cours: formattedTaches.filter((t: Tache) => t.statut === 'en_cours').length,
-        completee: formattedTaches.filter((t: Tache) => t.statut === 'completee').length,
-        total: formattedTaches.length,
-        non_lus: nonLus
+        en_attente: formattedTaches.filter((t) => t.statut === 'en_attente').length,
+        en_cours: formattedTaches.filter((t) => t.statut === 'en_cours').length,
+        completee: formattedTaches.filter((t) => t.statut === 'completee').length,
+        total: allItems.length,
+        non_lus: nonLusTaches + nonLusDemandes
       };
       setStats(newStats);
     } catch (error) {
-      console.error('Erreur chargement tâches:', error);
+      console.error('Erreur chargement inbox:', error);
     } finally {
       setLoading(false);
     }
@@ -204,6 +283,57 @@ export function InboxPage() {
     markAsRead(tache);
   };
 
+  const handleOpenDemandeExterne = async (demande: DemandeExterne) => {
+    setSelectedDemandeExterne(demande);
+
+    if (!demande.lu) {
+      try {
+        const { error } = await supabase
+          .from('inbox')
+          .update({ lu: true })
+          .eq('id', demande.id);
+
+        if (!error) {
+          setDemandesExternes(prev => prev.map(d =>
+            d.id === demande.id ? { ...d, lu: true } : d
+          ));
+          setInboxItems(prev => prev.map(item =>
+            item.itemType === 'demande_externe' && item.id === demande.id
+              ? { ...item, lu: true }
+              : item
+          ));
+          setStats(prev => ({ ...prev, non_lus: Math.max(0, prev.non_lus - 1) }));
+        }
+      } catch (error) {
+        console.error('Erreur marquage lu:', error);
+      }
+    }
+  };
+
+  const updateDemandeExterneStatus = async (demandeId: string, newStatus: 'nouveau' | 'consulte' | 'traite') => {
+    try {
+      const { error } = await supabase
+        .from('inbox')
+        .update({ statut: newStatus })
+        .eq('id', demandeId);
+
+      if (error) throw error;
+
+      setDemandesExternes(prev => prev.map(d => d.id === demandeId ? { ...d, statut: newStatus } : d));
+      setInboxItems(prev => prev.map(item =>
+        item.itemType === 'demande_externe' && item.id === demandeId
+          ? { ...item, statut: newStatus }
+          : item
+      ));
+      if (selectedDemandeExterne?.id === demandeId) {
+        setSelectedDemandeExterne(prev => prev ? { ...prev, statut: newStatus } : null);
+      }
+    } catch (error) {
+      console.error('Erreur mise à jour statut:', error);
+      alert('Erreur lors de la mise à jour du statut');
+    }
+  };
+
   const getPriorityColor = (priorite: string) => {
     switch (priorite) {
       case 'haute': return 'bg-red-100 text-red-800';
@@ -222,7 +352,11 @@ export function InboxPage() {
     }
   };
 
-  const filteredTaches = filter === 'all' ? taches : taches.filter(t => t.statut === filter);
+  const filteredItems = filter === 'all'
+    ? inboxItems
+    : inboxItems.filter(item =>
+        item.itemType === 'tache' && item.statut === filter
+      );
 
   if (loading) {
     return (
@@ -281,45 +415,87 @@ export function InboxPage() {
         </div>
 
         <div className="divide-y">
-          {filteredTaches.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">Aucune tâche</div>
+          {filteredItems.length === 0 ? (
+            <div className="p-12 text-center text-gray-500">Aucun message</div>
           ) : (
-            filteredTaches.map(tache => {
-              const isUnread =
-                (tache.assignee_id === appUserId && !tache.lu_par_assignee) ||
-                (tache.expediteur_id === appUserId && !tache.lu_par_expediteur);
-              return (
-                <div
-                  key={tache.id}
-                  onClick={() => handleOpenTask(tache)}
-                  className={`p-4 hover:bg-gray-50 cursor-pointer ${isUnread ? 'bg-blue-50' : ''}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      {isUnread && (
-                        <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" title="Non lu" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-blue-600 truncate ${isUnread ? 'font-bold' : 'font-semibold'}`}>
-                          {tache.expediteur_pole_nom}
-                        </p>
-                        <p className={`text-sm text-gray-600 truncate ${isUnread ? 'font-medium' : ''}`}>
-                          {tache.titre}
-                        </p>
+            filteredItems.map(item => {
+              if (item.itemType === 'tache') {
+                const tache = item;
+                const isUnread =
+                  (tache.assignee_id === appUserId && !tache.lu_par_assignee) ||
+                  (tache.expediteur_id === appUserId && !tache.lu_par_expediteur);
+                return (
+                  <div
+                    key={`tache-${tache.id}`}
+                    onClick={() => handleOpenTask(tache)}
+                    className={`p-4 hover:bg-gray-50 cursor-pointer ${isUnread ? 'bg-blue-50' : ''}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        {isUnread && (
+                          <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" title="Non lu" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-blue-600 truncate ${isUnread ? 'font-bold' : 'font-semibold'}`}>
+                            {tache.expediteur_pole_nom}
+                          </p>
+                          <p className={`text-sm text-gray-600 truncate ${isUnread ? 'font-medium' : ''}`}>
+                            {tache.titre}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className={`px-3 py-1 text-xs font-medium rounded ${getPriorityColor(tache.priorite)}`}>
-                        {tache.priorite}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        {getStatusIcon(tache.statut)}
-                        <span className="text-sm text-gray-600">{tache.statut}</span>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className={`px-3 py-1 text-xs font-medium rounded ${getPriorityColor(tache.priorite)}`}>
+                          {tache.priorite}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {getStatusIcon(tache.statut)}
+                          <span className="text-sm text-gray-600">{tache.statut}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
+                );
+              } else {
+                const demande = item;
+                const isUnread = !demande.lu;
+                return (
+                  <div
+                    key={`demande-${demande.id}`}
+                    onClick={() => handleOpenDemandeExterne(demande)}
+                    className={`p-4 hover:bg-gray-50 cursor-pointer ${isUnread ? 'bg-blue-50' : ''}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        {isUnread && (
+                          <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" title="Non lu" />
+                        )}
+                        <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-green-600 truncate ${isUnread ? 'font-bold' : 'font-semibold'}`}>
+                            {demande.pole?.nom || 'Demande externe'}
+                          </p>
+                          <p className={`text-sm text-gray-600 truncate ${isUnread ? 'font-medium' : ''}`}>
+                            {demande.titre}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {demande.description}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className={`px-3 py-1 text-xs font-medium rounded ${
+                          demande.statut === 'traite' ? 'bg-green-100 text-green-800' :
+                          demande.statut === 'consulte' ? 'bg-blue-100 text-blue-800' :
+                          'bg-orange-100 text-orange-800'
+                        }`}>
+                          {demande.statut}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
             })
           )}
         </div>
@@ -331,6 +507,14 @@ export function InboxPage() {
           onClose={() => setSelectedTask(null)}
           onUpdateStatus={updateTaskStatus}
           onDelete={deleteTask}
+        />
+      )}
+
+      {selectedDemandeExterne && (
+        <DemandeExterneModal
+          demande={selectedDemandeExterne}
+          onClose={() => setSelectedDemandeExterne(null)}
+          onUpdateStatus={updateDemandeExterneStatus}
         />
       )}
 
@@ -609,6 +793,185 @@ function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) 
             </div>
             <button onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete(task.id); onClose(); } }} className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm">
               Supprimer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface DemandeExterneModalProps {
+  demande: DemandeExterne;
+  onClose: () => void;
+  onUpdateStatus: (id: string, status: 'nouveau' | 'consulte' | 'traite') => void;
+}
+
+function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExterneModalProps) {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const handleDownloadFile = async (filePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('demandes-externes')
+        .download(filePath);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erreur téléchargement fichier:', error);
+      alert('Erreur lors du téléchargement du fichier');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <div className="bg-green-600 text-white p-4 flex items-center justify-between rounded-t-xl">
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold">{demande.titre}</h2>
+            <p className="text-green-100 text-sm mt-1">{demande.description}</p>
+          </div>
+          <button onClick={onClose} className="text-white hover:text-green-100 text-2xl font-light">✕</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div className="bg-gray-50 border rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Informations du chauffeur
+            </h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-gray-600">Nom complet:</span>
+                <p className="font-medium">{demande.profil?.prenom} {demande.profil?.nom}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Matricule:</span>
+                <p className="font-medium">{demande.profil?.matricule_tca || '-'}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Email:</span>
+                <p className="font-medium">{demande.profil?.email}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Poste:</span>
+                <p className="font-medium">{demande.profil?.poste || '-'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Détails de la demande
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <span className="text-sm text-gray-600">Pôle concerné:</span>
+                <p className="font-medium">{demande.pole?.nom || '-'}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-600">Date de création:</span>
+                <p className="font-medium">{formatDate(demande.created_at)}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-600">Statut actuel:</span>
+                <span className={`inline-block ml-2 px-3 py-1 text-xs font-medium rounded ${
+                  demande.statut === 'traite' ? 'bg-green-100 text-green-800' :
+                  demande.statut === 'consulte' ? 'bg-blue-100 text-blue-800' :
+                  'bg-orange-100 text-orange-800'
+                }`}>
+                  {demande.statut}
+                </span>
+              </div>
+              <div>
+                <span className="text-sm text-gray-600 block mb-2">Contenu de la demande:</span>
+                <div className="bg-gray-50 rounded p-3 whitespace-pre-wrap text-gray-700">
+                  {demande.contenu}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {demande.fichiers && demande.fichiers.length > 0 && (
+            <div className="bg-white border rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                Fichiers joints ({demande.fichiers.length})
+              </h3>
+              <div className="space-y-2">
+                {demande.fichiers.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                        <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDownloadFile(file.path, file.name)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex-shrink-0"
+                    >
+                      <Download className="w-3 h-3" />
+                      Télécharger
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t bg-gray-50 p-4 rounded-b-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              {demande.statut === 'nouveau' && (
+                <button
+                  onClick={() => onUpdateStatus(demande.id, 'consulte')}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                >
+                  Marquer consulté
+                </button>
+              )}
+              {demande.statut === 'consulte' && (
+                <button
+                  onClick={() => onUpdateStatus(demande.id, 'traite')}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+                >
+                  Marquer traité
+                </button>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium"
+            >
+              Fermer
             </button>
           </div>
         </div>
