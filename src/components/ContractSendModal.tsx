@@ -232,7 +232,6 @@ export default function ContractSendModal({
     contract_end: string;
     employees_date_de_debut___av1: string;
     employees_date_de_fin__av1: string;
-    employees_date_de_debut___av2: string;
     employees_date_de_fin__av2: string;
     trial_period_text?: string;
   }>({
@@ -250,7 +249,6 @@ export default function ContractSendModal({
     contract_end: '',
     employees_date_de_debut___av1: '',
     employees_date_de_fin__av1: '',
-    employees_date_de_debut___av2: '',
     employees_date_de_fin__av2: ''
   });
 
@@ -399,17 +397,11 @@ export default function ContractSendModal({
         if (avenant1Dates) {
           updates.employees_date_de_debut___av1 = avenant1Dates.date_debut;
           updates.employees_date_de_fin__av1 = avenant1Dates.date_fin;
-
-          // Calculer la date de début de l'avenant 2 (lendemain de la fin d'avenant 1)
-          const av1End = new Date(avenant1Dates.date_fin);
-          av1End.setDate(av1End.getDate() + 1);
-          updates.employees_date_de_debut___av2 = av1End.toISOString().split('T')[0];
-          console.log('✅ Date début avenant 2 auto-calculée:', updates.employees_date_de_debut___av2);
         }
 
         if (Object.keys(updates).length > 0) {
           setVariables(prev => ({ ...prev, ...updates }));
-          console.log('✅ Dates CDD, Avenant 1 et début Avenant 2 pré-remplies');
+          console.log('✅ Dates CDD et Avenant 1 pré-remplies');
         } else {
           console.warn('⚠️ Aucune date trouvée');
         }
@@ -639,7 +631,6 @@ export default function ContractSendModal({
           date_fin: preparedVariables.date_fin,
           employees_date_de_debut___av1: preparedVariables.employees_date_de_debut___av1,
           employees_date_de_fin__av1: preparedVariables.employees_date_de_fin__av1,
-          employees_date_de_debut___av2: preparedVariables.employees_date_de_debut___av2,
           employees_date_de_fin__av2: preparedVariables.employees_date_de_fin__av2
         });
       }
@@ -675,15 +666,14 @@ export default function ContractSendModal({
         contractData.date_debut = variables.employees_date_de_debut___av1 || variables.contract_start;
         contractData.date_fin = variables.employees_date_de_fin__av1;
       } else if (avenantType === 'avenant2') {
-        // Avenant 2 : date_debut = date début avenant 2 (ou date fin avenant 1 + 1 jour), date_fin = date fin avenant 2
-        // Si pas de date début explicite pour AV2, prendre le lendemain de la fin d'AV1
-        let av2DateDebut = variables.employees_date_de_debut___av2;
-        if (!av2DateDebut && variables.employees_date_de_fin__av1) {
+        // Avenant 2 : date_debut calculée auto (lendemain fin AV1), date_fin = date fin avenant 2
+        if (variables.employees_date_de_fin__av1) {
           const av1End = new Date(variables.employees_date_de_fin__av1);
           av1End.setDate(av1End.getDate() + 1);
-          av2DateDebut = av1End.toISOString().split('T')[0];
+          contractData.date_debut = av1End.toISOString().split('T')[0];
+        } else {
+          contractData.date_debut = variables.contract_start;
         }
-        contractData.date_debut = av2DateDebut || variables.contract_start;
         contractData.date_fin = variables.employees_date_de_fin__av2;
       } else if (avenantType === 'none') {
         if (variables.date_debut) contractData.date_debut = variables.date_debut;
@@ -696,7 +686,6 @@ export default function ContractSendModal({
       console.log('  - avenant_num:', contractData.avenant_num);
       console.log('  - variables.employees_date_de_debut___av1:', contractData.variables.employees_date_de_debut___av1);
       console.log('  - variables.employees_date_de_fin__av1:', contractData.variables.employees_date_de_fin__av1);
-      console.log('  - variables.employees_date_de_debut___av2:', contractData.variables.employees_date_de_debut___av2);
       console.log('  - variables.employees_date_de_fin__av2:', contractData.variables.employees_date_de_fin__av2);
       console.log('  - date_debut (colonne):', contractData.date_debut);
       console.log('  - date_fin (colonne):', contractData.date_fin);
@@ -1133,19 +1122,6 @@ export default function ContractSendModal({
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-purple-700 mb-1">
-                        Date début avenant 2
-                      </label>
-                      <input
-                        type="date"
-                        value={variables.employees_date_de_debut___av2}
-                        onChange={(e) => setVariables({...variables, employees_date_de_debut___av2: e.target.value})}
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-gray-700 text-sm"
-                        placeholder="Calculée auto si vide"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Optionnel - par défaut: lendemain fin AV1</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-purple-700 mb-1">
                         Date fin avenant 2 *
                       </label>
                       <input
@@ -1155,6 +1131,7 @@ export default function ContractSendModal({
                         className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white text-sm"
                         placeholder="Nouvelle date de fin"
                       />
+                      <p className="text-xs text-gray-500 mt-1">Date début AV2 = calculée auto (lendemain fin AV1)</p>
                     </div>
                   </div>
                 )}
