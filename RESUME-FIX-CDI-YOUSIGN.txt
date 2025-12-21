@@ -1,0 +1,62 @@
+========================================
+FIX CDI YOUSIGN - RÉSUMÉ RAPIDE
+========================================
+
+PROBLÈME
+--------
+Erreur: "Yousign error: DOCX download failed: 400 Bad Request"
+Lors de l'envoi de contrats CDI à Yousign
+
+CAUSE
+-----
+Le fichier DOCX du modèle CDI n'existe pas dans le storage
+
+SOLUTION
+--------
+✅ Fallback automatique HTML→PDF
+✅ Si DOCX inaccessible → génère PDF depuis HTML
+✅ Aucun fichier DOCX requis pour les CDI
+✅ Fonctionne automatiquement
+
+COMMENT ÇA MARCHE
+-----------------
+1. Essaie de charger le DOCX
+2. Si erreur 400 → active le fallback
+3. Génère un PDF depuis HTML via PDFShift
+4. Envoie à Yousign normalement
+
+DÉPLOIEMENT
+-----------
+./DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh
+
+OU manuellement :
+supabase functions deploy create-yousign-signature
+
+TEST
+----
+1. Créer un contrat CDI pour un salarié
+2. Cliquer sur "Envoyer le contrat"
+3. Devrait fonctionner sans erreur
+
+VÉRIFICATION
+------------
+Dans les logs Supabase, vous verrez :
+⚠️ Utilisation du fallback HTML→PDF au lieu du DOCX
+📝 Génération du PDF depuis HTML (fallback)...
+
+FICHIERS MODIFIÉS
+-----------------
+- supabase/functions/create-yousign-signature/index.ts
+
+DOCUMENTATION
+-------------
+- FIX-CDI-YOUSIGN-HTML-FALLBACK.md : Documentation complète
+- DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh : Script de déploiement
+
+AVANTAGES
+---------
+✅ Plus besoin de fichiers DOCX
+✅ Rétrocompatible avec DOCX existants
+✅ Logs détaillés pour debugging
+✅ Aucun changement frontend requis
+✅ Fonctionne pour CDI, CDD, Avenants

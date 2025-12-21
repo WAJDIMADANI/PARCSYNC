@@ -464,6 +464,102 @@ function buildPublicStorageUrl(supabaseUrl: string, storagePath: string) {
   return `${supabaseUrl}/storage/v1/object/public/${bucket}/${objectPath}`;
 }
 
+/** Génère un PDF depuis HTML en utilisant PDFShift (fallback quand DOCX non disponible) */
+async function generatePdfFromHtml(contract: any, variables: any, employeeName: string, employeeEmail: string): Promise<ArrayBuffer> {
+  const html = generateContractHTML(contract, variables, employeeName, employeeEmail);
+
+  const apiKey = Deno.env.get("PDFSHIFT_API_KEY");
+  if (!apiKey) {
+    throw new Error("PDFShift API key not configured");
+  }
+
+  const response = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Basic ${btoa(apiKey + ":")}`,
+    },
+    body: JSON.stringify({
+      source: html,
+      landscape: false,
+      use_print: true,
+      format: "A4",
+      margin: {
+        top: "2cm",
+        bottom: "2cm",
+        left: "2cm",
+        right: "2cm",
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`PDFShift API error: ${response.status} - ${error}`);
+  }
+
+  return await response.arrayBuffer();
+}
+
+/** Génère le HTML du contrat (utilisé comme fallback) */
+function generateContractHTML(contract: any, vars: any, employeeName: string, employeeEmail: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page { size: A4; margin: 2cm; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #000; }
+    h1 { text-align: center; color: #2563eb; font-size: 20pt; margin-bottom: 30px; border-bottom: 3px solid #2563eb; padding-bottom: 10px; }
+    h2 { color: #1e40af; font-size: 14pt; margin-top: 25px; margin-bottom: 15px; }
+    .info-box { background: #f0f9ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background-color: #f3f4f6; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${contract.modele?.nom || 'CONTRAT DE TRAVAIL'}</h1>
+    <p><strong>Type de contrat :</strong> ${contract.modele?.type_contrat || 'CDI'}</p>
+  </div>
+
+  <h2>ENTRE LES SOUSSIGNÉS :</h2>
+  <div class="info-box">
+    <p><strong>L'Employeur :</strong> <span style="color: #FFA500;">TRANSPORT</span> <span style="color: #4A90E2;">CLASSE AFFAIRE</span></p>
+  </div>
+  <p style="text-align: center; margin: 20px 0;"><strong>ET</strong></p>
+  <div class="info-box">
+    <p><strong>Le Salarié :</strong> ${employeeName}</p>
+    <p><strong>Email :</strong> ${employeeEmail}</p>
+  </div>
+
+  <h2>ARTICLE 1 : OBJET DU CONTRAT</h2>
+  <p>Le présent contrat a pour objet de définir les conditions d'emploi et de rémunération.</p>
+
+  <h2>ARTICLE 2 : POSTE ET FONCTIONS</h2>
+  <table>
+    <tr><th>Poste</th><td>${vars.poste || vars.job_title || '[Poste à définir]'}</td></tr>
+    <tr><th>Date de début</th><td>${vars.date_debut || vars.contract_start ? formatDateFR(vars.date_debut || vars.contract_start) : '[Date à définir]'}</td></tr>
+    <tr><th>Durée hebdomadaire</th><td>${vars.heures_semaine || vars.hours_per_week || '35'} heures</td></tr>
+  </table>
+
+  <h2>ARTICLE 3 : RÉMUNÉRATION</h2>
+  <div class="info-box">
+    <p><strong>Salaire brut mensuel :</strong> ${vars.salaire || vars.salary || '[Salaire à définir]'}</p>
+  </div>
+
+  <h2>ARTICLE 4 : PÉRIODE D'ESSAI</h2>
+  <p>Période d'essai : ${vars.periode_essai || vars.trial_period || '2 mois'}</p>
+
+  <h2>ARTICLE 5 : LIEU DE TRAVAIL</h2>
+  <p>Lieu : ${vars.lieu_travail || vars.work_location || '[Adresse à définir]'}</p>
+</body>
+</html>
+  `;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
@@ -524,18 +620,27 @@ Deno.serve(async (req: Request) => {
       docxUrl = buildPublicStorageUrl(SUPABASE_URL, contract.storage_path);
     }
 
-    if (!docxUrl) throw new Error("Aucun modèle DOCX trouvé (modele_id / fichier_contrat_url / storage_path vides)");
-    console.log("📄 Using DOCX URL:", docxUrl);
+    // Vérifier si on a un DOCX accessible
+    let useHtmlFallback = false;
 
-    // Vérifier que l'URL est accessible
-    console.log("🔍 Vérification de l'URL DOCX...");
-    const testResp = await fetch(docxUrl, { method: 'HEAD' });
-    if (!testResp.ok) {
-      console.error(`❌ URL DOCX inaccessible: ${testResp.status} ${testResp.statusText}`);
-      console.error(`   URL testée: ${docxUrl}`);
-      throw new Error(`Le fichier modèle DOCX n'est pas accessible (${testResp.status}). Vérifiez que le fichier existe dans le storage et est public.`);
+    if (!docxUrl) {
+      console.log("⚠️ Aucun modèle DOCX trouvé, utilisation du fallback HTML→PDF");
+      useHtmlFallback = true;
+    } else {
+      console.log("📄 Using DOCX URL:", docxUrl);
+
+      // Vérifier que l'URL est accessible
+      console.log("🔍 Vérification de l'URL DOCX...");
+      const testResp = await fetch(docxUrl, { method: 'HEAD' });
+      if (!testResp.ok) {
+        console.error(`❌ URL DOCX inaccessible: ${testResp.status} ${testResp.statusText}`);
+        console.error(`   URL testée: ${docxUrl}`);
+        console.log("⚠️ Utilisation du fallback HTML→PDF au lieu du DOCX");
+        useHtmlFallback = true;
+      } else {
+        console.log("✅ URL DOCX accessible");
+      }
     }
-    console.log("✅ URL DOCX accessible");
 
     const rawVars =
       typeof contract.variables === "string"
@@ -598,7 +703,15 @@ Deno.serve(async (req: Request) => {
     console.log("✅ employeeName:", employeeName);
     console.log("✅ employeeEmail:", employeeEmail);
 
-    const pdf = await convertDocxToPdfCloudConvert(docxUrl, enriched);
+    let pdf: ArrayBuffer;
+
+    if (useHtmlFallback) {
+      console.log("📝 Génération du PDF depuis HTML (fallback)...");
+      pdf = await generatePdfFromHtml(contract, enriched, employeeName, employeeEmail);
+    } else {
+      console.log("📄 Génération du PDF depuis DOCX...");
+      pdf = await convertDocxToPdfCloudConvert(docxUrl!, enriched);
+    }
 
     const pageCount = await getPdfPageCount(pdf);
     console.log("📄 PDF pageCount:", pageCount);

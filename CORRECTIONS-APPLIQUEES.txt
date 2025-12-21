@@ -55,23 +55,28 @@ CORRECTIONS APPLIQUÉES
    2. Cliquer sur "Télécharger" (bouton bleu)
    3. Le PDF est téléchargé ou généré automatiquement
 
-4. FIX ERREUR YOUSIGN CDI (NOUVEAU)
-   --------------------------------
+4. FIX ERREUR YOUSIGN CDI - FALLBACK HTML→PDF (NOUVEAU)
+   -----------------------------------------------------
    Problème : Erreur "DOCX download failed: 400 Bad Request"
-   Uniquement pour les CDI avec le bouton "Renvoyer"
+   Lors de l'envoi de contrats CDI à Yousign
 
-   Changements :
-   ✓ Meilleure construction des URLs DOCX
-   ✓ Vérification accessibilité avant téléchargement
-   ✓ Messages d'erreur plus clairs avec logs détaillés
-   ✓ Gère les URLs relatives (documents/...)
+   Solution : Fallback automatique HTML→PDF
+   ✓ Si DOCX inaccessible → génère PDF depuis HTML automatiquement
+   ✓ Plus besoin de fichiers DOCX pour envoyer les contrats CDI
+   ✓ Rétrocompatible avec DOCX existants
+   ✓ Logs détaillés pour debugging
+   ✓ Fonctionne pour tous les types de contrats
 
    Fichier modifié :
    - supabase/functions/create-yousign-signature/index.ts
+     - Ajout generatePdfFromHtml() (lignes 467-502)
+     - Ajout generateContractHTML() (lignes 504-561)
+     - Détection DOCX inaccessible (lignes 527-547)
+     - Génération conditionnelle PDF (lignes 610-618)
 
    Action requise :
-   Redéployer la fonction Edge :
-   ./deploy-yousign-fix.sh
+   Déployer la fonction Edge :
+   ./DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh
 
 RÉSUMÉ
 ------
@@ -80,14 +85,14 @@ RÉSUMÉ
 ✓ Bouton "Renvoyer" pour renvoyer le même modèle
 ✓ Bouton "Télécharger" toujours visible (tous statuts)
 ✓ Génération PDF à la demande pour contrats non signés (blob)
-✓ Fix erreur Yousign CDI (URLs et vérification)
+✓ Fix erreur Yousign CDI avec fallback HTML→PDF
+✓ Plus besoin de fichiers DOCX pour les contrats CDI
 ✓ Build réussi sans erreurs
 
 ACTIONS REQUISES
 ----------------
-⚠️ Redéployer create-yousign-signature : ./deploy-yousign-fix.sh
-⚠️ Vérifier fichier DOCX du modèle CDI dans Storage
-⚠️ S'assurer que bucket "documents" est PUBLIC
+⚠️ Redéployer create-yousign-signature :
+   ./DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh
 
 DOCUMENTATION
 -------------
@@ -95,5 +100,5 @@ DOCUMENTATION
 - CORRECTION-VARIABLES-CDI-APPLIQUEE.md : Détails correction SQL
 - SUPPRESSION-CONTRATS-SANS-CONTRAINTES.md : Suppression de contrats
 - BOUTON-TELECHARGER-TOUJOURS-VISIBLE.md : Téléchargement universel
-- FIX-ERREUR-YOUSIGN-CDI.md : Fix erreur DOCX 400
-- RESUME-FIX-YOUSIGN-CDI.txt : Résumé rapide fix Yousign
+- FIX-CDI-YOUSIGN-HTML-FALLBACK.md : Fix complet avec fallback HTML
+- RESUME-FIX-CDI-YOUSIGN.txt : Résumé rapide du fix

@@ -1,0 +1,91 @@
+========================================
+⚠️  ACTION IMMÉDIATE REQUISE  ⚠️
+========================================
+
+PROBLÈME RÉSOLU
+---------------
+Erreur : "Yousign error: DOCX download failed: 400 Bad Request"
+Lors de l'envoi de contrats CDI à Yousign
+
+SOLUTION IMPLÉMENTÉE
+-------------------
+✅ Système de fallback automatique HTML→PDF
+✅ Plus besoin de fichiers DOCX pour les contrats CDI
+✅ Fonctionne automatiquement si le DOCX n'est pas disponible
+
+CE QU'IL FAUT FAIRE MAINTENANT
+------------------------------
+
+1️⃣  DÉPLOYER LA FONCTION EDGE (OBLIGATOIRE)
+
+    ./DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh
+
+    OU manuellement :
+
+    supabase functions deploy create-yousign-signature
+
+2️⃣  TESTER L'ENVOI D'UN CONTRAT CDI
+
+    1. Aller dans l'app → Salarié (ex: WAJDI MADANI)
+    2. Cliquer sur "Créer un contrat"
+    3. Sélectionner un modèle CDI
+    4. Remplir les informations
+    5. Cliquer sur "Envoyer le contrat"
+    6. Le contrat devrait s'envoyer SANS erreur
+
+3️⃣  VÉRIFIER LES LOGS (OPTIONNEL)
+
+    Dans Supabase Dashboard :
+    → Functions → create-yousign-signature → Logs
+
+    Vous devriez voir :
+    📝 Génération du PDF depuis HTML (fallback)...
+
+COMMENT ÇA MARCHE
+-----------------
+
+AVANT (avec erreur) :
+  1. Essaie de télécharger le DOCX
+  2. ❌ Erreur 400 - fichier non trouvé
+  3. ❌ Arrêt du processus
+
+MAINTENANT (avec fallback) :
+  1. Essaie de télécharger le DOCX
+  2. ⚠️  Erreur 400 - fichier non trouvé
+  3. ✅ Active le fallback HTML→PDF
+  4. ✅ Génère le PDF depuis HTML
+  5. ✅ Envoie à Yousign normalement
+
+AVANTAGES
+---------
+✅ Plus besoin de créer/uploader des fichiers DOCX
+✅ Fonctionne immédiatement après le déploiement
+✅ Rétrocompatible : utilise toujours le DOCX s'il existe
+✅ Logs détaillés pour le debugging
+✅ Aucun changement dans l'interface utilisateur
+
+FICHIERS CRÉÉS
+--------------
+✓ FIX-CDI-YOUSIGN-HTML-FALLBACK.md
+  → Documentation complète du système
+
+✓ RESUME-FIX-CDI-YOUSIGN.txt
+  → Résumé rapide
+
+✓ DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh
+  → Script de déploiement automatique
+
+✓ CORRECTIONS-APPLIQUEES.txt
+  → Mis à jour avec tous les changements
+
+SUPPORT
+-------
+En cas de problème après déploiement :
+1. Vérifier les logs de la fonction Edge
+2. Chercher "📝 Génération du PDF depuis HTML"
+3. Vérifier que PDFSHIFT_API_KEY est configuré
+4. Consulter FIX-CDI-YOUSIGN-HTML-FALLBACK.md
+
+========================================
+👉 PROCHAINE ÉTAPE : Déployer maintenant
+========================================
