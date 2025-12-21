@@ -7,7 +7,7 @@
     - Exclut les profils avec CDI (type='cdi' OU date_fin IS NULL)
 
   2. Logique
-    - Récupère les profils qui ont des dates d'avenant
+    - Les dates d'avenant sont dans la table profil (p.avenant_1_date_fin, p.avenant_2_date_fin)
     - Calcule la date d'expiration avec GREATEST (avenant_2 prioritaire)
     - Exclut complètement les profils ayant un CDI (type='cdi' OU date_fin IS NULL)
     - Retourne uniquement ceux qui sont expirés (< CURRENT_DATE)
@@ -42,28 +42,28 @@ BEGIN
     p.email,
     p.matricule_tca,
     GREATEST(
-      COALESCE(c.avenant_2_date_fin, '1900-01-01'::date),
-      COALESCE(c.avenant_1_date_fin, '1900-01-01'::date)
+      COALESCE(p.avenant_2_date_fin, '1900-01-01'::date),
+      COALESCE(p.avenant_1_date_fin, '1900-01-01'::date)
     ) as date_expiration_reelle,
     c.id as contrat_id,
     c.type as contrat_type,
     c.date_debut as contrat_date_debut,
     c.date_fin as contrat_date_fin,
     c.statut as contrat_statut,
-    c.avenant_1_date_fin,
-    c.avenant_2_date_fin,
+    p.avenant_1_date_fin,
+    p.avenant_2_date_fin,
     (CURRENT_DATE - GREATEST(
-      COALESCE(c.avenant_2_date_fin, '1900-01-01'::date),
-      COALESCE(c.avenant_1_date_fin, '1900-01-01'::date)
+      COALESCE(p.avenant_2_date_fin, '1900-01-01'::date),
+      COALESCE(p.avenant_1_date_fin, '1900-01-01'::date)
     )) as jours_depuis_expiration
   FROM profil p
-  INNER JOIN contrat c ON c.profil_id = p.id
+  LEFT JOIN contrat c ON c.profil_id = p.id
   WHERE
     p.statut = 'actif'
-    AND (c.avenant_1_date_fin IS NOT NULL OR c.avenant_2_date_fin IS NOT NULL)
+    AND (p.avenant_1_date_fin IS NOT NULL OR p.avenant_2_date_fin IS NOT NULL)
     AND GREATEST(
-      COALESCE(c.avenant_2_date_fin, '1900-01-01'::date),
-      COALESCE(c.avenant_1_date_fin, '1900-01-01'::date)
+      COALESCE(p.avenant_2_date_fin, '1900-01-01'::date),
+      COALESCE(p.avenant_1_date_fin, '1900-01-01'::date)
     ) < CURRENT_DATE
     AND NOT EXISTS (
       SELECT 1

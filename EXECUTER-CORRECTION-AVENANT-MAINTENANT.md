@@ -4,16 +4,20 @@
 
 La fonction `get_avenants_expires()` a été mise à jour pour :
 
-1. **Exclure complètement les salariés en CDI**
+1. **Utilisation correcte des colonnes de la table profil**
+   - Les dates d'avenant sont dans `profil` : `p.avenant_1_date_fin` et `p.avenant_2_date_fin`
+   - LEFT JOIN avec `contrat` pour récupérer les informations de contrat
+
+2. **Exclure complètement les salariés en CDI**
    - Exclusion si `type='cdi'` OU `date_fin IS NULL`
    - Utilisation de `NOT EXISTS` pour vérifier tous les contrats du profil
 
-2. **Calcul unifié de la date d'expiration**
-   - Une seule date : `GREATEST(avenant_2_date_fin, avenant_1_date_fin)`
+3. **Calcul unifié de la date d'expiration**
+   - Une seule date : `GREATEST(p.avenant_2_date_fin, p.avenant_1_date_fin)`
    - Avenant 2 prioritaire sur Avenant 1
    - Retourne uniquement si `date_expiration_reelle < CURRENT_DATE`
 
-3. **Simplification de la logique**
+4. **Simplification de la logique**
    - Suppression des CTEs complexes
    - Une seule requête directe
    - Ajout de `matricule_tca` au retour
