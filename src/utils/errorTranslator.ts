@@ -5,14 +5,8 @@ export function translateError(error: any): { title: string; message: string } {
   const errorMessage = error?.message || String(error);
   const errorCode = error?.code;
 
-  // Erreur de contrainte unique - contrat déjà existant
-  if (errorMessage.includes('duplicate key value violates unique constraint') ||
-      errorMessage.includes('ux_contrat_one_base_per_group')) {
-    return {
-      title: 'Contrat déjà existant',
-      message: 'Ce salarié possède déjà un contrat de base actif.\n\nPour créer un nouveau contrat, vous devez d\'abord :\n• Créer un avenant si le contrat actuel doit être prolongé\n• Ou clôturer le contrat existant avant d\'en créer un nouveau'
-    };
-  }
+  // Validation supprimée : Autoriser plusieurs contrats par salarié
+  // Note: La contrainte ux_contrat_one_base_per_group a été supprimée de la base de données
 
   // Erreur de permission
   if (errorMessage.includes('permission denied') ||
