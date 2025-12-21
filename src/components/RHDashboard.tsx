@@ -445,15 +445,33 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       const docsCount = documentsIncidents?.length || 0;
 
       // 2. Récupérer CDD expirés via RPC (comme dans la page Incidents)
-      const { data: cddData } = await supabase.rpc('get_contrats_expires');
+      const { data: cddData, error: cddError } = await supabase.rpc('get_cdd_expires_for_incidents');
+
+      if (cddError) {
+        console.error('Erreur get_cdd_expires_for_incidents:', cddError);
+      }
+
       const cddCount = cddData?.length || 0;
 
       // 3. Récupérer avenants expirés via RPC (comme dans la page Incidents)
-      const { data: avenantsData } = await supabase.rpc('get_avenants_expires');
+      const { data: avenantsData, error: avenantsError } = await supabase.rpc('get_avenants_expires');
+
+      if (avenantsError) {
+        console.error('Erreur get_avenants_expires:', avenantsError);
+      }
+
       const avenantCount = avenantsData?.length || 0;
 
       // 4. Calculer le total EXACTEMENT comme dans la page Incidents
       const totalIncidents = docsCount + cddCount + avenantCount;
+
+      // Log pour debug
+      console.log('📊 Dashboard RH - Incidents:', {
+        docsCount,
+        cddCount,
+        avenantCount,
+        totalIncidents
+      });
 
       // 5. Transformer les données pour les affichages détaillés
       const cddIncidents = (cddData || []).map(cdd => ({

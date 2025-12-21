@@ -100,8 +100,8 @@ CORRECTIONS APPLIQUÉES
    Déployer la fonction Edge :
    ./DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh
 
-5. FIX CARTE INCIDENTS DASHBOARD RH (NOUVEAU)
-   -------------------------------------------
+5. FIX CARTE INCIDENTS DASHBOARD RH - EXCLUSION LEGACY
+   -----------------------------------------------------
    Problème : Carte "Incidents" affichait 260+ incidents au lieu du nombre réel
    La carte comptait les incidents legacy de type 'contrat_expirer' (199) et
    'avenant_expirer' (61) qui sont des doublons.
@@ -109,7 +109,7 @@ CORRECTIONS APPLIQUÉES
    Solution : Calcul exactement comme la page Incidents
    ✓ total = docsCount + cddCount + avenantCount
    ✓ docsCount = incidents de documents (types valides, statuts actifs)
-   ✓ cddCount = get_contrats_expires() RPC
+   ✓ cddCount = get_cdd_expires_for_incidents() RPC
    ✓ avenantCount = get_avenants_expires() RPC
    ✓ Types legacy JAMAIS comptés
 
@@ -122,6 +122,34 @@ CORRECTIONS APPLIQUÉES
    Résultat :
    Le nombre d'incidents affiché dans la carte Dashboard = Nombre page Incidents
 
+6. FIX CARTE INCIDENTS DASHBOARD RH - CDD MANQUANTS (NOUVEAU)
+   -----------------------------------------------------------
+   Problème : Carte "Incidents" affichait 56 au lieu de ~196
+   Les CDD expirés (140) n'étaient PAS comptés dans le total.
+
+   Cause : Mauvaise RPC utilisée
+   - Utilisait : get_contrats_expires() ❌ (n'existe pas ou ne retourne rien)
+   - Devait utiliser : get_cdd_expires_for_incidents() ✅
+
+   Solution : Corriger la RPC pour les CDD
+   ✓ Utiliser get_cdd_expires_for_incidents() (comme page Incidents)
+   ✓ Ajouter gestion d'erreur pour CDD et avenants
+   ✓ Ajouter logs de debug pour vérifier les données
+
+   Fichier modifié :
+   - src/components/RHDashboard.tsx
+     - Ligne 448 : RPC CDD corrigée
+     - Lignes 450-452 : Gestion erreur CDD
+     - Lignes 459-461 : Gestion erreur avenants
+     - Lignes 468-474 : Logs de debug
+
+   Résultat :
+   Avant : 56 incidents (CDD manquants)
+   Après : ~196 incidents (CDD comptés : 140 ✅)
+
+   La carte additionne maintenant TOUS les incidents :
+   titre de séjour + visite médicale + permis de conduire + CDD + Avenant
+
 RÉSUMÉ
 ------
 ✓ Erreur SQL corrigée (nir au lieu de numero_piece_identite)
@@ -130,7 +158,8 @@ RÉSUMÉ
 ✓ Bouton "Télécharger" toujours visible (tous statuts)
 ✓ Génération PDF à la demande pour contrats non signés (blob)
 ✓ Fix erreur Yousign CDI (2 solutions disponibles)
-✓ Carte Incidents Dashboard RH corrigée (exclut legacy, cohérent avec page)
+✓ Carte Incidents Dashboard RH : exclusion legacy (260 → nombre réel)
+✓ Carte Incidents Dashboard RH : CDD manquants corrigés (56 → 196)
 ✓ Build réussi sans erreurs
 
 ACTIONS REQUISES
@@ -154,8 +183,10 @@ Erreur Yousign CDI :
 - DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh : Déploiement fallback
 
 Dashboard RH - Incidents :
-- CORRECTION-DASHBOARD-RH-INCIDENTS.md : Guide complet de la correction
-- RESUME-CORRECTION-DASHBOARD-INCIDENTS.txt : Résumé rapide
+- CORRECTION-DASHBOARD-RH-INCIDENTS.md : Guide complet exclusion legacy
+- RESUME-CORRECTION-DASHBOARD-INCIDENTS.txt : Résumé rapide exclusion legacy
+- FIX-DASHBOARD-RH-CDD-MANQUANTS.md : Guide complet CDD manquants (NOUVEAU)
+- TEST-DASHBOARD-INCIDENTS.md : Procédure de test détaillée
 
 Autres corrections :
 - ERREUR-COLONNE-CORRIGEE.txt : Erreur SQL

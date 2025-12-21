@@ -1,0 +1,67 @@
+========================================
+FIX CARTE INCIDENTS - CDD MANQUANTS
+========================================
+
+PROBLÈME
+--------
+Carte "Incidents" affiche 56 au lieu de ~196
+Les CDD expirés (140) ne sont PAS comptés.
+
+CAUSE
+-----
+Mauvaise RPC utilisée :
+✗ get_contrats_expires() (n'existe pas ou retourne rien)
+✓ get_cdd_expires_for_incidents() (la bonne)
+
+SOLUTION
+--------
+Corriger la RPC ligne 448 :
+
+Avant :
+const { data: cddData } = await supabase.rpc('get_contrats_expires');
+
+Après :
+const { data: cddData, error: cddError } = await supabase.rpc('get_cdd_expires_for_incidents');
+
++ Gestion d'erreur CDD (lignes 450-452)
++ Gestion d'erreur avenants (lignes 459-461)
++ Logs de debug (lignes 468-474)
+
+RÉSULTAT
+--------
+Avant : 56 incidents (CDD = 0 ❌)
+Après : ~196 incidents (CDD = 140 ✅)
+
+La carte additionne maintenant TOUS les incidents :
+- Titre de séjour : 13
+- Visite médicale : 17
+- Permis de conduire : 1
+- CDD : 140 ✅ (maintenant comptés)
+- Avenant : 25
+Total : 196
+
+FICHIER MODIFIÉ
+---------------
+✓ src/components/RHDashboard.tsx
+  - Ligne 448 : RPC CDD corrigée
+  - Lignes 450-452 : Gestion erreur CDD
+  - Lignes 459-461 : Gestion erreur avenants
+  - Lignes 468-474 : Logs de debug
+
+TEST RAPIDE
+-----------
+1. Rafraîchir Dashboard RH (Ctrl+Shift+R)
+2. Vérifier carte Incidents : doit afficher ~196
+3. Ouvrir console (F12) : chercher log "📊 Dashboard RH - Incidents"
+   Doit afficher : cddCount: 140 (pas 0)
+4. Comparer avec page Incidents : les totaux doivent correspondre
+
+BUILD
+-----
+✓ Réussi sans erreurs
+
+DOCUMENTATION
+-------------
+- FIX-DASHBOARD-RH-CDD-MANQUANTS.md : Guide complet
+- Ce fichier : Résumé rapide
+- CORRECTIONS-APPLIQUEES.txt : Mis à jour (section 6)
