@@ -1,0 +1,50 @@
+========================================
+CORRECTIONS APPLIQUÉES
+========================================
+
+1. ERREUR SQL : Colonne inexistante (CORRIGÉ)
+   ----------------------------------------
+   Problème : numero_piece_identite n'existe pas
+   Solution : Utilise maintenant "nir" (Numéro de sécurité sociale)
+
+   Fichiers corrigés :
+   - VERIFIER-DONNEES-PROFIL-CDI.sql
+   - supabase/functions/create-yousign-signature/index.ts
+   - FIX-VARIABLES-CDI-NON-REMPLIES.md
+   - SOLUTION-VARIABLES-CDI.md
+
+   Action requise :
+   Redéployer la fonction Edge :
+   supabase functions deploy create-yousign-signature
+
+2. SUPPRESSION DE CONTRATS (NOUVEAU)
+   ---------------------------------
+   Fonctionnalité : Supprimer TOUS les contrats sans contraintes
+
+   Changements :
+   ✓ Bouton "Supprimer" visible pour TOUS les contrats
+   ✓ Supprime les contrats manuels ET générés (Yousign)
+   ✓ Nettoie les fichiers du storage automatiquement
+   ✓ Bouton "Renvoyer" pour renvoyer le même modèle
+
+   Fichier modifié :
+   - src/components/EmployeeList.tsx
+
+   Utilisation :
+   1. Ouvrir le modal du salarié
+   2. Cliquer sur "Supprimer" (bouton rouge)
+   3. Confirmer la suppression
+   4. Utiliser "Renvoyer" pour renvoyer le même modèle
+
+RÉSUMÉ
+------
+✓ Erreur SQL corrigée (nir au lieu de numero_piece_identite)
+✓ Suppression de contrats sans contraintes ajoutée
+✓ Bouton "Renvoyer" pour renvoyer le même modèle
+✓ Build réussi sans erreurs
+
+DOCUMENTATION
+-------------
+- ERREUR-COLONNE-CORRIGEE.txt : Erreur SQL
+- CORRECTION-VARIABLES-CDI-APPLIQUEE.md : Détails correction SQL
+- SUPPRESSION-CONTRATS-SANS-CONTRAINTES.md : Nouvelle fonctionnalité

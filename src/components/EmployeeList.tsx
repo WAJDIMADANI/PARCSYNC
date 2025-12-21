@@ -1245,23 +1245,36 @@ function EmployeeDetailModal({
     try {
       setDeletingContract(true);
 
+      // Supprimer le fichier signé du storage (pour tous les types de contrats)
       if (contractToDelete.fichier_signe_url) {
         const { error: storageError } = await supabase.storage
           .from('documents')
           .remove([contractToDelete.fichier_signe_url]);
 
         if (storageError) {
-          console.warn('Erreur suppression fichier (peut-être déjà supprimé):', storageError);
+          console.warn('Erreur suppression fichier signé (peut-être déjà supprimé):', storageError);
         }
       }
 
+      // Supprimer le fichier storage_path si présent (pour contrats Yousign)
+      if (contractToDelete.signed_storage_path) {
+        const { error: storageError2 } = await supabase.storage
+          .from('documents')
+          .remove([contractToDelete.signed_storage_path]);
+
+        if (storageError2) {
+          console.warn('Erreur suppression storage_path (peut-être déjà supprimé):', storageError2);
+        }
+      }
+
+      // Supprimer l'enregistrement du contrat dans la base de données
       const { error: deleteError } = await supabase
         .from('contrat')
         .delete()
         .eq('id', contractToDelete.id);
 
       if (deleteError) {
-        throw new Error('Erreur lors de la suppression du contrat');
+        throw new Error('Erreur lors de la suppression du contrat: ' + deleteError.message);
       }
 
       setToast({ type: 'success', message: 'Contrat supprimé avec succès' });
@@ -3990,25 +4003,24 @@ function EmployeeDetailModal({
                               Télécharger
                             </button>
                           )}
-                          {!isManual && (
+                          {!isManual && contract.modele_id && (
                             <button
                               onClick={() => handleSendContract(contract.id, currentEmployee.email)}
                               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                              title="Renvoyer le même modèle de contrat"
                             >
                               <Send className="w-4 h-4" />
-                              Envoyer
+                              Renvoyer
                             </button>
                           )}
-                          {isManual && (
-                            <button
-                              onClick={() => setContractToDelete(contract)}
-                              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors shadow-sm hover:shadow-md"
-                              title="Supprimer ce contrat"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Supprimer
-                            </button>
-                          )}
+                          <button
+                            onClick={() => setContractToDelete(contract)}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors shadow-sm hover:shadow-md"
+                            title="Supprimer ce contrat"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Supprimer
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -4644,17 +4656,50 @@ function EmployeeDetailModal({
       />
     )}
 
-    {contractToDelete && (
-      <ConfirmDeleteContractModal
-        contractId={contractToDelete.id}
-        contractName={contractToDelete.variables?.poste || 'Contrat de travail'}
-        contractType={contractToDelete.variables?.type_contrat || 'Non renseigné'}
-        signatureDate={contractToDelete.date_signature || contractToDelete.created_at}
-        onConfirm={deleteManualContract}
-        onClose={() => setContractToDelete(null)}
-        isDeleting={deletingContract}
-      />
-    )}
+    {contractToDelete && (() => {
+      // Déterminer le nom du contrat
+      const isManual = contractToDelete.source === 'manuel' || !contractToDelete.modele_id;
+      const contractType = contractToDelete.type?.toLowerCase();
+
+      let contractName = 'Contrat de travail';
+      if (contractType === 'cdi') {
+        contractName = 'Contrat de travail (CDI)';
+      } else if (contractType === 'cdd') {
+        contractName = 'Contrat de travail (CDD)';
+      } else if (contractType === 'avenant') {
+        contractName = 'Avenant au contrat';
+      } else if (isManual && contractToDelete.variables?.poste) {
+        contractName = contractToDelete.variables.poste;
+      } else if (contractToDelete.modele?.nom) {
+        contractName = contractToDelete.modele.nom;
+      }
+
+      // Déterminer le type pour l'affichage
+      let typeContrat = 'Non renseigné';
+      if (contractType === 'cdi') {
+        typeContrat = 'CDI';
+      } else if (contractType === 'cdd') {
+        typeContrat = 'CDD';
+      } else if (contractType === 'avenant') {
+        typeContrat = 'Avenant';
+      } else if (isManual && contractToDelete.variables?.type_contrat) {
+        typeContrat = contractToDelete.variables.type_contrat;
+      } else if (contractToDelete.modele?.type_contrat) {
+        typeContrat = contractToDelete.modele.type_contrat;
+      }
+
+      return (
+        <ConfirmDeleteContractModal
+          contractId={contractToDelete.id}
+          contractName={contractName}
+          contractType={typeContrat}
+          signatureDate={contractToDelete.date_signature || contractToDelete.yousign_signed_at || contractToDelete.created_at}
+          onConfirm={deleteManualContract}
+          onClose={() => setContractToDelete(null)}
+          isDeleting={deletingContract}
+        />
+      );
+    })()}
 
     <ConfirmInvalidIbanModal
       isOpen={showInvalidIbanModal}
