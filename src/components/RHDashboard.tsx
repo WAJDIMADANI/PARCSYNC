@@ -417,49 +417,20 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
 
   const fetchIncidentsStats = async () => {
     try {
-      const { data: statsData, error: statsError } = await supabase
-        .from('v_incidents_stats')
-        .select('*')
-        .single();
+      // Types d'incidents legacy à TOUJOURS exclure (doublons)
+      const LEGACY_TYPES = ['contrat_expirer', 'avenant_expirer'];
 
-      if (statsError) {
-        console.error('Error fetching v_incidents_stats:', statsError);
-      }
+      // Types d'incidents de documents valides
+      const DOCUMENT_TYPES = ['titre_sejour', 'visite_medicale', 'permis_conduire'];
 
-      // 1. Récupérer CDD expirés (SEULEMENT les vrais expirés)
-      const { data: cddData } = await supabase.rpc('get_cdd_expires_for_incidents');
-
-      // 2. Récupérer avenants expirés
-      const { data: avenantsData } = await supabase.rpc('get_avenants_expires');
-
-      // 3. Transformer comme dans IncidentsList
-      const cddIncidents = (cddData || []).map(cdd => ({
-        id: `cdd-${cdd.profil_id}-${cdd.contrat_id}`,
-        type: 'contrat_expire',
-        created_at: new Date().toISOString(),
-        statut: 'actif',
-        profil_id: cdd.profil_id,
-        contrat_type: 'CDD'
-      }));
-
-      const avenantsIncidents = (avenantsData || []).map(av => ({
-        id: `avenant-${av.profil_id}-${av.contrat_id}`,
-        type: 'contrat_expire',
-        created_at: new Date().toISOString(),
-        statut: 'actif',
-        profil_id: av.profil_id,
-        contrat_type: 'Avenant'
-      }));
-
-      const contratsIncidents = [...cddIncidents, ...avenantsIncidents];
-
-      // 4. Récupérer les autres types d'incidents
-      const { data: autresIncidents } = await supabase
+      // 1. Récupérer les incidents de documents (uniquement les types valides, statuts actifs)
+      const { data: documentsIncidents } = await supabase
         .from('incident')
         .select(`
           id,
           type,
           created_at,
+          date_creation_incident,
           statut,
           profil_id,
           profil:profil_id (
@@ -468,35 +439,60 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             email
           )
         `)
-        .neq('type', 'contrat_expire')
-        .order('date_creation_incident', { ascending: false });
+        .in('type', DOCUMENT_TYPES)
+        .in('statut', ['actif', 'en_cours']);
 
-      // 5. Filtrer les autres incidents (actifs seulement)
-      const activeAutresIncidents = autresIncidents?.filter(i =>
-        i.statut !== 'resolu' && i.statut !== 'ignore'
-      ).length || 0;
+      const docsCount = documentsIncidents?.length || 0;
 
-      // 6. Compter le total comme dans IncidentsList
-      const totalIncidents =
-        (cddIncidents?.length || 0) +
-        (avenantsIncidents?.length || 0) +
-        activeAutresIncidents;
+      // 2. Récupérer CDD expirés via RPC (comme dans la page Incidents)
+      const { data: cddData } = await supabase.rpc('get_contrats_expires');
+      const cddCount = cddData?.length || 0;
 
-      // Compter les incidents de ce mois
+      // 3. Récupérer avenants expirés via RPC (comme dans la page Incidents)
+      const { data: avenantsData } = await supabase.rpc('get_avenants_expires');
+      const avenantCount = avenantsData?.length || 0;
+
+      // 4. Calculer le total EXACTEMENT comme dans la page Incidents
+      const totalIncidents = docsCount + cddCount + avenantCount;
+
+      // 5. Transformer les données pour les affichages détaillés
+      const cddIncidents = (cddData || []).map(cdd => ({
+        id: `cdd-${cdd.profil_id}-${cdd.contrat_id}`,
+        type: 'contrat_expire',
+        created_at: cdd.date_fin || new Date().toISOString(),
+        statut: 'actif',
+        profil_id: cdd.profil_id,
+        profil: { prenom: cdd.prenom, nom: cdd.nom, email: cdd.email },
+        contrat_type: 'CDD'
+      }));
+
+      const avenantsIncidents = (avenantsData || []).map(av => ({
+        id: `avenant-${av.profil_id}-${av.contrat_id}`,
+        type: 'contrat_expire',
+        created_at: av.avenant_2_date_fin || new Date().toISOString(),
+        statut: 'actif',
+        profil_id: av.profil_id,
+        profil: { prenom: av.prenom, nom: av.nom, email: av.email },
+        contrat_type: 'Avenant'
+      }));
+
+      const allActiveIncidents = [
+        ...(documentsIncidents || []),
+        ...cddIncidents,
+        ...avenantsIncidents
+      ];
+
+      // 6. Compter les incidents de ce mois
       const now = new Date();
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const contratsThisMonth = contratsIncidents?.filter(i =>
-        new Date(i.created_at) >= firstDayOfMonth
-      ).length || 0;
+      const ce_mois = allActiveIncidents.filter(i => {
+        const incidentDate = new Date(i.created_at || i.date_creation_incident);
+        return incidentDate >= firstDayOfMonth;
+      }).length;
 
-      const autresThisMonth = autresIncidents?.filter(i =>
-        new Date(i.created_at) >= firstDayOfMonth
-      ).length || 0;
-
-      const ce_mois = contratsThisMonth + autresThisMonth;
-
-      if (!autresIncidents && contratsIncidents.length === 0) {
+      // 7. Si aucun incident, retourner des stats vides
+      if (totalIncidents === 0) {
         setStats((prev) => ({
           ...prev,
           incidents: {
@@ -510,65 +506,47 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         return;
       }
 
-      // Récupérer les incidents complets pour les statistiques détaillées
-      const { data: allIncidentsForStats } = await supabase
-        .from('incident')
-        .select(`
-          *,
-          profil:profil_id (
-            prenom,
-            nom,
-            email
-          ),
-          contrat:contrat_id (
-            type,
-            date_debut,
-            date_fin,
-            statut
-          )
-        `)
-        .order('date_creation_incident', { ascending: false });
+      // 8. Préparer les incidents pour les statistiques détaillées
+      const incidents = allActiveIncidents;
 
-      const incidents = allIncidentsForStats || [];
+      // 9. Compter les incidents par type (affichage lisible)
+      const typeCountMap: { [key: string]: number } = {
+        'Titre de séjour': 0,
+        'Visite médicale': 0,
+        'Permis de conduire': 0,
+        'Contrat CDD expiré': 0,
+        'Avenant expiré': 0,
+      };
 
-      const typeMap: { [key: string]: number } = {};
-      incidents.forEach((i) => {
-        if (i.type) {
-          typeMap[i.type] = (typeMap[i.type] || 0) + 1;
+      incidents.forEach((i: any) => {
+        if (i.type === 'titre_sejour') {
+          typeCountMap['Titre de séjour']++;
+        } else if (i.type === 'visite_medicale') {
+          typeCountMap['Visite médicale']++;
+        } else if (i.type === 'permis_conduire') {
+          typeCountMap['Permis de conduire']++;
+        } else if (i.type === 'contrat_expire') {
+          if (i.contrat_type === 'CDD') {
+            typeCountMap['Contrat CDD expiré']++;
+          } else if (i.contrat_type === 'Avenant') {
+            typeCountMap['Avenant expiré']++;
+          }
         }
       });
 
-      const getTypeLabel = (type: string, contrat?: any) => {
-        if (type === 'contrat_expire' && contrat) {
-          const contratType = contrat.type?.toLowerCase();
-          if (contratType === 'cdd') return 'Contrat CDD';
-          if (contratType === 'avenant') return 'Avenant au contrat';
-          return 'Contrat';
-        }
+      const par_type = Object.entries(typeCountMap)
+        .filter(([_, count]) => count > 0)
+        .map(([type, count]) => ({ type, count }));
 
-        switch (type) {
-          case 'titre_sejour': return 'Titre de séjour';
-          case 'visite_medicale': return 'Visite médicale';
-          case 'permis_conduire': return 'Permis de conduire';
-          case 'contrat_cdd': return 'Contrat CDD';
-          case 'contrat_expire': return 'Contrat expiré';
-          default: return type;
-        }
-      };
-
-      const par_type = Object.entries(typeMap).map(([type, count]) => ({
-        type: getTypeLabel(type),
-        count,
-      }));
-
+      // 10. Compter les incidents par employé (top 5)
       const employeMap: { [key: string]: { nom: string; prenom: string; count: number } } = {};
       incidents.forEach((i: any) => {
         if (i.profil_id && i.profil) {
           const key = i.profil_id;
           if (!employeMap[key]) {
             employeMap[key] = {
-              nom: i.profil.nom,
-              prenom: i.profil.prenom,
+              nom: i.profil.nom || '',
+              prenom: i.profil.prenom || '',
               count: 0,
             };
           }
@@ -580,15 +558,23 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      const activeIncidents = incidents.filter((i) => i.statut === 'actif').slice(0, 5);
+      // 11. Récupérer les 5 incidents les plus récents (tous sont actifs)
+      const recents = incidents
+        .sort((a, b) => {
+          const dateA = new Date(a.created_at || a.date_creation_incident || 0);
+          const dateB = new Date(b.created_at || b.date_creation_incident || 0);
+          return dateB.getTime() - dateA.getTime();
+        })
+        .slice(0, 5);
 
+      // 12. Mettre à jour les statistiques
       setStats((prev) => ({
         ...prev,
         incidents: {
           total: totalIncidents,
           ce_mois: ce_mois,
           par_type,
-          recents: activeIncidents,
+          recents,
           top_employes,
         },
       }));

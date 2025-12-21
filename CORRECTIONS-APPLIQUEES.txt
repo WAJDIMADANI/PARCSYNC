@@ -100,6 +100,28 @@ CORRECTIONS APPLIQUÉES
    Déployer la fonction Edge :
    ./DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh
 
+5. FIX CARTE INCIDENTS DASHBOARD RH (NOUVEAU)
+   -------------------------------------------
+   Problème : Carte "Incidents" affichait 260+ incidents au lieu du nombre réel
+   La carte comptait les incidents legacy de type 'contrat_expirer' (199) et
+   'avenant_expirer' (61) qui sont des doublons.
+
+   Solution : Calcul exactement comme la page Incidents
+   ✓ total = docsCount + cddCount + avenantCount
+   ✓ docsCount = incidents de documents (types valides, statuts actifs)
+   ✓ cddCount = get_contrats_expires() RPC
+   ✓ avenantCount = get_avenants_expires() RPC
+   ✓ Types legacy JAMAIS comptés
+
+   Fichier modifié :
+   - src/components/RHDashboard.tsx
+     - Fonction fetchIncidentsStats() réécrite (lignes 418-584)
+     - Exclusion explicite types legacy
+     - Calcul cohérent avec page Incidents
+
+   Résultat :
+   Le nombre d'incidents affiché dans la carte Dashboard = Nombre page Incidents
+
 RÉSUMÉ
 ------
 ✓ Erreur SQL corrigée (nir au lieu de numero_piece_identite)
@@ -108,6 +130,7 @@ RÉSUMÉ
 ✓ Bouton "Télécharger" toujours visible (tous statuts)
 ✓ Génération PDF à la demande pour contrats non signés (blob)
 ✓ Fix erreur Yousign CDI (2 solutions disponibles)
+✓ Carte Incidents Dashboard RH corrigée (exclut legacy, cohérent avec page)
 ✓ Build réussi sans erreurs
 
 ACTIONS REQUISES
@@ -122,10 +145,20 @@ ACTIONS REQUISES
 
 DOCUMENTATION
 -------------
+Erreur Yousign CDI :
 - LIRE-EN-PREMIER-CDI-YOUSIGN.txt : Guide rapide de démarrage
 - SOLUTION-COMPLETE-ERREUR-CDI-YOUSIGN.md : Documentation complète
 - FIX-BUCKET-MODELES-CONTRATS-PERMISSIONS.sql : Script SQL correction bucket
 - TESTER-ACCES-FICHIERS-CDI.sh : Script de test des URLs
 - FIX-CDI-YOUSIGN-HTML-FALLBACK.md : Documentation du fallback HTML
 - DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh : Déploiement fallback
-- Autres fichiers de documentation précédents...
+
+Dashboard RH - Incidents :
+- CORRECTION-DASHBOARD-RH-INCIDENTS.md : Guide complet de la correction
+- RESUME-CORRECTION-DASHBOARD-INCIDENTS.txt : Résumé rapide
+
+Autres corrections :
+- ERREUR-COLONNE-CORRIGEE.txt : Erreur SQL
+- CORRECTION-VARIABLES-CDI-APPLIQUEE.md : Détails correction SQL
+- SUPPRESSION-CONTRATS-SANS-CONTRAINTES.md : Suppression de contrats
+- BOUTON-TELECHARGER-TOUJOURS-VISIBLE.md : Téléchargement universel
