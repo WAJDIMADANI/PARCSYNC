@@ -1,0 +1,60 @@
+========================================
+FIX ERREUR YOUSIGN CDI - RÉSUMÉ
+========================================
+
+PROBLÈME
+--------
+Erreur "Yousign error: DOCX download failed: 400 Bad Request"
+Uniquement pour les contrats CDI avec le bouton "Renvoyer"
+
+CAUSE
+-----
+Le fichier DOCX du modèle CDI n'est pas accessible
+L'URL est mal formatée ou le fichier n'existe pas
+
+CORRECTIONS APPLIQUÉES
+----------------------
+1. ✅ Amélioration construction des URLs DOCX
+2. ✅ Vérification accessibilité du fichier avant utilisation
+3. ✅ Messages d'erreur plus clairs
+4. ✅ Bouton "Télécharger" amélioré (retourne PDF directement)
+
+DEUX BOUTONS DIFFÉRENTS
+------------------------
+🔵 TÉLÉCHARGER (bleu)
+   → Génère PDF via generate-contract-pdf
+   → Ne nécessite PAS de fichier DOCX
+   → Fonctionne toujours
+
+🟢 RENVOYER (vert)
+   → Envoie contrat via Yousign pour signature
+   → NÉCESSITE un fichier DOCX template
+   → Peut échouer si DOCX inaccessible
+
+DÉPLOIEMENT REQUIS
+-------------------
+./deploy-yousign-fix.sh
+
+OU manuellement :
+supabase functions deploy create-yousign-signature
+
+VÉRIFICATIONS À FAIRE
+---------------------
+1. Le fichier DOCX du modèle CDI existe dans Storage
+2. Le bucket "documents" est PUBLIC
+3. L'URL dans modeles_contrats.fichier_url est correcte
+
+SQL DE VÉRIFICATION
+-------------------
+SELECT id, nom, type_contrat, fichier_url
+FROM modeles_contrats
+WHERE type_contrat = 'CDI';
+
+FICHIERS MODIFIÉS
+-----------------
+1. src/components/EmployeeList.tsx
+2. supabase/functions/create-yousign-signature/index.ts
+
+DOCUMENTATION COMPLÈTE
+----------------------
+Voir FIX-ERREUR-YOUSIGN-CDI.md pour tous les détails
