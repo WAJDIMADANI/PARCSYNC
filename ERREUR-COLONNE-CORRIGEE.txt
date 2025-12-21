@@ -1,0 +1,53 @@
+========================================
+ERREUR CORRIGÉE : Colonne inexistante
+========================================
+
+PROBLÈME
+--------
+L'erreur SQL indiquait :
+"la colonne « numero_piece_identite » n'existe pas"
+
+CAUSE
+-----
+Les scripts utilisaient le mauvais nom de colonne.
+La table profil utilise "nir" (Numéro de sécurité sociale)
+et non "numero_piece_identite".
+
+FICHIERS CORRIGÉS
+-----------------
+1. VERIFIER-DONNEES-PROFIL-CDI.sql
+   - numero_piece_identite → nir
+   - numero_securite_sociale → nir
+
+2. supabase/functions/create-yousign-signature/index.ts
+   - Ligne 95: vars.nir
+   - Ligne 573: contract.profil?.nir
+   - Ligne 594: contract.profil?.nir
+
+3. Documentation mise à jour
+   - FIX-VARIABLES-CDI-NON-REMPLIES.md
+   - SOLUTION-VARIABLES-CDI.md
+
+ACTION IMMÉDIATE
+----------------
+1. Redéployez la fonction Edge :
+   supabase functions deploy create-yousign-signature
+
+2. Testez le script SQL :
+   - Ouvrez VERIFIER-DONNEES-PROFIL-CDI.sql
+   - Remplacez 'MATRICULE_ICI' par un vrai matricule
+   - Exécutez dans l'éditeur SQL Supabase
+   - Vérifiez que le champ "nir" est rempli
+
+3. Si NIR est vide, mettez-le à jour :
+   UPDATE profil
+   SET nir = '1900115012345'
+   WHERE matricule_tca = 'VOTRE_MATRICULE';
+
+VÉRIFICATION
+------------
+Créez un nouveau contrat CDI et vérifiez :
+- Logs Supabase affichent : "nir": "1900115012345"
+- PDF généré contient le NIR au lieu de {{id_number}}
+
+Plus d'infos : CORRECTION-VARIABLES-CDI-APPLIQUEE.md

@@ -1,5 +1,15 @@
 # À faire maintenant - 2 corrections
 
+## ⚠️ ERREUR SQL CORRIGÉE
+
+**Les scripts utilisaient le mauvais nom de colonne !**
+- ❌ `numero_piece_identite` (n'existe pas)
+- ✅ `nir` (le bon nom)
+
+Tous les fichiers ont été corrigés. Voir : **`CORRECTION-VARIABLES-CDI-APPLIQUEE.md`**
+
+---
+
 ## 1. Corriger l'onglet Avenant (25 au lieu de 86)
 
 ### Exécuter le SQL
