@@ -20,7 +20,7 @@ import { SendReminderModal } from './SendReminderModal';
 
 interface Incident {
   id: string;
-  type: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'contrat_expire';
+  type: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'contrat_expire' | 'avenant_expirer';
   profil_id: string;
   contrat_id?: string;
   date_expiration_originale: string;
@@ -50,7 +50,7 @@ interface IncidentsListProps {
 export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'contrat_expire'>('titre_sejour');
+  const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_expirer'>('titre_sejour');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -162,7 +162,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       // Transformer les avenants depuis la RPC
       const avenantsFormatted = (avenantsData || []).map(av => ({
         id: `avenant-${av.profil_id}-${av.contrat_id}`, // ID généré pour l'affichage
-        type: 'contrat_expire' as const,
+        type: 'avenant_expirer' as const,
         profil_id: av.profil_id,
         contrat_id: av.contrat_id,
         date_expiration_originale: av.date_expiration_reelle,
@@ -228,10 +228,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       ).length;
     }
 
-    if (type === 'contrat_expire') {
-      return incidents.filter(i =>
-        i.type === 'contrat_expire' && i.metadata?.contrat_type?.toLowerCase() === 'avenant'
-      ).length;
+    if (type === 'avenant_expirer') {
+      return incidents.filter(i => i.type === 'avenant_expirer').length;
     }
 
     return incidents.filter(i => i.type === type).length;
@@ -251,6 +249,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       case 'permis_conduire': return 'Permis de conduire';
       case 'contrat_cdd': return 'Contrat CDD';
       case 'contrat_expire': return 'Contrat expiré';
+      case 'avenant_expirer': return 'Avenant au contrat';
       default: return incident.type;
     }
   };
@@ -262,6 +261,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       case 'permis_conduire': return <CreditCard className="w-5 h-5" />;
       case 'contrat_cdd': return <Calendar className="w-5 h-5" />;
       case 'contrat_expire': return <Calendar className="w-5 h-5" />;
+      case 'avenant_expirer': return <Calendar className="w-5 h-5" />;
       default: return <AlertCircle className="w-5 h-5" />;
     }
   };
@@ -358,8 +358,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
     if (activeTab === 'contrat_cdd') {
       matchesTab = incident.type === 'contrat_expire' && incident.metadata?.contrat_type?.toLowerCase() === 'cdd';
-    } else if (activeTab === 'contrat_expire') {
-      matchesTab = incident.type === 'contrat_expire' && incident.metadata?.contrat_type?.toLowerCase() === 'avenant';
+    } else if (activeTab === 'avenant_expirer') {
+      matchesTab = incident.type === 'avenant_expirer';
     } else {
       matchesTab = incident.type === activeTab;
     }
@@ -480,20 +480,20 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         </button>
 
         <button
-          onClick={() => setActiveTab('contrat_expire')}
+          onClick={() => setActiveTab('avenant_expirer')}
           className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all whitespace-nowrap ${
-            activeTab === 'contrat_expire'
+            activeTab === 'avenant_expirer'
               ? 'bg-red-700 text-white shadow-lg'
               : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
           }`}
         >
           <Calendar className="w-5 h-5" />
           Avenant
-          {getTabCount('contrat_expire') > 0 && (
+          {getTabCount('avenant_expirer') > 0 && (
             <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-              activeTab === 'contrat_expire' ? 'bg-white text-red-700' : 'bg-red-100 text-red-700'
+              activeTab === 'avenant_expirer' ? 'bg-white text-red-700' : 'bg-red-100 text-red-700'
             }`}>
-              {getTabCount('contrat_expire')}
+              {getTabCount('avenant_expirer')}
             </span>
           )}
         </button>
@@ -534,7 +534,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
               : `Aucun incident de type "${activeTab === 'titre_sejour' ? 'Titre de séjour' :
                   activeTab === 'visite_medicale' ? 'Visite médicale' :
                   activeTab === 'permis_conduire' ? 'Permis de conduire' :
-                  activeTab === 'contrat_cdd' ? 'CDD' : 'Avenant'}"`}
+                  activeTab === 'contrat_cdd' ? 'CDD' :
+                  activeTab === 'avenant_expirer' ? 'Avenant' : 'Avenant'}"`}
           </p>
         </div>
       ) : (
