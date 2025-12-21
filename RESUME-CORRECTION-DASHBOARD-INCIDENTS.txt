@@ -1,0 +1,66 @@
+========================================
+CORRECTION DASHBOARD RH - CARTE INCIDENTS
+========================================
+
+PROBLÈME
+--------
+La carte "Incidents" affichait 260+ incidents au lieu du nombre réel.
+
+CAUSE
+-----
+Comptait les incidents legacy de la table incident :
+- contrat_expirer : 199 (doublons)
+- avenant_expirer : 61 (doublons)
+
+Ces types sont legacy car les vrais incidents viennent des RPC :
+- get_contrats_expires() pour CDD
+- get_avenants_expires() pour avenants
+
+SOLUTION
+--------
+Calcul maintenant EXACTEMENT comme la page Incidents :
+
+total = docsCount + cddCount + avenantCount
+
+Où :
+- docsCount = COUNT incident WHERE type IN (titre_sejour, visite_medicale, permis_conduire) AND statut actif
+- cddCount = COUNT get_contrats_expires()
+- avenantCount = COUNT get_avenants_expires()
+
+IMPORTANT : Les types legacy ne sont JAMAIS comptés.
+
+FICHIER MODIFIÉ
+---------------
+✓ src/components/RHDashboard.tsx
+  - Fonction fetchIncidentsStats() réécrite (lignes 418-584)
+
+CHANGEMENTS CLÉS
+----------------
+1. Types legacy explicitement exclus
+2. Documents : uniquement types valides + statuts actifs
+3. CDD : via RPC get_contrats_expires()
+4. Avenants : via RPC get_avenants_expires()
+5. Calcul par type nettoyé et simplifié
+6. Incidents récents triés par date
+
+RÉSULTAT
+--------
+Avant : ~260 incidents (avec legacy)
+Après : [Nombre réel] incidents (sans legacy)
+
+Le nombre affiché = Nombre page Incidents (cohérent ✓)
+
+TEST RAPIDE
+-----------
+1. Ouvrir Dashboard RH → noter total incidents
+2. Ouvrir page Incidents → compter Documents + CDD + Avenants
+3. Les deux nombres doivent être identiques
+
+BUILD
+-----
+✓ Réussi sans erreurs
+
+DOCUMENTATION
+-------------
+- CORRECTION-DASHBOARD-RH-INCIDENTS.md : Guide complet
+- Ce fichier : Résumé rapide
