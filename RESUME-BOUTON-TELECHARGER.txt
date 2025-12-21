@@ -1,0 +1,58 @@
+========================================
+BOUTON TÉLÉCHARGER TOUJOURS VISIBLE
+========================================
+
+AVANT
+-----
+❌ Bouton "Télécharger" visible uniquement pour contrats avec PDF signé
+❌ Impossible de télécharger un contrat envoyé mais pas encore signé
+❌ Impossible de prévisualiser un contrat avant envoi
+
+APRÈS
+-----
+✅ Bouton "Télécharger" visible pour TOUS les contrats
+✅ Télécharge le PDF existant si disponible
+✅ Génère le PDF à la demande si nécessaire
+✅ Fonctionne pour tous les statuts (brouillon, envoyé, en attente, signé)
+
+COMMENT ÇA MARCHE
+-----------------
+1. Contrat avec PDF → Télécharge directement
+2. Contrat sans PDF mais avec modèle → Génère le PDF puis télécharge
+3. Contrat manuel sans fichier → Affiche un message d'erreur
+
+UTILISATION
+-----------
+1. Ouvrir le modal d'un salarié
+2. Dans "Contrats signés", cliquer sur "Télécharger" (bouton bleu)
+3. Le PDF est téléchargé ou généré automatiquement
+
+EXEMPLE D'UTILISATION
+--------------------
+Cas 1 : Contrat CDI signé
+→ Clic sur "Télécharger" → PDF téléchargé immédiatement
+
+Cas 2 : Contrat CDD envoyé mais pas encore signé
+→ Clic sur "Télécharger" → Message "Génération en cours..."
+→ PDF généré à la demande → Ouverture dans nouvel onglet
+→ Message "PDF généré avec succès"
+
+Cas 3 : Contrat manuel uploadé sans fichier
+→ Clic sur "Télécharger" → Message "Aucun document disponible"
+
+AVANTAGES
+---------
+✓ Expérience utilisateur cohérente
+✓ Prévisualisation possible avant envoi
+✓ Pas besoin de deviner si un contrat est téléchargeable
+✓ Génération à la demande = économie de stockage
+
+IMPORTANT
+---------
+⚠️ Nécessite que l'Edge Function "generate-contract-pdf" soit déployée
+⚠️ Si la fonction n'existe pas, la génération à la demande échouera
+
+FICHIERS
+--------
+Modifié : src/components/EmployeeList.tsx (lignes 3978-4059)
+Documentation : BOUTON-TELECHARGER-TOUJOURS-VISIBLE.md

@@ -3976,10 +3976,11 @@ function EmployeeDetailModal({
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {hasPdf && (
-                            <button
-                              onClick={async () => {
-                                try {
+                          <button
+                            onClick={async () => {
+                              try {
+                                // Si le contrat a un PDF (signé ou non)
+                                if (contract.fichier_signe_url || contract.signed_storage_path) {
                                   // Utiliser le système spécifique pour les contrats manuels
                                   if (isManualContract(contract)) {
                                     const url = await resolveContractUrl(contract);
@@ -3992,17 +3993,51 @@ function EmployeeDetailModal({
                                     });
                                     window.open(url, '_blank');
                                   }
-                                } catch (error: any) {
-                                  console.error('Erreur téléchargement contrat:', error);
-                                  alert('Erreur lors du téléchargement: ' + (error.message || 'Erreur inconnue'));
+                                } else if (contract.modele_id) {
+                                  // Si le contrat a un modèle mais pas encore de PDF, générer le PDF
+                                  setToast({ type: 'success', message: 'Génération du PDF en cours...' });
+
+                                  const response = await fetch(
+                                    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-contract-pdf`,
+                                    {
+                                      method: 'POST',
+                                      headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+                                      },
+                                      body: JSON.stringify({
+                                        contractId: contract.id
+                                      })
+                                    }
+                                  );
+
+                                  if (!response.ok) {
+                                    throw new Error('Erreur lors de la génération du PDF');
+                                  }
+
+                                  const data = await response.json();
+
+                                  if (data.pdfUrl) {
+                                    window.open(data.pdfUrl, '_blank');
+                                    setToast({ type: 'success', message: 'PDF généré avec succès' });
+                                  } else {
+                                    throw new Error('URL du PDF non disponible');
+                                  }
+                                } else {
+                                  // Contrat manuel sans PDF
+                                  setToast({ type: 'error', message: 'Aucun document disponible pour ce contrat' });
                                 }
-                              }}
-                              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
-                            >
-                              <Download className="w-4 h-4" />
-                              Télécharger
-                            </button>
-                          )}
+                              } catch (error: any) {
+                                console.error('Erreur téléchargement contrat:', error);
+                                setToast({ type: 'error', message: 'Erreur lors du téléchargement: ' + (error.message || 'Erreur inconnue') });
+                              }
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
+                            title="Télécharger le contrat (génère le PDF si nécessaire)"
+                          >
+                            <Download className="w-4 h-4" />
+                            Télécharger
+                          </button>
                           {!isManual && contract.modele_id && (
                             <button
                               onClick={() => handleSendContract(contract.id, currentEmployee.email)}

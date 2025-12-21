@@ -36,15 +36,36 @@ CORRECTIONS APPLIQUÉES
    3. Confirmer la suppression
    4. Utiliser "Renvoyer" pour renvoyer le même modèle
 
+3. BOUTON TÉLÉCHARGER TOUJOURS VISIBLE (NOUVEAU)
+   --------------------------------------------
+   Fonctionnalité : Télécharger n'importe quel contrat
+
+   Changements :
+   ✓ Bouton "Télécharger" visible pour TOUS les statuts
+   ✓ Télécharge le PDF s'il existe
+   ✓ Génère le PDF à la demande si nécessaire
+   ✓ Fonctionne pour contrats signés et non signés
+
+   Fichier modifié :
+   - src/components/EmployeeList.tsx (lignes 3978-4059)
+
+   Utilisation :
+   1. Ouvrir le modal du salarié
+   2. Cliquer sur "Télécharger" (bouton bleu)
+   3. Le PDF est téléchargé ou généré automatiquement
+
 RÉSUMÉ
 ------
 ✓ Erreur SQL corrigée (nir au lieu de numero_piece_identite)
 ✓ Suppression de contrats sans contraintes ajoutée
 ✓ Bouton "Renvoyer" pour renvoyer le même modèle
+✓ Bouton "Télécharger" toujours visible (tous statuts)
+✓ Génération PDF à la demande pour contrats non signés
 ✓ Build réussi sans erreurs
 
 DOCUMENTATION
 -------------
 - ERREUR-COLONNE-CORRIGEE.txt : Erreur SQL
 - CORRECTION-VARIABLES-CDI-APPLIQUEE.md : Détails correction SQL
-- SUPPRESSION-CONTRATS-SANS-CONTRAINTES.md : Nouvelle fonctionnalité
+- SUPPRESSION-CONTRATS-SANS-CONTRAINTES.md : Suppression de contrats
+- BOUTON-TELECHARGER-TOUJOURS-VISIBLE.md : Téléchargement universel
