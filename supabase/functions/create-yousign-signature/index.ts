@@ -503,12 +503,39 @@ Deno.serve(async (req: Request) => {
     if (!contract) throw new Error("Contract not found");
 
     let docxUrl: string | null = null;
-    if (contract.modele?.fichier_url) docxUrl = contract.modele.fichier_url;
-    else if (contract.fichier_contrat_url) docxUrl = contract.fichier_contrat_url;
-    else if (contract.storage_path) docxUrl = buildPublicStorageUrl(SUPABASE_URL, contract.storage_path);
+
+    // Essayer de construire l'URL du fichier DOCX
+    if (contract.modele?.fichier_url) {
+      const fichierUrl = contract.modele.fichier_url;
+      // Si l'URL est relative (commence par documents/), construire l'URL complète
+      if (fichierUrl.startsWith('documents/')) {
+        docxUrl = `${SUPABASE_URL}/storage/v1/object/public/${fichierUrl}`;
+      } else {
+        docxUrl = fichierUrl;
+      }
+    } else if (contract.fichier_contrat_url) {
+      const fichierUrl = contract.fichier_contrat_url;
+      if (fichierUrl.startsWith('documents/')) {
+        docxUrl = `${SUPABASE_URL}/storage/v1/object/public/${fichierUrl}`;
+      } else {
+        docxUrl = fichierUrl;
+      }
+    } else if (contract.storage_path) {
+      docxUrl = buildPublicStorageUrl(SUPABASE_URL, contract.storage_path);
+    }
 
     if (!docxUrl) throw new Error("Aucun modèle DOCX trouvé (modele_id / fichier_contrat_url / storage_path vides)");
     console.log("📄 Using DOCX URL:", docxUrl);
+
+    // Vérifier que l'URL est accessible
+    console.log("🔍 Vérification de l'URL DOCX...");
+    const testResp = await fetch(docxUrl, { method: 'HEAD' });
+    if (!testResp.ok) {
+      console.error(`❌ URL DOCX inaccessible: ${testResp.status} ${testResp.statusText}`);
+      console.error(`   URL testée: ${docxUrl}`);
+      throw new Error(`Le fichier modèle DOCX n'est pas accessible (${testResp.status}). Vérifiez que le fichier existe dans le storage et est public.`);
+    }
+    console.log("✅ URL DOCX accessible");
 
     const rawVars =
       typeof contract.variables === "string"
