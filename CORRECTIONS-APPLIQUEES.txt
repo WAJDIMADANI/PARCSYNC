@@ -55,17 +55,39 @@ CORRECTIONS APPLIQUÉES
    2. Cliquer sur "Télécharger" (bouton bleu)
    3. Le PDF est téléchargé ou généré automatiquement
 
-4. FIX ERREUR YOUSIGN CDI - FALLBACK HTML→PDF (NOUVEAU)
-   -----------------------------------------------------
+4. FIX ERREUR YOUSIGN CDI (NOUVEAU)
+   ---------------------------------
    Problème : Erreur "DOCX download failed: 400 Bad Request"
    Lors de l'envoi de contrats CDI à Yousign
 
-   Solution : Fallback automatique HTML→PDF
+   Diagnostic :
+   ✓ Les fichiers DOCX EXISTENT dans le storage
+   ✗ Le bucket "modeles-contrats" N'EST PAS PUBLIC
+   → Les fichiers ne sont pas accessibles via leur URL publique
+
+   SOLUTION 1 (RECOMMANDÉE) : Rendre le bucket public
+   ✓ Corriger les permissions du bucket via Dashboard ou SQL
+   ✓ Résout le problème définitivement
+   ✓ Utilise les vrais fichiers DOCX avec leur mise en forme
+   ✓ Simple et rapide (2 minutes)
+
+   Fichiers créés :
+   - FIX-BUCKET-MODELES-CONTRATS-PERMISSIONS.sql : Script SQL
+   - TESTER-ACCES-FICHIERS-CDI.sh : Script de test des URLs
+
+   Action requise (Option A - Dashboard) :
+   1. Supabase Dashboard → Storage
+   2. Bucket "modeles-contrats" → Settings ⚙️
+   3. Cocher "Public bucket"
+   4. Sauvegarder
+
+   Action requise (Option B - SQL) :
+   Exécuter : FIX-BUCKET-MODELES-CONTRATS-PERMISSIONS.sql
+
+   SOLUTION 2 (SECOURS) : Fallback HTML→PDF
    ✓ Si DOCX inaccessible → génère PDF depuis HTML automatiquement
-   ✓ Plus besoin de fichiers DOCX pour envoyer les contrats CDI
-   ✓ Rétrocompatible avec DOCX existants
-   ✓ Logs détaillés pour debugging
-   ✓ Fonctionne pour tous les types de contrats
+   ✓ Fonctionne même si bucket privé
+   ✓ Filet de sécurité supplémentaire
 
    Fichier modifié :
    - supabase/functions/create-yousign-signature/index.ts
@@ -74,7 +96,7 @@ CORRECTIONS APPLIQUÉES
      - Détection DOCX inaccessible (lignes 527-547)
      - Génération conditionnelle PDF (lignes 610-618)
 
-   Action requise :
+   Action requise (optionnel) :
    Déployer la fonction Edge :
    ./DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh
 
@@ -85,20 +107,25 @@ RÉSUMÉ
 ✓ Bouton "Renvoyer" pour renvoyer le même modèle
 ✓ Bouton "Télécharger" toujours visible (tous statuts)
 ✓ Génération PDF à la demande pour contrats non signés (blob)
-✓ Fix erreur Yousign CDI avec fallback HTML→PDF
-✓ Plus besoin de fichiers DOCX pour les contrats CDI
+✓ Fix erreur Yousign CDI (2 solutions disponibles)
 ✓ Build réussi sans erreurs
 
 ACTIONS REQUISES
 ----------------
-⚠️ Redéployer create-yousign-signature :
+⚠️ PRIORITÉ 1 : Rendre le bucket public (SOLUTION 1)
+   Via Dashboard OU exécuter FIX-BUCKET-MODELES-CONTRATS-PERMISSIONS.sql
+
+⚠️ PRIORITÉ 2 (Optionnel) : Déployer le fallback (SOLUTION 2)
    ./DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh
+
+📋 Test : ./TESTER-ACCES-FICHIERS-CDI.sh
 
 DOCUMENTATION
 -------------
-- ERREUR-COLONNE-CORRIGEE.txt : Erreur SQL
-- CORRECTION-VARIABLES-CDI-APPLIQUEE.md : Détails correction SQL
-- SUPPRESSION-CONTRATS-SANS-CONTRAINTES.md : Suppression de contrats
-- BOUTON-TELECHARGER-TOUJOURS-VISIBLE.md : Téléchargement universel
-- FIX-CDI-YOUSIGN-HTML-FALLBACK.md : Fix complet avec fallback HTML
-- RESUME-FIX-CDI-YOUSIGN.txt : Résumé rapide du fix
+- LIRE-EN-PREMIER-CDI-YOUSIGN.txt : Guide rapide de démarrage
+- SOLUTION-COMPLETE-ERREUR-CDI-YOUSIGN.md : Documentation complète
+- FIX-BUCKET-MODELES-CONTRATS-PERMISSIONS.sql : Script SQL correction bucket
+- TESTER-ACCES-FICHIERS-CDI.sh : Script de test des URLs
+- FIX-CDI-YOUSIGN-HTML-FALLBACK.md : Documentation du fallback HTML
+- DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh : Déploiement fallback
+- Autres fichiers de documentation précédents...

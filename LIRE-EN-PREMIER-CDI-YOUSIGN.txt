@@ -1,0 +1,83 @@
+========================================
+⚠️  LIRE EN PREMIER - ERREUR CDI YOUSIGN  ⚠️
+========================================
+
+PROBLÈME
+--------
+Erreur : "Yousign error: DOCX download failed: 400 Bad Request"
+Lors de l'envoi de contrats CDI à Yousign
+
+DIAGNOSTIC
+----------
+✅ Les fichiers DOCX EXISTENT dans le storage
+❌ Le bucket "modeles-contrats" N'EST PAS PUBLIC
+→ Les fichiers ne sont pas accessibles via leur URL publique
+
+SOLUTION SIMPLE (2 MINUTES)
+---------------------------
+
+1️⃣  Rendre le bucket public (RECOMMANDÉ)
+
+    Via Supabase Dashboard :
+    → Storage
+    → Bucket "modeles-contrats"
+    → Cliquer sur ⚙️ Settings
+    → Cocher "Public bucket"
+    → Sauvegarder
+
+    OU via SQL :
+    → Exécuter FIX-BUCKET-MODELES-CONTRATS-PERMISSIONS.sql
+
+2️⃣  Tester que ça fonctionne
+
+    ./TESTER-ACCES-FICHIERS-CDI.sh
+
+    Vous devriez voir :
+    ✅ Fichiers accessibles: 3
+    🎉 TOUT FONCTIONNE !
+
+3️⃣  Tester dans l'app
+
+    → Créer un contrat CDI
+    → Envoyer à Yousign
+    → Ça devrait marcher !
+
+SOLUTION DE SECOURS (SI BESOIN)
+-------------------------------
+
+Si vous ne pouvez pas rendre le bucket public,
+j'ai créé un système de fallback qui génère
+automatiquement un PDF depuis HTML.
+
+Pour l'activer :
+./DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh
+
+FICHIERS IMPORTANTS
+-------------------
+
+📋 Tests et diagnostics :
+   - TESTER-ACCES-FICHIERS-CDI.sh
+
+🔧 Corrections :
+   - FIX-BUCKET-MODELES-CONTRATS-PERMISSIONS.sql (Solution 1)
+   - DEPLOYER-FIX-CDI-YOUSIGN-MAINTENANT.sh (Solution 2)
+
+📚 Documentation :
+   - SOLUTION-COMPLETE-ERREUR-CDI-YOUSIGN.md (Guide complet)
+   - RESUME-FIX-CDI-YOUSIGN.txt (Résumé rapide)
+
+ORDRE RECOMMANDÉ
+----------------
+
+1. Lire ce fichier (✓ Vous êtes ici)
+2. Tester l'accès : ./TESTER-ACCES-FICHIERS-CDI.sh
+3. Corriger le bucket (voir Solution Simple ci-dessus)
+4. Re-tester : ./TESTER-ACCES-FICHIERS-CDI.sh
+5. Tester dans l'app
+
+Si vous voulez comprendre en détail :
+→ Lire SOLUTION-COMPLETE-ERREUR-CDI-YOUSIGN.md
+
+========================================
+👉 ACTION : Rendre le bucket public maintenant
+========================================
