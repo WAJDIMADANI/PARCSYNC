@@ -106,6 +106,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         console.error('❌ Erreur get_avenants_expires:', avenantsError);
       }
 
+      console.log('avenantsData length', avenantsData?.length);
       console.log('📊 Avenants expirés depuis RPC:', avenantsData?.length || 0);
 
       // Récupérer les autres types d'incidents (titre_sejour, visite_medicale, permis_conduire)
@@ -160,36 +161,43 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       }));
 
       // Transformer les avenants depuis la RPC
-      const avenantsFormatted = (avenantsData || []).map(av => ({
-        id: `avenant-${av.profil_id}-${av.contrat_id}`, // ID généré pour l'affichage
-        type: 'avenant_expirer' as const,
-        profil_id: av.profil_id,
-        contrat_id: av.contrat_id,
-        date_expiration_originale: av.date_expiration_reelle,
-        date_creation_incident: new Date().toISOString(),
-        statut: 'actif' as const,
-        date_resolution: null,
-        nouvelle_date_validite: null,
-        notes: null,
-        metadata: {
-          jours_depuis_expiration: av.jours_depuis_expiration,
-          avenant_1_date_fin: av.avenant_1_date_fin,
-          avenant_2_date_fin: av.avenant_2_date_fin,
-          contrat_type: 'avenant'
-        },
-        profil: {
-          nom: av.nom,
-          prenom: av.prenom,
-          email: av.email,
-          matricule_tca: av.matricule_tca
-        },
-        contrat: {
-          type: 'avenant',
-          date_debut: av.contrat_date_debut,
-          date_fin: av.contrat_date_fin,
-          statut: av.contrat_statut
-        }
-      }));
+      const avenantsFormatted = (avenantsData || []).map(av => {
+        // Calculer jours depuis expiration
+        const expDate = new Date(av.date_expiration_reelle);
+        const today = new Date();
+        const diffTime = today.getTime() - expDate.getTime();
+        const joursSinceExpiration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return {
+          id: `avenant-${av.profil_id}`, // ID généré pour l'affichage
+          type: 'contrat_expire' as const,
+          profil_id: av.profil_id,
+          contrat_id: undefined,
+          date_expiration_originale: av.date_expiration_reelle,
+          date_creation_incident: new Date().toISOString(),
+          statut: 'actif' as const,
+          date_resolution: null,
+          nouvelle_date_validite: null,
+          notes: null,
+          metadata: {
+            jours_depuis_expiration: joursSinceExpiration,
+            avenant_1_date_fin: av.avenant_1_date_fin,
+            avenant_2_date_fin: av.avenant_2_date_fin,
+            contrat_type: 'avenant'
+          },
+          profil: {
+            nom: av.nom,
+            prenom: av.prenom,
+            email: av.email
+          },
+          contrat: {
+            type: 'avenant',
+            date_debut: '',
+            date_fin: av.date_expiration_reelle,
+            statut: 'expire'
+          }
+        };
+      });
 
       // Fusionner CDD et avenants
       const contratsFormatted = [...cddFormatted, ...avenantsFormatted];
@@ -229,7 +237,9 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     }
 
     if (type === 'avenant_expirer') {
-      return incidents.filter(i => i.type === 'avenant_expirer').length;
+      return incidents.filter(i =>
+        i.type === 'contrat_expire' && i.metadata?.contrat_type?.toLowerCase() === 'avenant'
+      ).length;
     }
 
     return incidents.filter(i => i.type === type).length;
@@ -359,7 +369,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     if (activeTab === 'contrat_cdd') {
       matchesTab = incident.type === 'contrat_expire' && incident.metadata?.contrat_type?.toLowerCase() === 'cdd';
     } else if (activeTab === 'avenant_expirer') {
-      matchesTab = incident.type === 'avenant_expirer';
+      matchesTab = incident.type === 'contrat_expire' && incident.metadata?.contrat_type?.toLowerCase() === 'avenant';
     } else {
       matchesTab = incident.type === activeTab;
     }
