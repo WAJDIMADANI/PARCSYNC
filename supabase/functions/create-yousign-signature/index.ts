@@ -74,8 +74,9 @@ function addDaysISO(dateStr: string, days: number) {
 function mapVariablesToWordFormat(vars: Record<string, any>) {
   const mapped: Record<string, string> = {};
 
-  mapped["first_name"] = String(vars.first_name || "");
-  mapped["last_name"] = String(vars.last_name || "");
+  // ✅ Informations personnelles
+  mapped["first_name"] = pickFirst(vars.first_name, vars.prenom, "");
+  mapped["last_name"] = pickFirst(vars.last_name, vars.nom, "");
 
   if ((!mapped.first_name || !mapped.last_name) && vars.nom_salarie) {
     const parts = String(vars.nom_salarie).trim().split(/\s+/);
@@ -83,13 +84,28 @@ function mapVariablesToWordFormat(vars: Record<string, any>) {
     mapped["last_name"] = mapped["last_name"] || (parts.slice(1).join(" ") || parts[0] || "");
   }
 
-  mapped["birthday"] = vars.birthday ? formatDateFR(vars.birthday) : "";
-  mapped["birthplace"] = String(vars.birthplace || "");
-  mapped["nationality"] = String(vars.nationality || "");
-  mapped["address_1"] = String(vars.address_1 || "");
-  mapped["zip"] = String(vars.zip || "");
-  mapped["city"] = String(vars.city || "");
-  mapped["id_number"] = String(vars.id_number || "");
+  const birthdayRaw = pickFirst(vars.birthday, vars.date_naissance, "");
+  mapped["birthday"] = birthdayRaw ? formatDateFR(birthdayRaw) : "";
+
+  mapped["birthplace"] = pickFirst(vars.birthplace, vars.lieu_naissance, "");
+  mapped["nationality"] = pickFirst(vars.nationality, vars.nationalite, "");
+  mapped["address_1"] = pickFirst(vars.address_1, vars.adresse, "");
+  mapped["zip"] = pickFirst(vars.zip, vars.code_postal, "");
+  mapped["city"] = pickFirst(vars.city, vars.ville, "");
+  mapped["id_number"] = pickFirst(vars.id_number, vars.numero_piece_identite, vars.numero_securite_sociale, "");
+
+  console.log("🔍 PROFIL MAPPING:", {
+    first_name: mapped["first_name"],
+    last_name: mapped["last_name"],
+    birthday_raw: birthdayRaw,
+    birthday: mapped["birthday"],
+    birthplace: mapped["birthplace"],
+    nationality: mapped["nationality"],
+    address_1: mapped["address_1"],
+    zip: mapped["zip"],
+    city: mapped["city"],
+    id_number: mapped["id_number"]
+  });
 
   // ---------------------------------------------------
   // ✅ CDD (ancien) : contract_start / contract_end
@@ -117,6 +133,13 @@ function mapVariablesToWordFormat(vars: Record<string, any>) {
 
   mapped["contract_start"] = cddStartRaw ? formatDateFR(cddStartRaw) : "";
   mapped["contract_end"] = cddEndRaw ? formatDateFR(cddEndRaw) : "";
+
+  console.log("🔍 CONTRACT DATES MAPPING:", {
+    cddStartRaw,
+    cddEndRaw,
+    contract_start: mapped["contract_start"],
+    contract_end: mapped["contract_end"]
+  });
 
   // ---------------------------------------------------
   // ✅ TRIAL (FIX)
@@ -538,6 +561,24 @@ Deno.serve(async (req: Request) => {
       trialEndISO,
     });
 
+    console.log("🔍 PROFIL DATA FROM DB:", {
+      prenom: contract.profil?.prenom,
+      nom: contract.profil?.nom,
+      date_naissance: contract.profil?.date_naissance,
+      lieu_naissance: contract.profil?.lieu_naissance,
+      nationalite: contract.profil?.nationalite,
+      adresse: contract.profil?.adresse,
+      ville: contract.profil?.ville,
+      code_postal: contract.profil?.code_postal,
+      numero_piece_identite: contract.profil?.numero_piece_identite,
+    });
+
+    console.log("🔍 CONTRACT DATA FROM DB:", {
+      date_debut: contract.date_debut,
+      date_fin: contract.date_fin,
+      type: contract.type,
+    });
+
     const enriched = {
       ...rawVars,
 
@@ -550,10 +591,21 @@ Deno.serve(async (req: Request) => {
       address_1: contract.profil?.adresse || rawVars.address_1 || "",
       city: contract.profil?.ville || rawVars.city || "",
       zip: contract.profil?.code_postal || rawVars.zip || "",
-      id_number: contract.profil?.numero_piece_identite || rawVars.id_number || "",
+      id_number: contract.profil?.numero_piece_identite || contract.profil?.numero_securite_sociale || rawVars.id_number || "",
 
-      contract_start: pickFirst(rawVars.contract_start, rawVars.cdd_contract_start, rawVars.contract_start_original, contract.date_debut),
-      contract_end: pickFirst(rawVars.contract_end, rawVars.cdd_contract_end, rawVars.contract_end_original),
+      // ✅ Pour CDI : contract_start doit être rempli
+      contract_start: pickFirst(
+        rawVars.contract_start,
+        rawVars.cdd_contract_start,
+        rawVars.contract_start_original,
+        contract.date_debut
+      ),
+      contract_end: pickFirst(
+        rawVars.contract_end,
+        rawVars.cdd_contract_end,
+        rawVars.contract_end_original,
+        contract.date_fin
+      ),
 
       avenant_1_date_debut: pickFirst(contract.profil?.avenant_1_date_debut, rawVars.avenant_1_date_debut),
       avenant_1_date_fin: pickFirst(contract.profil?.avenant_1_date_fin, rawVars.avenant_1_date_fin),
@@ -561,12 +613,23 @@ Deno.serve(async (req: Request) => {
       avenant_2_date_debut: pickFirst(contract.profil?.avenant_2_date_debut, rawVars.avenant_2_date_debut),
       avenant_2_date_fin: pickFirst(contract.profil?.avenant_2_date_fin, rawVars.avenant_2_date_fin),
 
-      // ✅ TRIAL (FIX): on pousse un champ "trial_end_date" lisible par le mapping
       trial_end_date: trialEndISO,
-
-      // si ton front l’envoie déjà, ok, sinon le mapping fallback sur trial_end_date
       trial_period_text: rawVars.trial_period_text || "",
     };
+
+    console.log("✅ ENRICHED VARIABLES:", {
+      first_name: enriched.first_name,
+      last_name: enriched.last_name,
+      birthday: enriched.birthday,
+      birthplace: enriched.birthplace,
+      nationality: enriched.nationality,
+      address_1: enriched.address_1,
+      city: enriched.city,
+      zip: enriched.zip,
+      id_number: enriched.id_number,
+      contract_start: enriched.contract_start,
+      contract_end: enriched.contract_end,
+    });
 
     console.log("✅ employeeName:", employeeName);
     console.log("✅ employeeEmail:", employeeEmail);
