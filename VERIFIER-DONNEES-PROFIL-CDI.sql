@@ -19,8 +19,7 @@ SELECT
   adresse,
   ville,
   code_postal,
-  numero_piece_identite,
-  numero_securite_sociale,
+  nir,
   statut,
   CASE
     WHEN nom IS NULL OR nom = '' THEN '❌ Nom manquant'
@@ -31,8 +30,7 @@ SELECT
     WHEN adresse IS NULL OR adresse = '' THEN '❌ Adresse manquante'
     WHEN ville IS NULL OR ville = '' THEN '❌ Ville manquante'
     WHEN code_postal IS NULL OR code_postal = '' THEN '❌ Code postal manquant'
-    WHEN (numero_piece_identite IS NULL OR numero_piece_identite = '')
-      AND (numero_securite_sociale IS NULL OR numero_securite_sociale = '') THEN '❌ Numéro ID manquant'
+    WHEN nir IS NULL OR nir = '' THEN '❌ Numéro de sécurité sociale (NIR) manquant'
     ELSE '✅ Toutes les données sont présentes'
   END as verification
 FROM profil
@@ -112,8 +110,7 @@ WITH profil_data AS (
     p.adresse,
     p.ville,
     p.code_postal,
-    p.numero_piece_identite,
-    p.numero_securite_sociale
+    p.nir
   FROM profil p
   WHERE p.matricule_tca = 'MATRICULE_ICI' -- Changez ici
 )
@@ -127,11 +124,7 @@ SELECT
   CASE WHEN adresse IS NOT NULL AND adresse != '' THEN '✅' ELSE '❌' END || ' Adresse: ' || COALESCE(adresse, 'VIDE') as check_address,
   CASE WHEN ville IS NOT NULL AND ville != '' THEN '✅' ELSE '❌' END || ' Ville: ' || COALESCE(ville, 'VIDE') as check_city,
   CASE WHEN code_postal IS NOT NULL AND code_postal != '' THEN '✅' ELSE '❌' END || ' Code postal: ' || COALESCE(code_postal, 'VIDE') as check_zip,
-  CASE
-    WHEN (numero_piece_identite IS NOT NULL AND numero_piece_identite != '')
-      OR (numero_securite_sociale IS NOT NULL AND numero_securite_sociale != '')
-    THEN '✅' ELSE '❌'
-  END || ' Numéro ID: ' || COALESCE(numero_piece_identite, numero_securite_sociale, 'VIDE') as check_id_number
+  CASE WHEN nir IS NOT NULL AND nir != '' THEN '✅' ELSE '❌' END || ' NIR (Sécurité sociale): ' || COALESCE(nir, 'VIDE') as check_nir
 FROM profil_data;
 
 -- ========================================
@@ -151,7 +144,7 @@ SET
   adresse = '123 rue Example',
   ville = 'Paris',
   code_postal = '75001',
-  numero_piece_identite = 'AB123456'
+  nir = '1900115012345'  -- Numéro de Sécurité Sociale (15 chiffres)
 WHERE matricule_tca = 'MATRICULE_ICI';
 
 -- Vérifier la mise à jour

@@ -142,7 +142,7 @@ Cherchez ces sections dans les logs :
    - Lieu de naissance
    - Nationalité
    - Adresse complète
-   - Numéro de pièce d'identité / Sécurité sociale
+   - NIR (Numéro de sécurité sociale)
 
 ### Cas 2 : CONTRACT DATA FROM DB.date_debut est vide
 
@@ -193,7 +193,7 @@ Toutes les variables du template sont maintenant supportées :
 - `{{address_1}}` - Adresse
 - `{{zip}}` - Code postal
 - `{{city}}` - Ville
-- `{{id_number}}` - Numéro pièce d'identité ou sécu
+- `{{id_number}}` - NIR (Numéro de sécurité sociale)
 - `{{contract_start}}` - Date de début du contrat (DD-MM-YYYY)
 
 **La variable `{{s1|signature|180|60}}` ne doit PAS être remplie** - c'est Yousign qui gère la signature électronique.

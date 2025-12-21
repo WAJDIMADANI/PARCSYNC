@@ -92,7 +92,7 @@ function mapVariablesToWordFormat(vars: Record<string, any>) {
   mapped["address_1"] = pickFirst(vars.address_1, vars.adresse, "");
   mapped["zip"] = pickFirst(vars.zip, vars.code_postal, "");
   mapped["city"] = pickFirst(vars.city, vars.ville, "");
-  mapped["id_number"] = pickFirst(vars.id_number, vars.numero_piece_identite, vars.numero_securite_sociale, "");
+  mapped["id_number"] = pickFirst(vars.id_number, vars.nir, "");
 
   console.log("🔍 PROFIL MAPPING:", {
     first_name: mapped["first_name"],
@@ -570,7 +570,7 @@ Deno.serve(async (req: Request) => {
       adresse: contract.profil?.adresse,
       ville: contract.profil?.ville,
       code_postal: contract.profil?.code_postal,
-      numero_piece_identite: contract.profil?.numero_piece_identite,
+      nir: contract.profil?.nir,
     });
 
     console.log("🔍 CONTRACT DATA FROM DB:", {
@@ -591,7 +591,7 @@ Deno.serve(async (req: Request) => {
       address_1: contract.profil?.adresse || rawVars.address_1 || "",
       city: contract.profil?.ville || rawVars.city || "",
       zip: contract.profil?.code_postal || rawVars.zip || "",
-      id_number: contract.profil?.numero_piece_identite || contract.profil?.numero_securite_sociale || rawVars.id_number || "",
+      id_number: contract.profil?.nir || rawVars.id_number || "",
 
       // ✅ Pour CDI : contract_start doit être rempli
       contract_start: pickFirst(

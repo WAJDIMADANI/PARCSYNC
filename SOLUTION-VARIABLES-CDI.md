@@ -49,7 +49,7 @@ Si des données sont manquantes :
    - Lieu de naissance
    - Nationalité
    - Adresse complète (rue, code postal, ville)
-   - Numéro de pièce d'identité OU numéro de sécurité sociale
+   - NIR (Numéro de sécurité sociale)
 4. Enregistrez
 
 ### Étape 4 : Vérifier la date de début du contrat
@@ -106,7 +106,7 @@ Toutes les variables standard sont maintenant supportées :
 - `{{birthday}}` (format DD-MM-YYYY automatique)
 - `{{birthplace}}`, `{{nationality}}`
 - `{{address_1}}`, `{{zip}}`, `{{city}}`
-- `{{id_number}}`
+- `{{id_number}}` (NIR - Numéro de sécurité sociale)
 - `{{contract_start}}` (format DD-MM-YYYY automatique)
 - `{{contract_end}}` (pour CDD)
 
