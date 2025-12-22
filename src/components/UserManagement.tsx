@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { PermissionGuard } from './PermissionGuard';
 import { Users, UserPlus, X, Save, Trash2, CheckCircle, XCircle, Edit2, Shield, Upload, FolderOpen, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -151,32 +152,22 @@ export function UserManagement() {
 
     try {
       const { data, error } = await supabase.functions.invoke("admin-create-user", {
-        body: {
-          email: email.trim(),
-          nom: nom.trim(),
-          prenom: prenom.trim(),
-          pole_id: poleId, // peut être null
-        },
+        body: { email, nom, prenom, pole_id: poleId },
       });
 
-      if (error) {
-        console.error("admin-create-user ERROR =>", error);
-        console.error("admin-create-user CONTEXT =>", (error as any).context);
-      }
-      console.log("admin-create-user DATA =>", data);
-
       if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error || "Création utilisateur échouée");
 
-      setShowAddModal(false);
-      setEmail('');
-      setNom('');
-      setPrenom('');
-      setPoleId(null);
-      await fetchUsers();
+      console.log("admin-create-user OK =>", data);
     } catch (err: any) {
-      console.error('Error adding user:', err);
-      setError(err.message);
+      // ✅ on lit le VRAI message renvoyé par la fonction (body JSON)
+      if (err instanceof FunctionsHttpError) {
+        const res = err.context; // Response
+        const text = await res.text();
+        console.error("admin-create-user HTTP ERROR =>", res.status, text);
+        return;
+      }
+
+      console.error("admin-create-user UNKNOWN ERROR =>", err);
     } finally {
       setSaving(false);
     }
