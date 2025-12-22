@@ -150,17 +150,17 @@ export function UserManagement() {
     setSaving(true);
 
     try {
-      const { error: insertError } = await supabase
-        .from('app_utilisateur')
-        .insert({
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: {
           email: email.trim(),
           nom: nom.trim(),
           prenom: prenom.trim(),
-          pole_id: poleId,
-          actif: true,
-        });
+          pole_id: poleId, // peut être null
+        },
+      });
 
-      if (insertError) throw insertError;
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || "Création utilisateur échouée");
 
       setShowAddModal(false);
       setEmail('');
