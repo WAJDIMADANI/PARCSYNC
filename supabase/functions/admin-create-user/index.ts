@@ -12,6 +12,7 @@ type Body = {
   email: string;
   nom: string;
   prenom: string;
+  password?: string;
   pole_id?: string | null;
 };
 
@@ -139,11 +140,13 @@ Deno.serve(async (req) => {
     const email = normalizeEmail(body.email);
     const nom = String(body.nom ?? "").trim();
     const prenom = String(body.prenom ?? "").trim();
+    const password = String(body.password ?? "").trim();
     const pole_id = body.pole_id ?? null;
 
     if (!email || !email.includes("@")) return json(400, { error: "Invalid email" });
     if (!nom) return json(400, { error: "Missing nom" });
     if (!prenom) return json(400, { error: "Missing prenom" });
+    if (!password || password.length < 8) return json(400, { error: "Password must be at least 8 characters" });
 
     // 4) Auth user: créer ou récupérer l'utilisateur existant
     let authUserId: string | null = null;
@@ -168,13 +171,11 @@ Deno.serve(async (req) => {
       authUserId = existing.id;
       invited = false;
     } else {
-      // Créer un nouvel utilisateur avec un mot de passe temporaire aléatoire
-      const tempPassword = crypto.randomUUID();
-
+      // Créer un nouvel utilisateur avec le mot de passe fourni
       const { data: newUser, error: createErr } =
         await supabaseAdmin.auth.admin.createUser({
           email: email,
-          password: tempPassword,
+          password: password,
           email_confirm: true, // Auto-confirmer l'email
         });
 
@@ -267,57 +268,9 @@ Deno.serve(async (req) => {
       appUserId = updated.id;
     }
 
-    // 6) Si c'est un nouvel utilisateur, générer un lien de réinitialisation et envoyer l'email
-    if (invited) {
-      try {
-        // Générer un lien de réinitialisation de mot de passe
-        const { data: resetData, error: resetErr } =
-          await supabaseAdmin.auth.admin.generateLink({
-            type: "recovery",
-            email: email,
-            options: {
-              redirectTo: "https://parcsync.madimpact.fr/set-password",
-            },
-          });
-
-        if (resetErr) {
-          console.error("Erreur génération lien:", resetErr);
-          // On continue même si l'email échoue
-        } else if (resetData?.properties?.action_link) {
-          // Envoyer l'email via Brevo
-          const emailResponse = await fetch(
-            `${SUPABASE_URL}/functions/v1/send-user-invitation`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${SERVICE_KEY}`,
-              },
-              body: JSON.stringify({
-                email: email,
-                nom: nom,
-                prenom: prenom,
-                resetLink: resetData.properties.action_link,
-              }),
-            }
-          );
-
-          if (!emailResponse.ok) {
-            const errorText = await emailResponse.text();
-            console.error("Erreur envoi email:", errorText);
-          } else {
-            console.log("Email d'invitation envoyé avec succès");
-          }
-        }
-      } catch (emailError) {
-        console.error("Erreur lors de l'envoi de l'email:", emailError);
-        // On continue même si l'email échoue
-      }
-    }
-
     return json(200, {
       ok: true,
-      invited,
+      created: invited,
       auth_user_id: authUserId,
       app_user_id: appUserId,
     });

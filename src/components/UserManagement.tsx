@@ -78,6 +78,7 @@ export function UserManagement() {
   const [email, setEmail] = useState('');
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
+  const [password, setPassword] = useState('');
   const [poleId, setPoleId] = useState<string | null>(null);
   const [poleNom, setPoleNom] = useState('');
   const [poleDescription, setPoleDescription] = useState('');
@@ -154,7 +155,7 @@ export function UserManagement() {
 
     try {
       const { data, error } = await supabase.functions.invoke("admin-create-user", {
-        body: { email, nom, prenom, pole_id: poleId },
+        body: { email, nom, prenom, password, pole_id: poleId },
       });
 
       if (error) throw error;
@@ -164,7 +165,7 @@ export function UserManagement() {
       }
 
       // ✅ succès
-      setSuccess(data.invited ? "Invitation envoyée ✅" : "Utilisateur lié / mis à jour ✅");
+      setSuccess("Utilisateur créé avec succès ! Il peut maintenant se connecter.");
 
       // refresh listes + reset form + fermer modal
       await fetchAllData();
@@ -172,6 +173,7 @@ export function UserManagement() {
       setEmail("");
       setNom("");
       setPrenom("");
+      setPassword("");
       setPoleId(null);
 
     } catch (err: any) {
@@ -705,6 +707,24 @@ export function UserManagement() {
                     className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Mot de passe
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    required
+                    minLength={8}
+                    placeholder="Minimum 8 caractères"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    L'utilisateur pourra se connecter immédiatement avec ce mot de passe
+                  </p>
                 </div>
 
                 <div>
