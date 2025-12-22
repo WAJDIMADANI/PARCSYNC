@@ -157,7 +157,7 @@ export function UserManagement() {
         email: email.trim().toLowerCase(),
         nom: nom.trim(),
         prenom: prenom.trim(),
-        pole_id: poleId, // null => Admin
+        pole_id: poleId,
       };
 
       const { data, error } = await supabase.functions.invoke("admin-create-user", {
@@ -166,59 +166,37 @@ export function UserManagement() {
 
       if (error) throw error;
 
-      // si la fonction renvoie un { ok:false, error:"..." }
-      if (data && data.ok === false) {
-        throw new Error(data.error || "Erreur inconnue (ok=false)");
-      }
+      // ✅ Message success + refresh + fermeture modal
+      setSuccess(
+        data?.invited
+          ? `Invitation envoyée à ${payload.email}`
+          : `Utilisateur synchronisé : ${payload.email}`
+      );
 
-      console.log("admin-create-user OK =>", data);
-
-      // ✅ MESSAGE SUCCÈS
-      const invitedTxt =
-        data?.invited === true ? "Invitation envoyée" : "Utilisateur créé / déjà existant";
-      setSuccess(`${invitedTxt} : ${payload.email}`);
-
-      // ✅ Fermeture modal + reset form
       setShowAddModal(false);
       setEmail("");
       setNom("");
       setPrenom("");
       setPoleId(null);
 
-      // ✅ Refresh UI (liste + permissions)
       await fetchAllData();
     } catch (err: any) {
-      // ✅ afficher le message côté UI
+      // ✅ On affiche le vrai message renvoyé par la Edge Function
       if (err instanceof FunctionsHttpError) {
-        const res = err.context;
-        const text = await res.text();
+        const res = err.context; // Response
+        const text = await res.text().catch(() => "");
+        console.error("admin-create-user HTTP ERROR =>", res.status, text);
 
-        // tente de lire un JSON {error:"..."}
-        let message = text;
         try {
-          const j = JSON.parse(text);
-          message = j.error || j.message || text;
-        } catch {}
-
-        console.error("admin-create-user HTTP ERROR =>", res.status, message);
-        setError(`Erreur serveur (${res.status}) : ${message}`);
-        return;
+          const parsed = JSON.parse(text || "{}");
+          setError(parsed?.error || text || `Erreur HTTP ${res.status}`);
+        } catch {
+          setError(text || `Erreur HTTP ${res.status}`);
+        }
+      } else {
+        console.error("admin-create-user UNKNOWN ERROR =>", err);
+        setError(err?.message || "Erreur inconnue");
       }
-
-      if (err instanceof FunctionsRelayError) {
-        console.error("admin-create-user RELAY ERROR =>", err);
-        setError(`Relay error : ${err.message}`);
-        return;
-      }
-
-      if (err instanceof FunctionsFetchError) {
-        console.error("admin-create-user FETCH ERROR =>", err);
-        setError(`Fetch error : ${err.message}`);
-        return;
-      }
-
-      console.error("admin-create-user UNKNOWN ERROR =>", err);
-      setError(err?.message || String(err));
     } finally {
       setSaving(false);
     }
