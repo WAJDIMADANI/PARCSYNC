@@ -1,0 +1,101 @@
+========================================
+FIX CARTE INBOX DASHBOARD RH
+========================================
+
+PROBLÈME
+--------
+Page Boîte de Réception : 8 tâches
+Dashboard RH - Carte Inbox : 0
+
+La carte n'affichait AUCUNE tâche.
+
+CAUSE
+-----
+1. Dashboard n'interrogeait PAS la table 'inbox' (demandes externes)
+2. Dashboard affichait 'non_lus' au lieu de 'total'
+
+SOURCES DE DONNÉES
+
+Page Inbox (InboxPage.tsx) :
+- Table 'taches' : filtre .or(assignee/expediteur)
+- Table 'inbox' : filtre .eq(utilisateur_id) + .eq(reference_type, 'demande_externe')
+- Total = taches.length + inbox.length
+
+Dashboard RH - AVANT :
+- Table 'taches' : filtre .or(assignee/expediteur)
+- Table 'inbox' : ❌ MANQUANT
+- Affichage : non_lus (pas le total)
+
+SOLUTION
+--------
+Aligner Dashboard avec page Inbox :
+
+1. Interface Stats (lignes 72-75) :
+   inbox: {
+     total: number,      // ✅ Ajouté
+     non_lus: number
+   }
+
+2. fetchInboxStats() (lignes 674-721) :
+   - Ajouter requête table 'inbox'
+   - Calculer total = taches + inbox
+   - Calculer non_lus = taches + inbox (non lus)
+   - Log debug
+
+3. Affichage carte (ligne 888) :
+   value={stats.inbox.total}  // Au lieu de non_lus
+
+4. Abonnements temps réel (lignes 232-257) :
+   - inbox channel
+   - demandes_externes channel
+
+RÉSULTAT
+--------
+Avant : Dashboard 0, Page Inbox 8 ❌
+Après : Dashboard 8, Page Inbox 8 ✅
+
+Les deux pages utilisent les MÊMES sources :
+- taches (filtre assignee/expediteur)
+- inbox (demandes externes)
+- Total = taches.length + inbox.length
+
+FICHIERS MODIFIÉS
+-----------------
+✓ src/components/RHDashboard.tsx
+  - Interface Stats (lignes 72-75, 156-159)
+  - fetchInboxStats() (lignes 674-721)
+  - Abonnements temps réel (lignes 232-257)
+  - Affichage carte (ligne 888)
+
+✓ src/components/InboxPage.tsx
+  - Logs de debug (lignes 257-266)
+
+LOGS DE DEBUG
+-------------
+Console (F12) :
+
+📊 Dashboard Inbox: {
+  tachesCount: 6,
+  demandesCount: 2,
+  total: 8,
+  non_lus: 3
+}
+
+📊 Page Inbox: {
+  tachesCount: 6,
+  demandesCount: 2,
+  total: 8,
+  non_lus: 3
+}
+
+Les totaux doivent correspondre !
+
+BUILD
+-----
+✓ Réussi sans erreurs
+
+DOCUMENTATION
+-------------
+- FIX-DASHBOARD-INBOX-COUNT.md : Guide complet
+- Ce fichier : Résumé rapide
+- CORRECTIONS-APPLIQUEES.txt : Mis à jour (section 7)

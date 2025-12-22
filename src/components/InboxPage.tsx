@@ -253,6 +253,18 @@ export function InboxPage() {
         total: allItems.length,
         non_lus: nonLusTaches + nonLusDemandes
       };
+
+      console.log('📊 Page Inbox:', {
+        tachesCount: formattedTaches.length,
+        demandesCount: formattedDemandes.length,
+        total: allItems.length,
+        non_lus: newStats.non_lus,
+        filters: {
+          utilisateur_id: appUserId,
+          source: 'taches + inbox'
+        }
+      });
+
       setStats(newStats);
     } catch (error) {
       console.error('Erreur chargement inbox:', error);

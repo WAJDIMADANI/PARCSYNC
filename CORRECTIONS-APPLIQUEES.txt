@@ -150,6 +150,40 @@ CORRECTIONS APPLIQUÉES
    La carte additionne maintenant TOUS les incidents :
    titre de séjour + visite médicale + permis de conduire + CDD + Avenant
 
+7. FIX CARTE INBOX DASHBOARD RH (NOUVEAU)
+   -----------------------------------------
+   Problème : Carte "Inbox" affichait 0 au lieu de 8 (le total de la page Inbox)
+   La carte comptait UNIQUEMENT les non lus ET n'incluait PAS les demandes externes.
+
+   Cause : Dashboard incomplet
+   - N'interrogeait PAS la table 'inbox' (demandes externes)
+   - Affichait non_lus au lieu du total
+
+   Solution : Aligner Dashboard avec page Inbox
+   ✓ Ajouter requête table 'inbox' (demandes externes)
+   ✓ Calculer total = taches + demandes externes (comme page Inbox)
+   ✓ Afficher total au lieu de non_lus
+   ✓ Ajouter abonnements temps réel (inbox + demandes_externes)
+   ✓ Ajouter logs de debug pour comparer les deux pages
+
+   Fichiers modifiés :
+   - src/components/RHDashboard.tsx
+     - Interface Stats : ajout field 'total' (lignes 72-75)
+     - Fonction fetchInboxStats() : ajout requête inbox + calcul total (lignes 674-721)
+     - Abonnements temps réel : inbox + demandes_externes (lignes 232-257)
+     - Affichage carte : stats.inbox.total au lieu de non_lus (ligne 888)
+   - src/components/InboxPage.tsx
+     - Ajout logs de debug (lignes 257-266)
+
+   Résultat :
+   Avant : Dashboard 0, Page Inbox 8 (incohérent)
+   Après : Dashboard 8, Page Inbox 8 (cohérent ✅)
+
+   Les deux pages utilisent maintenant EXACTEMENT les mêmes sources :
+   - taches (filtre assignee/expediteur)
+   - inbox (demandes externes)
+   - Total = taches.length + inbox.length
+
 RÉSUMÉ
 ------
 ✓ Erreur SQL corrigée (nir au lieu de numero_piece_identite)
@@ -160,6 +194,7 @@ RÉSUMÉ
 ✓ Fix erreur Yousign CDI (2 solutions disponibles)
 ✓ Carte Incidents Dashboard RH : exclusion legacy (260 → nombre réel)
 ✓ Carte Incidents Dashboard RH : CDD manquants corrigés (56 → 196)
+✓ Carte Inbox Dashboard RH : demandes externes manquantes (0 → 8)
 ✓ Build réussi sans erreurs
 
 ACTIONS REQUISES
@@ -185,8 +220,11 @@ Erreur Yousign CDI :
 Dashboard RH - Incidents :
 - CORRECTION-DASHBOARD-RH-INCIDENTS.md : Guide complet exclusion legacy
 - RESUME-CORRECTION-DASHBOARD-INCIDENTS.txt : Résumé rapide exclusion legacy
-- FIX-DASHBOARD-RH-CDD-MANQUANTS.md : Guide complet CDD manquants (NOUVEAU)
+- FIX-DASHBOARD-RH-CDD-MANQUANTS.md : Guide complet CDD manquants
 - TEST-DASHBOARD-INCIDENTS.md : Procédure de test détaillée
+
+Dashboard RH - Inbox :
+- FIX-DASHBOARD-INBOX-COUNT.md : Guide complet demandes externes manquantes (NOUVEAU)
 
 Autres corrections :
 - ERREUR-COLONNE-CORRIGEE.txt : Erreur SQL

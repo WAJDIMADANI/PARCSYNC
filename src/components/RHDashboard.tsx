@@ -70,6 +70,7 @@ interface Stats {
     urgentes: number;
   };
   inbox: {
+    total: number;
     non_lus: number;
   };
 }
@@ -153,6 +154,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       urgentes: 0,
     },
     inbox: {
+      total: 0,
       non_lus: 0,
     },
   });
@@ -227,6 +229,20 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       })
       .subscribe();
 
+    const inboxChannel = supabase
+      .channel('inbox-dashboard-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox' }, () => {
+        fetchInboxStats();
+      })
+      .subscribe();
+
+    const demandesExternesChannel = supabase
+      .channel('demandes-externes-dashboard-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes_externes' }, () => {
+        fetchInboxStats();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(candidatsChannel);
       supabase.removeChannel(profilsChannel);
@@ -237,6 +253,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(tachesChannel);
       supabase.removeChannel(tachesMessagesChannel);
+      supabase.removeChannel(inboxChannel);
+      supabase.removeChannel(demandesExternesChannel);
     };
   }, []);
 
@@ -673,27 +691,45 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
     if (!appUser) return;
 
     try {
+      // 1. Récupérer les tâches (même requête que InboxPage)
       const { data: taches } = await supabase
         .from('taches')
-        .select('lu_par_assignee, lu_par_expediteur, assignee_id, expediteur_id')
+        .select('*')
         .or(`assignee_id.eq.${appUser.id},expediteur_id.eq.${appUser.id}`);
 
-      if (!taches) {
-        setStats((prev) => ({
-          ...prev,
-          inbox: { non_lus: 0 },
-        }));
-        return;
-      }
+      // 2. Récupérer les demandes externes (même requête que InboxPage)
+      const { data: inboxData } = await supabase
+        .from('inbox')
+        .select('*')
+        .eq('utilisateur_id', appUser.id)
+        .eq('reference_type', 'demande_externe');
 
-      const non_lus = taches.filter((t) =>
+      const tachesCount = taches?.length || 0;
+      const demandesCount = inboxData?.length || 0;
+      const total = tachesCount + demandesCount;
+
+      // Calculer les non lus
+      const nonLusTaches = (taches || []).filter((t: any) =>
         (t.assignee_id === appUser.id && !t.lu_par_assignee) ||
         (t.expediteur_id === appUser.id && !t.lu_par_expediteur)
       ).length;
+      const nonLusDemandes = (inboxData || []).filter((d: any) => !d.lu).length;
+      const non_lus = nonLusTaches + nonLusDemandes;
+
+      console.log('📊 Dashboard Inbox:', {
+        tachesCount,
+        demandesCount,
+        total,
+        non_lus,
+        filters: {
+          utilisateur_id: appUser.id,
+          source: 'taches + inbox'
+        }
+      });
 
       setStats((prev) => ({
         ...prev,
-        inbox: { non_lus },
+        inbox: { total, non_lus },
       }));
     } catch (error) {
       console.error('Error fetching inbox stats:', error);
@@ -865,8 +901,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           <StatCard
             icon={<Inbox className="w-6 h-6" />}
             title="Inbox"
-            value={stats.inbox.non_lus}
-            subtitle={stats.inbox.non_lus > 0 ? `+${stats.inbox.non_lus} non lus` : 'Aucun message'}
+            value={stats.inbox.total}
+            subtitle={stats.inbox.non_lus > 0 ? `${stats.inbox.non_lus} non lus` : 'Aucun message'}
             trend={stats.inbox.non_lus > 0 ? 'up' : 'neutral'}
             trendValue={stats.inbox.non_lus > 0 ? 'Nouveau' : 'Boîte vide'}
             color="purple"
