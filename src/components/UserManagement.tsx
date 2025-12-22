@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { FunctionsHttpError } from "@supabase/supabase-js";
+import { FunctionsHttpError, FunctionsFetchError, FunctionsRelayError } from "@supabase/supabase-js";
 import { PermissionGuard } from './PermissionGuard';
 import { Users, UserPlus, X, Save, Trash2, CheckCircle, XCircle, Edit2, Shield, Upload, FolderOpen, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -83,6 +83,7 @@ export function UserManagement() {
   const [poleDescription, setPoleDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAllData();
@@ -148,26 +149,76 @@ export function UserManagement() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     setSaving(true);
 
     try {
+      const payload = {
+        email: email.trim().toLowerCase(),
+        nom: nom.trim(),
+        prenom: prenom.trim(),
+        pole_id: poleId, // null => Admin
+      };
+
       const { data, error } = await supabase.functions.invoke("admin-create-user", {
-        body: { email, nom, prenom, pole_id: poleId },
+        body: payload,
       });
 
       if (error) throw error;
 
+      // si la fonction renvoie un { ok:false, error:"..." }
+      if (data && data.ok === false) {
+        throw new Error(data.error || "Erreur inconnue (ok=false)");
+      }
+
       console.log("admin-create-user OK =>", data);
+
+      // ✅ MESSAGE SUCCÈS
+      const invitedTxt =
+        data?.invited === true ? "Invitation envoyée" : "Utilisateur créé / déjà existant";
+      setSuccess(`${invitedTxt} : ${payload.email}`);
+
+      // ✅ Fermeture modal + reset form
+      setShowAddModal(false);
+      setEmail("");
+      setNom("");
+      setPrenom("");
+      setPoleId(null);
+
+      // ✅ Refresh UI (liste + permissions)
+      await fetchAllData();
     } catch (err: any) {
-      // ✅ on lit le VRAI message renvoyé par la fonction (body JSON)
+      // ✅ afficher le message côté UI
       if (err instanceof FunctionsHttpError) {
-        const res = err.context; // Response
+        const res = err.context;
         const text = await res.text();
-        console.error("admin-create-user HTTP ERROR =>", res.status, text);
+
+        // tente de lire un JSON {error:"..."}
+        let message = text;
+        try {
+          const j = JSON.parse(text);
+          message = j.error || j.message || text;
+        } catch {}
+
+        console.error("admin-create-user HTTP ERROR =>", res.status, message);
+        setError(`Erreur serveur (${res.status}) : ${message}`);
+        return;
+      }
+
+      if (err instanceof FunctionsRelayError) {
+        console.error("admin-create-user RELAY ERROR =>", err);
+        setError(`Relay error : ${err.message}`);
+        return;
+      }
+
+      if (err instanceof FunctionsFetchError) {
+        console.error("admin-create-user FETCH ERROR =>", err);
+        setError(`Fetch error : ${err.message}`);
         return;
       }
 
       console.error("admin-create-user UNKNOWN ERROR =>", err);
+      setError(err?.message || String(err));
     } finally {
       setSaving(false);
     }
@@ -471,6 +522,12 @@ export function UserManagement() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-green-800">{success}</p>
           </div>
         )}
 
