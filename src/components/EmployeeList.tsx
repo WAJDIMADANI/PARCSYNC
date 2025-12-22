@@ -19,6 +19,7 @@ import { ContractBadge } from './ContractBadge';
 import { ConfirmInvalidIbanModal } from './ConfirmInvalidIbanModal';
 import { validateIban, cleanIban } from '../utils/ibanValidator';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
+import { ProfileAvatar } from './ProfileAvatar';
 
 // Fonction utilitaire pour formater les dates sans problème de fuseau horaire
 function formatDateFR(dateStr: string | null | undefined): string {
@@ -79,6 +80,7 @@ interface Employee {
   titre_sejour_fin_validite: string | null;
   matricule_tca: string | null;
   poste: string | null;
+  photo_url: string | null;
   avenant_1_date_debut: string | null;
   avenant_1_date_fin: string | null;
   avenant_2_date_debut: string | null;
@@ -950,6 +952,9 @@ function EmployeeDetailModal({
   // Masking states
   const [showSecuriteSociale, setShowSecuriteSociale] = useState(false);
   const [showIBAN, setShowIBAN] = useState(false);
+
+  // Photo de profil
+  const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(employee.photo_url || null);
 
   // Contracts states
   const [employeeContracts, setEmployeeContracts] = useState<any[]>([]);
@@ -2434,6 +2439,21 @@ function EmployeeDetailModal({
           </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Photo de profil */}
+          <div className="flex justify-center py-4">
+            <ProfileAvatar
+              profilId={currentEmployee.id}
+              prenom={currentEmployee.prenom}
+              nom={currentEmployee.nom}
+              photoUrl={currentPhotoUrl}
+              onUploadSuccess={(newPhotoUrl) => {
+                setCurrentPhotoUrl(newPhotoUrl || null);
+                setCurrentEmployee({ ...currentEmployee, photo_url: newPhotoUrl || null });
+              }}
+              editable={true}
+            />
+          </div>
+
           {/* Section Identité */}
           <div className={`border rounded-lg p-4 transition-colors ${isEditingIdentity ? 'bg-blue-100 border-blue-300' : 'bg-blue-50 border-blue-200'}`}>
             <div className="flex items-center justify-between mb-4">
