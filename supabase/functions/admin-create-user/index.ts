@@ -145,47 +145,53 @@ Deno.serve(async (req) => {
     if (!nom) return json(400, { error: "Missing nom" });
     if (!prenom) return json(400, { error: "Missing prenom" });
 
-    // 4) Auth user: invite, et si déjà existant => lookup par listUsers
+    // 4) Auth user: créer ou récupérer l'utilisateur existant
     let authUserId: string | null = null;
     let invited = false;
 
-    const { data: inviteData, error: inviteErr } =
-      await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-        redirectTo: 'https://parcsync.madimpact.fr/set-password',
+    // Chercher si l'utilisateur existe déjà
+    const { user: existing, error: findErr } = await findAuthUserByEmail(
+      supabaseAdmin,
+      email,
+    );
+
+    if (findErr) {
+      console.error("listUsers/findAuthUserByEmail error:", findErr);
+      return json(500, {
+        error: "Auth lookup failed (listUsers)",
+        details: findErr.message ?? String(findErr),
       });
+    }
 
-    if (inviteErr) {
-      // Cas fréquent: "user already registered" => on cherche l'user existant
-      const { user: existing, error: findErr } = await findAuthUserByEmail(
-        supabaseAdmin,
-        email,
-      );
-
-      if (findErr) {
-        console.error("listUsers/findAuthUserByEmail error:", findErr);
-        return json(500, {
-          error: "Auth lookup failed (listUsers)",
-          details: findErr.message ?? String(findErr),
-        });
-      }
-
-      if (!existing?.id) {
-        console.error("inviteUserByEmail error:", inviteErr);
-        return json(500, {
-          error: "Invite failed and user not found",
-          details: inviteErr.message ?? String(inviteErr),
-        });
-      }
-
+    if (existing?.id) {
+      // Utilisateur existe déjà
       authUserId = existing.id;
       invited = false;
     } else {
-      authUserId = inviteData?.user?.id ?? null;
+      // Créer un nouvel utilisateur avec un mot de passe temporaire aléatoire
+      const tempPassword = crypto.randomUUID();
+
+      const { data: newUser, error: createErr } =
+        await supabaseAdmin.auth.admin.createUser({
+          email: email,
+          password: tempPassword,
+          email_confirm: true, // Auto-confirmer l'email
+        });
+
+      if (createErr) {
+        console.error("createUser error:", createErr);
+        return json(500, {
+          error: "Failed to create user",
+          details: createErr.message ?? String(createErr),
+        });
+      }
+
+      authUserId = newUser?.user?.id ?? null;
       invited = true;
     }
 
     if (!authUserId) {
-      return json(500, { error: "Auth user id missing after invite/lookup" });
+      return json(500, { error: "Auth user id missing after create/lookup" });
     }
 
     // 5) Sync/Upsert app_utilisateur (robuste aux doublons)
@@ -259,6 +265,54 @@ Deno.serve(async (req) => {
       }
 
       appUserId = updated.id;
+    }
+
+    // 6) Si c'est un nouvel utilisateur, générer un lien de réinitialisation et envoyer l'email
+    if (invited) {
+      try {
+        // Générer un lien de réinitialisation de mot de passe
+        const { data: resetData, error: resetErr } =
+          await supabaseAdmin.auth.admin.generateLink({
+            type: "recovery",
+            email: email,
+            options: {
+              redirectTo: "https://parcsync.madimpact.fr/set-password",
+            },
+          });
+
+        if (resetErr) {
+          console.error("Erreur génération lien:", resetErr);
+          // On continue même si l'email échoue
+        } else if (resetData?.properties?.action_link) {
+          // Envoyer l'email via Brevo
+          const emailResponse = await fetch(
+            `${SUPABASE_URL}/functions/v1/send-user-invitation`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${SERVICE_KEY}`,
+              },
+              body: JSON.stringify({
+                email: email,
+                nom: nom,
+                prenom: prenom,
+                resetLink: resetData.properties.action_link,
+              }),
+            }
+          );
+
+          if (!emailResponse.ok) {
+            const errorText = await emailResponse.text();
+            console.error("Erreur envoi email:", errorText);
+          } else {
+            console.log("Email d'invitation envoyé avec succès");
+          }
+        }
+      } catch (emailError) {
+        console.error("Erreur lors de l'envoi de l'email:", emailError);
+        // On continue même si l'email échoue
+      }
     }
 
     return json(200, {
