@@ -70,6 +70,7 @@ export function UserManagement() {
   const [showAddPoleModal, setShowAddPoleModal] = useState(false);
   const [showRenamePoleModal, setShowRenamePoleModal] = useState(false);
   const [showDeletePoleModal, setShowDeletePoleModal] = useState(false);
+  const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
@@ -322,6 +323,31 @@ export function UserManagement() {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    setError(null);
+    setSaving(true);
+
+    try {
+      const { error } = await supabase
+        .from('app_utilisateur')
+        .delete()
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      setSuccess(`Utilisateur ${selectedUser.prenom} ${selectedUser.nom} supprimé avec succès`);
+      setShowDeleteUserModal(false);
+      setSelectedUser(null);
+      await fetchUsers();
+    } catch (err: any) {
+      console.error('Error deleting user:', err);
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const togglePoleExpanded = (poleId: string) => {
     const newExpanded = new Set(expandedPoles);
     if (newExpanded.has(poleId)) {
@@ -451,12 +477,25 @@ export function UserManagement() {
         </button>
       </td>
       <td className="px-6 py-4">
-        <button
-          onClick={() => openPermissionsModal(user)}
-          className="text-primary-600 hover:text-primary-700 font-medium text-sm"
-        >
-          <Edit2 className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => openPermissionsModal(user)}
+            className="p-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+            title="Modifier les permissions"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => {
+              setSelectedUser(user);
+              setShowDeleteUserModal(true);
+            }}
+            className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+            title="Supprimer l'utilisateur"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -953,6 +992,62 @@ export function UserManagement() {
                     className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors font-medium disabled:opacity-50"
                   >
                     {saving ? 'Suppression...' : 'Supprimer'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showDeleteUserModal && selectedUser && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-slate-900">Supprimer l'utilisateur</h3>
+                <button
+                  onClick={() => {
+                    setShowDeleteUserModal(false);
+                    setSelectedUser(null);
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-sm text-red-800">
+                    Êtes-vous sûr de vouloir supprimer définitivement l'utilisateur <strong>{selectedUser.prenom} {selectedUser.nom}</strong> ?
+                  </p>
+                  <p className="text-sm text-red-700 mt-2">
+                    Cette action est irréversible. Toutes les données associées à cet utilisateur seront supprimées.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <p className="text-xs text-slate-600">
+                    <strong>Email :</strong> {selectedUser.email}
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeleteUserModal(false);
+                      setSelectedUser(null);
+                    }}
+                    className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleDeleteUser}
+                    disabled={saving}
+                    className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors font-medium disabled:opacity-50"
+                  >
+                    {saving ? 'Suppression...' : 'Supprimer définitivement'}
                   </button>
                 </div>
               </div>
