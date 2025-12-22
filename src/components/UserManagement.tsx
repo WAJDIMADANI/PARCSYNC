@@ -153,50 +153,45 @@ export function UserManagement() {
     setSaving(true);
 
     try {
-      const payload = {
-        email: email.trim().toLowerCase(),
-        nom: nom.trim(),
-        prenom: prenom.trim(),
-        pole_id: poleId,
-      };
-
       const { data, error } = await supabase.functions.invoke("admin-create-user", {
-        body: payload,
+        body: { email, nom, prenom, pole_id: poleId },
       });
 
       if (error) throw error;
 
-      // ✅ Message success + refresh + fermeture modal
-      setSuccess(
-        data?.invited
-          ? `Invitation envoyée à ${payload.email}`
-          : `Utilisateur synchronisé : ${payload.email}`
-      );
+      if (!data?.ok) {
+        throw new Error(data?.error || "Création échouée");
+      }
 
+      // ✅ succès
+      setSuccess(data.invited ? "Invitation envoyée ✅" : "Utilisateur lié / mis à jour ✅");
+
+      // refresh listes + reset form + fermer modal
+      await fetchAllData();
       setShowAddModal(false);
       setEmail("");
       setNom("");
       setPrenom("");
       setPoleId(null);
 
-      await fetchAllData();
     } catch (err: any) {
-      // ✅ On affiche le vrai message renvoyé par la Edge Function
       if (err instanceof FunctionsHttpError) {
         const res = err.context; // Response
-        const text = await res.text().catch(() => "");
+        const text = await res.text();
         console.error("admin-create-user HTTP ERROR =>", res.status, text);
 
+        // essaie de lire le JSON renvoyé par ta fonction
         try {
-          const parsed = JSON.parse(text || "{}");
-          setError(parsed?.error || text || `Erreur HTTP ${res.status}`);
+          const j = JSON.parse(text);
+          setError(j?.error ? `${j.error}${j.details ? " — " + j.details : ""}` : text);
         } catch {
-          setError(text || `Erreur HTTP ${res.status}`);
+          setError(text || `Erreur serveur (${res.status})`);
         }
-      } else {
-        console.error("admin-create-user UNKNOWN ERROR =>", err);
-        setError(err?.message || "Erreur inconnue");
+        return;
       }
+
+      console.error("admin-create-user UNKNOWN ERROR =>", err);
+      setError(err?.message || "Erreur inconnue");
     } finally {
       setSaving(false);
     }
