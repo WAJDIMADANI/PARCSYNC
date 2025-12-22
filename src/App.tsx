@@ -9,6 +9,7 @@ import UploadMedicalCertificate from './components/UploadMedicalCertificate';
 import UploadAllMissingDocuments from './components/UploadAllMissingDocuments';
 import { FirstAdminSetup } from './components/FirstAdminSetup';
 import { DemandeExterne } from './components/DemandeExterne';
+import { SetPassword } from './components/SetPassword';
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
@@ -124,6 +125,10 @@ function AppContent() {
 
   if (path === '/demande-externe' || path.startsWith('/demande-externe')) {
     return <DemandeExterne />;
+  }
+
+  if (path === '/set-password' || path.startsWith('/set-password')) {
+    return <SetPassword />;
   }
 
   if (loading || checkingSetup) {

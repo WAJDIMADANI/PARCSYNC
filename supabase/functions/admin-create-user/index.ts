@@ -150,7 +150,9 @@ Deno.serve(async (req) => {
     let invited = false;
 
     const { data: inviteData, error: inviteErr } =
-      await supabaseAdmin.auth.admin.inviteUserByEmail(email);
+      await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+        redirectTo: 'https://parcsync.madimpact.fr/set-password',
+      });
 
     if (inviteErr) {
       // Cas fréquent: "user already registered" => on cherche l'user existant
