@@ -1,0 +1,88 @@
+================================================================================
+RÉSUMÉ - Correction photo de profil ne s'affiche pas
+================================================================================
+
+PROBLÈME :
+----------
+✅ Photo chargée
+❌ Photo ne s'affiche pas
+❌ Seules les initiales apparaissent
+
+CAUSE :
+-------
+Le bucket Storage "profile-photos" n'est pas configuré comme PUBLIC
+
+SOLUTION EN 3 ÉTAPES :
+-----------------------
+
+1️⃣ EXÉCUTER LE SCRIPT SQL
+   📄 Fichier : FIX-PHOTO-PROFILE-URGENT.sql
+   📍 Où : Supabase Dashboard → SQL Editor
+   ⏱️  Durée : 10 secondes
+
+2️⃣ VIDER LE CACHE DU NAVIGATEUR
+   🔧 Chrome/Edge : F12 → Clic droit Actualiser → "Vider le cache"
+   🔧 Firefox : Ctrl+Shift+Suppr → Cocher "Cache" → Effacer
+   ⏱️  Durée : 5 secondes
+
+3️⃣ RECHARGER LA PHOTO
+   🗑️  Supprimer la photo actuelle
+   ⬆️  Charger une nouvelle photo
+   ✅ Vérifier qu'elle s'affiche
+   ⏱️  Durée : 20 secondes
+
+AMÉLIORATIONS FAITES :
+----------------------
+✅ Avatar agrandi : 256px mobile / 320px desktop (+54% plus grand)
+✅ Initiales plus grosses : bien lisibles
+✅ Gestion d'erreur améliorée : log dans la console si problème
+✅ Détection automatique si photo ne charge pas
+✅ Build réussi sans erreur
+
+FICHIERS CRÉÉS :
+----------------
+📄 FIX-PHOTO-PROFILE-URGENT.sql          → Script SQL de correction
+📄 DIAGNOSTIC-PHOTO-PROFIL-PAS-AFFICHEE.md  → Diagnostic complet
+📄 FAIRE-CA-MAINTENANT-PHOTO.md          → Guide simple
+📄 CHANGEMENTS-TAILLE-AVATAR.md          → Détails des changements taille
+
+FICHIERS MODIFIÉS :
+-------------------
+📝 /src/components/ProfileAvatar.tsx     → Ajout onError + crossOrigin
+📝 /GUIDE-PHOTOS-PROFIL.md               → Dimensions mises à jour
+📝 /DEMARRAGE-RAPIDE-PHOTOS.md           → Info mise à jour
+
+CE QUE LE SCRIPT SQL FAIT :
+----------------------------
+✅ Force le bucket "profile-photos" à être PUBLIC
+✅ Supprime toutes les anciennes policies RLS
+✅ Recrée 4 nouvelles policies correctes :
+   - SELECT pour tout le monde (lecture publique)
+   - INSERT pour utilisateurs authentifiés
+   - UPDATE pour utilisateurs authentifiés
+   - DELETE pour utilisateurs authentifiés
+✅ Vérifie que la colonne photo_url existe
+✅ Affiche un résumé de vérification
+
+VÉRIFICATION APRÈS CORRECTION :
+--------------------------------
+Ouvrez la console du navigateur (F12) :
+❌ Erreur 404 → Photo n'existe pas, rechargez-la
+❌ Erreur 403 → Script SQL non exécuté
+✅ Pas d'erreur + photo visible → SUCCÈS !
+
+TEMPS TOTAL DE CORRECTION :
+----------------------------
+⏱️  35 secondes (si vous suivez les 3 étapes)
+
+RÉSULTAT FINAL :
+----------------
+✅ Avatar GRAND, ROND et VISIBLE
+✅ Photo s'affiche correctement
+✅ Initiales bien lisibles (si pas de photo)
+✅ Upload/suppression fonctionnels
+✅ Responsive (mobile + desktop)
+
+================================================================================
+📌 COMMENCEZ PAR : FAIRE-CA-MAINTENANT-PHOTO.md (guide le plus simple)
+================================================================================

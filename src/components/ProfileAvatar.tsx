@@ -156,6 +156,12 @@ export function ProfileAvatar({
               alt={`${prenom} ${nom}`}
               className="w-full h-full object-cover transition-opacity duration-300"
               style={{ opacity: loading ? 0.5 : 1 }}
+              onError={(e) => {
+                console.error('Erreur chargement photo:', currentPhotoUrl);
+                // Si l'image ne charge pas, afficher les initiales
+                setCurrentPhotoUrl(null);
+              }}
+              crossOrigin="anonymous"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center">
