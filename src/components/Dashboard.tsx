@@ -40,7 +40,7 @@ import { DemandesExternesManager } from './DemandesExternesManager';
 export function Dashboard() {
   const [view, setView] = useState<View>('dashboards/rh');
   const [viewParams, setViewParams] = useState<any>(null);
-  const { signOut, user } = useAuth();
+  const { signOut, user, appUserNom, appUserPrenom } = useAuth();
 
   const handleViewChange = (newView: View, params?: any) => {
     setView(newView);
@@ -173,7 +173,11 @@ export function Dashboard() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-xl">
                 <User className="w-4 h-4 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">{user?.email}</span>
+                <span className="text-sm font-medium text-slate-700">
+                  {appUserPrenom && appUserNom
+                    ? `${appUserPrenom} ${appUserNom}`
+                    : user?.email}
+                </span>
               </div>
               <button
                 onClick={() => signOut()}
