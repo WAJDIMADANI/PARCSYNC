@@ -159,6 +159,12 @@ export function UserManagement() {
         },
       });
 
+      if (error) {
+        console.error("admin-create-user ERROR =>", error);
+        console.error("admin-create-user CONTEXT =>", (error as any).context);
+      }
+      console.log("admin-create-user DATA =>", data);
+
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "Création utilisateur échouée");
 
