@@ -143,7 +143,7 @@ export function ProfileAvatar({
         <div
           className={`
             relative overflow-hidden rounded-full transition-all duration-300
-            w-48 h-48 md:w-52 md:h-52
+            w-64 h-64 md:w-80 md:h-80
             ${editable && !loading ? 'cursor-pointer' : 'cursor-default'}
             ${isDragging ? 'ring-4 ring-blue-500 ring-offset-4 scale-105' : 'ring-2 ring-gray-200'}
             shadow-xl
@@ -159,18 +159,18 @@ export function ProfileAvatar({
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center">
-              <span className="text-white font-bold text-6xl">{getInitials()}</span>
+              <span className="text-white font-bold text-8xl md:text-9xl">{getInitials()}</span>
             </div>
           )}
 
           {/* Overlay au survol (uniquement si editable) */}
           {editable && !loading && (
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2">
-              <FileUp className="w-10 h-10 text-white" />
-              <span className="text-white text-sm font-medium px-3">
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3">
+              <FileUp className="w-16 h-16 md:w-20 md:h-20 text-white" />
+              <span className="text-white text-base md:text-lg font-medium px-4">
                 {currentPhotoUrl ? 'Changer la photo' : 'Ajouter une photo'}
               </span>
-              <span className="text-white/80 text-xs">
+              <span className="text-white/80 text-sm md:text-base">
                 JPG, PNG ou WebP (max 5MB)
               </span>
             </div>
@@ -179,7 +179,7 @@ export function ProfileAvatar({
           {/* Loading Spinner */}
           {loading && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <Loader2 className="w-12 h-12 text-white animate-spin" />
+              <Loader2 className="w-16 h-16 md:w-20 md:h-20 text-white animate-spin" />
             </div>
           )}
 
@@ -187,8 +187,8 @@ export function ProfileAvatar({
           {isDragging && (
             <div className="absolute inset-0 bg-blue-500/80 flex items-center justify-center border-4 border-dashed border-white">
               <div className="text-center">
-                <FileUp className="w-12 h-12 text-white mx-auto mb-2" />
-                <span className="text-white text-lg font-bold">Déposer ici</span>
+                <FileUp className="w-16 h-16 md:w-20 md:h-20 text-white mx-auto mb-3" />
+                <span className="text-white text-xl md:text-2xl font-bold">Déposer ici</span>
               </div>
             </div>
           )}
@@ -201,10 +201,10 @@ export function ProfileAvatar({
               e.stopPropagation();
               setShowDeleteConfirm(true);
             }}
-            className="absolute top-0 right-0 w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center transform hover:scale-110"
+            className="absolute top-2 right-2 w-14 h-14 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center transform hover:scale-110"
             title="Supprimer la photo"
           >
-            <Trash2 className="w-5 h-5" />
+            <Trash2 className="w-7 h-7" />
           </button>
         )}
 
@@ -220,7 +220,7 @@ export function ProfileAvatar({
 
       {/* Nom et prénom sous l'avatar */}
       <div className="text-center">
-        <h3 className="text-xl font-bold text-gray-900">
+        <h3 className="text-2xl md:text-3xl font-bold text-gray-900">
           {prenom} {nom}
         </h3>
       </div>

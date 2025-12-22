@@ -19,9 +19,9 @@ Hook React pour gérer l'upload et la suppression de photos de profil.
 Composant React pour afficher et gérer l'avatar de profil.
 
 **Fonctionnalités :**
-- Avatar circulaire (200px de diamètre sur desktop, 150px sur mobile)
+- Avatar circulaire GRAND (320px de diamètre sur desktop, 256px sur mobile)
 - Gradient coloré (bleu → violet → rose) en arrière-plan
-- Affichage de la photo ou des initiales
+- Affichage de la photo ou des initiales bien visibles
 - Drag-and-drop pour upload
 - Clic pour sélectionner un fichier
 - Bouton de suppression (visible au survol)
@@ -148,11 +148,17 @@ Remplacer par d'autres couleurs Tailwind, par exemple :
 Modifier dans `/src/components/ProfileAvatar.tsx` :
 
 ```tsx
-// Ligne 158-159
-w-48 h-48 md:w-52 md:h-52
+// Ligne 146 (taille actuelle)
+w-64 h-64 md:w-80 md:h-80
 ```
 
-Valeurs disponibles : `w-32 h-32` (128px), `w-40 h-40` (160px), `w-56 h-56` (224px), etc.
+Valeurs disponibles :
+- `w-32 h-32 md:w-40 md:h-40` (128px/160px) - Petit
+- `w-48 h-48 md:w-56 md:h-56` (192px/224px) - Moyen
+- `w-64 h-64 md:w-80 md:h-80` (256px/320px) - Grand (actuel)
+- `w-72 h-72 md:w-96 md:h-96` (288px/384px) - Très grand
+
+**Note :** Pensez aussi à ajuster la taille des initiales (`text-8xl md:text-9xl` ligne 162)
 
 ### Changer la taille maximale des fichiers
 

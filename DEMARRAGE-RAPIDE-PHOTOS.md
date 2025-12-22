@@ -42,15 +42,15 @@ npm run dev
 
 ## Fonctionnalités
 
-- ✅ Avatar circulaire 200px avec gradient coloré
-- ✅ Affichage photo ou initiales
+- ✅ Avatar circulaire GRAND (320px desktop / 256px mobile) avec gradient coloré
+- ✅ Affichage photo ou initiales bien visibles
 - ✅ Drag & drop pour upload
 - ✅ Clic pour sélectionner un fichier
 - ✅ Validation : JPG/PNG/WebP, max 5MB
 - ✅ Suppression avec confirmation
 - ✅ Animations fluides
 - ✅ Toast de notification
-- ✅ Responsive (150px sur mobile)
+- ✅ Responsive et bien rond
 
 ---
 
