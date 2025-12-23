@@ -1,148 +1,152 @@
-/**
- * Extrait les variables {{variable}} d'un fichier Word (.docx)
- * Les fichiers .docx sont des archives ZIP contenant du XML
- */
+import * as fflate from 'fflate';
 
-import { Document } from 'docx';
+export interface VariableInfo {
+  name: string;
+  count: number;
+}
 
-/**
- * Extrait les variables {{ }} du contenu texte
- */
-export function extractVariablesFromText(text: string): string[] {
-  const variableRegex = /\{\{([^}]+)\}\}/g;
-  const matches = text.matchAll(variableRegex);
-  const variables = new Set<string>();
-
-  for (const match of matches) {
-    const varName = match[1].trim();
-    if (varName) {
-      variables.add(varName);
+export class LetterVariablesExtractor {
+  /**
+   * Extrait les variables {{...}} d'un texte
+   */
+  static extractVariablesFromText(text: string): VariableInfo[] {
+    const regex = /\{\{([^}]+)\}\}/g;
+    const matches = new Map<string, number>();
+    
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      const varName = match[1].trim();
+      matches.set(varName, (matches.get(varName) || 0) + 1);
     }
-  }
-
-  return Array.from(variables).sort();
-}
-
-/**
- * Analyse un fichier Word et extrait les variables
- * @param file - Fichier Word à analyser
- * @returns Variables trouvées
- */
-export async function extractVariablesFromWordFile(file: File): Promise<{
-  variables: string[];
-  content: string;
-}> {
-  try {
-    // Utiliser pako ou fflate pour décompresser le ZIP
-    // Pour maintenant, on va utiliser une approche simplifiée
-    // si la librairie docx est disponible
-
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-
-    // Essayer de lire en tant que texte brut d'abord
-    const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);
-
-    // Extraire les variables
-    const variables = extractVariablesFromText(text);
-
-    return {
-      variables,
-      content: text
-    };
-  } catch (error) {
-    console.error('Erreur extraction Word:', error);
-    throw new Error('Impossible de lire le fichier Word');
-  }
-}
-
-/**
- * Classe pour analyser les variables détectées
- */
-export class VariableAnalyzer {
-  private variables: string[];
-
-  constructor(variables: string[]) {
-    this.variables = variables;
+    
+    return Array.from(matches.entries()).map(([name, count]) => ({
+      name,
+      count
+    }));
   }
 
   /**
-   * Classe les variables en optionnelles vs requises basé sur des heuristiques
+   * Extrait les variables d'un fichier Word (.docx)
+   * Les fichiers .docx sont des archives ZIP contenant du XML
    */
-  classifyVariables(): {
+  static async extractVariablesFromWordFile(file: File): Promise<VariableInfo[]> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          if (!arrayBuffer) {
+            reject(new Error('Impossible de lire le fichier'));
+            return;
+          }
+
+          // Décompresser le ZIP
+          fflate.unzip(new Uint8Array(arrayBuffer), (err, unzipped) => {
+            if (err) {
+              reject(new Error(`Erreur décompression: ${err.message}`));
+              return;
+            }
+
+            if (!unzipped) {
+              reject(new Error('Fichier vide ou corrompu'));
+              return;
+            }
+
+            // Lire le document.xml
+            const documentXml = unzipped['word/document.xml'];
+            if (!documentXml) {
+              reject(new Error('Fichier Word invalide: document.xml non trouvé'));
+              return;
+            }
+
+            // Convertir en string
+            const decoder = new TextDecoder('utf-8');
+            const xmlContent = decoder.decode(documentXml);
+
+            // Extraire les variables
+            const variables = this.extractVariablesFromText(xmlContent);
+            
+            console.log(`[LetterVariablesExtractor] ${variables.length} variables trouvées:`, 
+              variables.map(v => v.name));
+            
+            resolve(variables);
+          });
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      reader.onerror = () => {
+        reject(new Error('Erreur lecture du fichier'));
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  /**
+   * Analyse les variables et détermine lesquelles sont requises vs optionnelles
+   * Les variables contenant "date", "heure" sont généralement requises
+   * Les autres varient selon le contexte
+   */
+  static analyzeVariables(variables: VariableInfo[]): {
     requises: string[];
     optionnelles: string[];
   } {
-    const requises = new Set<string>();
-    const optionnelles = new Set<string>();
+    const dateTimeKeywords = ['date', 'heure', 'jour', 'mois', 'annee'];
+    
+    const requises: string[] = [];
+    const optionnelles: string[] = [];
 
-    // Variables requises (données essentielles du salarié/courrier)
-    const requiredPatterns = [
-      'nom',
-      'prenom',
-      'civilite',
-      'date',
-      'employee',
-      'salarié',
-      'profil'
-    ];
+    variables.forEach(v => {
+      const isDateTimeRelated = dateTimeKeywords.some(keyword => 
+        v.name.toLowerCase().includes(keyword)
+      );
 
-    // Variables optionnelles (détails spécifiques)
-    const optionalPatterns = [
-      'commentaire',
-      'note',
-      'description',
-      'detail',
-      'description_incident',
-      'raison'
-    ];
-
-    for (const variable of this.variables) {
-      const lowerVar = variable.toLowerCase();
-
-      if (requiredPatterns.some(p => lowerVar.includes(p))) {
-        requises.add(variable);
-      } else if (optionalPatterns.some(p => lowerVar.includes(p))) {
-        optionnelles.add(variable);
+      // Pour simplifier: on considère les variables date/heure comme requises
+      // Les autres comme optionnelles
+      if (isDateTimeRelated) {
+        requises.push(v.name);
       } else {
-        // Par défaut, considérer comme requise si on n'est pas sûr
-        requises.add(variable);
+        optionnelles.push(v.name);
       }
+    });
+
+    return { requises, optionnelles };
+  }
+
+  /**
+   * Suggère un nom pour le modèle basé sur les variables
+   */
+  static suggestTemplateName(variables: VariableInfo[]): string {
+    const varNames = variables.map(v => v.name);
+    
+    // Si c'est un avertissement (incident, km_non_autorises, etc.)
+    if (varNames.some(v => v.includes('incident') || v.includes('km'))) {
+      return 'Avertissement utilisation vehicule';
+    }
+    
+    // Sinon, utiliser la première variable significative
+    return varNames[0] || 'Nouveau modèle';
+  }
+
+  /**
+   * Détecte le type de courrier basé sur les variables
+   */
+  static detectLetterType(variables: VariableInfo[]): string {
+    const varNames = variables.map(v => v.name).join(' ').toLowerCase();
+
+    if (varNames.includes('incident') || varNames.includes('km')) {
+      return 'Avertissement';
+    } else if (varNames.includes('contrat') || varNames.includes('cdi')) {
+      return 'Contrat';
+    } else if (varNames.includes('rupture') || varNames.includes('licenciement')) {
+      return 'Licenciement';
+    } else if (varNames.includes('demission')) {
+      return 'Démission';
     }
 
-    return {
-      requises: Array.from(requises),
-      optionnelles: Array.from(optionnelles)
-    };
-  }
-
-  /**
-   * Détecte le type de courrier basé sur le nom du fichier et les variables
-   */
-  detectLetterType(filename: string): string {
-    const lowerFilename = filename.toLowerCase();
-
-    if (lowerFilename.includes('avertissement')) return 'Avertissement';
-    if (lowerFilename.includes('convocation')) return 'Convocation';
-    if (lowerFilename.includes('attestation')) return 'Attestation';
-    if (lowerFilename.includes('sanction')) return 'Sanction';
-    if (lowerFilename.includes('félicitations')) return 'Félicitations';
-    if (lowerFilename.includes('rappel')) return 'Rappel';
-
     return 'Autre';
-  }
-
-  /**
-   * Génère un nom suggéré pour le modèle
-   */
-  suggestTemplateName(filename: string): string {
-    // Enlever l'extension .docx
-    const nameWithoutExtension = filename.replace(/\.docx$/i, '');
-
-    // Capitaliser correctement
-    return nameWithoutExtension
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
   }
 }
