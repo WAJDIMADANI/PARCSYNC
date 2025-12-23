@@ -415,21 +415,22 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       return matchesSearch && matchesStatut && matchesSecteur && matchesTypeContrat;
     })
     .sort((a, b) => {
-      // Priority sorting: 'contrat_envoye' and 'en_attente_contrat' statuses always appear first
-      const aIsPriority = a.statut === 'contrat_envoye' || a.statut === 'en_attente_contrat';
-      const bIsPriority = b.statut === 'contrat_envoye' || b.statut === 'en_attente_contrat';
-
-      if (aIsPriority && !bIsPriority) return -1;
-      if (!aIsPriority && bIsPriority) return 1;
-
-      // If both have the same priority, sort by the selected field
       let aValue: any;
       let bValue: any;
 
       switch (sortField) {
         case 'matricule_tca':
-          aValue = (a.matricule_tca || '').toLowerCase();
-          bValue = (b.matricule_tca || '').toLowerCase();
+          aValue = a.matricule_tca || '';
+          bValue = b.matricule_tca || '';
+          if (!aValue) return 1;
+          if (!bValue) return -1;
+          const aMatricule = parseInt(aValue) || 0;
+          const bMatricule = parseInt(bValue) || 0;
+          if (aMatricule !== bMatricule) {
+            return sortDirection === 'asc' ? aMatricule - bMatricule : bMatricule - aMatricule;
+          }
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
           break;
         case 'prenom':
           aValue = a.prenom.toLowerCase();
@@ -448,9 +449,11 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           bValue = (b.modele_contrat || '').toLowerCase();
           break;
         case 'date_entree':
-          aValue = new Date(a.date_entree || 0).getTime();
-          bValue = new Date(b.date_entree || 0).getTime();
-          break;
+          aValue = a.date_entree ? new Date(a.date_entree).getTime() : 0;
+          bValue = b.date_entree ? new Date(b.date_entree).getTime() : 0;
+          if (!a.date_entree) return 1;
+          if (!b.date_entree) return -1;
+          return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
         case 'statut_contrat':
           aValue = getActualContractStatus(a).toLowerCase();
           bValue = getActualContractStatus(b).toLowerCase();
