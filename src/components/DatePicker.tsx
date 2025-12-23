@@ -9,19 +9,57 @@ interface DatePickerProps {
 }
 
 export function DatePicker({ value, onChange, required = false, placeholder = 'JJ/MM/AAAA', className = '' }: DatePickerProps) {
-  const formatDateForInput = (isoDate: string): string => {
-    if (!isoDate) return '';
-    const date = new Date(isoDate);
+  const formatDateForInput = (dateStr: string): string => {
+    if (!dateStr) return '';
+
+    // Si c'est déjà au format YYYY-MM-DD, retourner tel quel
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+
+    // Si c'est au format ISO complet (avec heure)
+    if (dateStr.includes('T')) {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return '';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // Si c'est au format "23 décembre 2025" ou autre format textuel
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    return '';
+  };
+
+  const formatDateForDisplay = (inputDate: string): string => {
+    if (!inputDate) return '';
+    const date = new Date(inputDate);
     if (isNaN(date.getTime())) return '';
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+
+    const options: Intl.DateTimeFormatOptions = {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    };
+    return date.toLocaleDateString('fr-FR', options);
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const dateValue = e.target.value;
-    onChange(dateValue);
+    if (dateValue) {
+      const formattedDate = formatDateForDisplay(dateValue);
+      onChange(formattedDate);
+    } else {
+      onChange('');
+    }
   };
 
   return (

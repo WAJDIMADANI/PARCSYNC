@@ -379,25 +379,39 @@ export function GenerateLetterV2Wizard({ onClose, onComplete }: GenerateLetterV2
               </label>
 
               {inputType === 'date' ? (
-                <DatePicker
-                  selected={variableValues[varName] || ''}
-                  onChange={(date) => setVariableValues({
-                    ...variableValues,
-                    [varName]: date
-                  })}
-                  placeholder={`Sélectionnez ${varName}`}
-                  className={isAutoFilled ? 'bg-green-50' : ''}
-                />
+                <div>
+                  <DatePicker
+                    value={variableValues[varName] || ''}
+                    onChange={(date) => setVariableValues({
+                      ...variableValues,
+                      [varName]: date
+                    })}
+                    placeholder={`Sélectionnez ${varName}`}
+                    className={isAutoFilled ? 'bg-green-50' : ''}
+                  />
+                  {variableValues[varName] && (
+                    <p className="mt-1 text-sm text-gray-600">
+                      Sélectionné : <span className="font-medium text-gray-900">{variableValues[varName]}</span>
+                    </p>
+                  )}
+                </div>
               ) : inputType === 'time' ? (
-                <TimePicker
-                  value={variableValues[varName] || ''}
-                  onChange={(time) => setVariableValues({
-                    ...variableValues,
-                    [varName]: time
-                  })}
-                  placeholder={`Sélectionnez ${varName}`}
-                  className={isAutoFilled ? 'bg-green-50' : ''}
-                />
+                <div>
+                  <TimePicker
+                    value={variableValues[varName] || ''}
+                    onChange={(time) => setVariableValues({
+                      ...variableValues,
+                      [varName]: time
+                    })}
+                    placeholder={`Sélectionnez ${varName}`}
+                    className={isAutoFilled ? 'bg-green-50' : ''}
+                  />
+                  {variableValues[varName] && (
+                    <p className="mt-1 text-sm text-gray-600">
+                      Sélectionné : <span className="font-medium text-gray-900">{variableValues[varName]}</span>
+                    </p>
+                  )}
+                </div>
               ) : (
                 <input
                   type="text"
