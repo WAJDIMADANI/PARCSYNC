@@ -43,7 +43,7 @@ CREATE POLICY "Authenticated users can create generated letters"
   TO authenticated
   WITH CHECK (created_by = auth.uid());
 
--- Policy: Users can update their own generated letters or if they are admin
+-- Policy: Users can update their own generated letters or if they have admin permissions
 CREATE POLICY "Users can update their generated letters"
   ON courrier_genere
   FOR UPDATE
@@ -51,13 +51,15 @@ CREATE POLICY "Users can update their generated letters"
   USING (
     created_by = auth.uid() OR
     EXISTS (
-      SELECT 1 FROM app_utilisateur
-      WHERE id = auth.uid()
-      AND (role = 'admin' OR role = 'super_admin')
+      SELECT 1 FROM utilisateur_permissions up
+      JOIN app_utilisateur au ON au.id = up.utilisateur_id
+      WHERE au.auth_user_id = auth.uid()
+      AND up.section_id = 'gestion_utilisateurs'
+      AND up.actif = true
     )
   );
 
--- Policy: Users can delete their own generated letters or if they are admin
+-- Policy: Users can delete their own generated letters or if they have admin permissions
 CREATE POLICY "Users can delete their generated letters"
   ON courrier_genere
   FOR DELETE
@@ -65,9 +67,11 @@ CREATE POLICY "Users can delete their generated letters"
   USING (
     created_by = auth.uid() OR
     EXISTS (
-      SELECT 1 FROM app_utilisateur
-      WHERE id = auth.uid()
-      AND (role = 'admin' OR role = 'super_admin')
+      SELECT 1 FROM utilisateur_permissions up
+      JOIN app_utilisateur au ON au.id = up.utilisateur_id
+      WHERE au.auth_user_id = auth.uid()
+      AND up.section_id = 'gestion_utilisateurs'
+      AND up.actif = true
     )
   );
 ```
@@ -88,8 +92,10 @@ Les politiques RLS (Row Level Security) pour la table `courrier_genere` ont ét�
 
 1. **SELECT** : Tous les utilisateurs authentifiés peuvent voir tous les courriers
 2. **INSERT** : Tous les utilisateurs authentifiés peuvent créer des courriers (en s'assignant comme créateur)
-3. **UPDATE** : Les utilisateurs peuvent modifier leurs propres courriers (ou les admins peuvent modifier n'importe quel courrier)
-4. **DELETE** : Les utilisateurs peuvent supprimer leurs propres courriers (ou les admins peuvent supprimer n'importe quel courrier)
+3. **UPDATE** : Les utilisateurs peuvent modifier leurs propres courriers (ou les utilisateurs avec la permission 'gestion_utilisateurs' peuvent modifier n'importe quel courrier)
+4. **DELETE** : Les utilisateurs peuvent supprimer leurs propres courriers (ou les utilisateurs avec la permission 'gestion_utilisateurs' peuvent supprimer n'importe quel courrier)
+
+**Note** : Le système utilise les permissions de la table `utilisateur_permissions` au lieu d'un champ `role` dans `app_utilisateur`.
 
 ## En cas de problème
 

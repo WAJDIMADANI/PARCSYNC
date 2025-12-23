@@ -31,7 +31,7 @@ CREATE POLICY "Authenticated users can create generated letters"
   TO authenticated
   WITH CHECK (created_by = auth.uid());
 
--- Policy: Users can update their own generated letters or if they are admin
+-- Policy: Users can update their own generated letters or if they have admin permissions
 CREATE POLICY "Users can update their generated letters"
   ON courrier_genere
   FOR UPDATE
@@ -39,13 +39,15 @@ CREATE POLICY "Users can update their generated letters"
   USING (
     created_by = auth.uid() OR
     EXISTS (
-      SELECT 1 FROM app_utilisateur
-      WHERE id = auth.uid()
-      AND (role = 'admin' OR role = 'super_admin')
+      SELECT 1 FROM utilisateur_permissions up
+      JOIN app_utilisateur au ON au.id = up.utilisateur_id
+      WHERE au.auth_user_id = auth.uid()
+      AND up.section_id = 'gestion_utilisateurs'
+      AND up.actif = true
     )
   );
 
--- Policy: Users can delete their own generated letters or if they are admin
+-- Policy: Users can delete their own generated letters or if they have admin permissions
 CREATE POLICY "Users can delete their generated letters"
   ON courrier_genere
   FOR DELETE
@@ -53,8 +55,10 @@ CREATE POLICY "Users can delete their generated letters"
   USING (
     created_by = auth.uid() OR
     EXISTS (
-      SELECT 1 FROM app_utilisateur
-      WHERE id = auth.uid()
-      AND (role = 'admin' OR role = 'super_admin')
+      SELECT 1 FROM utilisateur_permissions up
+      JOIN app_utilisateur au ON au.id = up.utilisateur_id
+      WHERE au.auth_user_id = auth.uid()
+      AND up.section_id = 'gestion_utilisateurs'
+      AND up.actif = true
     )
   );
