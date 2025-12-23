@@ -110,6 +110,8 @@ export function Dashboard() {
         return <PostesList />;
       case 'admin/modeles':
         return <LetterTemplatesManager />;
+        case 'admin/modeles-courriers-v2':
+  return <LetterTemplatesV2Manager />;
       case 'admin/generer-courrier':
         return <GenerateLetterPage />;
       case 'admin/modeles-contrats':
