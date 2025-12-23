@@ -31,6 +31,7 @@ import { UserManagement } from './UserManagement';
 import { DemandesPage } from './DemandesPage';
 import { ValidationsPage } from './ValidationsPage';
 import { LetterTemplatesManager } from './LetterTemplatesManager';
+import { LetterTemplatesV2Manager } from './LetterTemplatesV2Manager';
 import { GeneratedLettersList } from './GeneratedLettersList';
 import { MissingDocuments } from './MissingDocuments';
 import { GenerateLetterPage } from './GenerateLetterPage';
