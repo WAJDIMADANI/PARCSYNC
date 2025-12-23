@@ -76,14 +76,14 @@ export function useLetterTemplatesV2() {
         // 1. Upload le fichier Word dans Storage
         const fileName = `${Date.now()}_${templateData.file.name}`;
         const { error: uploadError } = await supabase.storage
-          .from('letter_templates')
+          .from('letter-templates')
           .upload(fileName, templateData.file);
 
         if (uploadError) throw uploadError;
 
         // 2. Obtenir l'URL public du fichier
         const { data: publicData } = supabase.storage
-          .from('letter_templates')
+          .from('letter-templates')
           .getPublicUrl(fileName);
 
         // 3. Créer l'entrée en BD
@@ -175,7 +175,7 @@ export function useLetterTemplatesV2() {
           const fileName = storagePath.split('/').pop();
           if (fileName) {
             await supabase.storage
-              .from('letter_templates')
+              .from('letter-templates')
               .remove([fileName]);
           }
         }
