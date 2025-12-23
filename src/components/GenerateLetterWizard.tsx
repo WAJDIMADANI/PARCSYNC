@@ -410,8 +410,8 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
     if (!selectedProfile || !selectedTemplate) return { subject: '', content: '' };
 
     const systemValues = formatProfileData(selectedProfile);
-    const subject = replaceAllVariables(selectedTemplate.sujet, systemValues, customValues);
-    const content = replaceAllVariables(selectedTemplate.contenu, systemValues, customValues);
+    const subject = replaceAllVariables(selectedTemplate.sujet || '', systemValues, customValues);
+    const content = replaceAllVariables(selectedTemplate.contenu || '', systemValues, customValues);
 
     return { subject, content };
   };

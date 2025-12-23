@@ -207,19 +207,20 @@ export function replaceAllVariables(
   systemValues: Record<string, string>,
   customValues: Record<string, any>
 ): string {
+  if (!template) return '';
   let result = template;
 
   // D'abord remplacer les variables système (sans formatage spécial)
   Object.entries(systemValues).forEach(([key, value]) => {
     const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-    const displayValue = formatCustomValue(value);
+    const displayValue = formatCustomValue(value) || '';
     result = result.replace(regex, displayValue);
   });
 
   // Ensuite remplacer les variables personnalisées (EN GRAS ET EN ROUGE)
   Object.entries(customValues).forEach(([key, value]) => {
     const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-    const displayValue = formatCustomValue(value);
+    const displayValue = formatCustomValue(value) || '';
     // Wrapper avec HTML pour affichage en gras et rouge
     const styledValue = `<b style="color: red;">${displayValue}</b>`;
     result = result.replace(regex, styledValue);
