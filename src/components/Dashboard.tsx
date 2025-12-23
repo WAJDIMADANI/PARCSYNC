@@ -34,6 +34,7 @@ import { LetterTemplatesManager } from './LetterTemplatesManager';
 import { GeneratedLettersList } from './GeneratedLettersList';
 import { MissingDocuments } from './MissingDocuments';
 import { GenerateLetterPage } from './GenerateLetterPage';
+import { LetterTemplatesV2Manager } from './LetterTemplatesV2Manager';
 import { InboxPage } from './InboxPage';
 import { DemandesExternesManager } from './DemandesExternesManager';
 
