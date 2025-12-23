@@ -164,6 +164,7 @@ export function Dashboard() {
                 {view === 'admin/secteurs' && 'Secteurs'}
                 {view === 'admin/postes' && 'Postes'}
                 {view === 'admin/modeles' && 'Modèles de Courriers'}
+                {view === 'admin/modeles-courriers-v2' && 'Modèles de Courriers V2'}
                 {view === 'admin/generer-courrier' && 'Générer un Courrier'}
                 {view === 'admin/modeles-contrats' && 'Modèles de Contrats'}
                 {view === 'admin/import-salarie' && 'Import Salarié Test'}
