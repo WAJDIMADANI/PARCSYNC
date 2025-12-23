@@ -189,6 +189,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'admin/secteurs', label: 'Secteurs', icon: Tag, enabled: true },
         { id: 'admin/postes', label: 'Postes', icon: Briefcase, enabled: true },
         { id: 'admin/modeles', label: 'Modèles de Courriers', icon: FileCode, enabled: true },
+        { id: 'admin/modeles-courriers-v2', label: 'Modèles Courriers V2', icon: FileCode, enabled: true },
         { id: 'admin/generer-courrier', label: 'Générer Courrier Word', icon: FileCheck, enabled: true },
         { id: 'admin/modeles-contrats', label: 'Modèles Contrats', icon: FileText, enabled: true },
         { id: 'admin/import-salarie', label: 'Import Salarié Test', icon: UserPlus, enabled: true },
