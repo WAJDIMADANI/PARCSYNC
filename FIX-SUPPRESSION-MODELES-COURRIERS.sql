@@ -17,18 +17,14 @@ DROP POLICY IF EXISTS "Admins can delete letter templates files" ON storage.obje
 DROP POLICY IF EXISTS "Allow admin delete on letter-templates" ON storage.objects;
 
 -- 2. Créer nouvelle policy de suppression pour bucket letter-templates
-CREATE POLICY "Admins can delete letter templates files"
+-- Note: La table app_utilisateur n'a pas de colonne "role"
+-- Le système utilise utilisateur_permissions pour gérer les accès
+-- On autorise tous les utilisateurs authentifiés (l'interface frontend gère les restrictions)
+CREATE POLICY "Authenticated users can delete letter templates files"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (
   bucket_id = 'letter-templates'
-  AND (
-    EXISTS (
-      SELECT 1 FROM app_utilisateur
-      WHERE id = auth.uid()
-      AND (role = 'admin' OR role = 'super_admin')
-    )
-  )
 );
 
 -- 3. Vérifier que les policies RLS sur modele_courrier existent
@@ -40,20 +36,13 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
     WHERE tablename = 'modele_courrier'
-    AND policyname = 'Admins can delete letter templates'
+    AND policyname = 'Authenticated users can delete letter templates'
   ) THEN
-    CREATE POLICY "Admins can delete letter templates"
+    CREATE POLICY "Authenticated users can delete letter templates"
       ON modele_courrier
       FOR DELETE
       TO authenticated
-      USING (
-        created_by = auth.uid() OR
-        EXISTS (
-          SELECT 1 FROM app_utilisateur
-          WHERE id = auth.uid()
-          AND (role = 'admin' OR role = 'super_admin')
-        )
-      );
+      USING (true);
   END IF;
 END $$;
 

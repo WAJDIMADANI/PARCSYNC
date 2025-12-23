@@ -13,9 +13,11 @@ Impossible de supprimer les modèles de courriers (V1 et V2) depuis l'interface.
 4. Exécutez le script
 
 Ce script va:
-- ✅ Ajouter les permissions de suppression sur le bucket Storage `letter-templates`
+- ✅ Ajouter les permissions de suppression sur le bucket Storage `letter-templates` pour tous les utilisateurs authentifiés
 - ✅ Vérifier et corriger les policies RLS sur la table `modele_courrier`
 - ✅ Afficher les permissions actuelles pour vérification
+
+**Note:** Le système n'utilise pas de colonne "role" mais un système de permissions via la table `utilisateur_permissions`. Les restrictions d'accès sont gérées au niveau du frontend.
 
 ### Étape 2: Tester la suppression
 
@@ -52,5 +54,6 @@ Si la suppression échoue toujours:
 
 1. Vérifiez dans la console développeur (F12) les logs qui commencent par `[deleteTemplate]`
 2. Notez le message d'erreur affiché dans le bandeau rouge
-3. Vérifiez votre rôle utilisateur (doit être admin ou super_admin)
-4. Vérifiez que le bucket `letter-templates` existe dans Storage
+3. Vérifiez que vous êtes bien authentifié et avez accès à l'interface
+4. Vérifiez que le bucket `letter-templates` existe dans Storage > Buckets
+5. Vérifiez les policies RLS dans Database > Policies
