@@ -596,69 +596,136 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
             }`}
           >
             <Filter className="w-5 h-5" />
-            Filtres {hasActiveFilters && `(${[filterStatut, filterSecteur, filterTypeContrat].filter(Boolean).length})`}
+            Filtres & Tri {hasActiveFilters && `(${[filterStatut, filterSecteur, filterTypeContrat].filter(Boolean).length})`}
           </button>
         </div>
       </div>
 
+      {/* Indicateur de tri actuel (toujours visible) */}
+      {!showFilters && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+          <ChevronUp className="w-4 h-4" />
+          <span>
+            Tri : <span className="font-medium text-gray-900">
+              {sortField === 'matricule_tca' && 'Matricule'}
+              {sortField === 'prenom' && 'Prénom'}
+              {sortField === 'nom' && 'Nom'}
+              {sortField === 'email' && 'Email'}
+              {sortField === 'type_contrat' && 'Type de contrat'}
+              {sortField === 'date_entree' && 'Date de début'}
+              {sortField === 'statut_contrat' && 'Statut contrat'}
+              {sortField === 'secteur' && 'Secteur'}
+            </span>
+            {sortDirection === 'asc' ? ' (A → Z)' : ' (Z → A)'}
+          </span>
+        </div>
+      )}
+
       {showFilters && (
         <div className="mb-6 bg-white rounded-lg shadow p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
-              <select
-                value={filterStatut}
-                onChange={(e) => setFilterStatut(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Tous les statuts</option>
-                <option value="actif">Actif</option>
-                <option value="en_attente_contrat">En attente contrat</option>
-                <option value="contrat_envoye">Contrat envoyé</option>
-                <option value="en_attente_signature">En attente signature</option>
-                <option value="signe">Signé</option>
-                <option value="expiré">Expiré</option>
-                <option value="inactif">Inactif</option>
-              </select>
-            </div>
+          {/* Section Filtres */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              Filtres
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                <select
+                  value={filterStatut}
+                  onChange={(e) => setFilterStatut(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Tous les statuts</option>
+                  <option value="actif">Actif</option>
+                  <option value="en_attente_contrat">En attente contrat</option>
+                  <option value="contrat_envoye">Contrat envoyé</option>
+                  <option value="en_attente_signature">En attente signature</option>
+                  <option value="signe">Signé</option>
+                  <option value="expiré">Expiré</option>
+                  <option value="inactif">Inactif</option>
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Secteur</label>
-              <select
-                value={filterSecteur}
-                onChange={(e) => setFilterSecteur(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Tous les secteurs</option>
-                {secteurs.map(secteur => (
-                  <option key={secteur.id} value={secteur.id}>{secteur.nom}</option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Secteur</label>
+                <select
+                  value={filterSecteur}
+                  onChange={(e) => setFilterSecteur(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Tous les secteurs</option>
+                  {secteurs.map(secteur => (
+                    <option key={secteur.id} value={secteur.id}>{secteur.nom}</option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Type de contrat</label>
-              <select
-                value={filterTypeContrat}
-                onChange={(e) => setFilterTypeContrat(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Tous les types</option>
-                <option value="CDD">CDD</option>
-                <option value="CDI">CDI</option>
-                <option value="Avenant 1">Avenant 1</option>
-                <option value="Avenant 2">Avenant 2</option>
-              </select>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Type de contrat</label>
+                <select
+                  value={filterTypeContrat}
+                  onChange={(e) => setFilterTypeContrat(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Tous les types</option>
+                  <option value="CDD">CDD</option>
+                  <option value="CDI">CDI</option>
+                  <option value="Avenant 1">Avenant 1</option>
+                  <option value="Avenant 2">Avenant 2</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section Tri */}
+          <div className="border-t border-gray-200 pt-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <ChevronUp className="w-4 h-4" />
+              Tri
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Trier par</label>
+                <select
+                  value={sortField}
+                  onChange={(e) => setSortField(e.target.value as SortField)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="matricule_tca">Matricule</option>
+                  <option value="prenom">Prénom</option>
+                  <option value="nom">Nom</option>
+                  <option value="email">Email</option>
+                  <option value="type_contrat">Type de contrat</option>
+                  <option value="date_entree">Date de début</option>
+                  <option value="statut_contrat">Statut contrat</option>
+                  <option value="secteur">Secteur</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Ordre</label>
+                <select
+                  value={sortDirection}
+                  onChange={(e) => setSortDirection(e.target.value as SortDirection)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="asc">Croissant (A → Z, 0 → 9)</option>
+                  <option value="desc">Décroissant (Z → A, 9 → 0)</option>
+                </select>
+              </div>
             </div>
           </div>
 
           {hasActiveFilters && (
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
               <button
                 onClick={clearFilters}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
               >
-                Réinitialiser les filtres
+                <X className="w-4 h-4" />
+                Réinitialiser tous les filtres
               </button>
             </div>
           )}
