@@ -28,6 +28,10 @@ export function GenerateLetterV2Page() {
     setSuccessMessage(null);
 
     try {
+      if (!selectedTemplate.fichier_word_url) {
+        throw new Error('Fichier Word manquant pour ce modele');
+      }
+
       const blob = await generateLetter(
         {
           templateId: selectedTemplate.id,
