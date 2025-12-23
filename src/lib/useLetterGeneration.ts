@@ -88,7 +88,7 @@ export function useLetterGeneration() {
             let xmlContent = decoder.decode(documentXml);
 
             // Remplacer les variables
-            xmlContent = this.replaceVariablesInXml(xmlContent, options.variables);
+            xmlContent = replaceVariablesInXml(xmlContent, options.variables);
 
             // 4. Recompresser le ZIP avec le contenu modifié
             console.log('[useLetterGeneration] Recompression...');
