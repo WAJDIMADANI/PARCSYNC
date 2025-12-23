@@ -34,6 +34,7 @@ import { LetterTemplatesManager } from './LetterTemplatesManager';
 import { GeneratedLettersList } from './GeneratedLettersList';
 import { MissingDocuments } from './MissingDocuments';
 import { GenerateLetterPage } from './GenerateLetterPage';
+import { GenerateLetterV2Page } from './GenerateLetterV2Page';
 import { LetterTemplatesV2Manager } from './LetterTemplatesV2Manager';
 import { InboxPage } from './InboxPage';
 import { DemandesExternesManager } from './DemandesExternesManager';
@@ -114,6 +115,8 @@ export function Dashboard() {
   return <LetterTemplatesV2Manager />;
       case 'admin/generer-courrier':
         return <GenerateLetterPage />;
+      case 'admin/generer-courrier-v2':
+        return <GenerateLetterV2Page />;
       case 'admin/modeles-contrats':
         return <ContractTemplates />;
       case 'admin/import-salarie':
@@ -166,6 +169,7 @@ export function Dashboard() {
                 {view === 'admin/modeles' && 'Modèles de Courriers'}
                 {view === 'admin/modeles-courriers-v2' && 'Modèles de Courriers V2'}
                 {view === 'admin/generer-courrier' && 'Générer un Courrier'}
+                {view === 'admin/generer-courrier-v2' && 'Générer un Courrier (V2)'}
                 {view === 'admin/modeles-contrats' && 'Modèles de Contrats'}
                 {view === 'admin/import-salarie' && 'Import Salarié Test'}
                 {view === 'admin/import-bulk' && 'Import en Masse'}

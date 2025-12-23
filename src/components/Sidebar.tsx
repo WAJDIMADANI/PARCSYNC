@@ -38,6 +38,7 @@ export type View =
   | 'admin/modeles'
   | 'admin/modeles-courriers-v2'
   | 'admin/generer-courrier'
+  | 'admin/generer-courrier-v2'
   | 'admin/modeles-contrats'
   | 'admin/import-salarie'
   | 'admin/import-bulk'
@@ -191,6 +192,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'admin/modeles', label: 'Modèles de Courriers', icon: FileCode, enabled: true },
         { id: 'admin/modeles-courriers-v2', label: 'Modèles Courriers V2', icon: FileCode, enabled: true },
         { id: 'admin/generer-courrier', label: 'Générer Courrier Word', icon: FileCheck, enabled: true },
+        { id: 'admin/generer-courrier-v2', label: 'Générer Courrier (V2)', icon: FileCheck, enabled: true },
         { id: 'admin/modeles-contrats', label: 'Modèles Contrats', icon: FileText, enabled: true },
         { id: 'admin/import-salarie', label: 'Import Salarié Test', icon: UserPlus, enabled: true },
         { id: 'admin/import-bulk', label: 'Import en Masse', icon: Upload, enabled: true },
