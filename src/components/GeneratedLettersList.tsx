@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { FileText, Plus, Search, Eye, Download, Trash2, Mail, Edit, Copy, Calendar, ChevronDown } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
-import { GenerateLetterWizard } from './GenerateLetterWizard';
+import { GenerateLetterV2Wizard } from './GenerateLetterV2Wizard';
 import { LetterPreviewModal } from './LetterPreviewModal';
 import { ConfirmModal } from './ConfirmModal';
 import { SendEmailModal } from './SendEmailModal';
@@ -513,7 +513,7 @@ export function GeneratedLettersList() {
       )}
 
       {showWizard && (
-        <GenerateLetterWizard
+        <GenerateLetterV2Wizard
           onClose={() => setShowWizard(false)}
           onComplete={() => {
             setShowWizard(false);

@@ -112,6 +112,7 @@ export function GenerateLetterV2Wizard({ onClose, onComplete }: GenerateLetterV2
     if (!selectedTemplate || !selectedProfile) return;
 
     setError('');
+    setLoading(true);
 
     try {
       if (!selectedTemplate.fichier_word_url) {
@@ -122,19 +123,58 @@ export function GenerateLetterV2Wizard({ onClose, onComplete }: GenerateLetterV2
         {
           templateId: selectedTemplate.id,
           variables: variableValues,
-          outputFormat: 'pdf'
+          outputFormat: 'docx'
         },
         selectedTemplate.fichier_word_url.split('/').pop() || '',
         selectedTemplate.nom
       );
 
-      const fileName = `${selectedTemplate.nom}_${selectedProfile.nom}_${selectedProfile.prenom}_${new Date().toISOString().split('T')[0]}.pdf`;
-      downloadGeneratedLetter(blob, fileName);
+      const timestamp = new Date().toISOString().split('T')[0];
+      const baseFileName = `${selectedTemplate.nom}_${selectedProfile.nom}_${selectedProfile.prenom}_${timestamp}`;
+      const docxFileName = `${baseFileName}.docx`;
+      const storageFileName = `${Date.now()}_${docxFileName}`;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Utilisateur non authentifié');
+
+      const { error: uploadError } = await supabase.storage
+        .from('courriers')
+        .upload(storageFileName, blob, {
+          contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('courriers')
+        .getPublicUrl(storageFileName);
+
+      const { error: dbError } = await supabase
+        .from('courrier_genere')
+        .insert({
+          profil_id: selectedProfile.id,
+          modele_courrier_id: selectedTemplate.id,
+          modele_nom: selectedTemplate.nom,
+          sujet: selectedTemplate.nom,
+          contenu_genere: JSON.stringify(variableValues),
+          variables_remplies: variableValues,
+          fichier_pdf_url: publicUrlData.publicUrl,
+          status: 'generated',
+          created_by: user.id
+        });
+
+      if (dbError) throw dbError;
+
+      downloadGeneratedLetter(blob, docxFileName);
+
+      onComplete();
 
       setStep(4);
     } catch (err) {
       console.error('Erreur génération:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors de la génération');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -463,9 +503,14 @@ export function GenerateLetterV2Wizard({ onClose, onComplete }: GenerateLetterV2
         <CheckCircle2 className="w-8 h-8 text-green-600" />
       </div>
       <h2 className="text-2xl font-bold text-gray-900 mb-2">Courrier généré avec succès !</h2>
-      <p className="text-gray-600 mb-6">
+      <p className="text-gray-600 mb-2">
         Le courrier pour {selectedProfile?.prenom} {selectedProfile?.nom} a été généré et téléchargé.
       </p>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 mx-8">
+        <p className="text-sm text-blue-800">
+          Le courrier a été enregistré et est maintenant disponible dans l'onglet <span className="font-semibold">Courriers</span>.
+        </p>
+      </div>
       <div className="flex justify-center gap-3">
         <button
           onClick={() => {
