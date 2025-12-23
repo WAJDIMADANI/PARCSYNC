@@ -209,7 +209,9 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       .map(item => {
         if (isSection(item) && item.children) {
           const visibleChildren = item.children.filter(child => {
-            const hasAccess = hasPermission(child.id);
+            // Les nouvelles routes admin ont les mêmes perms que les anciennes
+            const permissionId = child.id === 'admin/modeles-courriers-v2' ? 'admin/modeles' : child.id;
+            const hasAccess = hasPermission(permissionId);
             console.log(`Checking permission for ${child.id}:`, hasAccess);
             return hasAccess;
           });
