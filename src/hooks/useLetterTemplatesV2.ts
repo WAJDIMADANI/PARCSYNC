@@ -170,28 +170,43 @@ export function useLetterTemplatesV2() {
       setError(null);
 
       try {
+        console.log('[deleteTemplate] Début suppression:', { templateId, storagePath });
+
         // 1. Supprimer le fichier du Storage
         if (storagePath) {
           const fileName = storagePath.split('/').pop();
+          console.log('[deleteTemplate] Suppression fichier Storage:', fileName);
+
           if (fileName) {
-            await supabase.storage
+            const { error: storageError } = await supabase.storage
               .from('letter-templates')
               .remove([fileName]);
+
+            if (storageError) {
+              console.warn('[deleteTemplate] Erreur suppression Storage (non bloquant):', storageError);
+              // On continue même si la suppression Storage échoue
+            }
           }
         }
 
         // 2. Supprimer de la BD
+        console.log('[deleteTemplate] Suppression en BD...');
         const { error: err } = await supabase
           .from('modele_courrier')
           .delete()
           .eq('id', templateId);
 
-        if (err) throw err;
+        if (err) {
+          console.error('[deleteTemplate] Erreur BD:', err);
+          throw new Error(`Erreur BD: ${err.message || 'Impossible de supprimer le modèle'}`);
+        }
 
+        console.log('[deleteTemplate] Suppression réussie');
         await fetchTemplates();
         return { success: true };
       } catch (err: any) {
         const message = err.message || 'Erreur lors de la suppression';
+        console.error('[deleteTemplate] Erreur finale:', message);
         setError(message);
         throw err;
       }

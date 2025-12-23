@@ -28,6 +28,7 @@ export function LetterTemplatesManager() {
   const [showModal, setShowModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<LetterTemplate | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, template: LetterTemplate | null }>({ show: false, template: null });
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -89,6 +90,7 @@ export function LetterTemplatesManager() {
   const confirmDelete = async () => {
     if (!deleteConfirm.template) return;
 
+    setDeleteError(null);
     try {
       const { error } = await supabase
         .from('modele_courrier')
@@ -97,9 +99,10 @@ export function LetterTemplatesManager() {
 
       if (error) throw error;
       fetchTemplates();
-    } catch (error) {
+      setDeleteConfirm({ show: false, template: null });
+    } catch (error: any) {
       console.error('Erreur suppression modèle:', error);
-    } finally {
+      setDeleteError(error.message || 'Erreur lors de la suppression du modèle');
       setDeleteConfirm({ show: false, template: null });
     }
   };
@@ -151,6 +154,24 @@ export function LetterTemplatesManager() {
 
   return (
     <div>
+      {deleteError && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 text-red-600">⚠️</div>
+            <div>
+              <p className="text-sm font-medium text-red-900">Erreur de suppression</p>
+              <p className="text-sm text-red-700 mt-1">{deleteError}</p>
+            </div>
+            <button
+              onClick={() => setDeleteError(null)}
+              className="ml-auto text-red-600 hover:text-red-800"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>

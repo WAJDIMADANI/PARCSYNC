@@ -12,6 +12,7 @@ export function LetterTemplatesV2Manager() {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     show: boolean;
     template: any | null;
@@ -124,6 +125,24 @@ export function LetterTemplatesV2Manager() {
 
   return (
     <div>
+      {deleteError && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 text-red-600">⚠️</div>
+            <div>
+              <p className="text-sm font-medium text-red-900">Erreur de suppression</p>
+              <p className="text-sm text-red-700 mt-1">{deleteError}</p>
+            </div>
+            <button
+              onClick={() => setDeleteError(null)}
+              className="ml-auto text-red-600 hover:text-red-800"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -402,11 +421,14 @@ export function LetterTemplatesV2Manager() {
           confirmText="Supprimer"
           type="danger"
           onConfirm={async () => {
+            setDeleteError(null);
             try {
               await deleteTemplate(deleteConfirm.template.id, deleteConfirm.template.fichier_word_url);
               setDeleteConfirm({ show: false, template: null });
-            } catch (err) {
+            } catch (err: any) {
               console.error('Erreur suppression:', err);
+              setDeleteError(err.message || 'Erreur lors de la suppression du modele');
+              setDeleteConfirm({ show: false, template: null });
             }
           }}
           onCancel={() => setDeleteConfirm({ show: false, template: null })}
