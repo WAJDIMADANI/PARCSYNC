@@ -36,6 +36,7 @@ export type View =
   | 'admin/secteurs'
   | 'admin/postes'
   | 'admin/modeles'
+  | 'admin/modeles-courriers-v2'
   | 'admin/generer-courrier'
   | 'admin/modeles-contrats'
   | 'admin/import-salarie'
