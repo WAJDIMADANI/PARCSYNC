@@ -36,7 +36,7 @@ import { MissingDocuments } from './MissingDocuments';
 import { GenerateLetterPage } from './GenerateLetterPage';
 import { InboxPage } from './InboxPage';
 import { DemandesExternesManager } from './DemandesExternesManager';
-import { LetterTemplatesV2Manager } from './LetterTemplatesV2Manager';
+
 export function Dashboard() {
   const [view, setView] = useState<View>('dashboards/rh');
   const [viewParams, setViewParams] = useState<any>(null);
