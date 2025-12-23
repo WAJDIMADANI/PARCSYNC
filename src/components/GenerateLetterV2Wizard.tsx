@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Search, ChevronRight, ChevronLeft, FileText, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { X, Search, ChevronRight, ChevronLeft, FileText, AlertTriangle, CheckCircle2, Calendar, Clock } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { useLetterTemplatesV2, LetterTemplateV2 } from '../hooks/useLetterTemplatesV2';
 import { useLetterGeneration } from '../lib/useLetterGeneration';
 import { formatProfileData, extractVariables } from '../lib/letterTemplateGenerator';
+import { DatePicker } from './DatePicker';
+import { TimePicker } from './TimePicker';
 
 interface Profile {
   id: string;
@@ -88,6 +90,22 @@ export function GenerateLetterV2Wizard({ onClose, onComplete }: GenerateLetterV2
 
     setVariableValues(newValues);
     setAutoFilledVars(autoFilled);
+  };
+
+  const isDateVariable = (varName: string): boolean => {
+    const lowerName = varName.toLowerCase();
+    return lowerName.includes('date') || lowerName.includes('jour');
+  };
+
+  const isTimeVariable = (varName: string): boolean => {
+    const lowerName = varName.toLowerCase();
+    return lowerName.includes('heure') || lowerName.includes('time');
+  };
+
+  const getVariableInputType = (varName: string): 'date' | 'time' | 'text' => {
+    if (isDateVariable(varName)) return 'date';
+    if (isTimeVariable(varName)) return 'time';
+    return 'text';
   };
 
   const handleGenerate = async () => {
@@ -342,30 +360,58 @@ export function GenerateLetterV2Wizard({ onClose, onComplete }: GenerateLetterV2
         {selectedTemplate?.variables_detectees.map((varName) => {
           const isAutoFilled = autoFilledVars.includes(varName);
           const isRequired = selectedTemplate.variables_requises?.includes(varName);
+          const inputType = getVariableInputType(varName);
 
           return (
             <div key={varName} className={`p-3 rounded-lg ${
               isAutoFilled ? 'bg-green-50 border border-green-200' : 'bg-white border border-gray-300'
             }`}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {varName}
-                {isRequired && <span className="text-red-500 ml-1">*</span>}
-                {isAutoFilled && (
-                  <span className="ml-2 text-xs text-green-600 font-normal">(rempli automatiquement)</span>
-                )}
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="flex items-center gap-2">
+                  {inputType === 'date' && <Calendar className="w-4 h-4 text-blue-600" />}
+                  {inputType === 'time' && <Clock className="w-4 h-4 text-blue-600" />}
+                  <span>{varName}</span>
+                  {isRequired && <span className="text-red-500">*</span>}
+                  {isAutoFilled && (
+                    <span className="text-xs text-green-600 font-normal">(rempli automatiquement)</span>
+                  )}
+                </div>
               </label>
-              <input
-                type="text"
-                value={variableValues[varName] || ''}
-                onChange={(e) => setVariableValues({
-                  ...variableValues,
-                  [varName]: e.target.value
-                })}
-                placeholder={`Entrez ${varName}`}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  isAutoFilled ? 'bg-green-50 border-green-300' : 'border-gray-300'
-                }`}
-              />
+
+              {inputType === 'date' ? (
+                <DatePicker
+                  selected={variableValues[varName] || ''}
+                  onChange={(date) => setVariableValues({
+                    ...variableValues,
+                    [varName]: date
+                  })}
+                  placeholder={`Sélectionnez ${varName}`}
+                  className={isAutoFilled ? 'bg-green-50' : ''}
+                />
+              ) : inputType === 'time' ? (
+                <TimePicker
+                  value={variableValues[varName] || ''}
+                  onChange={(time) => setVariableValues({
+                    ...variableValues,
+                    [varName]: time
+                  })}
+                  placeholder={`Sélectionnez ${varName}`}
+                  className={isAutoFilled ? 'bg-green-50' : ''}
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={variableValues[varName] || ''}
+                  onChange={(e) => setVariableValues({
+                    ...variableValues,
+                    [varName]: e.target.value
+                  })}
+                  placeholder={`Entrez ${varName}`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                    isAutoFilled ? 'bg-green-50 border-green-300' : 'border-gray-300'
+                  }`}
+                />
+              )}
             </div>
           );
         })}
