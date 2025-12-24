@@ -25,19 +25,31 @@ CREATE POLICY "Users can view generated letters"
   USING (true);
 
 -- Policy: All authenticated users can insert generated letters
+-- Note: created_by references app_utilisateur.id, so we need to check via auth_user_id
 CREATE POLICY "Authenticated users can create generated letters"
   ON courrier_genere
   FOR INSERT
   TO authenticated
-  WITH CHECK (created_by = auth.uid());
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM app_utilisateur
+      WHERE app_utilisateur.id = courrier_genere.created_by
+      AND app_utilisateur.auth_user_id = auth.uid()
+    )
+  );
 
 -- Policy: Users can update their own generated letters or if they have admin permissions
+-- Note: created_by references app_utilisateur.id, not auth.uid()
 CREATE POLICY "Users can update their generated letters"
   ON courrier_genere
   FOR UPDATE
   TO authenticated
   USING (
-    created_by = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM app_utilisateur
+      WHERE app_utilisateur.id = courrier_genere.created_by
+      AND app_utilisateur.auth_user_id = auth.uid()
+    ) OR
     EXISTS (
       SELECT 1 FROM utilisateur_permissions up
       JOIN app_utilisateur au ON au.id = up.utilisateur_id
@@ -48,12 +60,17 @@ CREATE POLICY "Users can update their generated letters"
   );
 
 -- Policy: Users can delete their own generated letters or if they have admin permissions
+-- Note: created_by references app_utilisateur.id, not auth.uid()
 CREATE POLICY "Users can delete their generated letters"
   ON courrier_genere
   FOR DELETE
   TO authenticated
   USING (
-    created_by = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM app_utilisateur
+      WHERE app_utilisateur.id = courrier_genere.created_by
+      AND app_utilisateur.auth_user_id = auth.uid()
+    ) OR
     EXISTS (
       SELECT 1 FROM utilisateur_permissions up
       JOIN app_utilisateur au ON au.id = up.utilisateur_id

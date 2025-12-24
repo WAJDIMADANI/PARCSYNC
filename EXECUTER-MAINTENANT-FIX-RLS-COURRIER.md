@@ -37,19 +37,31 @@ CREATE POLICY "Users can view generated letters"
   USING (true);
 
 -- Policy: All authenticated users can insert generated letters
+-- Note: created_by references app_utilisateur.id, so we need to check via auth_user_id
 CREATE POLICY "Authenticated users can create generated letters"
   ON courrier_genere
   FOR INSERT
   TO authenticated
-  WITH CHECK (created_by = auth.uid());
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM app_utilisateur
+      WHERE app_utilisateur.id = courrier_genere.created_by
+      AND app_utilisateur.auth_user_id = auth.uid()
+    )
+  );
 
 -- Policy: Users can update their own generated letters or if they have admin permissions
+-- Note: created_by references app_utilisateur.id, not auth.uid()
 CREATE POLICY "Users can update their generated letters"
   ON courrier_genere
   FOR UPDATE
   TO authenticated
   USING (
-    created_by = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM app_utilisateur
+      WHERE app_utilisateur.id = courrier_genere.created_by
+      AND app_utilisateur.auth_user_id = auth.uid()
+    ) OR
     EXISTS (
       SELECT 1 FROM utilisateur_permissions up
       JOIN app_utilisateur au ON au.id = up.utilisateur_id
@@ -60,12 +72,17 @@ CREATE POLICY "Users can update their generated letters"
   );
 
 -- Policy: Users can delete their own generated letters or if they have admin permissions
+-- Note: created_by references app_utilisateur.id, not auth.uid()
 CREATE POLICY "Users can delete their generated letters"
   ON courrier_genere
   FOR DELETE
   TO authenticated
   USING (
-    created_by = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM app_utilisateur
+      WHERE app_utilisateur.id = courrier_genere.created_by
+      AND app_utilisateur.auth_user_id = auth.uid()
+    ) OR
     EXISTS (
       SELECT 1 FROM utilisateur_permissions up
       JOIN app_utilisateur au ON au.id = up.utilisateur_id
@@ -88,14 +105,19 @@ Retournez dans l'application et essayez de générer un nouveau courrier. L'erre
 
 ## Qu'est-ce qui a été corrigé ?
 
-Les politiques RLS (Row Level Security) pour la table `courrier_genere` ont été créées/corrigées pour permettre :
+Le problème venait du fait que :
+- Le champ `created_by` dans `courrier_genere` référence `app_utilisateur.id` (UUID de la table app_utilisateur)
+- Mais les policies RLS vérifiaient `created_by = auth.uid()` (UUID de auth.users)
+- Ces deux UUIDs sont différents !
+
+**Solution** : Les policies RLS ont été corrigées pour faire le bon lien entre `app_utilisateur.id` et `auth.uid()` via le champ `auth_user_id`.
+
+Les politiques RLS (Row Level Security) pour la table `courrier_genere` permettent maintenant :
 
 1. **SELECT** : Tous les utilisateurs authentifiés peuvent voir tous les courriers
-2. **INSERT** : Tous les utilisateurs authentifiés peuvent créer des courriers (en s'assignant comme créateur)
+2. **INSERT** : Les utilisateurs authentifiés peuvent créer des courriers en vérifiant que le `created_by` correspond bien à leur `app_utilisateur.id`
 3. **UPDATE** : Les utilisateurs peuvent modifier leurs propres courriers (ou les utilisateurs avec la permission 'gestion_utilisateurs' peuvent modifier n'importe quel courrier)
 4. **DELETE** : Les utilisateurs peuvent supprimer leurs propres courriers (ou les utilisateurs avec la permission 'gestion_utilisateurs' peuvent supprimer n'importe quel courrier)
-
-**Note** : Le système utilise les permissions de la table `utilisateur_permissions` au lieu d'un champ `role` dans `app_utilisateur`.
 
 ## En cas de problème
 
