@@ -496,8 +496,7 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
         subject,
         content,
         allVariables,
-        pdfUrl,
-        appUser?.id || null
+        pdfUrl
       );
 
       console.log('Enregistré en base de données');

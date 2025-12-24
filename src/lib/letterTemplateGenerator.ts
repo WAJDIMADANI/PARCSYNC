@@ -347,25 +347,55 @@ export async function saveGeneratedLetter(
   subject: string,
   content: string,
   variables: Record<string, any>,
-  pdfUrl: string,
-  userId: string | null
+  pdfUrl: string
 ): Promise<string> {
-  const { data, error } = await supabase
+  // 1) Récupérer l'utilisateur authentifié
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    console.error('[courrier] Auth error:', authError);
+    throw authError || new Error('Utilisateur non authentifié');
+  }
+  console.log('[courrier] Auth user ID:', user.id);
+
+  // 2) Récupérer l'app_utilisateur.id correspondant
+  const { data: appUser, error: appUserError } = await supabase
+    .from('app_utilisateur')
+    .select('id')
+    .eq('auth_user_id', user.id)
+    .maybeSingle();
+
+  if (appUserError || !appUser) {
+    console.error('[courrier] app_utilisateur introuvable:', appUserError);
+    throw appUserError || new Error('app_utilisateur introuvable pour cet utilisateur');
+  }
+  console.log('[courrier] app_utilisateur.id:', appUser.id);
+
+  // 3) Insérer dans courrier_genere avec created_by = appUser.id (PAS auth.uid())
+  const payload = {
+    profil_id: profilId,
+    modele_courrier_id: modeleId,
+    modele_nom: modeleName,
+    sujet: subject,
+    contenu_genere: content,
+    variables_remplies: variables,
+    fichier_pdf_url: pdfUrl,
+    created_by: appUser.id
+  };
+
+  console.log('[courrier] Insertion avec created_by:', appUser.id);
+
+  const { data, error: dbError } = await supabase
     .from('courrier_genere')
-    .insert({
-      profil_id: profilId,
-      modele_courrier_id: modeleId,
-      modele_nom: modeleName,
-      sujet: subject,
-      contenu_genere: content,
-      variables_remplies: variables,
-      fichier_pdf_url: pdfUrl,
-      created_by: userId
-    })
+    .insert(payload)
     .select()
     .single();
 
-  if (error) throw error;
+  if (dbError) {
+    console.error('[courrier] Erreur insertion DB:', dbError);
+    throw dbError;
+  }
+
+  console.log('[courrier] Courrier enregistré avec succès, ID:', data.id);
   return data.id;
 }
 
