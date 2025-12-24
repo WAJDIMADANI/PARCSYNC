@@ -415,6 +415,23 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       return matchesSearch && matchesStatut && matchesSecteur && matchesTypeContrat;
     })
     .sort((a, b) => {
+      // Priorité par statut : en_attente_contrat > contrat_envoye > autres
+      const getStatusPriority = (emp: Employee): number => {
+        const status = getActualContractStatus(emp);
+        if (status === 'en_attente_contrat') return 1;
+        if (status === 'contrat_envoye') return 2;
+        return 3;
+      };
+
+      const aPriority = getStatusPriority(a);
+      const bPriority = getStatusPriority(b);
+
+      // Si les priorités sont différentes, on trie par priorité
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+
+      // Sinon, on applique le tri normal
       let aValue: any;
       let bValue: any;
 
