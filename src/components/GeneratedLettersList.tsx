@@ -92,6 +92,12 @@ export function GeneratedLettersList() {
   };
 
   const handleDownload = async (letter: GeneratedLetter, file: DownloadableFile) => {
+    console.log('[download-click]', {
+      id: letter.id,
+      fichier_pdf_url: letter.fichier_pdf_url,
+      fichier_word_genere_url: letter.fichier_word_genere_url,
+      chosen: file
+    });
     setDownloadLetter({ letter, file });
   };
 
@@ -143,6 +149,12 @@ export function GeneratedLettersList() {
 
   const handleGeneratePdf = async (letter: GeneratedLetter) => {
     try {
+      console.log('[generate-pdf-click]', {
+        id: letter.id,
+        fichier_pdf_url: letter.fichier_pdf_url,
+        fichier_word_genere_url: letter.fichier_word_genere_url
+      });
+
       setConvertingPdfId(letter.id);
 
       const { data, error } = await supabase.functions.invoke('convert-courrier-to-pdf', {
@@ -157,6 +169,7 @@ export function GeneratedLettersList() {
         throw new Error(data.error);
       }
 
+      console.log('[generate-pdf-success]', { data });
       setSuccessMessage('PDF généré avec succès!');
       await fetchLetters();
     } catch (error) {
@@ -604,6 +617,12 @@ export function GeneratedLettersList() {
           onClose={() => setPreviewLetter(null)}
           onDownload={() => {
             const files = getAvailableDownloads(previewLetter.fichier_pdf_url, previewLetter.fichier_word_genere_url);
+            console.log('[modal-download-click]', {
+              id: previewLetter.id,
+              fichier_pdf_url: previewLetter.fichier_pdf_url,
+              fichier_word_genere_url: previewLetter.fichier_word_genere_url,
+              availableFiles: files
+            });
             if (files.length > 0) {
               handleDownload(previewLetter, files[0]);
             }

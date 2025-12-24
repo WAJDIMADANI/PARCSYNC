@@ -9,14 +9,23 @@ export interface FileInfo {
 export function detectFileType(url: string | null | undefined): FileType {
   if (!url) return 'unknown';
 
-  const urlLower = url.toLowerCase();
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname.toLowerCase();
 
-  if (urlLower.endsWith('.pdf')) return 'pdf';
-  if (urlLower.endsWith('.docx')) return 'docx';
-  if (urlLower.includes('.pdf?')) return 'pdf';
-  if (urlLower.includes('.docx?')) return 'docx';
+    if (pathname.endsWith('.pdf')) return 'pdf';
+    if (pathname.endsWith('.docx') || pathname.endsWith('.doc')) return 'docx';
 
-  return 'unknown';
+    return 'unknown';
+  } catch {
+    const urlLower = url.toLowerCase();
+    if (urlLower.endsWith('.pdf')) return 'pdf';
+    if (urlLower.endsWith('.docx') || urlLower.endsWith('.doc')) return 'docx';
+    if (urlLower.includes('.pdf?')) return 'pdf';
+    if (urlLower.includes('.docx?') || urlLower.includes('.doc?')) return 'docx';
+
+    return 'unknown';
+  }
 }
 
 export function getFileInfo(url: string | null | undefined): FileInfo {
@@ -67,36 +76,37 @@ export function getAvailableDownloads(
 ): DownloadableFile[] {
   const downloads: DownloadableFile[] = [];
 
-  if (fichier_pdf_url) {
-    const type = detectFileType(fichier_pdf_url);
-    if (type === 'pdf') {
-      downloads.push({
-        url: fichier_pdf_url,
-        type,
-        label: 'PDF'
-      });
-      return downloads;
-    }
+  const pdfType = detectFileType(fichier_pdf_url);
+  const wordType = detectFileType(fichier_word_genere_url);
+
+  console.log('[getAvailableDownloads]', {
+    fichier_pdf_url,
+    fichier_word_genere_url,
+    pdfType,
+    wordType
+  });
+
+  if (pdfType === 'pdf') {
+    downloads.push({
+      url: fichier_pdf_url!,
+      type: 'pdf',
+      label: 'PDF'
+    });
+    return downloads;
   }
 
   if (fichier_word_genere_url) {
-    const type = detectFileType(fichier_word_genere_url);
     downloads.push({
       url: fichier_word_genere_url,
-      type,
-      label: getFileLabel(type)
+      type: wordType,
+      label: getFileLabel(wordType)
     });
-  }
-
-  if (fichier_pdf_url && !fichier_word_genere_url) {
-    const type = detectFileType(fichier_pdf_url);
-    if (type === 'docx') {
-      downloads.push({
-        url: fichier_pdf_url,
-        type,
-        label: getFileLabel(type)
-      });
-    }
+  } else if (pdfType === 'docx') {
+    downloads.push({
+      url: fichier_pdf_url!,
+      type: 'docx',
+      label: 'Word'
+    });
   }
 
   return downloads;
