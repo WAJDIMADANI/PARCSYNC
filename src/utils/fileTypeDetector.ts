@@ -67,6 +67,18 @@ export function getAvailableDownloads(
 ): DownloadableFile[] {
   const downloads: DownloadableFile[] = [];
 
+  if (fichier_pdf_url) {
+    const type = detectFileType(fichier_pdf_url);
+    if (type === 'pdf') {
+      downloads.push({
+        url: fichier_pdf_url,
+        type,
+        label: 'PDF'
+      });
+      return downloads;
+    }
+  }
+
   if (fichier_word_genere_url) {
     const type = detectFileType(fichier_word_genere_url);
     downloads.push({
@@ -76,15 +88,9 @@ export function getAvailableDownloads(
     });
   }
 
-  if (fichier_pdf_url) {
+  if (fichier_pdf_url && !fichier_word_genere_url) {
     const type = detectFileType(fichier_pdf_url);
-    if (type === 'pdf') {
-      downloads.push({
-        url: fichier_pdf_url,
-        type,
-        label: getFileLabel(type)
-      });
-    } else if (type === 'docx' && !fichier_word_genere_url) {
+    if (type === 'docx') {
       downloads.push({
         url: fichier_pdf_url,
         type,
