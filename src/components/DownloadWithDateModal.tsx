@@ -6,9 +6,10 @@ interface DownloadWithDateModalProps {
   onConfirm: (markAsSent: boolean, dateEnvoi?: Date) => Promise<void>;
   onCancel: () => void;
   letterSubject: string;
+  fileType?: string;
 }
 
-export function DownloadWithDateModal({ isOpen, onConfirm, onCancel, letterSubject }: DownloadWithDateModalProps) {
+export function DownloadWithDateModal({ isOpen, onConfirm, onCancel, letterSubject, fileType = 'PDF' }: DownloadWithDateModalProps) {
   const [markAsSent, setMarkAsSent] = useState(false);
   const [dateEnvoi, setDateEnvoi] = useState<string>(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
@@ -33,7 +34,7 @@ export function DownloadWithDateModal({ isOpen, onConfirm, onCancel, letterSubje
               <div className="bg-blue-100 p-3 rounded-full">
                 <Download className="w-6 h-6 text-blue-600" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">Télécharger le PDF</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Télécharger le {fileType}</h2>
             </div>
             <button
               onClick={onCancel}

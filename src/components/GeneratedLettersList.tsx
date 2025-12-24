@@ -11,6 +11,7 @@ import { EditLetterModal } from './EditLetterModal';
 import { StatusChangeModal } from './StatusChangeModal';
 import { DownloadWithDateModal } from './DownloadWithDateModal';
 import { SuccessNotification } from './SuccessNotification';
+import { getAvailableDownloads, getFileInfo, type DownloadableFile } from '../utils/fileTypeDetector';
 
 interface GeneratedLetter {
   id: string;
@@ -60,7 +61,7 @@ export function GeneratedLettersList() {
   const [sendEmailLetter, setSendEmailLetter] = useState<GeneratedLetter | null>(null);
   const [editLetter, setEditLetter] = useState<GeneratedLetter | null>(null);
   const [statusChangeLetter, setStatusChangeLetter] = useState<GeneratedLetter | null>(null);
-  const [downloadLetter, setDownloadLetter] = useState<GeneratedLetter | null>(null);
+  const [downloadLetter, setDownloadLetter] = useState<{ letter: GeneratedLetter; file: DownloadableFile } | null>(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string>('');
 
@@ -89,17 +90,17 @@ export function GeneratedLettersList() {
     }
   };
 
-  const handleDownload = async (letter: GeneratedLetter) => {
-    if (!letter.fichier_pdf_url && !letter.fichier_word_genere_url) return;
-    setDownloadLetter(letter);
+  const handleDownload = async (letter: GeneratedLetter, file: DownloadableFile) => {
+    setDownloadLetter({ letter, file });
   };
 
-  const handleDownloadConfirm = async (letter: GeneratedLetter, markAsSent: boolean, dateEnvoi?: Date) => {
-    if (!letter.fichier_pdf_url) return;
+  const handleDownloadConfirm = async (markAsSent: boolean, dateEnvoi?: Date) => {
+    if (!downloadLetter) return;
+
+    const { letter, file } = downloadLetter;
 
     try {
       if (markAsSent && dateEnvoi && user) {
-        // Récupérer l'ID app_utilisateur à partir de auth.users.id
         const { data: appUser } = await supabase
           .from('app_utilisateur')
           .select('id')
@@ -120,12 +121,15 @@ export function GeneratedLettersList() {
         await fetchLetters();
       }
 
-      const response = await fetch(letter.fichier_pdf_url);
+      const response = await fetch(file.url);
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const fileInfo = getFileInfo(file.url);
+
+      const blobWithCorrectType = new Blob([blob], { type: fileInfo.mimeType });
+      const url = window.URL.createObjectURL(blobWithCorrectType);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${letter.modele_nom}_${letter.profil?.nom}_${new Date(letter.created_at).toLocaleDateString('fr-FR')}.pdf`;
+      a.download = `${letter.modele_nom}_${letter.profil?.nom}_${new Date(letter.created_at).toLocaleDateString('fr-FR')}${fileInfo.extension}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -501,15 +505,16 @@ export function GeneratedLettersList() {
                           <Edit className="w-4 h-4" />
                         </button>
                       )}
-                      {letter.fichier_pdf_url && (
+                      {getAvailableDownloads(letter.fichier_pdf_url, letter.fichier_word_genere_url).map((file, idx) => (
                         <button
-                          onClick={() => handleDownload(letter)}
+                          key={idx}
+                          onClick={() => handleDownload(letter, file)}
                           className="text-green-600 hover:text-green-800 p-1 hover:bg-green-50 rounded"
-                          title="Télécharger PDF"
+                          title={`Télécharger ${file.label}`}
                         >
                           <Download className="w-4 h-4" />
                         </button>
-                      )}
+                      ))}
                       {letter.fichier_pdf_url && !letter.sent_at && letter.profil?.email && (
                         <button
                           onClick={() => handleSendEmail(letter)}
@@ -556,7 +561,12 @@ export function GeneratedLettersList() {
         <LetterPreviewModal
           letter={previewLetter}
           onClose={() => setPreviewLetter(null)}
-          onDownload={() => handleDownload(previewLetter)}
+          onDownload={() => {
+            const files = getAvailableDownloads(previewLetter.fichier_pdf_url, previewLetter.fichier_word_genere_url);
+            if (files.length > 0) {
+              handleDownload(previewLetter, files[0]);
+            }
+          }}
         />
       )}
 
@@ -602,9 +612,10 @@ export function GeneratedLettersList() {
       {downloadLetter && (
         <DownloadWithDateModal
           isOpen={true}
-          onConfirm={(markAsSent, dateEnvoi) => handleDownloadConfirm(downloadLetter, markAsSent, dateEnvoi)}
+          onConfirm={handleDownloadConfirm}
           onCancel={() => setDownloadLetter(null)}
-          letterSubject={downloadLetter.sujet}
+          letterSubject={downloadLetter.letter.sujet}
+          fileType={downloadLetter.file.label}
         />
       )}
 
