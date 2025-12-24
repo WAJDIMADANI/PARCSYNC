@@ -95,3 +95,20 @@ export function getAvailableDownloads(
 
   return downloads;
 }
+
+export function hasPdfAvailable(
+  fichier_pdf_url: string | null | undefined,
+  fichier_word_genere_url: string | null | undefined
+): boolean {
+  const downloads = getAvailableDownloads(fichier_pdf_url, fichier_word_genere_url);
+  return downloads.some(file => file.type === 'pdf');
+}
+
+export function canGeneratePdf(
+  fichier_pdf_url: string | null | undefined,
+  fichier_word_genere_url: string | null | undefined
+): boolean {
+  const hasPdf = hasPdfAvailable(fichier_pdf_url, fichier_word_genere_url);
+  const hasDocx = fichier_word_genere_url || (fichier_pdf_url && detectFileType(fichier_pdf_url) === 'docx');
+  return !hasPdf && !!hasDocx;
+}

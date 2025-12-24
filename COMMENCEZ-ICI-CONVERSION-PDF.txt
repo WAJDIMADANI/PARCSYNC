@@ -1,0 +1,124 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║   🎯 CONVERSION AUTOMATIQUE DOCX → PDF                       ║
+║                                                               ║
+║   Objectif : Générer automatiquement des PDF depuis les      ║
+║              courriers Word avec CloudConvert                ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+
+┌───────────────────────────────────────────────────────────────┐
+│  📚 PAR OÙ COMMENCER ?                                        │
+└───────────────────────────────────────────────────────────────┘
+
+Si vous voulez DÉPLOYER RAPIDEMENT (20 minutes) :
+  → Ouvrir : DEPLOIEMENT-RAPIDE-CONVERSION-PDF.md
+
+Si vous voulez CONFIGURER CLOUDCONVERT :
+  → Ouvrir : CONFIGURATION-CLOUDCONVERT.txt
+
+Si vous voulez COMPRENDRE LE SYSTÈME :
+  → Ouvrir : GUIDE-CONVERSION-DOCX-PDF-CLOUDCONVERT.md
+
+Si vous voulez UN RÉSUMÉ TECHNIQUE :
+  → Ouvrir : RESUME-CONVERSION-PDF-CLOUDCONVERT.md
+
+Si vous cherchez UN FICHIER SPÉCIFIQUE :
+  → Ouvrir : INDEX-CONVERSION-PDF.md
+
+
+┌───────────────────────────────────────────────────────────────┐
+│  ⚡ DÉMARRAGE ULTRA-RAPIDE                                    │
+└───────────────────────────────────────────────────────────────┘
+
+1. Créer un compte CloudConvert : https://cloudconvert.com/
+2. Obtenir l'API Key : Dashboard > API > API Keys
+3. Configurer dans Supabase :
+   Dashboard > Project Settings > Edge Functions > Secrets
+   Nom : CLOUDCONVERT_API_KEY
+   Valeur : [Votre clé API]
+4. Déployer : ./deploy-convert-pdf.sh
+5. Build : npm run build
+6. Tester dans l'interface
+
+
+┌───────────────────────────────────────────────────────────────┐
+│  ✅ CE QUI A ÉTÉ FAIT                                         │
+└───────────────────────────────────────────────────────────────┘
+
+✓ Edge Function créée : convert-courrier-to-pdf
+  → Convertit DOCX en PDF via CloudConvert
+  → Upload dans Storage
+  → Mise à jour de la DB
+
+✓ Bouton "Générer PDF" ajouté dans l'interface
+  → Apparaît quand DOCX disponible mais pas de PDF
+  → Spinner pendant conversion (2-5 secondes)
+  → Toast de succès
+  → Bouton PDF apparaît après
+
+✓ Build frontend effectué
+  → Nouveau hash : index-Cnfp7Rda.js
+
+✓ Documentation complète créée
+  → 6 fichiers de documentation
+  → Script de déploiement automatique
+  → Guides détaillés
+
+
+┌───────────────────────────────────────────────────────────────┐
+│  🔧 FICHIERS À DÉPLOYER                                       │
+└───────────────────────────────────────────────────────────────┘
+
+Backend :
+  supabase/functions/convert-courrier-to-pdf/index.ts
+
+Frontend :
+  dist/  (après npm run build)
+
+
+┌───────────────────────────────────────────────────────────────┐
+│  💰 COÛTS CLOUDCONVERT                                        │
+└───────────────────────────────────────────────────────────────┘
+
+Gratuit :   25 conversions/jour    → $0
+Starter :   500 conversions/jour   → $9/mois  (recommandé)
+Pro :       5000 conversions/jour  → $39/mois
+
+
+┌───────────────────────────────────────────────────────────────┐
+│  📖 DOCUMENTATION                                             │
+└───────────────────────────────────────────────────────────────┘
+
+DEPLOIEMENT-RAPIDE-CONVERSION-PDF.md
+  → Déploiement en 5 minutes
+
+CONFIGURATION-CLOUDCONVERT.txt
+  → Configuration CloudConvert étape par étape
+
+GUIDE-CONVERSION-DOCX-PDF-CLOUDCONVERT.md
+  → Documentation technique complète (15 sections)
+
+RESUME-CONVERSION-PDF-CLOUDCONVERT.md
+  → Résumé en 1 page
+
+INDEX-CONVERSION-PDF.md
+  → Navigation dans la documentation
+
+deploy-convert-pdf.sh
+  → Script de déploiement automatique
+
+
+┌───────────────────────────────────────────────────────────────┐
+│  🎯 PROCHAINE ÉTAPE                                           │
+└───────────────────────────────────────────────────────────────┘
+
+→ Ouvrir DEPLOIEMENT-RAPIDE-CONVERSION-PDF.md
+
+
+═══════════════════════════════════════════════════════════════
+Date : 2025-12-24
+Build : index-Cnfp7Rda.js
+Statut : ✅ Prêt pour déploiement
+═══════════════════════════════════════════════════════════════

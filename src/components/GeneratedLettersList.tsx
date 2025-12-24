@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Plus, Search, Eye, Download, Trash2, Mail, Edit, Copy, Calendar, ChevronDown } from 'lucide-react';
+import { FileText, Plus, Search, Eye, Download, Trash2, Mail, Edit, Copy, Calendar, ChevronDown, FileCheck } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { GenerateLetterV2Wizard } from './GenerateLetterV2Wizard';
 import { LetterPreviewModal } from './LetterPreviewModal';
@@ -11,7 +11,7 @@ import { EditLetterModal } from './EditLetterModal';
 import { StatusChangeModal } from './StatusChangeModal';
 import { DownloadWithDateModal } from './DownloadWithDateModal';
 import { SuccessNotification } from './SuccessNotification';
-import { getAvailableDownloads, getFileInfo, type DownloadableFile } from '../utils/fileTypeDetector';
+import { getAvailableDownloads, getFileInfo, canGeneratePdf, type DownloadableFile } from '../utils/fileTypeDetector';
 
 interface GeneratedLetter {
   id: string;
@@ -64,6 +64,7 @@ export function GeneratedLettersList() {
   const [downloadLetter, setDownloadLetter] = useState<{ letter: GeneratedLetter; file: DownloadableFile } | null>(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [convertingPdfId, setConvertingPdfId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLetters();
@@ -137,6 +138,32 @@ export function GeneratedLettersList() {
       setDownloadLetter(null);
     } catch (error) {
       console.error('Erreur téléchargement:', error);
+    }
+  };
+
+  const handleGeneratePdf = async (letter: GeneratedLetter) => {
+    try {
+      setConvertingPdfId(letter.id);
+
+      const { data, error } = await supabase.functions.invoke('convert-courrier-to-pdf', {
+        body: { courrierId: letter.id }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      setSuccessMessage('PDF généré avec succès!');
+      await fetchLetters();
+    } catch (error) {
+      console.error('Erreur génération PDF:', error);
+      alert(`Erreur lors de la génération du PDF: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    } finally {
+      setConvertingPdfId(null);
     }
   };
 
@@ -515,6 +542,20 @@ export function GeneratedLettersList() {
                           <Download className="w-4 h-4" />
                         </button>
                       ))}
+                      {canGeneratePdf(letter.fichier_pdf_url, letter.fichier_word_genere_url) && (
+                        <button
+                          onClick={() => handleGeneratePdf(letter)}
+                          disabled={convertingPdfId === letter.id}
+                          className="text-indigo-600 hover:text-indigo-800 p-1 hover:bg-indigo-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={convertingPdfId === letter.id ? "Génération en cours..." : "Générer PDF"}
+                        >
+                          {convertingPdfId === letter.id ? (
+                            <div className="animate-spin w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full"></div>
+                          ) : (
+                            <FileCheck className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
                       {letter.fichier_pdf_url && !letter.sent_at && letter.profil?.email && (
                         <button
                           onClick={() => handleSendEmail(letter)}

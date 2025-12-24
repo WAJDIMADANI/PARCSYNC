@@ -1,0 +1,220 @@
+═══════════════════════════════════════════════════════════
+  CONFIGURATION CLOUDCONVERT - INSTRUCTIONS COMPLÈTES
+═══════════════════════════════════════════════════════════
+
+🎯 OBJECTIF
+-----------
+Configurer CloudConvert pour convertir automatiquement les
+courriers Word (.docx) en PDF.
+
+
+📝 ÉTAPE 1 : CRÉER UN COMPTE CLOUDCONVERT
+------------------------------------------
+1. Aller sur https://cloudconvert.com/
+2. Cliquer sur "Sign Up"
+3. Créer un compte avec votre email professionnel
+4. Confirmer l'email
+
+
+🔑 ÉTAPE 2 : OBTENIR L'API KEY
+-------------------------------
+1. Se connecter sur https://cloudconvert.com/dashboard
+2. Aller dans "API" > "API Keys"
+   URL directe : https://cloudconvert.com/dashboard/api/v2/keys
+3. Cliquer sur "Create New API Key"
+4. Nom suggéré : "ParcSync Production"
+5. COPIER LA CLÉ (commence par "eyJ...")
+   ⚠️ IMPORTANT : La clé ne sera affichée qu'une seule fois !
+
+
+💰 ÉTAPE 3 : CHOISIR UN PLAN (OPTIONNEL)
+-----------------------------------------
+Plan Gratuit (par défaut) :
+  • 25 conversions par jour
+  • Parfait pour tester
+  • $0
+
+Plan Starter (recommandé) :
+  • 500 conversions par jour
+  • ~16 conversions par jour de travail
+  • $9 par mois
+  • Lien : https://cloudconvert.com/pricing
+
+Plan Pro :
+  • 5000 conversions par jour
+  • Pour usage intensif
+  • $39 par mois
+
+
+🔧 ÉTAPE 4 : CONFIGURER DANS SUPABASE
+--------------------------------------
+
+MÉTHODE A : Via le Dashboard Supabase (Recommandé)
+---------------------------------------------------
+1. Aller sur https://supabase.com/dashboard
+2. Sélectionner votre projet ParcSync
+3. Menu latéral : "Project Settings" (⚙️)
+4. Onglet : "Edge Functions"
+5. Section : "Secrets"
+6. Cliquer sur "Add new secret"
+7. Remplir :
+   • Name : CLOUDCONVERT_API_KEY
+   • Value : [Coller votre clé API CloudConvert]
+8. Cliquer sur "Add secret"
+9. ✅ Configuration terminée !
+
+
+MÉTHODE B : Via Supabase CLI
+-----------------------------
+Si vous avez installé Supabase CLI :
+
+1. Ouvrir un terminal
+2. Naviguer vers le dossier du projet
+3. Exécuter :
+
+   supabase secrets set CLOUDCONVERT_API_KEY=eyJ...votre-clé...
+
+4. Vérifier :
+
+   supabase secrets list
+
+5. ✅ Vous devriez voir CLOUDCONVERT_API_KEY dans la liste
+
+
+📤 ÉTAPE 5 : DÉPLOYER LA FONCTION EDGE
+---------------------------------------
+
+MÉTHODE A : Via le script fourni
+---------------------------------
+1. Ouvrir un terminal dans le dossier du projet
+2. Exécuter :
+
+   ./deploy-convert-pdf.sh
+
+3. Répondre "o" quand demandé
+4. ✅ La fonction sera déployée automatiquement
+
+
+MÉTHODE B : Commande manuelle
+------------------------------
+   supabase functions deploy convert-courrier-to-pdf
+
+
+🧪 ÉTAPE 6 : TESTER
+--------------------
+1. Aller sur parcsync.madimpact.fr
+2. Se connecter
+3. Menu : Courriers administratifs
+4. Trouver un courrier avec uniquement un fichier Word
+5. Cliquer sur le bouton 🔍 "Générer PDF"
+6. Attendre 2-5 secondes
+7. Toast de succès : "PDF généré avec succès!"
+8. Télécharger le PDF et l'ouvrir
+9. ✅ Le PDF doit s'ouvrir correctement
+
+
+🔍 VÉRIFICATION
+---------------
+
+Vérifier que la variable est configurée :
+-----------------------------------------
+Dashboard Supabase > Edge Functions > Secrets
+Vous devez voir : CLOUDCONVERT_API_KEY = ••••••••
+
+
+Vérifier les logs après test :
+-------------------------------
+Dashboard Supabase > Edge Functions > Logs
+Rechercher : "Conversion du courrier"
+Résultat attendu :
+  Conversion du courrier <id>, DOCX: <url>
+  DOCX téléchargé, taille: XXX octets
+  CloudConvert job créé: <job-id>
+  PDF généré avec succès
+
+
+Vérifier le quota CloudConvert :
+---------------------------------
+Dashboard CloudConvert > Usage
+  • Conversions utilisées aujourd'hui
+  • Conversions restantes
+
+
+⚠️ DÉPANNAGE
+------------
+
+Erreur "CLOUDCONVERT_API_KEY non configurée"
+---------------------------------------------
+→ La variable d'environnement n'est pas configurée
+→ Reprendre l'étape 4
+
+
+Erreur "CloudConvert job creation failed"
+------------------------------------------
+→ Clé API invalide ou quota dépassé
+→ Vérifier la clé API sur le dashboard CloudConvert
+→ Vérifier le quota : https://cloudconvert.com/dashboard/usage
+
+
+Conversion qui ne termine jamais
+----------------------------------
+→ Fichier trop lourd (> 5 MB)
+→ Problème réseau avec CloudConvert
+→ Vérifier les logs : Dashboard CloudConvert > Jobs
+
+
+Le PDF généré est corrompu
+---------------------------
+→ Le fichier Word source est corrompu
+→ Télécharger et ouvrir le Word pour vérifier
+→ Vérifier les logs de l'Edge Function
+
+
+═══════════════════════════════════════════════════════════
+  RÉCAPITULATIF
+═══════════════════════════════════════════════════════════
+
+✅ Compte CloudConvert créé
+✅ API Key obtenue (commence par eyJ...)
+✅ Plan choisi (Gratuit ou Starter)
+✅ Variable CLOUDCONVERT_API_KEY configurée dans Supabase
+✅ Edge Function convert-courrier-to-pdf déployée
+✅ Test de conversion réussi
+✅ PDF téléchargeable et valide
+
+
+═══════════════════════════════════════════════════════════
+  SUPPORT
+═══════════════════════════════════════════════════════════
+
+CloudConvert :
+  • Documentation API : https://cloudconvert.com/api/v2
+  • Support : support@cloudconvert.com
+  • Status : https://status.cloudconvert.com
+
+Supabase :
+  • Documentation : https://supabase.com/docs
+  • Discord : https://discord.supabase.com
+
+
+═══════════════════════════════════════════════════════════
+  FICHIERS DE DOCUMENTATION
+═══════════════════════════════════════════════════════════
+
+• GUIDE-CONVERSION-DOCX-PDF-CLOUDCONVERT.md
+  → Documentation technique complète
+
+• DEPLOIEMENT-RAPIDE-CONVERSION-PDF.md
+  → Guide de déploiement en 5 minutes
+
+• RESUME-CONVERSION-PDF-CLOUDCONVERT.md
+  → Résumé concis de l'implémentation
+
+• deploy-convert-pdf.sh
+  → Script de déploiement automatique
+
+
+═══════════════════════════════════════════════════════════
+
+Date : 2025-12-24
+Version : 1.0
