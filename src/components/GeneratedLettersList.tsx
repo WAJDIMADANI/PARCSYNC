@@ -142,21 +142,51 @@ export function GeneratedLettersList() {
 
   const handleDuplicate = async (letter: GeneratedLetter) => {
     try {
+      // Récupérer l'utilisateur authentifié
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('[duplicate] Auth error:', authError);
+        throw authError || new Error('Utilisateur non authentifié');
+      }
+      console.log('[duplicate] auth uid', user.id);
+
+      // Récupérer l'app_utilisateur.id correspondant
+      const { data: appUser, error: appUserError } = await supabase
+        .from('app_utilisateur')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      if (appUserError || !appUser) {
+        console.error('[duplicate] app_utilisateur introuvable:', appUserError);
+        throw appUserError || new Error('app_utilisateur introuvable pour cet utilisateur');
+      }
+      console.log('[duplicate] appUser.id', appUser.id);
+
+      const payload = {
+        profil_id: letter.profil_id,
+        modele_courrier_id: null,
+        modele_nom: `${letter.modele_nom} (Copie)`,
+        sujet: letter.sujet,
+        contenu_genere: letter.contenu_genere,
+        variables_remplies: letter.variables_remplies,
+        fichier_pdf_url: null,
+        status: 'brouillon',
+        canal: letter.canal || 'courrier',
+        created_by: appUser.id
+      };
+
+      console.log('[duplicate] payload.created_by', payload.created_by);
+
       const { error } = await supabase
         .from('courrier_genere')
-        .insert({
-          profil_id: letter.profil_id,
-          modele_courrier_id: null,
-          modele_nom: `${letter.modele_nom} (Copie)`,
-          sujet: letter.sujet,
-          contenu_genere: letter.contenu_genere,
-          variables_remplies: letter.variables_remplies,
-          fichier_pdf_url: null,
-          status: 'brouillon',
-          canal: letter.canal || 'courrier'
-        });
+        .insert(payload);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[duplicate] insert error', error);
+        throw error;
+      }
+
       fetchLetters();
     } catch (error) {
       console.error('Erreur duplication:', error);

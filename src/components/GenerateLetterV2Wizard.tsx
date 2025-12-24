@@ -134,8 +134,26 @@ export function GenerateLetterV2Wizard({ onClose, onComplete }: GenerateLetterV2
       const docxFileName = `${baseFileName}.docx`;
       const storageFileName = `${Date.now()}_${docxFileName}`;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Utilisateur non authentifié');
+      // Récupérer l'utilisateur authentifié
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('[courrier-v2] Auth error:', authError);
+        throw authError || new Error('Utilisateur non authentifié');
+      }
+      console.log('[courrier-v2] auth uid', user.id);
+
+      // Récupérer l'app_utilisateur.id correspondant
+      const { data: appUser, error: appUserError } = await supabase
+        .from('app_utilisateur')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      if (appUserError || !appUser) {
+        console.error('[courrier-v2] app_utilisateur introuvable:', appUserError);
+        throw appUserError || new Error('app_utilisateur introuvable pour cet utilisateur');
+      }
+      console.log('[courrier-v2] appUser.id', appUser.id);
 
       const { error: uploadError } = await supabase.storage
         .from('courriers')
@@ -149,21 +167,28 @@ export function GenerateLetterV2Wizard({ onClose, onComplete }: GenerateLetterV2
         .from('courriers')
         .getPublicUrl(storageFileName);
 
+      const payload = {
+        profil_id: selectedProfile.id,
+        modele_courrier_id: selectedTemplate.id,
+        modele_nom: selectedTemplate.nom,
+        sujet: selectedTemplate.nom,
+        contenu_genere: JSON.stringify(variableValues),
+        variables_remplies: variableValues,
+        fichier_pdf_url: publicUrlData.publicUrl,
+        status: 'generated',
+        created_by: appUser.id
+      };
+
+      console.log('[courrier-v2] payload.created_by', payload.created_by);
+
       const { error: dbError } = await supabase
         .from('courrier_genere')
-        .insert({
-          profil_id: selectedProfile.id,
-          modele_courrier_id: selectedTemplate.id,
-          modele_nom: selectedTemplate.nom,
-          sujet: selectedTemplate.nom,
-          contenu_genere: JSON.stringify(variableValues),
-          variables_remplies: variableValues,
-          fichier_pdf_url: publicUrlData.publicUrl,
-          status: 'generated',
-          created_by: user.id
-        });
+        .insert(payload);
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('[courrier-v2] insert error', dbError);
+        throw dbError;
+      }
 
       downloadGeneratedLetter(blob, docxFileName);
 

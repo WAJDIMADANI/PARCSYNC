@@ -355,7 +355,7 @@ export async function saveGeneratedLetter(
     console.error('[courrier] Auth error:', authError);
     throw authError || new Error('Utilisateur non authentifié');
   }
-  console.log('[courrier] Auth user ID:', user.id);
+  console.log('[courrier] auth uid', user.id);
 
   // 2) Récupérer l'app_utilisateur.id correspondant
   const { data: appUser, error: appUserError } = await supabase
@@ -368,7 +368,7 @@ export async function saveGeneratedLetter(
     console.error('[courrier] app_utilisateur introuvable:', appUserError);
     throw appUserError || new Error('app_utilisateur introuvable pour cet utilisateur');
   }
-  console.log('[courrier] app_utilisateur.id:', appUser.id);
+  console.log('[courrier] appUser.id', appUser.id);
 
   // 3) Insérer dans courrier_genere avec created_by = appUser.id (PAS auth.uid())
   const payload = {
@@ -382,7 +382,8 @@ export async function saveGeneratedLetter(
     created_by: appUser.id
   };
 
-  console.log('[courrier] Insertion avec created_by:', appUser.id);
+  console.log('[courrier] payload.created_by', payload.created_by);
+  console.log('[courrier] payload complet:', JSON.stringify(payload, null, 2));
 
   const { data, error: dbError } = await supabase
     .from('courrier_genere')
@@ -391,7 +392,7 @@ export async function saveGeneratedLetter(
     .single();
 
   if (dbError) {
-    console.error('[courrier] Erreur insertion DB:', dbError);
+    console.error('[courrier] insert error', dbError);
     throw dbError;
   }
 
