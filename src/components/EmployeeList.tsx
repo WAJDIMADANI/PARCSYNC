@@ -431,6 +431,22 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
         return aPriority - bPriority;
       }
 
+      // Si les deux ont le statut "contrat_envoye", trier par date d'envoi (plus récent en premier)
+      if (aPriority === 2 && bPriority === 2) {
+        const aContract = contracts
+          .filter(c => c.profil_id === a.id)
+          .sort((c1, c2) => new Date(c2.created_at).getTime() - new Date(c1.created_at).getTime())[0];
+        const bContract = contracts
+          .filter(c => c.profil_id === b.id)
+          .sort((c1, c2) => new Date(c2.created_at).getTime() - new Date(c1.created_at).getTime())[0];
+
+        const aDate = aContract?.created_at ? new Date(aContract.created_at).getTime() : 0;
+        const bDate = bContract?.created_at ? new Date(bContract.created_at).getTime() : 0;
+
+        // Plus récent en premier (ordre décroissant)
+        return bDate - aDate;
+      }
+
       // Sinon, on applique le tri normal
       let aValue: any;
       let bValue: any;
