@@ -434,10 +434,11 @@ export function DemandeExterne() {
                       type="file"
                       id="file-upload"
                       multiple
-                      accept=".pdf,.png,.jpg,.jpeg"
+                      accept="image/png,image/jpeg,application/pdf"
                       onChange={handleFileChange}
                       className="hidden"
                       disabled={fichiers.length >= 3}
+                      capture="environment"
                     />
                     <label
                       htmlFor="file-upload"
