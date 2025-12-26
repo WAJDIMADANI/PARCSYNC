@@ -317,7 +317,10 @@ export function VivierList() {
                   Téléphone
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ville (Dép.)
+                  Ville
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  CP
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Poste souhaité
@@ -358,9 +361,10 @@ export function VivierList() {
                     {candidate.telephone || '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                    {candidate.candidat_ville && candidate.candidat_department_code
-                      ? `${candidate.candidat_ville} (${candidate.candidat_department_code})`
-                      : candidate.candidat_ville || '-'}
+                    {candidate.candidat_ville || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                    {candidate.candidat_code_postal || '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                     {candidate.poste_souhaite || '-'}
