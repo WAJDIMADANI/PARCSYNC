@@ -84,9 +84,7 @@ Deno.serve(async (req: Request) => {
 
                   <p><strong>Informations à préparer :</strong></p>
                   <ul>
-                    <li>📋 Votre CV (format PDF)</li>
-                    <li>✉️ Vos coordonnées complètes</li>
-                    <li>📱 Votre numéro de téléphone</li>
+                    <li>📄 Vos documents d'identité<br/>(carte d'identité, carte vitale, permis de conduire)</li>
                   </ul>
 
                   <p>Le formulaire ne prend que quelques minutes à compléter.</p>

@@ -49,13 +49,11 @@ export function OnboardingQRModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-            <h3 className="font-semibold text-blue-900 mb-2">Informations collectées</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">Informations à préparer :</h3>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Informations personnelles complètes</li>
-              <li>• IBAN et NIR (optionnel)</li>
-              <li>• Détails du permis de conduire</li>
-              <li>• Documents: CNI, Carte Vitale, RIB, Permis</li>
-              <li>• Consentement RGPD obligatoire</li>
+              <li>• Vos documents d'identité</li>
+              <li className="ml-4">(carte d'identité, carte Vitale, permis de conduire)</li>
+              <li>• Votre RIB</li>
             </ul>
           </div>
 
