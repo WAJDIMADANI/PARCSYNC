@@ -22,6 +22,7 @@ import {
   MessageSquare,
   User,
   Inbox,
+  Database,
 } from 'lucide-react';
 
 interface Stats {
@@ -72,6 +73,11 @@ interface Stats {
   inbox: {
     total: number;
     non_lus: number;
+  };
+  vivier: {
+    total: number;
+    ce_mois: number;
+    aujourdhui: number;
   };
 }
 
@@ -156,6 +162,11 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
     inbox: {
       total: 0,
       non_lus: 0,
+    },
+    vivier: {
+      total: 0,
+      ce_mois: 0,
+      aujourdhui: 0,
     },
   });
   const [loading, setLoading] = useState(true);
@@ -243,6 +254,13 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       })
       .subscribe();
 
+    const vivierChannel = supabase
+      .channel('vivier-dashboard-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vivier' }, () => {
+        fetchVivierStats();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(candidatsChannel);
       supabase.removeChannel(profilsChannel);
@@ -255,6 +273,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       supabase.removeChannel(tachesMessagesChannel);
       supabase.removeChannel(inboxChannel);
       supabase.removeChannel(demandesExternesChannel);
+      supabase.removeChannel(vivierChannel);
     };
   }, []);
 
@@ -269,6 +288,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       fetchValidationsStats(),
       fetchValidationsWithMessages(),
       fetchInboxStats(),
+      fetchVivierStats(),
     ]);
     setLoading(false);
   };
@@ -736,6 +756,56 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
     }
   };
 
+  const fetchVivierStats = async () => {
+    try {
+      // Total des candidats dans le vivier
+      const { count: totalCount } = await supabase
+        .from('vivier')
+        .select('id', { count: 'exact', head: true });
+
+      // Candidats ajoutés ce mois
+      const firstDayOfMonth = new Date();
+      firstDayOfMonth.setDate(1);
+      firstDayOfMonth.setHours(0, 0, 0, 0);
+
+      const { count: thisMonthCount } = await supabase
+        .from('vivier')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', firstDayOfMonth.toISOString());
+
+      // Candidats ajoutés aujourd'hui
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const startOfTomorrow = new Date(startOfToday);
+      startOfTomorrow.setDate(startOfToday.getDate() + 1);
+
+      const { count: todayCount } = await supabase
+        .from('vivier')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', startOfToday.toISOString())
+        .lt('created_at', startOfTomorrow.toISOString());
+
+      setStats((prev) => ({
+        ...prev,
+        vivier: {
+          total: totalCount || 0,
+          ce_mois: thisMonthCount || 0,
+          aujourdhui: todayCount || 0,
+        },
+      }));
+    } catch (error) {
+      console.error('Error fetching vivier stats:', error);
+      setStats((prev) => ({
+        ...prev,
+        vivier: {
+          total: 0,
+          ce_mois: 0,
+          aujourdhui: 0,
+        },
+      }));
+    }
+  };
+
   const fetchValidationsWithMessages = async () => {
     if (!appUser) return;
 
@@ -951,6 +1021,21 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             trend={stats.validations.urgentes > 0 ? 'up' : 'neutral'}
             trendValue={`${stats.validations.urgentes} urgentes`}
             color="purple"
+          />
+        </button>
+
+        <button
+          onClick={() => onNavigate?.('rh/vivier')}
+          className="text-left hover:scale-105 transition-transform"
+        >
+          <StatCard
+            icon={<Database className="w-6 h-6" />}
+            title="Vivier"
+            value={stats.vivier.total}
+            subtitle={`${stats.vivier.ce_mois} ce mois`}
+            trend={stats.vivier.aujourdhui > 0 ? 'up' : 'neutral'}
+            trendValue={`${stats.vivier.aujourdhui} aujourd'hui`}
+            color="blue"
           />
         </button>
       </div>
