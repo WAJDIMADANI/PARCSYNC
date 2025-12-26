@@ -379,6 +379,26 @@ export default function UploadAllMissingDocuments() {
       const docLabel = docConfig?.label || documentType;
       setSuccessMessage(`${docLabel} a été envoyé avec succès !`);
 
+      try {
+        console.log('📬 Envoi de la notification inbox...');
+        const { error: notifyError } = await supabase.functions.invoke('notify-document-uploaded', {
+          body: {
+            profil_id: profilData.id,
+            document_label: docLabel
+          }
+        });
+
+        if (notifyError) {
+          console.error('❌ Erreur lors de l\'envoi de la notification:', notifyError);
+          setSuccessMessage(`${docLabel} a été envoyé avec succès ! (notification non envoyée)`);
+        } else {
+          console.log('✅ notify-document-uploaded OK', { profil_id: profilData.id, document_label: docLabel });
+          setSuccessMessage(`${docLabel} a été envoyé avec succès ! Notification envoyée au pôle concerné.`);
+        }
+      } catch (notifyErr) {
+        console.error('❌ Exception lors de l\'envoi de la notification:', notifyErr);
+      }
+
       console.log('🔄 Rechargement des données du profil...');
       await loadData();
       console.log('✅ Upload terminé avec succès');
