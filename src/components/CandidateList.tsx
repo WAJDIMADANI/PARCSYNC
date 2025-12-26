@@ -609,16 +609,21 @@ export function CandidateList() {
                       {new Date(candidate.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                     </td>
                     <td className="px-2 py-3 text-sm" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => setEditingCandidate(candidate)}
-                        className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 ${
-                          hasDocuments
-                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700'
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                        }`}
-                      >
-                        {hasDocuments ? 'Voir' : '-'}
-                      </button>
+                      {hasDocuments ? (
+                        <button
+                          onClick={() => setEditingCandidate(candidate)}
+                          className="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-300 hover:bg-green-200 transition-all duration-300"
+                        >
+                          Complets
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setEditingCandidate(candidate)}
+                          className="px-2 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-300 hover:bg-orange-200 transition-all duration-300"
+                        >
+                          Manquants
+                        </button>
+                      )}
                     </td>
                     <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                       <select

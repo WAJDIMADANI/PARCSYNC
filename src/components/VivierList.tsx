@@ -108,36 +108,57 @@ export function VivierList() {
 
   const fetchData = async () => {
     try {
-      // Utiliser la vue enrichie avec les infos du candidat
-      const { data: vivierData, error: vivierError } = await supabase
-        .from('v_vivier_enrichi')
+      // Récupérer directement depuis la table candidat avec statut_candidature = 'vivier'
+      const { data: candidatsData, error: candidatsError } = await supabase
+        .from('candidat')
         .select('*')
+        .eq('statut_candidature', 'vivier')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
-      if (vivierError) throw vivierError;
+      if (candidatsError) throw candidatsError;
 
-      // Charger les statuts depuis candidat pour chaque entrée vivier
-      const vivierWithStatus = await Promise.all(
-        (vivierData || []).map(async (v) => {
-          const { data: candidatData } = await supabase
-            .from('candidat')
-            .select('statut_candidature')
-            .eq('id', v.candidat_id)
-            .single();
-
-          return {
-            ...v,
-            statut_candidature: candidatData?.statut_candidature || 'vivier'
-          };
-        })
-      );
-
-      // Filtrer pour n'afficher QUE les candidats avec statut 'vivier'
-      const filteredVivier = vivierWithStatus.filter(v => v.statut_candidature === 'vivier');
+      // Transformer les données pour matcher le format attendu par le composant
+      const vivierData = candidatsData?.map(c => ({
+        candidat_id: c.id,
+        candidat_nom: c.nom,
+        candidat_prenom: c.prenom,
+        candidat_email: c.email,
+        candidat_telephone: c.tel,
+        candidat_poste: c.poste,
+        candidat_department_code: c.department_code,
+        statut_candidature: c.statut_candidature || 'vivier',
+        created_at: c.created_at,
+        // Inclure tous les champs du candidat pour l'édition
+        id: c.id,
+        nom: c.nom,
+        prenom: c.prenom,
+        email: c.email,
+        tel: c.tel,
+        poste: c.poste,
+        department_code: c.department_code,
+        adresse: c.adresse,
+        code_postal: c.code_postal,
+        ville: c.ville,
+        genre: c.genre,
+        date_naissance: c.date_naissance,
+        nationalite: c.nationalite,
+        date_permis_conduire: c.date_permis_conduire,
+        cv_url: c.cv_url,
+        lettre_motivation_url: c.lettre_motivation_url,
+        carte_identite_recto_url: c.carte_identite_recto_url,
+        carte_identite_verso_url: c.carte_identite_verso_url,
+        site_id: c.site_id,
+        secteur_id: c.secteur_id,
+        type_piece_identite: c.type_piece_identite,
+        date_fin_validite_piece: c.date_fin_validite_piece,
+        code_couleur_rh: c.code_couleur_rh,
+        note_interne: c.note_interne
+      })) || [];
 
       // Extraire les départements uniques pour le filtre
       const depts = [...new Set(
-        filteredVivier
+        vivierData
           .map(v => v.candidat_department_code)
           .filter(d => d)
       )].sort();
@@ -152,7 +173,7 @@ export function VivierList() {
       if (secteursRes.error) throw secteursRes.error;
       if (postesRes.error) throw postesRes.error;
 
-      setCandidates(filteredVivier);
+      setCandidates(vivierData);
       setAvailableDepartements(depts as string[]);
       setSites(sitesRes.data || []);
       setSecteurs(secteursRes.data || []);
@@ -331,6 +352,9 @@ export function VivierList() {
                     )}
                   </div>
                 </th>
+                <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Documents
+                </th>
                 <th className="w-[14%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Statut
                 </th>
@@ -363,6 +387,17 @@ export function VivierList() {
                   </td>
                   <td className="px-3 py-3 text-sm font-bold text-gray-900 group-hover:text-blue-900 transition-colors">
                     <div className="truncate" title={formatDisponibilite(candidate)}>{formatDisponibilite(candidate)}</div>
+                  </td>
+                  <td className="px-3 py-3">
+                    {(!candidate.cv_url && !candidate.lettre_motivation_url && !candidate.carte_identite_recto_url && !candidate.carte_identite_verso_url) ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-300">
+                        Manquants
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-300">
+                        Complets
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <select
