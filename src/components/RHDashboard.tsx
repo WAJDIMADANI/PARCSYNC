@@ -961,6 +961,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             trend={stats.demandes.urgentes > 0 ? 'up' : 'neutral'}
             trendValue={`${stats.demandes.urgentes} urgentes`}
             color="blue"
+            hasNotification={stats.demandes.en_attente > 0}
+            notificationCount={stats.demandes.en_attente}
           />
         </button>
 
@@ -976,6 +978,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             trend={stats.inbox.non_lus > 0 ? 'up' : 'neutral'}
             trendValue={stats.inbox.non_lus > 0 ? 'Nouveau' : 'Boîte vide'}
             color="purple"
+            hasNotification={stats.inbox.non_lus > 0}
+            notificationCount={stats.inbox.non_lus}
           />
         </button>
 
@@ -1021,6 +1025,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             trend={stats.validations.urgentes > 0 ? 'up' : 'neutral'}
             trendValue={`${stats.validations.urgentes} urgentes`}
             color="purple"
+            hasNotification={stats.validations.en_attente > 0 || validationsWithMessages.length > 0}
+            notificationCount={stats.validations.en_attente > 0 ? stats.validations.en_attente : validationsWithMessages.length}
           />
         </button>
 
@@ -1305,6 +1311,8 @@ function StatCard({
   trend,
   trendValue,
   color,
+  hasNotification,
+  notificationCount,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -1313,6 +1321,8 @@ function StatCard({
   trend: 'up' | 'down' | 'neutral';
   trendValue: string;
   color: 'blue' | 'green' | 'amber' | 'red' | 'purple';
+  hasNotification?: boolean;
+  notificationCount?: number;
 }) {
   const colorClasses = {
     blue: 'bg-gradient-to-br from-sky-500 to-blue-600',
@@ -1323,7 +1333,20 @@ function StatCard({
   };
 
   return (
-    <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-6 transition-all duration-300 transform hover:scale-105">
+    <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-6 transition-all duration-300 transform hover:scale-105 relative overflow-hidden">
+      {hasNotification && notificationCount && notificationCount > 0 && (
+        <>
+          <div className="absolute -top-1 -right-1 w-20 h-20 bg-gradient-to-br from-red-500 via-rose-500 to-pink-500 opacity-20 rounded-full blur-2xl animate-pulse" />
+          <div className="absolute top-2 right-2 z-10">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-rose-600 rounded-full animate-ping opacity-75" />
+              <div className="relative flex items-center justify-center min-w-[28px] h-7 px-2 bg-gradient-to-r from-red-500 via-rose-500 to-red-600 text-white text-xs font-extrabold rounded-full shadow-lg ring-4 ring-red-200 ring-opacity-50">
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
       <div className="flex items-start justify-between mb-4">
         <div className={`p-3 rounded-xl shadow-lg ${colorClasses[color]} text-white`}>
           {icon}
