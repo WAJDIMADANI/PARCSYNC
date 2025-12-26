@@ -284,12 +284,12 @@ export function VivierList() {
           <p className="text-gray-600">Aucun candidat dans le vivier</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
+          <table className="w-full divide-y divide-gray-100 table-fixed">
+            <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
               <tr>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200"
                   onClick={() => handleSort('nom')}
                 >
                   <div className="flex items-center gap-1">
@@ -300,7 +300,7 @@ export function VivierList() {
                   </div>
                 </th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200"
                   onClick={() => handleSort('prenom')}
                 >
                   <div className="flex items-center gap-1">
@@ -310,69 +310,69 @@ export function VivierList() {
                     )}
                   </div>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[14%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Email
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[10%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Téléphone
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[10%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Ville
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[6%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   CP
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Poste souhaité
                 </th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="w-[14%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200"
                   onClick={() => handleSort('date_disponibilite')}
                 >
                   <div className="flex items-center gap-1">
-                    Date de disponibilité
+                    Disponibilité
                     {sortConfig.key === 'date_disponibilite' && (
                       <span className="text-blue-600">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </div>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Statut
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-50">
               {filteredCandidates.map((candidate) => (
                 <tr
                   key={candidate.id}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className="hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50 cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg"
                   onClick={() => setSelectedCandidateId(candidate.candidat_id)}
                 >
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {candidate.nom}
+                  <td className="px-3 py-3 text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors">
+                    <div className="truncate" title={candidate.nom}>{candidate.nom}</div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {candidate.prenom}
+                  <td className="px-3 py-3 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">
+                    <div className="truncate" title={candidate.prenom}>{candidate.prenom}</div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                    {candidate.email || '-'}
+                  <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
+                    <div className="truncate" title={candidate.email || '-'}>{candidate.email || '-'}</div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
                     {candidate.telephone || '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate" title={candidate.candidat_ville || '-'}>
                     {candidate.candidat_ville || '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
                     {candidate.candidat_code_postal || '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                    {candidate.poste_souhaite || '-'}
+                  <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
+                    <div className="truncate" title={candidate.poste_souhaite || '-'}>{candidate.poste_souhaite || '-'}</div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
-                    {formatDisponibilite(candidate)}
+                  <td className="px-3 py-3 text-sm font-bold text-gray-900 group-hover:text-blue-900 transition-colors">
+                    <div className="truncate" title={formatDisponibilite(candidate)}>{formatDisponibilite(candidate)}</div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <select
                       value={candidate.statut_candidature || 'vivier'}
                       onChange={async (e) => {
@@ -386,7 +386,7 @@ export function VivierList() {
                           console.error('Erreur mise à jour statut:', error);
                         }
                       }}
-                      className="text-sm px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="text-xs border-2 border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 bg-white shadow-sm hover:shadow-md transition-all duration-300 w-full font-medium truncate"
                     >
                       {STATUT_CANDIDATURE.map(s => (
                         <option key={s.value} value={s.value}>{s.label}</option>
