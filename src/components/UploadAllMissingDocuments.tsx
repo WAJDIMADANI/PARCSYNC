@@ -384,7 +384,8 @@ export default function UploadAllMissingDocuments() {
         const { error: notifyError } = await supabase.functions.invoke('notify-document-uploaded', {
           body: {
             profil_id: profilData.id,
-            document_label: docLabel
+            document_label: docLabel,
+            token: token
           }
         });
 

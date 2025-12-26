@@ -11,7 +11,8 @@ const corsHeaders = {
 
 type Body = {
   profil_id: string;
-  document_label: string; // ex: "Permis de conduire", "Carte Vitale", etc.
+  document_label: string;
+  token?: string;
 };
 
 function json(status: number, payload: unknown) {
@@ -22,7 +23,6 @@ function json(status: number, payload: unknown) {
 }
 
 export default Deno.serve(async (req) => {
-  // CORS preflight
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
@@ -35,24 +35,8 @@ export default Deno.serve(async (req) => {
       });
     }
 
-    // 1) Auth obligatoire (si ton lien d’upload est public, on adaptera après)
-    const authHeader = req.headers.get("authorization") || "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    if (!token) return json(401, { error: "Missing Bearer token" });
-
-    // Client admin (bypass RLS) + on passe le token pour vérifier l’utilisateur
-    const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: authData, error: authErr } = await supabaseAdmin.auth.getUser();
-    if (authErr || !authData?.user) {
-      return json(401, { error: "Invalid token", details: authErr?.message });
-    }
-    const authUserId = authData.user.id;
-
-    // 2) Lire body
     let body: Body;
     try {
       body = (await req.json()) as Body;
@@ -60,12 +44,52 @@ export default Deno.serve(async (req) => {
       return json(400, { error: "Invalid JSON body" });
     }
 
-    const { profil_id, document_label } = body;
+    const { profil_id, document_label, token } = body;
     if (!profil_id || !document_label) {
       return json(400, { error: "profil_id and document_label are required" });
     }
 
-    // 3) Charger le profil pour composer le message et sécuriser
+    const authHeader = req.headers.get("authorization") || "";
+    const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+    if (!bearerToken && !token) {
+      return json(401, { error: "Missing authentication (Bearer token or upload token required)" });
+    }
+
+    let isAuthenticated = false;
+    let authUserId: string | null = null;
+
+    if (bearerToken) {
+      const { data: authData, error: authErr } = await supabaseAdmin.auth.getUser(bearerToken);
+      if (!authErr && authData?.user) {
+        isAuthenticated = true;
+        authUserId = authData.user.id;
+      }
+    }
+
+    if (!isAuthenticated && token) {
+      const { data: tokenData, error: tokenError } = await supabaseAdmin
+        .from('upload_tokens')
+        .select('*')
+        .eq('token', token)
+        .eq('profil_id', profil_id)
+        .maybeSingle();
+
+      if (tokenError || !tokenData) {
+        return json(401, { error: "Invalid upload token" });
+      }
+
+      if (new Date(tokenData.expires_at) < new Date()) {
+        return json(401, { error: "Upload token expired" });
+      }
+
+      isAuthenticated = true;
+    }
+
+    if (!isAuthenticated) {
+      return json(401, { error: "Authentication failed" });
+    }
+
     const { data: profil, error: profilErr } = await supabaseAdmin
       .from("profil")
       .select("id, user_id, prenom, nom, matricule_tca")
@@ -75,8 +99,7 @@ export default Deno.serve(async (req) => {
     if (profilErr) return json(500, { error: "profil select failed", details: profilErr.message });
     if (!profil) return json(404, { error: "profil not found" });
 
-    // Sécurité simple : si profil.user_id existe, il doit matcher le user connecté
-    if (profil.user_id && profil.user_id !== authUserId) {
+    if (authUserId && profil.user_id && profil.user_id !== authUserId) {
       return json(403, { error: "Forbidden: profil not owned by current user" });
     }
 
