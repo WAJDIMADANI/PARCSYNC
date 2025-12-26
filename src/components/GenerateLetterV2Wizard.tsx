@@ -79,7 +79,16 @@ export function GenerateLetterV2Wizard({ onClose, onComplete }: GenerateLetterV2
     const newValues: Record<string, string> = {};
     const autoFilled: string[] = [];
 
-    selectedTemplate.variables_detectees.forEach(varName => {
+    // Collecter les variables du template
+    const variables = [...selectedTemplate.variables_detectees];
+
+    // Si adresse ou code_postal est présent, ajouter ville automatiquement
+    const hasAdresseFields = variables.some(v => v === 'adresse' || v === 'code_postal');
+    if (hasAdresseFields && !variables.includes('ville')) {
+      variables.push('ville');
+    }
+
+    variables.forEach(varName => {
       if (profileData[varName]) {
         newValues[varName] = profileData[varName];
         autoFilled.push(varName);
@@ -100,6 +109,20 @@ export function GenerateLetterV2Wizard({ onClose, onComplete }: GenerateLetterV2
   const isTimeVariable = (varName: string): boolean => {
     const lowerName = varName.toLowerCase();
     return lowerName.includes('heure') || lowerName.includes('time');
+  };
+
+  const getDisplayVariables = (): string[] => {
+    if (!selectedTemplate) return [];
+
+    const variables = [...selectedTemplate.variables_detectees];
+
+    // Si adresse ou code_postal est présent, ajouter ville automatiquement
+    const hasAdresseFields = variables.some(v => v === 'adresse' || v === 'code_postal');
+    if (hasAdresseFields && !variables.includes('ville')) {
+      variables.push('ville');
+    }
+
+    return variables;
   };
 
   const getVariableInputType = (varName: string): 'date' | 'time' | 'text' => {
@@ -422,9 +445,9 @@ export function GenerateLetterV2Wizard({ onClose, onComplete }: GenerateLetterV2
       )}
 
       <div className="space-y-4 max-h-96 overflow-y-auto">
-        {selectedTemplate?.variables_detectees.map((varName) => {
+        {getDisplayVariables().map((varName) => {
           const isAutoFilled = autoFilledVars.includes(varName);
-          const isRequired = selectedTemplate.variables_requises?.includes(varName);
+          const isRequired = selectedTemplate?.variables_requises?.includes(varName);
           const inputType = getVariableInputType(varName);
 
           return (
