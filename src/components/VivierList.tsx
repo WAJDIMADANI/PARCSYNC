@@ -310,23 +310,20 @@ export function VivierList() {
                     )}
                   </div>
                 </th>
-                <th className="w-[14%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="w-[10%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Téléphone
-                </th>
-                <th className="w-[10%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <th className="w-[12%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Ville
                 </th>
-                <th className="w-[6%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  CP
+                <th className="w-[8%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Dép.
                 </th>
-                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <th className="w-[11%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Téléphone
+                </th>
+                <th className="w-[14%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Poste souhaité
                 </th>
                 <th
-                  className="w-[14%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200"
+                  className="w-[17%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200"
                   onClick={() => handleSort('date_disponibilite')}
                 >
                   <div className="flex items-center gap-1">
@@ -336,7 +333,7 @@ export function VivierList() {
                     )}
                   </div>
                 </th>
-                <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <th className="w-[14%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Statut
                 </th>
               </tr>
@@ -354,17 +351,14 @@ export function VivierList() {
                   <td className="px-3 py-3 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">
                     <div className="truncate" title={candidate.prenom}>{candidate.prenom}</div>
                   </td>
-                  <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
-                    <div className="truncate" title={candidate.email || '-'}>{candidate.email || '-'}</div>
-                  </td>
-                  <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
-                    {candidate.telephone || '-'}
-                  </td>
                   <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate" title={candidate.candidat_ville || '-'}>
                     {candidate.candidat_ville || '-'}
                   </td>
                   <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
-                    {candidate.candidat_code_postal || '-'}
+                    {candidate.candidat_department_code || '-'}
+                  </td>
+                  <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
+                    {candidate.telephone || '-'}
                   </td>
                   <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
                     <div className="truncate" title={candidate.poste_souhaite || '-'}>{candidate.poste_souhaite || '-'}</div>

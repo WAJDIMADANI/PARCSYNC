@@ -526,17 +526,17 @@ export function CandidateList() {
                 <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
                   Prénom
                 </th>
-                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
-                  Poste
-                </th>
-                <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
-                  Site
-                </th>
                 <th className="w-[8%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Ville
                 </th>
                 <th className="w-[5%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Dép.
+                </th>
+                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
+                  Poste
+                </th>
+                <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
+                  Site
                 </th>
                 <th className="w-[6%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Date
@@ -574,6 +574,12 @@ export function CandidateList() {
                     <td className="px-3 py-3 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">
                       <div className="truncate" title={candidate.prenom}>{candidate.prenom}</div>
                     </td>
+                    <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate" title={candidate.ville || '-'}>
+                      {candidate.ville || '-'}
+                    </td>
+                    <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
+                      {candidate.department_code || '-'}
+                    </td>
                     <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
                       <div className="truncate" title={candidate.poste || '-'}>
                         {candidate.poste || '-'}
@@ -581,12 +587,6 @@ export function CandidateList() {
                     </td>
                     <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
                       <div className="truncate" title={site?.nom || '-'}>{site?.nom || '-'}</div>
-                    </td>
-                    <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate" title={candidate.ville || '-'}>
-                      {candidate.ville || '-'}
-                    </td>
-                    <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
-                      {candidate.department_code || '-'}
                     </td>
                     <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
                       {new Date(candidate.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
