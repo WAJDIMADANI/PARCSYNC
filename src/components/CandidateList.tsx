@@ -174,6 +174,7 @@ export function CandidateList() {
   const [postes, setPostes] = useState<Poste[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
   const [convertingCandidate, setConvertingCandidate] = useState<Candidate | null>(null);
@@ -454,9 +455,15 @@ export function CandidateList() {
     }
   };
 
-  const filteredCandidates = candidates.filter(cand =>
-    `${cand.prenom} ${cand.nom} ${cand.email}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredCandidates = candidates.filter(cand => {
+    const matchesSearch = `${cand.prenom} ${cand.nom} ${cand.email}`.toLowerCase().includes(search.toLowerCase());
+    const matchesDepartment = !filterDepartment || cand.department_code === filterDepartment;
+    return matchesSearch && matchesDepartment;
+  });
+
+  const uniqueDepartments = Array.from(
+    new Set(candidates.map(c => c.department_code).filter(Boolean))
+  ).sort();
 
   if (loading) {
     return (
@@ -498,8 +505,8 @@ export function CandidateList() {
         </div>
       </div>
 
-      <div className="mb-6">
-        <div className="relative">
+      <div className="mb-6 flex gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
@@ -509,6 +516,16 @@ export function CandidateList() {
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
+        <select
+          value={filterDepartment}
+          onChange={(e) => setFilterDepartment(e.target.value)}
+          className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[200px]"
+        >
+          <option value="">Tous les départements</option>
+          {uniqueDepartments.map(dept => (
+            <option key={dept} value={dept}>{dept}</option>
+          ))}
+        </select>
       </div>
 
       {filteredCandidates.length === 0 ? (

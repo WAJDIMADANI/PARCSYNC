@@ -227,12 +227,10 @@ export function VivierList() {
   });
 
   const filteredCandidates = sortedCandidates
-    .filter((cand) =>
-      `${cand.prenom} ${cand.nom} ${cand.email} ${cand.poste_souhaite}`.toLowerCase().includes(search.toLowerCase())
-    )
     .filter((cand) => {
-      if (!departementFilter) return true;
-      return cand.candidat_department_code === departementFilter;
+      const matchesSearch = `${cand.prenom} ${cand.nom} ${cand.email} ${cand.poste_souhaite}`.toLowerCase().includes(search.toLowerCase());
+      const matchesDepartment = !departementFilter || cand.candidat_department_code === departementFilter;
+      return matchesSearch && matchesDepartment;
     });
 
   if (loading) {
