@@ -534,44 +534,45 @@ export function CandidateList() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
-          <table className="w-full divide-y divide-gray-100 table-fixed">
-            <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
-              <tr>
-                <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
-                  Nom
-                </th>
-                <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
-                  Prénom
-                </th>
-                <th className="w-[8%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Ville
-                </th>
-                <th className="w-[5%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Dép.
-                </th>
-                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
-                  Poste
-                </th>
-                <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
-                  Site
-                </th>
-                <th className="w-[6%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="w-[5%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Docs
-                </th>
-                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Statut
-                </th>
-                <th className="w-[9%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Code
-                </th>
-                <th className="w-[5%] px-2 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
+          <div className="overflow-x-auto">
+            <table className="w-full divide-y divide-gray-100 min-w-[1200px]">
+              <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
+                <tr>
+                  <th className="w-32 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
+                    Nom
+                  </th>
+                  <th className="w-32 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
+                    Prénom
+                  </th>
+                  <th className="w-24 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Ville
+                  </th>
+                  <th className="w-16 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Dép.
+                  </th>
+                  <th className="w-36 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
+                    Poste
+                  </th>
+                  <th className="w-32 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
+                    Site
+                  </th>
+                  <th className="w-20 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="w-24 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Docs
+                  </th>
+                  <th className="w-44 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="w-32 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Code
+                  </th>
+                  <th className="w-20 px-2 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
             <tbody className="bg-white divide-y divide-gray-50">
               {filteredCandidates.map((candidate) => {
                 const site = sites.find(s => s.id === candidate.site_id);
@@ -585,61 +586,55 @@ export function CandidateList() {
                     className="hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50 cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg"
                     onClick={() => setEditingCandidate(candidate)}
                   >
-                    <td className="px-3 py-3 text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors">
+                    <td className="px-2 py-2 text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors">
                       <div className="truncate" title={candidate.nom}>{candidate.nom}</div>
                     </td>
-                    <td className="px-3 py-3 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">
+                    <td className="px-2 py-2 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">
                       <div className="truncate" title={candidate.prenom}>{candidate.prenom}</div>
                     </td>
-                    <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate" title={candidate.ville || '-'}>
+                    <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate" title={candidate.ville || '-'}>
                       {candidate.ville || '-'}
                     </td>
-                    <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
+                    <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
                       {candidate.department_code || '-'}
                     </td>
-                    <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
+                    <td className="px-2 py-2 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
                       <div className="truncate" title={candidate.poste || '-'}>
                         {candidate.poste || '-'}
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
+                    <td className="px-2 py-2 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
                       <div className="truncate" title={site?.nom || '-'}>{site?.nom || '-'}</div>
                     </td>
-                    <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
+                    <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
                       {new Date(candidate.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                     </td>
-                    <td className="px-2 py-3 text-sm" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-1 py-2" onClick={(e) => e.stopPropagation()}>
                       {hasDocuments ? (
-                        <button
-                          onClick={() => setEditingCandidate(candidate)}
-                          className="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-300 hover:bg-green-200 transition-all duration-300"
-                        >
-                          Complets
-                        </button>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-300 whitespace-nowrap">
+                          OK
+                        </span>
                       ) : (
-                        <button
-                          onClick={() => setEditingCandidate(candidate)}
-                          className="px-2 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-300 hover:bg-orange-200 transition-all duration-300"
-                        >
-                          Manquants
-                        </button>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-300 whitespace-nowrap">
+                          KO
+                        </span>
                       )}
                     </td>
-                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
                       <select
                         value={statutCandidature}
                         onChange={(e) => handleStatutChange(candidate.id, e.target.value)}
-                        className="text-xs border-2 border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 bg-white shadow-sm hover:shadow-md transition-all duration-300 w-full font-medium truncate"
+                        className="text-[11px] border border-gray-200 rounded-md px-1.5 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-500 bg-white hover:border-gray-300 transition-all w-full font-medium"
                       >
                         {STATUT_CANDIDATURE.map(s => (
                           <option key={s.value} value={s.value}>{s.label}</option>
                         ))}
                       </select>
                     </td>
-                    <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => openCodeCouleurModal(candidate)}
-                        className="flex items-center gap-1 text-xs border-2 border-gray-200 rounded-lg px-2 py-1.5 w-full bg-white hover:bg-blue-50 hover:border-blue-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 shadow-sm hover:shadow-md transition-all duration-300 truncate font-medium"
+                        className="flex items-center gap-1 text-[11px] border border-gray-200 rounded-md px-1.5 py-1 w-full bg-white hover:bg-blue-50 hover:border-blue-300 focus:ring-1 focus:ring-blue-400 transition-all truncate font-medium"
                       >
                         <div className={`w-4 h-4 rounded-full flex-shrink-0 ${
                           candidate.code_couleur_rh
@@ -690,6 +685,7 @@ export function CandidateList() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
