@@ -85,8 +85,22 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
       fetchProfiles();
     } else if (step === 2) {
       fetchTemplates();
+    } else if (step === 3 && selectedProfile && selectedTemplate) {
+      // Pré-remplir automatiquement ville si adresse ou code_postal présents
+      const vars = Object.keys(selectedTemplate.variables_personnalisees);
+      const systemVars = selectedTemplate.variables_systeme || [];
+      const allVars = [...vars, ...systemVars];
+
+      const hasAdresseFields = allVars.some(v => v === 'adresse' || v === 'code_postal');
+
+      if (hasAdresseFields && selectedProfile.ville && !customValues['ville']) {
+        setCustomValues(prev => ({
+          ...prev,
+          ville: selectedProfile.ville
+        }));
+      }
     }
-  }, [step]);
+  }, [step, selectedProfile, selectedTemplate]);
 
   const fetchProfiles = async () => {
     setLoading(true);
@@ -441,11 +455,26 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
       }
 
       const systemValues = formatProfileData(selectedProfile);
-      const { subject, content } = getPreviewContent();
+
+      // S'assurer que la ville est toujours incluse si elle existe dans le profil
+      const enhancedCustomValues = { ...customValues };
+      if (selectedProfile.ville && !enhancedCustomValues.ville) {
+        enhancedCustomValues.ville = selectedProfile.ville;
+      }
+      if (selectedProfile.adresse && !enhancedCustomValues.adresse) {
+        enhancedCustomValues.adresse = selectedProfile.adresse;
+      }
+      if (selectedProfile.code_postal && !enhancedCustomValues.code_postal) {
+        enhancedCustomValues.code_postal = selectedProfile.code_postal;
+      }
+
+      // Remplacer les variables avec les valeurs améliorées
+      const subject = replaceAllVariables(selectedTemplate.sujet || '', systemValues, enhancedCustomValues);
+      const content = replaceAllVariables(selectedTemplate.contenu || '', systemValues, enhancedCustomValues);
 
       const allVariables = {
         ...systemValues,
-        ...customValues
+        ...enhancedCustomValues
       };
 
       console.log('Toutes les variables préparées:', Object.keys(allVariables));
@@ -462,9 +491,9 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
           civilite: civilite as 'Madame' | 'Monsieur' | 'Madame, Monsieur',
           nom: selectedProfile.nom,
           prenom: selectedProfile.prenom,
-          adresse: customValues.adresse || selectedProfile.adresse || undefined,
-          code_postal: customValues.code_postal || selectedProfile.code_postal || undefined,
-          ville: customValues.ville || selectedProfile.ville || undefined
+          adresse: enhancedCustomValues.adresse || selectedProfile.adresse || undefined,
+          code_postal: enhancedCustomValues.code_postal || selectedProfile.code_postal || undefined,
+          ville: enhancedCustomValues.ville || selectedProfile.ville || undefined
         },
         object: subject,
         content: content,
