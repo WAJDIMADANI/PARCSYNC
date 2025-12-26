@@ -27,6 +27,9 @@ interface VivierCandidate {
   created_at: string;
   updated_at: string;
   statut_candidature?: string;
+  candidat_ville?: string;
+  candidat_code_postal?: string;
+  candidat_department_code?: string;
 }
 
 interface Site {
@@ -58,6 +61,7 @@ interface FullCandidate {
   adresse?: string;
   code_postal?: string;
   ville?: string;
+  department_code?: string;
   genre?: string;
   date_naissance?: string;
   nationalite?: string;
@@ -89,6 +93,8 @@ export function VivierList() {
     direction: 'asc',
   });
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; newStatus: string; candidateId: string } | null>(null);
+  const [departementFilter, setDepartementFilter] = useState<string>('');
+  const [availableDepartements, setAvailableDepartements] = useState<string[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -102,9 +108,9 @@ export function VivierList() {
 
   const fetchData = async () => {
     try {
-      // Charger le vivier avec les statuts depuis candidat
+      // Utiliser la vue enrichie avec les infos du candidat
       const { data: vivierData, error: vivierError } = await supabase
-        .from('vivier')
+        .from('v_vivier_enrichi')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -129,6 +135,13 @@ export function VivierList() {
       // Filtrer pour n'afficher QUE les candidats avec statut 'vivier'
       const filteredVivier = vivierWithStatus.filter(v => v.statut_candidature === 'vivier');
 
+      // Extraire les départements uniques pour le filtre
+      const depts = [...new Set(
+        filteredVivier
+          .map(v => v.candidat_department_code)
+          .filter(d => d)
+      )].sort();
+
       const [sitesRes, secteursRes, postesRes] = await Promise.all([
         supabase.from('site').select('*').order('nom'),
         supabase.from('secteur').select('*').order('nom'),
@@ -140,6 +153,7 @@ export function VivierList() {
       if (postesRes.error) throw postesRes.error;
 
       setCandidates(filteredVivier);
+      setAvailableDepartements(depts as string[]);
       setSites(sitesRes.data || []);
       setSecteurs(secteursRes.data || []);
       setPostes(postesRes.data || []);
@@ -212,9 +226,14 @@ export function VivierList() {
     return 0;
   });
 
-  const filteredCandidates = sortedCandidates.filter((cand) =>
-    `${cand.prenom} ${cand.nom} ${cand.email} ${cand.poste_souhaite}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredCandidates = sortedCandidates
+    .filter((cand) =>
+      `${cand.prenom} ${cand.nom} ${cand.email} ${cand.poste_souhaite}`.toLowerCase().includes(search.toLowerCase())
+    )
+    .filter((cand) => {
+      if (!departementFilter) return true;
+      return cand.candidat_department_code === departementFilter;
+    });
 
   if (loading) {
     return (
@@ -233,8 +252,8 @@ export function VivierList() {
         </div>
       </div>
 
-      <div className="mb-6">
-        <div className="relative">
+      <div className="mb-6 flex gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
@@ -243,6 +262,20 @@ export function VivierList() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+        </div>
+        <div className="w-56">
+          <select
+            value={departementFilter}
+            onChange={(e) => setDepartementFilter(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+          >
+            <option value="">Tous les départements</option>
+            {availableDepartements.map((dept) => (
+              <option key={dept} value={dept}>
+                Département {dept}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -284,6 +317,9 @@ export function VivierList() {
                   Téléphone
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ville (Dép.)
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Poste souhaité
                 </th>
                 <th
@@ -320,6 +356,11 @@ export function VivierList() {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                     {candidate.telephone || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                    {candidate.candidat_ville && candidate.candidat_department_code
+                      ? `${candidate.candidat_ville} (${candidate.candidat_department_code})`
+                      : candidate.candidat_ville || '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                     {candidate.poste_souhaite || '-'}
@@ -568,6 +609,14 @@ function CandidateModal({
             >
               Modifier
             </button>
+          </div>
+        )}
+
+        {candidate.ville && candidate.department_code && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold">Localisation:</span> {candidate.ville} ({candidate.department_code})
+            </p>
           </div>
         )}
 

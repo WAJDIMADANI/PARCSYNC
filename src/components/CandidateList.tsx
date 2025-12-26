@@ -38,6 +38,7 @@ interface Candidate {
   adresse?: string;
   code_postal?: string;
   ville?: string;
+  department_code?: string;
   genre?: string;
   date_naissance?: string;
   nationalite?: string;
@@ -519,31 +520,34 @@ export function CandidateList() {
           <table className="w-full divide-y divide-gray-100 table-fixed">
             <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
               <tr>
-                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
+                <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
                   Nom
                 </th>
-                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
+                <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
                   Prénom
                 </th>
-                <th className="w-[14%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
+                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
                   Poste
                 </th>
-                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
+                <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
                   Site
                 </th>
-                <th className="w-[7%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  CP
-                </th>
                 <th className="w-[8%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Ville
+                </th>
+                <th className="w-[5%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Dép.
+                </th>
+                <th className="w-[6%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="w-[7%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <th className="w-[5%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Docs
                 </th>
-                <th className="w-[13%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <th className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="w-[10%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <th className="w-[9%] px-2 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Code
                 </th>
                 <th className="w-[5%] px-2 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -578,8 +582,11 @@ export function CandidateList() {
                     <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
                       <div className="truncate" title={site?.nom || '-'}>{site?.nom || '-'}</div>
                     </td>
+                    <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate" title={candidate.ville || '-'}>
+                      {candidate.ville || '-'}
+                    </td>
                     <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
-                      {candidate.code_postal || '-'}
+                      {candidate.department_code || '-'}
                     </td>
                     <td className="px-2 py-3 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
                       {new Date(candidate.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
@@ -1105,6 +1112,14 @@ function CandidateModal({
             >
               Modifier
             </button>
+          </div>
+        )}
+
+        {candidate?.ville && candidate?.department_code && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold">Localisation:</span> {candidate.ville} ({candidate.department_code})
+            </p>
           </div>
         )}
 
