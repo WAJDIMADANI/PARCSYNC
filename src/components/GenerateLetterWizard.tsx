@@ -462,9 +462,9 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
           civilite: civilite as 'Madame' | 'Monsieur' | 'Madame, Monsieur',
           nom: selectedProfile.nom,
           prenom: selectedProfile.prenom,
-          adresse: selectedProfile.adresse || undefined,
-          code_postal: selectedProfile.code_postal || undefined,
-          ville: selectedProfile.ville || undefined
+          adresse: customValues.adresse || selectedProfile.adresse || undefined,
+          code_postal: customValues.code_postal || selectedProfile.code_postal || undefined,
+          ville: customValues.ville || selectedProfile.ville || undefined
         },
         object: subject,
         content: content,
@@ -808,14 +808,40 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
               {Object.keys(selectedTemplate.variables_personnalisees).length > 0 && (
                 <div>
                   <div className="text-sm font-medium text-gray-700 mb-3">
-                    Variables à compléter ({Object.keys(selectedTemplate.variables_personnalisees).length})
+                    Variables à compléter ({(() => {
+                      const vars = Object.keys(selectedTemplate.variables_personnalisees);
+                      const hasAdresseFields = vars.some(v => v === 'adresse' || v === 'code_postal');
+                      const hasVille = vars.includes('ville');
+                      return hasAdresseFields && !hasVille ? vars.length + 1 : vars.length;
+                    })()})
                   </div>
 
                   <div className="space-y-4">
-                    {Object.entries(selectedTemplate.variables_personnalisees)
-                      .sort(([, a], [, b]) => (a.ordre || 0) - (b.ordre || 0))
-                      .map(([name, config]) => {
-                        const isAutofilled = warningsInfo?.autofilled.includes(name) || false;
+                    {(() => {
+                      const entries = Object.entries(selectedTemplate.variables_personnalisees);
+                      const vars = Object.keys(selectedTemplate.variables_personnalisees);
+                      const hasAdresseFields = vars.some(v => v === 'adresse' || v === 'code_postal');
+                      const hasVille = vars.includes('ville');
+
+                      // Ajouter ville automatiquement si adresse ou code_postal présent
+                      if (hasAdresseFields && !hasVille && selectedProfile) {
+                        const villeConfig = {
+                          label: 'Ville',
+                          type: 'text',
+                          required: false,
+                          ordre: 999
+                        };
+                        entries.push(['ville', villeConfig]);
+                        // Pré-remplir la ville si elle existe dans le profil
+                        if (selectedProfile.ville && !customValues['ville']) {
+                          customValues['ville'] = selectedProfile.ville;
+                        }
+                      }
+
+                      return entries
+                        .sort(([, a], [, b]) => (a.ordre || 0) - (b.ordre || 0))
+                        .map(([name, config]) => {
+                          const isAutofilled = warningsInfo?.autofilled.includes(name) || (name === 'ville' && selectedProfile?.ville);
                         return (
                           <div key={name}>
                             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
@@ -921,7 +947,8 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
                           )}
                         </div>
                         );
-                      })}
+                      });
+                    })()}
                   </div>
                 </div>
               )}
