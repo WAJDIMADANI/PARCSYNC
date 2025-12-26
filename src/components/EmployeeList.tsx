@@ -178,9 +178,12 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [activeTab, setActiveTab] = useState<'salaries' | 'sortants'>('salaries');
   const hasProcessedInitialProfile = useRef(false);
 
   useEffect(() => {
+    // Réinitialiser la page courante quand on change d'onglet
+    setCurrentPage(1);
     fetchData();
 
     // S'abonner aux changements de contrats en temps réel
@@ -209,7 +212,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     return () => {
       supabase.removeChannel(contractsChannel);
     };
-  }, []);
+  }, [activeTab]);
 
   // Si un profilId initial est fourni, ouvrir automatiquement le profil
   useEffect(() => {
@@ -255,16 +258,29 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
     if (!silent) setLoading(true);
 
     try {
+      // Construire la requête selon l'onglet actif
+      let employeesQuery = supabase
+        .from('profil')
+        .select(`
+          *,
+          site:site_id(id, nom),
+          secteur:secteur_id(id, nom),
+          manager:manager_id(prenom, nom)
+        `)
+        .eq('role', 'salarie');
+
+      if (activeTab === 'salaries') {
+        // Onglet Salariés : exclure statut='inactif'
+        employeesQuery = employeesQuery.or('statut.is.null,statut.neq.inactif');
+        employeesQuery = employeesQuery.order('created_at', { ascending: false });
+      } else {
+        // Onglet Sortants : uniquement statut='inactif', tri par date_sortie desc
+        employeesQuery = employeesQuery.eq('statut', 'inactif');
+        employeesQuery = employeesQuery.order('date_sortie', { ascending: false, nullsFirst: false });
+      }
+
       const [employeesRes, contractsRes, sitesRes, secteursRes] = await Promise.all([
-        supabase
-          .from('profil')
-          .select(`
-            *,
-            site:site_id(id, nom),
-            secteur:secteur_id(id, nom),
-            manager:manager_id(prenom, nom)
-          `)
-          .order('created_at', { ascending: false }),
+        employeesQuery,
         supabase
           .from('contrat')
           .select('id, profil_id, statut, date_signature, yousign_signed_at, created_at, modele_id, date_debut, date_fin, type, modeles_contrats:modele_id(nom)')
@@ -599,9 +615,34 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   return (
     <div>
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Employés</h1>
-          <div className="flex items-center gap-4 mt-1">
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Employés</h1>
+
+          {/* Onglets */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setActiveTab('salaries')}
+              className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
+                activeTab === 'salaries'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Salariés
+            </button>
+            <button
+              onClick={() => setActiveTab('sortants')}
+              className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
+                activeTab === 'sortants'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Sortants
+            </button>
+          </div>
+
+          <div className="flex items-center gap-4">
             <p className="text-gray-600">
               {filteredAndSortedEmployees.length} employé(s) {hasActiveFilters && `(sur ${employees.length} au total)`}
             </p>
