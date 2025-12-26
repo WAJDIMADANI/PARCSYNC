@@ -634,7 +634,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
               onClick={() => setActiveTab('sortants')}
               className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
                 activeTab === 'sortants'
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -949,7 +949,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                       {formatDate(employee.date_entree)}
                     </td>
                     <td className="px-3 py-3 text-sm text-gray-900">
-                      <ContractBadge type="status" value={getActualContractStatus(employee)} />
+                      <ContractBadge type="status" value={employee.statut || 'actif'} />
                     </td>
                     <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors truncate">
                       {employee.secteur?.nom || '-'}

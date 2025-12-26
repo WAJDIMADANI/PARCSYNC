@@ -51,6 +51,10 @@ export function ContractBadge({ type, value, showFullText = false }: ContractBad
 
   if (type === 'status') {
     const lowerValue = value.toLowerCase();
+    const isInactif = lowerValue === 'inactif';
+    const isContratEnvoye = lowerValue === 'contrat_envoye';
+    const isContratSigne = lowerValue === 'contrat_signe';
+    const isEnAttenteContrat = lowerValue === 'en_attente_contrat';
     const isSigned = lowerValue.includes('sign');
     const isSent = lowerValue.includes('envoye') || lowerValue.includes('envoy');
     const isExpired = lowerValue.includes('expir') || lowerValue === 'expiré';
@@ -59,15 +63,24 @@ export function ContractBadge({ type, value, showFullText = false }: ContractBad
     let bgColor = 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700';
     let label = value;
 
-    if (isExpired) {
+    if (isInactif) {
+      bgColor = 'bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white border-2 border-red-500 shadow-md';
+      label = 'Sortant';
+    } else if (isExpired) {
       bgColor = 'bg-gradient-to-r from-red-500 via-rose-500 to-red-600 text-white border-2 border-red-400 shadow-md';
       label = 'Expiré';
-    } else if (isSigned || isActif) {
+    } else if (isContratSigne || isSigned) {
       bgColor = 'bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white shadow-md';
-      label = isSigned ? 'Signé' : 'Actif';
-    } else if (isSent) {
+      label = 'Signé';
+    } else if (isActif) {
+      bgColor = 'bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white shadow-md';
+      label = 'Actif';
+    } else if (isContratEnvoye || isSent) {
       bgColor = 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-md';
-      label = 'Envoyé';
+      label = 'Contrat envoyé';
+    } else if (isEnAttenteContrat) {
+      bgColor = 'bg-gradient-to-r from-sky-500 via-blue-500 to-sky-600 text-white shadow-md';
+      label = 'En attente contrat';
     }
 
     return (
