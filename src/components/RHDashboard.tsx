@@ -340,7 +340,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
 
       const now = new Date();
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      const today = new Date().toISOString().slice(0, 10);
 
       const actifs = profils.filter((p) => p.statut === 'actif').length;
       const nouveaux_mois = profils.filter(
@@ -349,12 +349,20 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           p.date_entree &&
           new Date(p.date_entree) >= firstDayOfMonth
       ).length;
-      const periode_essai = profils.filter(
-        (p) =>
-          p.statut === 'actif' &&
-          p.date_entree &&
-          new Date(p.date_entree) >= threeMonthsAgo
-      ).length;
+
+      const { count: periode_essai_count, error: periodeEssaiError } = await supabase
+        .from('profil')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'salarie')
+        .eq('statut', 'actif')
+        .not('date_fin_periode_essai', 'is', null)
+        .gte('date_fin_periode_essai', today);
+
+      if (periodeEssaiError) {
+        console.error('Erreur calcul période essai:', periodeEssaiError);
+      }
+      const periode_essai = periode_essai_count || 0;
+
       const departs_prevus = profils.filter(
         (p) =>
           p.date_sortie &&
