@@ -103,6 +103,7 @@ interface Employee {
   iban: string | null;
   bic: string | null;
   modele_contrat: string | null;
+  department_code: string | null;
 }
 
 interface Contract {
@@ -125,7 +126,7 @@ interface Contract {
   } | null;
 }
 
-type SortField = 'matricule_tca' | 'prenom' | 'nom' | 'email' | 'secteur' | 'date_entree' | 'type_contrat' | 'statut_contrat';
+type SortField = 'matricule_tca' | 'prenom' | 'nom' | 'email' | 'secteur' | 'department_code' | 'date_entree' | 'type_contrat' | 'statut_contrat';
 type SortDirection = 'asc' | 'desc';
 
 interface EmployeeListProps {
@@ -495,6 +496,10 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           aValue = (a.secteur?.nom || '').toLowerCase();
           bValue = (b.secteur?.nom || '').toLowerCase();
           break;
+        case 'department_code':
+          aValue = (a.department_code || '').toLowerCase();
+          bValue = (b.department_code || '').toLowerCase();
+          break;
         default:
           return 0;
       }
@@ -793,7 +798,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                 <tr>
                   <th
                     onClick={() => handleSort('matricule_tca')}
-                    className="w-[8%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[7%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Matricule
@@ -802,7 +807,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                   </th>
                   <th
                     onClick={() => handleSort('prenom')}
-                    className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Prénom
@@ -811,7 +816,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                   </th>
                   <th
                     onClick={() => handleSort('nom')}
-                    className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Nom
@@ -820,7 +825,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                   </th>
                   <th
                     onClick={() => handleSort('email')}
-                    className="w-[18%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[16%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Email
@@ -829,7 +834,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                   </th>
                   <th
                     onClick={() => handleSort('type_contrat')}
-                    className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Type
@@ -838,7 +843,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                   </th>
                   <th
                     onClick={() => handleSort('date_entree')}
-                    className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Début
@@ -847,7 +852,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                   </th>
                   <th
                     onClick={() => handleSort('statut_contrat')}
-                    className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[11%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Statut
@@ -856,14 +861,23 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                   </th>
                   <th
                     onClick={() => handleSort('secteur')}
-                    className="w-[12%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Secteur
                       {getSortIcon('secteur')}
                     </div>
                   </th>
-                  <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  <th
+                    onClick={() => handleSort('department_code')}
+                    className="w-[6%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                  >
+                    <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
+                      Dép.
+                      {getSortIcon('department_code')}
+                    </div>
+                  </th>
+                  <th className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -898,6 +912,9 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                     </td>
                     <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors truncate">
                       {employee.secteur?.nom || '-'}
+                    </td>
+                    <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors truncate text-center">
+                      {employee.department_code || '-'}
                     </td>
                     <td className="px-3 py-3">
                       <button
