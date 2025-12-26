@@ -158,7 +158,6 @@ export function InboxPage() {
           .from('inbox')
           .select('*')
           .eq('utilisateur_id', appUserId)
-          .eq('reference_type', 'demande_externe')
           .order('created_at', { ascending: false })
       ]);
 
@@ -177,57 +176,88 @@ export function InboxPage() {
 
       let formattedDemandes: (DemandeExterne & { itemType: 'demande_externe' })[] = [];
 
-      console.log('Chargement demandes externes...');
+      console.log('🔍 Tous les messages inbox:', inboxResult.data?.map(x => ({ titre: x.titre, reference_type: x.reference_type, type: x.type })));
+      console.log('Chargement messages inbox...');
       console.log('Inbox result:', inboxResult.data?.length || 0, 'entrées', inboxResult.error);
 
       if (inboxResult.error) {
-        console.warn('Erreur chargement inbox demandes externes:', inboxResult.error);
+        console.warn('Erreur chargement inbox:', inboxResult.error);
       } else if (inboxResult.data && inboxResult.data.length > 0) {
-        const demandeIds = inboxResult.data.map((i: any) => i.reference_id);
-        console.log('IDs des demandes à charger:', demandeIds);
+        // Séparer les demandes externes des autres messages (profil, etc.)
+        const demandesExternesInbox = inboxResult.data.filter((i: any) => i.reference_type === 'demande_externe');
+        const autresMessages = inboxResult.data.filter((i: any) => i.reference_type !== 'demande_externe');
 
-        const { data: demandesData, error: demandesError } = await supabase
-          .from('demandes_externes')
-          .select(`
-            id,
-            profil_id,
-            pole_id,
-            fichiers,
-            profil:profil_id(prenom, nom, email, matricule_tca, poste),
-            pole:pole_id(nom)
-          `)
-          .in('id', demandeIds);
+        // Charger les détails des demandes externes uniquement
+        if (demandesExternesInbox.length > 0) {
+          const demandeIds = demandesExternesInbox.map((i: any) => i.reference_id);
+          console.log('IDs des demandes externes à charger:', demandeIds);
 
-        console.log('Détails demandes chargés:', demandesData?.length || 0, 'demandes', demandesError);
+          const { data: demandesData, error: demandesError } = await supabase
+            .from('demandes_externes')
+            .select(`
+              id,
+              profil_id,
+              pole_id,
+              fichiers,
+              profil:profil_id(prenom, nom, email, matricule_tca, poste),
+              pole:pole_id(nom)
+            `)
+            .in('id', demandeIds);
 
-        if (demandesError) {
-          console.warn('Erreur chargement détails demandes externes:', demandesError);
-        } else {
-          const demandesMap = new Map((demandesData || []).map((d: any) => [d.id, d]));
+          console.log('Détails demandes chargés:', demandesData?.length || 0, 'demandes', demandesError);
 
-          formattedDemandes = inboxResult.data.map((inbox: any) => {
-            const demandeDetails = demandesMap.get(inbox.reference_id);
-            return {
-              id: inbox.id,
-              itemType: 'demande_externe' as const,
-              type: 'demande_externe' as const,
-              titre: inbox.titre,
-              description: inbox.description,
-              contenu: inbox.contenu,
-              reference_id: inbox.reference_id,
-              statut: inbox.statut || 'nouveau',
-              lu: inbox.lu ?? false,
-              created_at: inbox.created_at,
-              profil: demandeDetails?.profil,
-              pole: demandeDetails?.pole,
-              fichiers: demandeDetails?.fichiers || []
-            };
-          });
+          if (!demandesError) {
+            const demandesMap = new Map((demandesData || []).map((d: any) => [d.id, d]));
 
-          console.log('Demandes externes formatées:', formattedDemandes.length);
+            const formattedDemandesExternes = demandesExternesInbox.map((inbox: any) => {
+              const demandeDetails = demandesMap.get(inbox.reference_id);
+              return {
+                id: inbox.id,
+                itemType: 'demande_externe' as const,
+                type: 'demande_externe' as const,
+                titre: inbox.titre,
+                description: inbox.description,
+                contenu: inbox.contenu,
+                reference_id: inbox.reference_id,
+                statut: inbox.statut || 'nouveau',
+                lu: inbox.lu ?? false,
+                created_at: inbox.created_at,
+                profil: demandeDetails?.profil,
+                pole: demandeDetails?.pole,
+                fichiers: demandeDetails?.fichiers || []
+              };
+            });
+
+            formattedDemandes = [...formattedDemandesExternes];
+            console.log('Demandes externes formatées:', formattedDemandesExternes.length);
+          }
         }
+
+        // Ajouter les autres messages (profil, etc.) sans charger de détails supplémentaires
+        if (autresMessages.length > 0) {
+          const formattedAutres = autresMessages.map((inbox: any) => ({
+            id: inbox.id,
+            itemType: 'demande_externe' as const,
+            type: 'demande_externe' as const,
+            titre: inbox.titre,
+            description: inbox.description || '',
+            contenu: inbox.contenu || '',
+            reference_id: inbox.reference_id,
+            statut: inbox.statut || 'nouveau',
+            lu: inbox.lu ?? false,
+            created_at: inbox.created_at,
+            profil: undefined,
+            pole: undefined,
+            fichiers: []
+          }));
+
+          formattedDemandes = [...formattedDemandes, ...formattedAutres];
+          console.log('Autres messages formatés:', autresMessages.length, '(type profil, etc.)');
+        }
+
+        console.log('Total messages inbox:', formattedDemandes.length);
       } else {
-        console.log('Aucune demande externe trouvée dans inbox');
+        console.log('Aucun message trouvé dans inbox');
       }
 
       setTaches(formattedTaches);
