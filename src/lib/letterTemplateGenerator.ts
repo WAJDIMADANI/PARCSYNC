@@ -130,7 +130,7 @@ export function formatProfileData(profil: any): Record<string, string> {
     tel: profil.tel || '',
     adresse: profil.adresse || '',
     complement_adresse: profil.complement_adresse || '',
-    code_postal: profil.code_postal || '',
+    code_postal: profil.code_postal ? String(profil.code_postal).replace('.0', '') : '',
     ville: profil.ville || '',
 
     // Professionnel

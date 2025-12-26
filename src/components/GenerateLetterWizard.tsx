@@ -85,22 +85,8 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
       fetchProfiles();
     } else if (step === 2) {
       fetchTemplates();
-    } else if (step === 3 && selectedProfile && selectedTemplate) {
-      // Pré-remplir automatiquement ville si adresse ou code_postal présents
-      const vars = Object.keys(selectedTemplate.variables_personnalisees);
-      const systemVars = selectedTemplate.variables_systeme || [];
-      const allVars = [...vars, ...systemVars];
-
-      const hasAdresseFields = allVars.some(v => v === 'adresse' || v === 'code_postal');
-
-      if (hasAdresseFields && selectedProfile.ville && !customValues['ville']) {
-        setCustomValues(prev => ({
-          ...prev,
-          ville: selectedProfile.ville
-        }));
-      }
     }
-  }, [step, selectedProfile, selectedTemplate]);
+  }, [step]);
 
   const fetchProfiles = async () => {
     setLoading(true);
@@ -454,27 +440,31 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
         console.warn('Attention: Utilisateur non trouvé dans app_utilisateur:', appUserError);
       }
 
-      const systemValues = formatProfileData(selectedProfile);
+      let systemValues = formatProfileData(selectedProfile);
 
-      // S'assurer que la ville est toujours incluse si elle existe dans le profil
-      const enhancedCustomValues = { ...customValues };
-      if (selectedProfile.ville && !enhancedCustomValues.ville) {
-        enhancedCustomValues.ville = selectedProfile.ville;
+      // S'assurer que les champs d'adresse sont toujours présents dans systemValues
+      // (au cas où ils seraient manquants ou vides)
+      if (selectedProfile.ville) {
+        systemValues.ville = selectedProfile.ville;
       }
-      if (selectedProfile.adresse && !enhancedCustomValues.adresse) {
-        enhancedCustomValues.adresse = selectedProfile.adresse;
+      if (selectedProfile.adresse) {
+        systemValues.adresse = selectedProfile.adresse;
       }
-      if (selectedProfile.code_postal && !enhancedCustomValues.code_postal) {
-        enhancedCustomValues.code_postal = selectedProfile.code_postal;
+      if (selectedProfile.code_postal) {
+        // Convertir en string et retirer le .0 si c'est un nombre
+        systemValues.code_postal = String(selectedProfile.code_postal).replace('.0', '');
       }
 
-      // Remplacer les variables avec les valeurs améliorées
-      const subject = replaceAllVariables(selectedTemplate.sujet || '', systemValues, enhancedCustomValues);
-      const content = replaceAllVariables(selectedTemplate.contenu || '', systemValues, enhancedCustomValues);
+      console.log('Ville du profil:', selectedProfile.ville);
+      console.log('Ville dans systemValues:', systemValues.ville);
+
+      // Remplacer les variables
+      const subject = replaceAllVariables(selectedTemplate.sujet || '', systemValues, customValues);
+      const content = replaceAllVariables(selectedTemplate.contenu || '', systemValues, customValues);
 
       const allVariables = {
         ...systemValues,
-        ...enhancedCustomValues
+        ...customValues
       };
 
       console.log('Toutes les variables préparées:', Object.keys(allVariables));
@@ -491,9 +481,9 @@ export function GenerateLetterWizard({ onClose, onComplete }: GenerateLetterWiza
           civilite: civilite as 'Madame' | 'Monsieur' | 'Madame, Monsieur',
           nom: selectedProfile.nom,
           prenom: selectedProfile.prenom,
-          adresse: enhancedCustomValues.adresse || selectedProfile.adresse || undefined,
-          code_postal: enhancedCustomValues.code_postal || selectedProfile.code_postal || undefined,
-          ville: enhancedCustomValues.ville || selectedProfile.ville || undefined
+          adresse: systemValues.adresse || selectedProfile.adresse || undefined,
+          code_postal: systemValues.code_postal || selectedProfile.code_postal?.toString() || undefined,
+          ville: systemValues.ville || selectedProfile.ville || undefined
         },
         object: subject,
         content: content,
