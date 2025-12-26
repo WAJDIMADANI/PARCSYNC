@@ -725,12 +725,10 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .select('*')
         .or(`assignee_id.eq.${appUser.id},expediteur_id.eq.${appUser.id}`);
 
-      // 2. Récupérer les demandes externes (même requête que InboxPage)
+      // 2. Récupérer les messages inbox - RLS gère le filtrage par utilisateur
       const { data: inboxData } = await supabase
         .from('inbox')
-        .select('*')
-        .eq('utilisateur_id', appUser.id)
-        .eq('reference_type', 'demande_externe');
+        .select('*');
 
       const tachesCount = taches?.length || 0;
       const demandesCount = inboxData?.length || 0;
@@ -744,15 +742,14 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       const nonLusDemandes = (inboxData || []).filter((d: any) => !d.lu).length;
       const non_lus = nonLusTaches + nonLusDemandes;
 
+      console.log('Inbox count', non_lus);
       console.log('📊 Dashboard Inbox:', {
         tachesCount,
         demandesCount,
         total,
         non_lus,
-        filters: {
-          utilisateur_id: appUser.id,
-          source: 'taches + inbox'
-        }
+        inboxData: inboxData?.map(d => ({ id: d.id, lu: d.lu, utilisateur_id: d.utilisateur_id })),
+        source: 'taches + inbox (RLS)'
       });
 
       setStats((prev) => ({
