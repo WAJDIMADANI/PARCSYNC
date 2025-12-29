@@ -36,12 +36,17 @@ interface Candidate {
   secteur_id: string | null;
   created_at: string;
   adresse?: string;
+  complement_adresse?: string;
   code_postal?: string;
   ville?: string;
   department_code?: string;
   genre?: string;
   date_naissance?: string;
+  nom_naissance?: string;
+  lieu_naissance?: string;
+  pays_naissance?: string;
   nationalite?: string;
+  numero_securite_sociale?: string;
   date_permis_conduire?: string;
   type_piece_identite?: string;
   date_fin_validite_piece?: string;
