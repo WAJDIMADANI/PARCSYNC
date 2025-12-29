@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Mail, CheckCircle, XCircle, AlertTriangle, Calendar, User, FileText, Loader2, FilePlus } from 'lucide-react';
 import ContractSendModal from './ContractSendModal';
+import { EmailSuccessModal } from './EmailSuccessModal';
 
 interface NotificationModalProps {
   notification: {
@@ -28,6 +29,7 @@ export function NotificationModal({ notification, onClose, onUpdate }: Notificat
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [showContractModal, setShowContractModal] = useState(false);
   const [profilData, setProfilData] = useState<any>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     if (['contrat_cdd', 'avenant_1', 'avenant_2'].includes(notification.type)) {
@@ -145,9 +147,8 @@ Le service RH`;
 
       if (updateError) throw updateError;
 
-      alert('Email de rappel envoyé avec succès');
+      setShowSuccessModal(true);
       onUpdate();
-      onClose();
     } catch (error: any) {
       console.error('Error sending reminder:', error);
       alert(`Erreur lors de l'envoi: ${error.message || 'Erreur inconnue'}`);
@@ -397,6 +398,17 @@ Le service RH`;
             onUpdate();
           }}
           initialDateDebut={calculateNextStartDate()}
+        />
+      )}
+
+      {showSuccessModal && (
+        <EmailSuccessModal
+          message="L'email de rappel a été envoyé avec succès"
+          recipient={notification.profil?.email}
+          onClose={() => {
+            setShowSuccessModal(false);
+            onClose();
+          }}
         />
       )}
     </div>
