@@ -1118,7 +1118,10 @@ function CandidateModal({
         .from(bucketName)
         .upload(bucketPath, file, { upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error(`Erreur upload ${docType}:`, uploadError);
+        throw new Error(`Impossible d'uploader ${docType}: ${uploadError.message || 'Le bucket "candidatures" n\'existe peut-être pas'}`);
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from(bucketName)
@@ -1127,7 +1130,7 @@ function CandidateModal({
       return publicUrl;
     } catch (error) {
       console.error(`Erreur upload ${docType}:`, error);
-      return null;
+      throw error;
     }
   };
 
@@ -1184,9 +1187,10 @@ function CandidateModal({
       }
 
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur:', error);
-      alert('Erreur lors de l\'opération');
+      const errorMessage = error?.message || 'Erreur lors de l\'opération';
+      alert(errorMessage);
     } finally {
       setLoading(false);
       setUploadingDocs(false);
