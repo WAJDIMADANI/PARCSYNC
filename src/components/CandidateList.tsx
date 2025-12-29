@@ -973,6 +973,13 @@ function CandidateModal({
   const [ageError, setAgeError] = useState('');
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [uploadingDocs, setUploadingDocs] = useState(false);
+  const [docFiles, setDocFiles] = useState<{
+    cv?: File;
+    lettre_motivation?: File;
+    carte_identite_recto?: File;
+    carte_identite_verso?: File;
+  }>({});
 
   useEffect(() => {
     if (candidate) {
@@ -1083,11 +1090,35 @@ function CandidateModal({
     setSignedUrls(urls);
   };
 
+  const uploadDocument = async (file: File, docType: string, candidateId: string): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${candidateId}/${docType}_${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error(`Erreur upload ${docType}:`, error);
+      return null;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      let candidateId = candidate?.id;
+
       if (candidate) {
         const { error } = await supabase
           .from('candidat')
@@ -1095,18 +1126,51 @@ function CandidateModal({
           .eq('id', candidate.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('candidat').insert([{
+        const { data, error } = await supabase.from('candidat').insert([{
           ...formData,
           pipeline: 'nouveau',
-        }]);
+        }]).select().single();
         if (error) throw error;
+        candidateId = data.id;
       }
+
+      if (candidateId && Object.keys(docFiles).length > 0) {
+        setUploadingDocs(true);
+        const docUpdates: any = {};
+
+        if (docFiles.cv) {
+          const url = await uploadDocument(docFiles.cv, 'cv', candidateId);
+          if (url) docUpdates.cv_url = url;
+        }
+        if (docFiles.lettre_motivation) {
+          const url = await uploadDocument(docFiles.lettre_motivation, 'lettre_motivation', candidateId);
+          if (url) docUpdates.lettre_motivation_url = url;
+        }
+        if (docFiles.carte_identite_recto) {
+          const url = await uploadDocument(docFiles.carte_identite_recto, 'carte_identite_recto', candidateId);
+          if (url) docUpdates.carte_identite_recto_url = url;
+        }
+        if (docFiles.carte_identite_verso) {
+          const url = await uploadDocument(docFiles.carte_identite_verso, 'carte_identite_verso', candidateId);
+          if (url) docUpdates.carte_identite_verso_url = url;
+        }
+
+        if (Object.keys(docUpdates).length > 0) {
+          const { error } = await supabase
+            .from('candidat')
+            .update(docUpdates)
+            .eq('id', candidateId);
+          if (error) throw error;
+        }
+      }
+
       onSuccess();
     } catch (error) {
       console.error('Erreur:', error);
       alert('Erreur lors de l\'opération');
     } finally {
       setLoading(false);
+      setUploadingDocs(false);
     }
   };
 
@@ -1417,7 +1481,7 @@ function CandidateModal({
 
           {candidate && (candidate.cv_url || candidate.lettre_motivation_url || candidate.carte_identite_recto_url) && (
             <div className="border-t pt-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Documents</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Documents existants</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {candidate.cv_url && signedUrls.cv && (
                   <a
@@ -1460,6 +1524,86 @@ function CandidateModal({
                   </a>
                 )}
               </div>
+            </div>
+          )}
+
+          {!isViewMode && (
+            <div className="border-t pt-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Upload className="w-5 h-5" />
+                Ajouter/Remplacer des documents
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    CV {candidate?.cv_url && <span className="text-orange-600">(Remplacer)</span>}
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setDocFiles({ ...docFiles, cv: file });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                  {docFiles.cv && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.cv.name}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Lettre de motivation {candidate?.lettre_motivation_url && <span className="text-orange-600">(Remplacer)</span>}
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setDocFiles({ ...docFiles, lettre_motivation: file });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                  {docFiles.lettre_motivation && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.lettre_motivation.name}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Carte d'identité (Recto) {candidate?.carte_identite_recto_url && <span className="text-orange-600">(Remplacer)</span>}
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setDocFiles({ ...docFiles, carte_identite_recto: file });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                  {docFiles.carte_identite_recto && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.carte_identite_recto.name}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Carte d'identité (Verso) {candidate?.carte_identite_verso_url && <span className="text-orange-600">(Remplacer)</span>}
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setDocFiles({ ...docFiles, carte_identite_verso: file });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                  {docFiles.carte_identite_verso && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.carte_identite_verso.name}</p>}
+                </div>
+              </div>
+              {uploadingDocs && (
+                <p className="text-sm text-blue-600 mt-3 flex items-center gap-2">
+                  <Upload className="w-4 h-4 animate-spin" />
+                  Upload des documents en cours...
+                </p>
+              )}
             </div>
           )}
 
