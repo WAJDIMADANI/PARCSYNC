@@ -5,6 +5,7 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { ConfirmModal } from './ConfirmModal';
 import { GENRE_OPTIONS } from '../constants/genreOptions';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
+import { sanitizeUuidFields } from '../utils/uuidHelper';
 
 const STATUT_CANDIDATURE = [
   { value: 'candidature_recue', label: 'Candidature reçue' },
@@ -513,8 +514,8 @@ function CandidateModal({
     nom: candidate?.nom || '',
     email: candidate?.email || '',
     tel: candidate?.tel || '',
-    site_id: candidate?.site_id || '',
-    secteur_id: candidate?.secteur_id || '',
+    site_id: candidate?.site_id || null,
+    secteur_id: candidate?.secteur_id || null,
     poste: candidate?.poste || '',
     adresse: candidate?.adresse || '',
     complement_adresse: candidate?.complement_adresse || '',
@@ -597,14 +598,14 @@ function CandidateModal({
     setLoading(true);
 
     try {
-      // Mettre à jour le candidat
+      const sanitizedData = sanitizeUuidFields(formData, ['site_id', 'secteur_id']);
+
       const { error } = await supabase
         .from('candidat')
-        .update(formData)
+        .update(sanitizedData)
         .eq('id', candidate.id);
       if (error) throw error;
 
-      // Si le statut change et n'est plus 'vivier', supprimer de la table vivier
       if (formData.statut_candidature !== 'vivier') {
         const { error: deleteError } = await supabase
           .from('vivier')
@@ -842,8 +843,8 @@ function CandidateModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
               <select
                 disabled={isViewMode}
-                value={formData.site_id}
-                onChange={(e) => setFormData({ ...formData, site_id: e.target.value })}
+                value={formData.site_id ?? ""}
+                onChange={(e) => setFormData({ ...formData, site_id: e.target.value || null })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
               >
                 <option value="">Aucun</option>
@@ -857,8 +858,8 @@ function CandidateModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">Secteur</label>
               <select
                 disabled={isViewMode}
-                value={formData.secteur_id}
-                onChange={(e) => setFormData({ ...formData, secteur_id: e.target.value })}
+                value={formData.secteur_id ?? ""}
+                onChange={(e) => setFormData({ ...formData, secteur_id: e.target.value || null })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
               >
                 <option value="">Aucun</option>

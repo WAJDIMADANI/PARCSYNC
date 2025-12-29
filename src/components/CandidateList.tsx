@@ -8,6 +8,7 @@ import CodeCouleurModal from './CodeCouleurModal';
 import { VivierDisponibiliteModal } from './VivierDisponibiliteModal';
 import { GENRE_OPTIONS } from '../constants/genreOptions';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
+import { sanitizeUuidFields } from '../utils/uuidHelper';
 
 interface Site {
   id: string;
@@ -951,8 +952,8 @@ function CandidateModal({
     nom: candidate?.nom || '',
     email: candidate?.email || '',
     tel: candidate?.tel || '',
-    site_id: candidate?.site_id || '',
-    secteur_id: candidate?.secteur_id || '',
+    site_id: candidate?.site_id || null,
+    secteur_id: candidate?.secteur_id || null,
     poste: candidate?.poste || '',
     adresse: candidate?.adresse || '',
     complement_adresse: candidate?.complement_adresse || '',
@@ -1141,15 +1142,17 @@ function CandidateModal({
     try {
       let candidateId = candidate?.id;
 
+      const sanitizedData = sanitizeUuidFields(formData, ['site_id', 'secteur_id']);
+
       if (candidate) {
         const { error } = await supabase
           .from('candidat')
-          .update(formData)
+          .update(sanitizedData)
           .eq('id', candidate.id);
         if (error) throw error;
       } else {
         const { data, error } = await supabase.from('candidat').insert([{
-          ...formData,
+          ...sanitizedData,
           pipeline: 'nouveau',
         }]).select().single();
         if (error) throw error;
@@ -1475,8 +1478,8 @@ function CandidateModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
               <select
                 disabled={isViewMode}
-                value={formData.site_id}
-                onChange={(e) => setFormData({ ...formData, site_id: e.target.value })}
+                value={formData.site_id ?? ""}
+                onChange={(e) => setFormData({ ...formData, site_id: e.target.value || null })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
               >
                 <option value="">Aucun</option>
@@ -1490,8 +1493,8 @@ function CandidateModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">Secteur</label>
               <select
                 disabled={isViewMode}
-                value={formData.secteur_id}
-                onChange={(e) => setFormData({ ...formData, secteur_id: e.target.value })}
+                value={formData.secteur_id ?? ""}
+                onChange={(e) => setFormData({ ...formData, secteur_id: e.target.value || null })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
               >
                 <option value="">Aucun</option>
@@ -1694,8 +1697,8 @@ function ConvertToEmployeeModal({
   const [formData, setFormData] = useState({
     role: '',
     date_entree: new Date().toISOString().split('T')[0],
-    site_id: candidate.site_id || '',
-    secteur_id: candidate.secteur_id || '',
+    site_id: candidate.site_id || null,
+    secteur_id: candidate.secteur_id || null,
     visite_medicale_faite: (candidate as any).visite_medicale_faite || false,
     casier_judiciaire_date: (candidate as any).casier_judiciaire_date || '',
     dpae_transmise: (candidate as any).dpae_transmise || false,
@@ -1781,15 +1784,17 @@ function ConvertToEmployeeModal({
     setLoading(true);
 
     try {
+      const sanitizedFormData = sanitizeUuidFields(formData, ['site_id', 'secteur_id']);
+
       const { data: profilData, error: profilError } = await supabase.from('profil').insert([{
         prenom: candidate.prenom,
         nom: candidate.nom,
         email: candidate.email,
         tel: candidate.tel,
-        role: formData.role,
-        date_entree: formData.date_entree,
-        site_id: formData.site_id || null,
-        secteur_id: formData.secteur_id || null,
+        role: sanitizedFormData.role,
+        date_entree: sanitizedFormData.date_entree,
+        site_id: sanitizedFormData.site_id,
+        secteur_id: sanitizedFormData.secteur_id,
         statut: 'actif',
         candidat_id: candidate.id,
         adresse: candidate.adresse,
@@ -1798,8 +1803,8 @@ function ConvertToEmployeeModal({
         date_naissance: candidate.date_naissance,
         nationalite: candidate.nationalite,
         date_permis_conduire: candidate.date_permis_conduire,
-        iban: formData.iban,
-        bic: formData.bic,
+        iban: sanitizedFormData.iban,
+        bic: sanitizedFormData.bic,
         nir: (candidate as any).numero_securite_sociale,
         permis_categorie: (candidate as any).permis_categorie,
         permis_points: (candidate as any).permis_points,
@@ -1886,8 +1891,8 @@ function ConvertToEmployeeModal({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
             <select
-              value={formData.site_id}
-              onChange={(e) => setFormData({ ...formData, site_id: e.target.value })}
+              value={formData.site_id ?? ""}
+              onChange={(e) => setFormData({ ...formData, site_id: e.target.value || null })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Aucun</option>
@@ -1900,8 +1905,8 @@ function ConvertToEmployeeModal({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Secteur</label>
             <select
-              value={formData.secteur_id}
-              onChange={(e) => setFormData({ ...formData, secteur_id: e.target.value })}
+              value={formData.secteur_id ?? ""}
+              onChange={(e) => setFormData({ ...formData, secteur_id: e.target.value || null })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Aucun</option>
