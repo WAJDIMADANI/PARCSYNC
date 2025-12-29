@@ -1050,16 +1050,17 @@ function CandidateModal({
 
   const getSignedUrl = async (publicUrl: string): Promise<string> => {
     try {
-      const match = publicUrl.match(/\/object\/public\/documents\/(.+)$/);
+      const match = publicUrl.match(/\/object\/public\/([^/]+)\/(.+)$/);
       if (!match) {
         console.error('URL format invalide:', publicUrl);
         return publicUrl;
       }
 
-      const filePath = match[1];
+      const bucketName = match[1];
+      const filePath = match[2];
 
       const { data, error } = await supabase.storage
-        .from('documents')
+        .from(bucketName)
         .createSignedUrl(filePath, 3600);
 
       if (error) {
@@ -1098,17 +1099,30 @@ function CandidateModal({
   const uploadDocument = async (file: File, docType: string, candidateId: string): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${candidateId}/${docType}_${Date.now()}.${fileExt}`;
+      const uniqueId = Math.random().toString(36).substring(2, 15);
+
+      let bucketPath = '';
+      let bucketName = 'candidatures';
+
+      if (docType === 'cv') {
+        bucketPath = `cv/${uniqueId}-${Date.now()}.${fileExt}`;
+      } else if (docType === 'lettre_motivation') {
+        bucketPath = `lettres/${uniqueId}-${Date.now()}.${fileExt}`;
+      } else if (docType === 'carte_identite_recto' || docType === 'carte_identite_verso') {
+        bucketPath = `cartes-identite/${uniqueId}-${Date.now()}.${fileExt}`;
+      } else {
+        bucketPath = `${docType}/${uniqueId}-${Date.now()}.${fileExt}`;
+      }
 
       const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(fileName, file, { upsert: true });
+        .from(bucketName)
+        .upload(bucketPath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(fileName);
+        .from(bucketName)
+        .getPublicUrl(bucketPath);
 
       return publicUrl;
     } catch (error) {

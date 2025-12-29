@@ -546,16 +546,17 @@ function CandidateModal({
 
   const getSignedUrl = async (publicUrl: string): Promise<string> => {
     try {
-      const match = publicUrl.match(/\/object\/public\/documents\/(.+)$/);
+      const match = publicUrl.match(/\/object\/public\/([^/]+)\/(.+)$/);
       if (!match) {
         console.error('URL format invalide:', publicUrl);
         return publicUrl;
       }
 
-      const filePath = match[1];
+      const bucketName = match[1];
+      const filePath = match[2];
 
       const { data, error } = await supabase.storage
-        .from('documents')
+        .from(bucketName)
         .createSignedUrl(filePath, 3600);
 
       if (error) {
