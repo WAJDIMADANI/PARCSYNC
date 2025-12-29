@@ -59,12 +59,17 @@ interface FullCandidate {
   secteur_id: string | null;
   created_at: string;
   adresse?: string;
+  complement_adresse?: string;
   code_postal?: string;
   ville?: string;
   department_code?: string;
   genre?: string;
   date_naissance?: string;
+  nom_naissance?: string;
+  lieu_naissance?: string;
+  pays_naissance?: string;
   nationalite?: string;
+  numero_securite_sociale?: string;
   date_permis_conduire?: string;
   type_piece_identite?: string;
   date_fin_validite_piece?: string;
@@ -512,11 +517,16 @@ function CandidateModal({
     secteur_id: candidate?.secteur_id || '',
     poste: candidate?.poste || '',
     adresse: candidate?.adresse || '',
+    complement_adresse: candidate?.complement_adresse || '',
     code_postal: candidate?.code_postal || '',
     ville: candidate?.ville || '',
     genre: candidate?.genre || '',
     date_naissance: candidate?.date_naissance || '',
+    nom_naissance: candidate?.nom_naissance || '',
+    lieu_naissance: candidate?.lieu_naissance || '',
+    pays_naissance: candidate?.pays_naissance || '',
     nationalite: candidate?.nationalite || '',
+    numero_securite_sociale: candidate?.numero_securite_sociale || '',
     date_permis_conduire: candidate?.date_permis_conduire || '',
   });
   const [loading, setLoading] = useState(false);
