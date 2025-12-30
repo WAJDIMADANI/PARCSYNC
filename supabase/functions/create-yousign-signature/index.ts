@@ -719,7 +719,7 @@ Deno.serve(async (req: Request) => {
     const pdfBlob = new Blob([pdf], { type: "application/pdf" });
 
     const exp = new Date();
-    exp.setHours(exp.getHours() + 48);
+    exp.setDate(exp.getDate() + 7);
 
     const signatureRequest = await yousignFetch(`${YOUSIGN_BASE_URL}/signature_requests`, {
       method: "POST",
