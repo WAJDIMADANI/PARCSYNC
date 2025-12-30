@@ -82,8 +82,10 @@ Deno.serve(async (req: Request) => {
 
                   <p><strong>Informations à préparer :</strong></p>
                   <ul>
-                    <li>📄 Vos documents d'identité<br/>(carte d'identité, carte Vitale, permis de conduire)</li>
-                    <li>💳 Votre RIB</li>
+                    <li>📄 Votre pièce d'identité (carte d'identité ou passeport)</li>
+                    <li>💳 Votre RIB (IBAN)</li>
+                    <li>🔢 Votre numéro de sécurité sociale (NIR)</li>
+                    <li>🚗 Votre permis de conduire</li>
                   </ul>
 
                   <p>Une fois votre dossier complété, nous générerons votre contrat de travail et vous l'enverrons pour signature électronique.</p>
