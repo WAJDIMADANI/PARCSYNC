@@ -1158,7 +1158,6 @@ function EmployeeDetailModal({
   const [ibanError, setIbanError] = useState('');
   const [ibanValidationMessage, setIbanValidationMessage] = useState('');
   const [ibanValidating, setIbanValidating] = useState(false);
-  const [bicAutoFilled, setBicAutoFilled] = useState(true);
   const [showInvalidIbanModal, setShowInvalidIbanModal] = useState(false);
   const ibanValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -1185,7 +1184,7 @@ function EmployeeDetailModal({
     setCurrentEmployee(employee);
 
     // Mettre à jour les champs édités UNIQUEMENT si l'utilisateur n'est pas en train d'éditer cette section
-    // Cela préserve les modifications en cours (comme le BIC auto-rempli)
+    // Cela préserve les modifications en cours
 
     if (!isEditingPersonal) {
       setEditedDateNaissance(employee.date_naissance || '');
@@ -1284,11 +1283,6 @@ function EmployeeDetailModal({
               ? `✅ IBAN valide (${result.error})`
               : '✅ IBAN valide'
           );
-
-          // Auto-remplir le BIC uniquement si pas modifié manuellement
-          if (bicAutoFilled && result.bic) {
-            setEditedBIC(result.bic);
-          }
 
           // Nettoyer l'IBAN
           setEditedIBAN(result.cleanIban);
@@ -2169,7 +2163,6 @@ function EmployeeDetailModal({
     setIbanError('');
     setIbanValidationMessage('');
     setIbanValidating(false);
-    setBicAutoFilled(true);
     setShowInvalidIbanModal(false);
     if (ibanValidationTimeoutRef.current) {
       clearTimeout(ibanValidationTimeoutRef.current);
@@ -3344,29 +3337,14 @@ function EmployeeDetailModal({
                   <p className="text-sm text-gray-900 font-mono">{currentEmployee.bic || '-'}</p>
                 ) : (
                   <div className="space-y-1">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={editedBIC}
-                        onChange={(e) => {
-                          setEditedBIC(e.target.value.toUpperCase());
-                          setBicAutoFilled(false);
-                        }}
-                        className={`w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
-                          bicAutoFilled ? 'bg-blue-50' : 'bg-white'
-                        }`}
-                        placeholder="Auto-rempli après validation IBAN"
-                        maxLength={11}
-                      />
-                      {bicAutoFilled && editedBIC && (
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-blue-600 font-medium bg-blue-100 px-2 py-0.5 rounded">
-                          Auto
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      {bicAutoFilled ? 'Rempli automatiquement (modifiable)' : 'Modifié manuellement'}
-                    </p>
+                    <input
+                      type="text"
+                      value={editedBIC}
+                      onChange={(e) => setEditedBIC(e.target.value.toUpperCase())}
+                      className="w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors bg-white"
+                      placeholder="Ex: BNPAFRPP"
+                      maxLength={11}
+                    />
                   </div>
                 )}
               </div>

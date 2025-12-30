@@ -1707,22 +1707,6 @@ function ConvertToEmployeeModal({
   });
   const [loading, setLoading] = useState(false);
 
-  const getBicFromBankCode = (bankCode: string): string => {
-    const bankCodes: { [key: string]: string } = {
-      '20041': 'BNPAFRPP',
-      '30004': 'SOGEFRPP',
-      '10278': 'CMCIFRPP',
-      '13335': 'CEPAFRPP',
-      '11315': 'AGRIFRPP',
-      '30002': 'CRLYFRPP',
-      '16958': 'CEPAFRPP',
-      '17515': 'CCFRFRPP',
-      '10096': 'CMCIFR2A',
-      '30003': 'SOGEFRPP',
-    };
-    return bankCodes[bankCode] || '';
-  };
-
   const validateIban = async (iban: string) => {
     if (!iban || iban.length < 15) {
       setIbanError('');
@@ -1732,21 +1716,14 @@ function ConvertToEmployeeModal({
     try {
       const cleanIban = iban.replace(/\s/g, '').toUpperCase();
 
-      const res = await fetch(`https://openiban.com/validate/${cleanIban}?validateBankCode=true&getBIC=true`);
+      const res = await fetch(`https://openiban.com/validate/${cleanIban}?validateBankCode=true`);
       const data = await res.json();
 
       if (data.valid) {
         setIbanError('');
         setIbanValidationMessage('✅ IBAN valide');
 
-        let bic = data.bankData?.bic || '';
-
-        if (!bic && cleanIban.startsWith('FR')) {
-          const bankCode = cleanIban.substring(4, 9);
-          bic = getBicFromBankCode(bankCode);
-        }
-
-        setFormData(prev => ({ ...prev, bic, iban: cleanIban }));
+        setFormData(prev => ({ ...prev, iban: cleanIban }));
       } else {
         setIbanError('❌ IBAN invalide');
         setIbanValidationMessage('');
@@ -1940,7 +1917,7 @@ function ConvertToEmployeeModal({
                   value={formData.bic}
                   onChange={(e) => setFormData(prev => ({ ...prev, bic: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Auto-rempli après validation IBAN"
+                  placeholder="Ex: BNPAFRPP"
                 />
               </div>
             </div>
