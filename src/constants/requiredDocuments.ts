@@ -8,16 +8,6 @@ export interface RequiredDocumentConfig {
 
 export const REQUIRED_DOCUMENTS: RequiredDocumentConfig[] = [
   {
-    value: 'permis_recto',
-    label: 'Permis de conduire (Recto)',
-    icon: Car
-  },
-  {
-    value: 'permis_verso',
-    label: 'Permis de conduire (Verso)',
-    icon: Car
-  },
-  {
     value: 'cni_recto',
     label: 'Carte d\'identité (Recto)',
     icon: CreditCard
@@ -33,14 +23,24 @@ export const REQUIRED_DOCUMENTS: RequiredDocumentConfig[] = [
     icon: CreditCard
   },
   {
-    value: 'certificat_medical',
-    label: 'Certificat médical',
-    icon: Heart
-  },
-  {
     value: 'rib',
     label: 'RIB',
     icon: Briefcase
+  },
+  {
+    value: 'permis_recto',
+    label: 'Permis de conduire (Recto)',
+    icon: Car
+  },
+  {
+    value: 'permis_verso',
+    label: 'Permis de conduire (Verso)',
+    icon: Car
+  },
+  {
+    value: 'certificat_medical',
+    label: 'Certificat médical',
+    icon: Heart
   }
 ];
 

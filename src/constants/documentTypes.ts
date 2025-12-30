@@ -10,20 +10,6 @@ export interface DocumentTypeConfig {
 
 export const DOCUMENT_TYPES: DocumentTypeConfig[] = [
   {
-    value: 'certificat_medical',
-    label: 'Certificat médical',
-    icon: Heart,
-    requiresExpiration: true,
-    expirationField: 'date_fin_visite_medicale'
-  },
-  {
-    value: 'titre_sejour',
-    label: 'Titre de séjour / Carte de résident',
-    icon: FileText,
-    requiresExpiration: true,
-    expirationField: 'titre_sejour_fin_validite'
-  },
-  {
     value: 'cni_recto',
     label: 'Carte d\'identité (Recto)',
     icon: CreditCard,
@@ -33,6 +19,18 @@ export const DOCUMENT_TYPES: DocumentTypeConfig[] = [
     value: 'cni_verso',
     label: 'Carte d\'identité (Verso)',
     icon: CreditCard,
+    requiresExpiration: false
+  },
+  {
+    value: 'carte_vitale',
+    label: 'Carte vitale',
+    icon: CreditCard,
+    requiresExpiration: false
+  },
+  {
+    value: 'rib',
+    label: 'RIB',
+    icon: Briefcase,
     requiresExpiration: false
   },
   {
@@ -48,16 +46,18 @@ export const DOCUMENT_TYPES: DocumentTypeConfig[] = [
     requiresExpiration: false
   },
   {
-    value: 'carte_vitale',
-    label: 'Carte vitale',
-    icon: CreditCard,
-    requiresExpiration: false
+    value: 'certificat_medical',
+    label: 'Certificat médical',
+    icon: Heart,
+    requiresExpiration: true,
+    expirationField: 'date_fin_visite_medicale'
   },
   {
-    value: 'rib',
-    label: 'RIB',
-    icon: Briefcase,
-    requiresExpiration: false
+    value: 'titre_sejour',
+    label: 'Titre de séjour / Carte de résident',
+    icon: FileText,
+    requiresExpiration: true,
+    expirationField: 'titre_sejour_fin_validite'
   },
   {
     value: 'autre',
