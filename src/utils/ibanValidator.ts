@@ -61,11 +61,11 @@ export function cleanIban(iban: string): string {
 }
 
 /**
- * Valide un IBAN via l'API OpenIBAN et récupère le BIC
- * Utilise une base locale de codes BIC pour les IBAN français en cas d'échec API
+ * Valide un IBAN via l'API OpenIBAN
+ * Note: Le BIC n'est plus auto-rempli et doit être saisi manuellement
  *
  * @param iban IBAN à valider
- * @returns Résultat de validation avec BIC
+ * @returns Résultat de validation (BIC toujours vide)
  */
 export async function validateIban(iban: string): Promise<IbanValidationResult> {
   // Vérifier longueur minimale
@@ -83,22 +83,14 @@ export async function validateIban(iban: string): Promise<IbanValidationResult> 
   try {
     // Appel API OpenIBAN pour validation
     const response = await fetch(
-      `https://openiban.com/validate/${cleanedIban}?validateBankCode=true&getBIC=true`
+      `https://openiban.com/validate/${cleanedIban}?validateBankCode=true`
     );
     const data = await response.json();
 
     if (data.valid) {
-      let bic = data.bankData?.bic || '';
-
-      // Si pas de BIC retourné et IBAN français, utiliser la base locale
-      if (!bic && cleanedIban.startsWith('FR')) {
-        const bankCode = cleanedIban.substring(4, 9);
-        bic = getBicFromBankCode(bankCode);
-      }
-
       return {
         valid: true,
-        bic,
+        bic: '', // BIC n'est plus auto-rempli
         cleanIban: cleanedIban,
       };
     } else {
@@ -114,12 +106,9 @@ export async function validateIban(iban: string): Promise<IbanValidationResult> 
 
     // Fallback: validation locale pour IBAN français
     if (cleanedIban.startsWith('FR') && cleanedIban.length === 27) {
-      const bankCode = cleanedIban.substring(4, 9);
-      const bic = getBicFromBankCode(bankCode);
-
       return {
         valid: true, // On considère valide si format correct
-        bic,
+        bic: '', // BIC n'est plus auto-rempli
         cleanIban: cleanedIban,
         error: 'Validation partielle (hors ligne)',
       };
