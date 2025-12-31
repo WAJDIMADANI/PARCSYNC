@@ -86,6 +86,7 @@ interface Employee {
   avenant_2_date_debut: string | null;
   avenant_2_date_fin: string | null;
   created_at: string;
+  updated_at?: string;
   site?: Site;
   secteur?: Secteur;
   manager?: { prenom: string; nom: string };
@@ -270,9 +271,9 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
         .eq('role', 'salarie');
 
       if (activeTab === 'salaries') {
-        // Onglet Salariés : exclure statut='inactif'
+        // Onglet Salariés : exclure statut='inactif', trier par dernière modification
         employeesQuery = employeesQuery.or('statut.is.null,statut.neq.inactif');
-        employeesQuery = employeesQuery.order('created_at', { ascending: false });
+        employeesQuery = employeesQuery.order('updated_at', { ascending: false, nullsFirst: false });
       } else {
         // Onglet Sortants : uniquement statut='inactif', tri par date_sortie desc
         employeesQuery = employeesQuery.eq('statut', 'inactif');
