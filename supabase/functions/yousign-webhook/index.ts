@@ -42,7 +42,11 @@ async function computeHmacSha256Hex(secret: string, payload: string) {
     false,
     ["sign"]
   );
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(payload)
+  );
   return toHex(sig);
 }
 
@@ -153,7 +157,9 @@ Deno.serve(async (req: Request) => {
 
     // --- Signature verification (skip uniquement si SKIP_WEBHOOK_VERIFY=true) ---
     if (SKIP_VERIFY) {
-      console.warn("SKIP_WEBHOOK_VERIFY enabled (testing mode) — signature NOT verified");
+      console.warn(
+        "SKIP_WEBHOOK_VERIFY enabled (testing mode) — signature NOT verified"
+      );
     } else {
       const expected = req.headers.get("X-Yousign-Signature-256") ?? "";
       if (!expected) {
@@ -161,7 +167,10 @@ Deno.serve(async (req: Request) => {
         return json({ ok: false, error: "Missing signature header" }, 401);
       }
 
-      const computedDigest = await computeHmacSha256Hex(YOUSIGN_SECRET, bodyText);
+      const computedDigest = await computeHmacSha256Hex(
+        YOUSIGN_SECRET,
+        bodyText
+      );
       const computed = `sha256=${computedDigest}`;
 
       if (!timingSafeEqual(expected, computed)) {
@@ -207,13 +216,18 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, ignored: eventName }, 200);
     }
 
-    if (String(eventName) === "signer.done" && String(signatureRequestStatus) !== "done") {
+    if (
+      String(eventName) === "signer.done" &&
+      String(signatureRequestStatus) !== "done"
+    ) {
       // évite de marquer signé si ce n'est pas la fin
       return json({ ok: true, ignored: "signer.done_not_final" }, 200);
     }
 
     if (!signatureRequestId && !externalId) {
-      console.error("Missing identifiers (signature_request.id and external_id)");
+      console.error(
+        "Missing identifiers (signature_request.id and external_id)"
+      );
       return json({ ok: false, error: "Missing identifiers" }, 500);
     }
 
@@ -221,7 +235,9 @@ Deno.serve(async (req: Request) => {
 
     // --- Update contract (comme avant) ---
     const filter = signatureRequestId
-      ? `yousign_signature_request_id=eq.${encodeURIComponent(String(signatureRequestId))}`
+      ? `yousign_signature_request_id=eq.${encodeURIComponent(
+          String(signatureRequestId)
+        )}`
       : `id=eq.${encodeURIComponent(String(externalId))}`;
 
     // NOTE: on ajoute select=... pour être sûr d'avoir les champs utiles dans la réponse
@@ -238,7 +254,11 @@ Deno.serve(async (req: Request) => {
     );
 
     if (!contractPatch.ok) {
-      console.error("Contract update failed:", contractPatch.status, contractPatch.data ?? contractPatch.raw);
+      console.error(
+        "Contract update failed:",
+        contractPatch.status,
+        contractPatch.data ?? contractPatch.raw
+      );
       return json(
         {
           ok: false,
@@ -250,13 +270,20 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const updatedContracts = Array.isArray(contractPatch.data) ? contractPatch.data : [];
+    const updatedContracts = Array.isArray(contractPatch.data)
+      ? contractPatch.data
+      : [];
     if (updatedContracts.length === 0) {
       console.error("0 contract updated. Filter:", filter);
       return json({ ok: false, error: "No contract updated", filter }, 500);
     }
     if (updatedContracts.length > 1) {
-      console.warn("WARNING: multiple contracts updated for filter:", filter, "count:", updatedContracts.length);
+      console.warn(
+        "WARNING: multiple contracts updated for filter:",
+        filter,
+        "count:",
+        updatedContracts.length
+      );
     }
 
     const c = updatedContracts[0];
@@ -271,10 +298,16 @@ Deno.serve(async (req: Request) => {
       if (modeleId) {
         const modeleRes = await restGet<any[]>(
           SUPABASE_URL,
-          `modeles_contrats?id=eq.${encodeURIComponent(String(modeleId))}&select=type_contrat`,
+          `modeles_contrats?id=eq.${encodeURIComponent(
+            String(modeleId)
+          )}&select=type_contrat`,
           SERVICE_KEY
         );
-        if (modeleRes.ok && Array.isArray(modeleRes.data) && modeleRes.data.length > 0) {
+        if (
+          modeleRes.ok &&
+          Array.isArray(modeleRes.data) &&
+          modeleRes.data.length > 0
+        ) {
           computedType = modeleRes.data[0]?.type_contrat ?? null;
         }
       }
@@ -296,7 +329,11 @@ Deno.serve(async (req: Request) => {
         );
 
         if (!typePatch.ok) {
-          console.error("Contract type patch failed:", typePatch.status, typePatch.data ?? typePatch.raw);
+          console.error(
+            "Contract type patch failed:",
+            typePatch.status,
+            typePatch.data ?? typePatch.raw
+          );
           // on ne bloque pas tout, mais on log
         } else {
           console.log("Contract type filled:", computedType);
@@ -309,12 +346,18 @@ Deno.serve(async (req: Request) => {
       // lire le profil actuel
       const profilRes = await restGet<any[]>(
         SUPABASE_URL,
-        `profil?id=eq.${encodeURIComponent(String(profilId))}&select=id,matricule_tca,date_entree,statut`,
+        `profil?id=eq.${encodeURIComponent(
+          String(profilId)
+        )}&select=id,matricule_tca,date_entree,statut`,
         SERVICE_KEY
       );
 
       let currentProfil: any = null;
-      if (profilRes.ok && Array.isArray(profilRes.data) && profilRes.data.length > 0) {
+      if (
+        profilRes.ok &&
+        Array.isArray(profilRes.data) &&
+        profilRes.data.length > 0
+      ) {
         currentProfil = profilRes.data[0];
       }
 
@@ -327,27 +370,35 @@ Deno.serve(async (req: Request) => {
 
       // matricule_tca si NULL
       if (!currentProfil?.matricule_tca) {
-        // On génère un matricule 1590XXX (simple)
-        // On prend quelques matricules existants et on calcule le max sur ceux qui matchent 1590\d+
+        // Nouveau système : matricule numérique auto-incrémenté à partir de 1613
+        const BASE = 1613;
+
         const matsRes = await restGet<any[]>(
           SUPABASE_URL,
           `profil?select=matricule_tca&matricule_tca=not.is.null&limit=200`,
           SERVICE_KEY
         );
 
-        let maxN = 0;
+        let maxN = BASE - 1; // si aucun matricule trouvé >= 1613 => next = 1613
+
         if (matsRes.ok && Array.isArray(matsRes.data)) {
           for (const row of matsRes.data) {
-            const m = String(row?.matricule_tca ?? "");
-            const match = m.match(/^1590(\d+)$/);
-            if (match) {
-              const n = parseInt(match[1], 10);
-              if (!Number.isNaN(n)) maxN = Math.max(maxN, n);
+            const m = String(row?.matricule_tca ?? "").trim();
+
+            // On ne garde que les matricules 100% numériques (ex: 1613, 1614, 1700...)
+            if (!/^\d+$/.test(m)) continue;
+
+            const n = parseInt(m, 10);
+            if (Number.isNaN(n)) continue;
+
+            // On ignore tout ce qui est < 1613 (donc 1612 ne compte pas)
+            if (n >= BASE && n <= 99999) {
+              maxN = Math.max(maxN, n);
             }
           }
         }
-        const nextN = maxN + 1;
-        const newMatricule = `1590${String(nextN).padStart(3, "0")}`;
+
+        const newMatricule = String(maxN + 1); // 1613, puis 1614, puis 1615...
         profilPatchBody.matricule_tca = newMatricule;
       }
 
@@ -360,8 +411,19 @@ Deno.serve(async (req: Request) => {
       );
 
       if (!profilPatch.ok) {
-        console.error("Profil update failed:", profilPatch.status, profilPatch.data ?? profilPatch.raw);
-        return json({ ok: false, error: "Profil update failed", details: profilPatch.data ?? profilPatch.raw }, 500);
+        console.error(
+          "Profil update failed:",
+          profilPatch.status,
+          profilPatch.data ?? profilPatch.raw
+        );
+        return json(
+          {
+            ok: false,
+            error: "Profil update failed",
+            details: profilPatch.data ?? profilPatch.raw,
+          },
+          500
+        );
       }
     }
 
