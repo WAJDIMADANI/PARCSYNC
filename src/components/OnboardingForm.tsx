@@ -79,8 +79,6 @@ export function OnboardingForm() {
     code_postal: '',
     ville: '',
     date_permis_conduire: '',
-    permis_categorie: '',
-    permis_points: '',
     iban: '',
     bic: '',
     nir: '',
@@ -148,8 +146,6 @@ export function OnboardingForm() {
           code_postal: data.code_postal || '',
           ville: data.ville || '',
           date_permis_conduire: data.date_permis_conduire || '',
-          permis_categorie: data.permis_categorie || '',
-          permis_points: data.permis_points?.toString() || '',
           iban: data.iban || '',
           bic: data.bic || '',
           nir: data.nir || '',
@@ -295,8 +291,6 @@ export function OnboardingForm() {
             code_postal: formData.code_postal,
             ville: formData.ville,
             date_permis_conduire: formData.date_permis_conduire || null,
-            permis_categorie: formData.permis_categorie || null,
-            permis_points: formData.permis_points ? parseInt(formData.permis_points) : null,
             iban: formData.iban,
             bic: formData.bic || null,
             site_id: formData.site_id || null,
@@ -329,8 +323,6 @@ export function OnboardingForm() {
               code_postal: formData.code_postal,
               ville: formData.ville,
               date_permis_conduire: formData.date_permis_conduire || null,
-              permis_categorie: formData.permis_categorie || null,
-              permis_points: formData.permis_points ? parseInt(formData.permis_points) : null,
               iban: formData.iban,
               bic: formData.bic || null,
               site_id: formData.site_id || null,
@@ -415,8 +407,6 @@ export function OnboardingForm() {
         code_postal: '',
         ville: '',
         date_permis_conduire: '',
-        permis_categorie: '',
-        permis_points: '',
         iban: '',
         bic: '',
         nir: '',
@@ -600,10 +590,8 @@ export function OnboardingForm() {
             <h2 className="text-xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">
               Permis de conduire
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
               <FormInput label="Date d'obtention *" type="date" value={formData.date_permis_conduire} onChange={(v) => setFormData({ ...formData, date_permis_conduire: v })} required />
-              <FormInput label="Catégorie *" placeholder="Ex: B" value={formData.permis_categorie} onChange={(v) => setFormData({ ...formData, permis_categorie: v })} required />
-              <FormInput label="Points (déclaratif) *" type="number" placeholder="12" value={formData.permis_points} onChange={(v) => setFormData({ ...formData, permis_points: v })} required />
             </div>
           </div>
 
