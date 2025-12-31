@@ -344,15 +344,28 @@ export default function ContractValidationPanel({
                 )}
               </div>
               {hasDpae && dpaeUrl ? (
-                <a
-                  href={dpaeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors text-sm font-medium"
-                >
-                  <FileText className="w-4 h-4" />
-                  Voir le document
-                </a>
+                <div className="space-y-2">
+                  <a
+                    href={dpaeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors text-sm font-medium"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Voir le document
+                  </a>
+                  <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer text-sm font-medium ml-2">
+                    <Upload className="w-4 h-4" />
+                    {uploading ? 'Remplacement...' : 'Changer'}
+                    <input
+                      type="file"
+                      onChange={handleDpaeUpload}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                  </label>
+                </div>
               ) : (
                 <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border-2 border-red-400 text-red-700 rounded-lg hover:bg-red-50 transition-colors cursor-pointer text-sm font-medium">
                   <Upload className="w-4 h-4" />
