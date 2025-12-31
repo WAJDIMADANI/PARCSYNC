@@ -42,20 +42,15 @@ export function Apply() {
     date_permis_conduire: '',
     site_id: '',
     secteur_id: '',
-    poste: '',
     type_piece_identite: 'carte_identite',
     date_fin_validite_piece: '',
     consentement_rgpd: false,
     accepte_vivier: false,
   });
   const [files, setFiles] = useState<{
-    cv: File | null;
-    lettre_motivation: File | null;
     carte_identite_recto: File | null;
     carte_identite_verso: File | null;
   }>({
-    cv: null,
-    lettre_motivation: null,
     carte_identite_recto: null,
     carte_identite_verso: null,
   });
@@ -201,8 +196,6 @@ export function Apply() {
         throw new Error('Votre candidature a été archivée. Veuillez contacter le service RH.');
       }
 
-      const cvUrl = files.cv ? await uploadFile(files.cv, 'cv') : null;
-      const lettreUrl = files.lettre_motivation ? await uploadFile(files.lettre_motivation, 'lettres') : null;
       const rectoUrl = await uploadFile(files.carte_identite_recto, 'cartes-identite');
       const versoUrl = await uploadFile(files.carte_identite_verso, 'cartes-identite');
 
@@ -225,11 +218,8 @@ export function Apply() {
         date_permis_conduire: formData.date_permis_conduire || null,
         site_id: formData.site_id || null,
         secteur_id: formData.secteur_id || null,
-        poste: formData.poste || null,
         type_piece_identite: formData.type_piece_identite,
         date_fin_validite_piece: formData.date_fin_validite_piece || null,
-        cv_url: cvUrl,
-        lettre_motivation_url: lettreUrl,
         carte_identite_recto_url: rectoUrl,
         carte_identite_verso_url: versoUrl,
         accepte_vivier: formData.accepte_vivier,
@@ -261,34 +251,6 @@ export function Apply() {
 
       if (error) throw error;
 
-      // Créer les documents dans la table document
-      const documents = [];
-      if (cvUrl) {
-        documents.push({
-          owner_type: 'candidat',
-          owner_id: candidatId,
-          type_document: 'cv',
-          file_url: cvUrl,
-          file_name: 'cv.pdf'
-        });
-      }
-      if (lettreUrl) {
-        documents.push({
-          owner_type: 'candidat',
-          owner_id: candidatId,
-          type_document: 'lettre_motivation',
-          file_url: lettreUrl,
-          file_name: 'lettre_motivation.pdf'
-        });
-      }
-
-      if (documents.length > 0) {
-        const { error: docError } = await supabase
-          .from('document')
-          .insert(documents);
-        if (docError) console.error('Erreur création documents:', docError);
-      }
-
       setSuccess(true);
       setFormData({
         prenom: '',
@@ -304,13 +266,12 @@ export function Apply() {
         date_permis_conduire: '',
         site_id: '',
         secteur_id: '',
-        poste: '',
+        type_piece_identite: 'carte_identite',
+        date_fin_validite_piece: '',
         consentement_rgpd: false,
         accepte_vivier: false,
       });
       setFiles({
-        cv: null,
-        lettre_motivation: null,
         carte_identite_recto: null,
         carte_identite_verso: null,
       });
@@ -792,26 +753,6 @@ export function Apply() {
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium"
                 />
               </div>
-
-              <div>
-                <label htmlFor="poste" className="block text-sm font-semibold text-slate-700 mb-2">
-                  Poste candidaté *
-                </label>
-                <select
-                  id="poste"
-                  value={formData.poste}
-                  onChange={(e) => setFormData({ ...formData, poste: e.target.value })}
-                  required
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium"
-                >
-                  <option value="">Sélectionner un poste</option>
-                  {postes.map((poste) => (
-                    <option key={poste.id} value={poste.nom}>
-                      {poste.nom}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
           </div>
 
@@ -820,22 +761,6 @@ export function Apply() {
               Documents
             </h2>
             <div className="space-y-4">
-              <FileUploadField
-                label="CV (optionnel)"
-                file={files.cv}
-                onChange={(e) => handleFileChange(e, 'cv')}
-                onRemove={() => removeFile('cv')}
-                accept=".pdf,.doc,.docx"
-              />
-
-              <FileUploadField
-                label="Lettre de motivation (optionnel)"
-                file={files.lettre_motivation}
-                onChange={(e) => handleFileChange(e, 'lettre_motivation')}
-                onRemove={() => removeFile('lettre_motivation')}
-                accept=".pdf,.doc,.docx"
-              />
-
               <div>
                 <label htmlFor="type_piece_identite" className="block text-sm font-semibold text-slate-700 mb-2">
                   Type de pièce d'identité *
