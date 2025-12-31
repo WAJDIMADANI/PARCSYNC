@@ -81,7 +81,14 @@ export default function ImportantDocumentUpload({ profilId, onClose, onSuccess }
         .getPublicUrl(filePath);
 
       // Insert document record
-      const { error: insertError } = await supabase
+      console.log('[UPLOAD DOCUMENT] Insertion document:', {
+        owner_id: profilId,
+        owner_type: 'profil',
+        type_document: documentType,
+        file_name: documentName || selectedFile.name
+      });
+
+      const { error: insertError, status: insertStatus, statusText: insertStatusText } = await supabase
         .from('document')
         .insert({
           owner_id: profilId,
@@ -95,7 +102,19 @@ export default function ImportantDocumentUpload({ profilId, onClose, onSuccess }
           statut: 'valide'
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('[UPLOAD DOCUMENT] Erreur insertion:', {
+          status: insertStatus,
+          statusText: insertStatusText,
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint,
+          code: insertError.code
+        });
+        throw insertError;
+      }
+
+      console.log('[UPLOAD DOCUMENT] Document inséré avec succès');
 
       // Update profil table with expiration dates if applicable
       if (selectedDocType?.expirationField && expirationDate) {
@@ -107,11 +126,22 @@ export default function ImportantDocumentUpload({ profilId, onClose, onSuccess }
         if (updateError) throw updateError;
       }
 
+      console.log('[UPLOAD DOCUMENT] Upload terminé avec succès');
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error('Erreur upload document:', err);
-      setError(err.message || 'Erreur lors de l\'upload du document.');
+      console.error('[UPLOAD DOCUMENT] Erreur upload document:', {
+        message: err?.message || 'Erreur inconnue',
+        status: err?.status,
+        statusText: err?.statusText,
+        details: err?.details,
+        hint: err?.hint,
+        code: err?.code,
+        fullError: err
+      });
+      const errorMessage = err?.message || 'Erreur lors de l\'upload du document.';
+      const errorDetails = err?.details ? ` (${err.details})` : '';
+      setError(`${errorMessage}${errorDetails}`);
     } finally {
       setUploading(false);
     }

@@ -1566,27 +1566,51 @@ function EmployeeDetailModal({
 
   const fetchDocuments = async () => {
     try {
+      console.log('[FETCH DOCUMENTS] Début chargement pour profil:', currentEmployee.id);
+
       // Charger les documents du profil
-      const { data: profilDocs, error: profilError } = await supabase
+      const { data: profilDocs, error: profilError, status: profilStatus } = await supabase
         .from('document')
         .select('*')
         .eq('owner_id', currentEmployee.id)
         .eq('owner_type', 'profil');
 
-      if (profilError) throw profilError;
+      if (profilError) {
+        console.error('[FETCH DOCUMENTS] Erreur profil documents:', {
+          status: profilStatus,
+          message: profilError.message,
+          details: profilError.details,
+          hint: profilError.hint,
+          code: profilError.code
+        });
+        throw profilError;
+      }
 
+      console.log('[FETCH DOCUMENTS] Documents profil chargés:', profilDocs?.length || 0);
       let allDocuments = profilDocs || [];
 
       // Charger les documents du candidat lié (si candidat_id existe)
       if (currentEmployee.candidat_id) {
-        const { data: candidatDocs, error: candidatError } = await supabase
+        console.log('[FETCH DOCUMENTS] Chargement documents candidat:', currentEmployee.candidat_id);
+
+        const { data: candidatDocs, error: candidatError, status: candidatStatus } = await supabase
           .from('document')
           .select('*')
           .eq('owner_id', currentEmployee.candidat_id)
           .eq('owner_type', 'candidat');
 
-        if (candidatError) throw candidatError;
+        if (candidatError) {
+          console.error('[FETCH DOCUMENTS] Erreur candidat documents:', {
+            status: candidatStatus,
+            message: candidatError.message,
+            details: candidatError.details,
+            hint: candidatError.hint,
+            code: candidatError.code
+          });
+          throw candidatError;
+        }
 
+        console.log('[FETCH DOCUMENTS] Documents candidat chargés:', candidatDocs?.length || 0);
         // Fusionner les deux tableaux
         allDocuments = [...allDocuments, ...(candidatDocs || [])];
       }
@@ -1594,9 +1618,19 @@ function EmployeeDetailModal({
       // Trier par date (plus récent d'abord)
       allDocuments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+      console.log('[FETCH DOCUMENTS] Total documents:', allDocuments.length);
       setDocuments(allDocuments);
-    } catch (error) {
-      console.error('Erreur chargement documents:', error);
+    } catch (error: any) {
+      console.error('[FETCH DOCUMENTS] Erreur chargement documents:', {
+        message: error?.message || 'Erreur inconnue',
+        status: error?.status,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code,
+        fullError: error
+      });
+      // On ne bloque pas l'interface même en cas d'erreur
+      setDocuments([]);
     } finally {
       setLoadingDocuments(false);
     }
