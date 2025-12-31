@@ -9,6 +9,7 @@ import { VivierDisponibiliteModal } from './VivierDisponibiliteModal';
 import { GENRE_OPTIONS } from '../constants/genreOptions';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 import { sanitizeUuidFields } from '../utils/uuidHelper';
+import { Pagination } from './Pagination';
 
 interface Site {
   id: string;
@@ -195,6 +196,8 @@ export function CandidateList() {
   const [editingCodeCandidate, setEditingCodeCandidate] = useState<Candidate | null>(null);
   const [showVivierModal, setShowVivierModal] = useState(false);
   const [vivierCandidate, setVivierCandidate] = useState<Candidate | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchData();
@@ -510,6 +513,13 @@ export function CandidateList() {
     return matchesSearch && matchesDepartment;
   });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterDepartment]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedCandidates = filteredCandidates.slice(startIndex, startIndex + itemsPerPage);
+
   const uniqueDepartments = Array.from(
     new Set(candidates.map(c => c.department_code).filter(Boolean))
   ).sort();
@@ -623,7 +633,7 @@ export function CandidateList() {
                 </tr>
               </thead>
             <tbody className="bg-white divide-y divide-gray-50">
-              {filteredCandidates.map((candidate) => {
+              {paginatedCandidates.map((candidate) => {
                 const site = sites.find(s => s.id === candidate.site_id);
                 const statutCandidature = candidate.statut_candidature || 'candidature_recue';
                 const codeCouleur = CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh);
@@ -735,6 +745,15 @@ export function CandidateList() {
             </tbody>
           </table>
           </div>
+
+          {filteredCandidates.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredCandidates.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          )}
         </div>
       )}
 

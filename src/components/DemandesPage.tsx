@@ -4,6 +4,7 @@ import { PermissionGuard } from './PermissionGuard';
 import { Phone, Search, X, Save, AlertCircle, Clock, CheckCircle, Edit2, Filter, User, History, ArrowRight, Eye, CheckSquare } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { RequestValidationModal } from './RequestValidationModal';
+import { Pagination } from './Pagination';
 
 interface Profil {
   id: string;
@@ -59,6 +60,8 @@ export function DemandesPage() {
   const [filterStatut, setFilterStatut] = useState<string>('');
   const [filterPriorite, setFilterPriorite] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [formData, setFormData] = useState({
     profil_id: null as string | null,
@@ -297,6 +300,13 @@ export function DemandesPage() {
     return true;
   });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatut, filterPriorite]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedDemandes = filteredDemandes.slice(startIndex, startIndex + itemsPerPage);
+
   const demandesEnAttente = demandes.filter((d) => d.statut === 'en_attente').length;
 
   // NOUVELLE FONCTION - Chargement historique
@@ -478,7 +488,7 @@ export function DemandesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {filteredDemandes.map((demande) => (
+                {paginatedDemandes.map((demande) => (
                   <tr key={demande.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4">
                       <p className="text-sm text-slate-900">
@@ -596,6 +606,15 @@ export function DemandesPage() {
               </tbody>
             </table>
           </div>
+
+          {filteredDemandes.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredDemandes.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          )}
         </div>
 
         {showCreateModal && (

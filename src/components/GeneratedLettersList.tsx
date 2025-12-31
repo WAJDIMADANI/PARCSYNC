@@ -12,6 +12,7 @@ import { StatusChangeModal } from './StatusChangeModal';
 import { DownloadWithDateModal } from './DownloadWithDateModal';
 import { SuccessNotification } from './SuccessNotification';
 import { getAvailableDownloads, getFileInfo, canGeneratePdf, type DownloadableFile } from '../utils/fileTypeDetector';
+import { Pagination } from './Pagination';
 
 interface GeneratedLetter {
   id: string;
@@ -65,6 +66,8 @@ export function GeneratedLettersList() {
   const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [convertingPdfId, setConvertingPdfId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchLetters();
@@ -347,6 +350,13 @@ export function GeneratedLettersList() {
     );
   });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedLetters = filteredLetters.slice(startIndex, startIndex + itemsPerPage);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -457,7 +467,7 @@ export function GeneratedLettersList() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredLetters.map((letter) => (
+              {paginatedLetters.map((letter) => (
                 <tr key={letter.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     <div>
@@ -598,6 +608,13 @@ export function GeneratedLettersList() {
               ))}
             </tbody>
           </table>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredLetters.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
 

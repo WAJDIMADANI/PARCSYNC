@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Send, Reply, FileText, Download, MessageSquare } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { Pagination } from './Pagination';
 
 interface Tache {
   id: string;
@@ -77,6 +78,8 @@ export function InboxPage() {
   const [selectedDemandeExterne, setSelectedDemandeExterne] = useState<DemandeExterne | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'en_attente' | 'en_cours' | 'completee'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchTaches();
@@ -474,6 +477,13 @@ export function InboxPage() {
         item.itemType === 'tache' && item.statut === filter
       );
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -534,7 +544,7 @@ export function InboxPage() {
           {filteredItems.length === 0 ? (
             <div className="p-12 text-center text-gray-500">Aucun message</div>
           ) : (
-            filteredItems.map(item => {
+            paginatedItems.map(item => {
               if (item.itemType === 'tache') {
                 const tache = item;
                 const isUnread =
@@ -639,6 +649,15 @@ export function InboxPage() {
             })
           )}
         </div>
+
+        {filteredItems.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredItems.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
 
       {selectedTask && (

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Bell, Calendar, FileText, CreditCard, AlertCircle, Mail, CheckCircle, X, Loader2, User } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { NotificationModal } from './NotificationModal';
+import { Pagination } from './Pagination';
 
 interface Notification {
   id: string;
@@ -33,6 +34,8 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatut, setFilterStatut] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     if (initialTab) {
@@ -149,6 +152,13 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         n.profil?.email?.toLowerCase().includes(searchLower)
       );
     });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, filterStatut, searchTerm]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedNotifications = filteredNotifications.slice(startIndex, startIndex + itemsPerPage);
 
   const getTabCount = (type: string) => {
     const filtered = notifications.filter(n => {
@@ -348,7 +358,7 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredNotifications.map((notification) => {
+          {paginatedNotifications.map((notification) => {
             const urgency = getUrgencyLevel(notification.date_echeance);
             const daysRemaining = Math.ceil(
               (new Date(notification.date_echeance).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
@@ -425,6 +435,15 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
             );
           })}
         </div>
+      )}
+
+      {filteredNotifications.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredNotifications.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       {selectedNotification && (

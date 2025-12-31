@@ -17,6 +17,7 @@ import {
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResolveIncidentModal } from './ResolveIncidentModal';
 import { SendReminderModal } from './SendReminderModal';
+import { Pagination } from './Pagination';
 
 interface Incident {
   id: string;
@@ -56,6 +57,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [changingStatus, setChangingStatus] = useState<string | null>(null);
   const [reminderIncident, setReminderIncident] = useState<Incident | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     let isInitialLoad = true;
@@ -388,6 +391,13 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     return true;
   });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, filterStatus, searchTerm]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedIncidents = filteredIncidents.slice(startIndex, startIndex + itemsPerPage);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -550,7 +560,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredIncidents.map((incident) => {
+          {paginatedIncidents.map((incident) => {
             const daysSince = getDaysSinceExpiration(incident.date_expiration_originale);
             const urgencyBadge = getUrgencyBadge(daysSince);
 
@@ -762,6 +772,15 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
             );
           })}
         </div>
+      )}
+
+      {filteredIncidents.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredIncidents.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       {selectedIncident && (

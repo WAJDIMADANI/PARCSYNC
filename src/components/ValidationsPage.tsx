@@ -5,6 +5,7 @@ import { usePermissions } from '../contexts/PermissionsContext';
 import { CheckSquare, Search, X, Clock, CheckCircle, XCircle, AlertCircle, Send, User, MessageSquare, ArrowRight, Eye, Users } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ValidateRequestModal } from './ValidateRequestModal';
+import { Pagination } from './Pagination';
 
 interface Validation {
   id: string;
@@ -48,6 +49,8 @@ export function ValidationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedValidation, setSelectedValidation] = useState<Validation | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const isSuperAdmin = hasPermission('admin/utilisateurs');
 
@@ -186,6 +189,13 @@ export function ValidationsPage() {
 
   const filteredValidations = getFilteredValidations();
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchTerm]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedValidations = (filteredValidations || []).slice(startIndex, startIndex + itemsPerPage);
+
   const stats = {
     assignees: validations.filter(v =>
       v.statut === 'en_attente' &&
@@ -311,7 +321,7 @@ export function ValidationsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredValidations.map((validation) => (
+                  {paginatedValidations.map((validation) => (
                     <tr key={validation.id} className="hover:bg-slate-50 transition-colors">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
@@ -394,6 +404,15 @@ export function ValidationsPage() {
                   ))}
                 </tbody>
               </table>
+
+              {filteredValidations && filteredValidations.length > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={filteredValidations.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              )}
             </div>
           )}
         </div>
