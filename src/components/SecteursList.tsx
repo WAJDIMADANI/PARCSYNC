@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Plus, Search, Edit2, Trash2, X, Tag } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { Pagination } from './Pagination';
 
 interface Secteur {
   id: string;
@@ -17,6 +18,8 @@ export function SecteursList() {
   const [editingSecteur, setEditingSecteur] = useState<Secteur | null>(null);
   const [formData, setFormData] = useState({ nom: '' });
   const [saving, setSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     loadSecteurs();
@@ -116,6 +119,14 @@ export function SecteursList() {
     secteur.nom.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedSecteurs = filteredSecteurs.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -178,7 +189,7 @@ export function SecteursList() {
                   </td>
                 </tr>
               ) : (
-                filteredSecteurs.map((secteur) => (
+                paginatedSecteurs.map((secteur) => (
                   <tr key={secteur.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -213,6 +224,14 @@ export function SecteursList() {
             </tbody>
           </table>
         </div>
+        {filteredSecteurs.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredSecteurs.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
 
       {isModalOpen && (
