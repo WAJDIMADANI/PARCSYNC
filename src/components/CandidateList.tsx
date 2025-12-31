@@ -233,16 +233,59 @@ export function CandidateList() {
     if (!deletingCandidateId) return;
 
     try {
+      // 1. Récupérer tous les documents du candidat
+      const { data: documents, error: docError } = await supabase
+        .from('document')
+        .select('storage_path')
+        .eq('profil_id', deletingCandidateId);
+
+      if (docError) {
+        console.error('Erreur récupération documents:', docError);
+      }
+
+      // 2. Supprimer les fichiers du storage
+      if (documents && documents.length > 0) {
+        for (const doc of documents) {
+          if (doc.storage_path) {
+            // Extraire le chemin du fichier depuis storage_path
+            // Format: candidatures/xxx/yyy.pdf -> xxx/yyy.pdf
+            const filePath = doc.storage_path.replace(/^candidatures\//, '');
+
+            const { error: storageError } = await supabase
+              .storage
+              .from('candidatures')
+              .remove([filePath]);
+
+            if (storageError) {
+              console.error('Erreur suppression fichier:', storageError);
+            }
+          }
+        }
+      }
+
+      // 3. Supprimer les entrées de la table document
+      const { error: deleteDocError } = await supabase
+        .from('document')
+        .delete()
+        .eq('profil_id', deletingCandidateId);
+
+      if (deleteDocError) {
+        console.error('Erreur suppression documents:', deleteDocError);
+      }
+
+      // 4. Supprimer le candidat
       const { error } = await supabase
         .from('candidat')
         .delete()
         .eq('id', deletingCandidateId);
+
       if (error) throw error;
+
       setDeletingCandidateId(null);
       fetchData();
     } catch (error) {
       console.error('Erreur suppression:', error);
-      alert('Erreur lors de la suppression');
+      alert('Erreur lors de la suppression du candidat');
     }
   };
 
@@ -811,28 +854,31 @@ export function CandidateList() {
       )}
 
       {deletingCandidateId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-slideDown">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                <Trash2 className="h-8 w-8 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Supprimer définitivement ce candidat ?</h3>
-              <p className="text-sm text-gray-600 mb-6">
-                Cette action est irréversible. Le candidat sera supprimé définitivement de la base de données. Vous pourrez ensuite créer un nouveau candidat avec les mêmes coordonnées.
-              </p>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Supprimer définitivement ce candidat ?</h3>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-red-800 font-medium mb-2">
+                  Cette action est irréversible !
+                </p>
+                <p className="text-sm text-red-700">
+                  Le candidat et tous ses documents seront supprimés définitivement de la base de données et du stockage.
+                </p>
+              </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setDeletingCandidateId(null)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  className="flex-1 px-4 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+                  className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-semibold shadow-lg"
                 >
                   Supprimer définitivement
                 </button>
