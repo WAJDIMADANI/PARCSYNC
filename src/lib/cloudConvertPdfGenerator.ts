@@ -1,22 +1,28 @@
 const CLOUDCONVERT_API_KEY = import.meta.env.VITE_CLOUDCONVERT_API_KEY;
 const CLOUDCONVERT_API_URL = 'https://api.cloudconvert.com/v2';
 
+interface CloudConvertTask {
+  id: string;
+  name: string;
+  operation: string;
+  status: string;
+  result?: {
+    files: Array<{
+      filename: string;
+      url: string;
+    }>;
+    form?: {
+      url: string;
+      parameters: Record<string, string>;
+    };
+  };
+}
+
 interface CloudConvertJob {
   data: {
     id: string;
     status: string;
-    tasks: Array<{
-      id: string;
-      name: string;
-      operation: string;
-      status: string;
-      result?: {
-        files: Array<{
-          filename: string;
-          url: string;
-        }>;
-      };
-    }>;
+    tasks: CloudConvertTask[];
   };
 }
 
@@ -44,8 +50,10 @@ export async function generatePDFFromHTML(html: string): Promise<Blob> {
       throw new Error('Failed to get task IDs from CloudConvert');
     }
 
-    console.log('📤 Uploading HTML...');
-    await uploadHTMLFile(uploadTask.id, html);
+    console.log('📤 Getting upload URL...');
+    const uploadUrl = await getUploadUrl(uploadTask.id);
+    console.log('📤 Uploading HTML to:', uploadUrl);
+    await uploadHTMLFile(uploadUrl, html);
 
     console.log('⏳ Waiting for conversion...');
     const result = await waitForJobCompletion(job.data.id);
@@ -112,21 +120,37 @@ async function createConversionJob(): Promise<CloudConvertJob> {
   return await response.json();
 }
 
-async function uploadHTMLFile(taskId: string, html: string): Promise<void> {
+async function getUploadUrl(taskId: string): Promise<string> {
+  const response = await fetch(`${CLOUDCONVERT_API_URL}/tasks/${taskId}`, {
+    headers: {
+      'Authorization': `Bearer ${CLOUDCONVERT_API_KEY}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get upload URL: ${error}`);
+  }
+
+  const task = await response.json();
+
+  if (!task.data?.result?.form?.url) {
+    console.error('Invalid task response:', task);
+    throw new Error('No upload URL in task response');
+  }
+
+  return task.data.result.form.url;
+}
+
+async function uploadHTMLFile(uploadUrl: string, html: string): Promise<void> {
   const blob = new Blob([html], { type: 'text/html' });
   const formData = new FormData();
   formData.append('file', blob, 'contract.html');
 
-  const response = await fetch(
-    `${CLOUDCONVERT_API_URL}/import/upload/${taskId}`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${CLOUDCONVERT_API_KEY}`,
-      },
-      body: formData,
-    }
-  );
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    body: formData,
+  });
 
   if (!response.ok) {
     const error = await response.text();
