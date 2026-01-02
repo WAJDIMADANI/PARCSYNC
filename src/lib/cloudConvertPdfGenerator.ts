@@ -1,202 +1,134 @@
 const CLOUDCONVERT_API_KEY = import.meta.env.VITE_CLOUDCONVERT_API_KEY;
-const CLOUDCONVERT_API_URL = 'https://api.cloudconvert.com/v2';
+const CLOUDCONVERT_SYNC_API_URL = 'https://sync.api.cloudconvert.com/v2';
 
-interface CloudConvertTask {
+type CloudConvertTask = {
   id: string;
-  name: string;
+  name?: string;
   operation: string;
   status: string;
-  result?: {
-    files: Array<{
-      filename: string;
-      url: string;
-    }>;
-    form?: {
-      url: string;
-      parameters: Record<string, string>;
-    };
+  message?: string | null;
+  code?: string | null;
+  result?: any;
+};
+
+type CloudConvertJobResponse = {
+  data?: {
+    id: string;
+    status: "waiting" | "processing" | "finished" | "error";
+    tasks?: CloudConvertTask[] | Record<string, CloudConvertTask>;
   };
+};
+
+function normalizeTasks(tasks: CloudConvertJobResponse["data"]["tasks"]): CloudConvertTask[] {
+  if (!tasks) return [];
+  if (Array.isArray(tasks)) return tasks;
+  return Object.values(tasks);
 }
 
-interface CloudConvertJob {
-  data: {
-    id: string;
-    status: string;
-    tasks: CloudConvertTask[];
+function extractExportUrl(job: CloudConvertJobResponse): string {
+  const tasks = normalizeTasks(job.data?.tasks);
+  const exportTask = tasks.find(t => t.operation === "export/url" && t.status === "finished");
+
+  const url = exportTask?.result?.files?.[0]?.url;
+  if (!url) {
+    const debug = tasks.map(t => ({
+      op: t.operation,
+      status: t.status,
+      message: t.message,
+      code: t.code,
+      hasFiles: !!t.result?.files,
+    }));
+    throw new Error(`CloudConvert: export/url introuvable. Tasks=${JSON.stringify(debug)}`);
+  }
+  return url;
+}
+
+export async function htmlToPdfUrlCloudConvert(html: string): Promise<string> {
+  if (!CLOUDCONVERT_API_KEY) {
+    throw new Error("VITE_CLOUDCONVERT_API_KEY manquante");
+  }
+
+  console.log('🎯 Creating CloudConvert sync job...');
+
+  const payload = {
+    tasks: {
+      "import-html": {
+        operation: "import/raw",
+        file: html,
+        filename: "contract.html",
+      },
+      "convert-pdf": {
+        operation: "convert",
+        input: "import-html",
+        input_format: "html",
+        output_format: "pdf",
+        engine: "chrome",
+        engine_version: "132",
+        page_width: 8.27,
+        page_height: 11.69,
+        margin_top: 0,
+        margin_bottom: 0,
+        margin_left: 0,
+        margin_right: 0,
+        print_background: true,
+        display_header_footer: false,
+      },
+      "export-pdf": {
+        operation: "export/url",
+        input: "convert-pdf",
+        inline: false,
+      },
+    },
   };
+
+  const res = await fetch(`${CLOUDCONVERT_SYNC_API_URL}/jobs`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${CLOUDCONVERT_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error('❌ CloudConvert job failed:', text);
+    throw new Error(`CloudConvert job failed (${res.status}): ${text}`);
+  }
+
+  const job = (await res.json()) as CloudConvertJobResponse;
+  console.log('✅ Job completed:', job.data?.status);
+
+  if (!job.data) {
+    throw new Error("CloudConvert: réponse inattendue (pas de data)");
+  }
+
+  if (job.data.status === "error") {
+    const tasks = normalizeTasks(job.data.tasks);
+    const errTask = tasks.find(t => t.status === "error");
+    console.error('❌ Job error:', errTask);
+    throw new Error(`CloudConvert: job error. ${errTask?.message ?? "Unknown error"}`);
+  }
+
+  return extractExportUrl(job);
 }
 
 export async function generatePDFFromHTML(html: string): Promise<Blob> {
-  if (!CLOUDCONVERT_API_KEY) {
-    throw new Error('CloudConvert API key not configured');
-  }
-
   try {
-    console.log('🎯 Creating CloudConvert job...');
-    const job = await createConversionJob();
-    console.log('✅ Job created:', job);
+    console.log('🎯 Generating PDF with CloudConvert...');
+    const url = await htmlToPdfUrlCloudConvert(html);
 
-    if (!job.data || !job.data.tasks) {
-      console.error('❌ Invalid job structure:', job);
-      throw new Error('Invalid CloudConvert job response');
+    console.log('⬇️ Downloading PDF from:', url);
+    const r = await fetch(url);
+    if (!r.ok) {
+      throw new Error(`Download PDF failed (${r.status})`);
     }
 
-    const tasksArray = Array.isArray(job.data.tasks) ? job.data.tasks : Object.values(job.data.tasks);
-    const uploadTask = tasksArray.find((t: any) => t.operation === 'import/upload');
-    const exportTask = tasksArray.find((t: any) => t.operation === 'export/url');
-
-    if (!uploadTask?.id || !exportTask?.id) {
-      console.error('❌ Missing task IDs:', { uploadTask, exportTask });
-      throw new Error('Failed to get task IDs from CloudConvert');
-    }
-
-    console.log('📤 Getting upload URL...');
-    const uploadUrl = await getUploadUrl(uploadTask.id);
-    console.log('📤 Uploading HTML to:', uploadUrl);
-    await uploadHTMLFile(uploadUrl, html);
-
-    console.log('⏳ Waiting for conversion...');
-    const result = await waitForJobCompletion(job.data.id);
-
-    const resultTasksArray = Array.isArray(result.data.tasks) ? result.data.tasks : Object.values(result.data.tasks);
-    const finalExportTask = resultTasksArray.find((t: any) => t.id === exportTask.id);
-
-    if (!finalExportTask?.result?.files?.[0]?.url) {
-      console.error('❌ No PDF URL in result:', finalExportTask);
-      throw new Error('No PDF file generated');
-    }
-
-    console.log('⬇️ Downloading PDF...');
-    const pdfBlob = await downloadPDF(finalExportTask.result.files[0].url);
+    const blob = await r.blob();
     console.log('✅ PDF generated successfully');
-    return pdfBlob;
+    return blob;
   } catch (error) {
     console.error('CloudConvert error:', error);
     throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
-
-async function createConversionJob(): Promise<CloudConvertJob> {
-  const response = await fetch(`${CLOUDCONVERT_API_URL}/jobs`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${CLOUDCONVERT_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      tasks: {
-        'upload-html': {
-          operation: 'import/upload',
-        },
-        'convert-to-pdf': {
-          operation: 'convert',
-          input: 'upload-html',
-          output_format: 'pdf',
-          engine: 'chrome',
-          engine_version: '132',
-          filename: 'contract.pdf',
-          page_width: 8.27,
-          page_height: 11.69,
-          margin_top: 0,
-          margin_bottom: 0,
-          margin_left: 0,
-          margin_right: 0,
-          print_background: true,
-          display_header_footer: false,
-        },
-        'export-pdf': {
-          operation: 'export/url',
-          input: 'convert-to-pdf',
-        },
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to create job: ${error}`);
-  }
-
-  return await response.json();
-}
-
-async function getUploadUrl(taskId: string): Promise<string> {
-  const response = await fetch(`${CLOUDCONVERT_API_URL}/tasks/${taskId}`, {
-    headers: {
-      'Authorization': `Bearer ${CLOUDCONVERT_API_KEY}`,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to get upload URL: ${error}`);
-  }
-
-  const task = await response.json();
-
-  if (!task.data?.result?.form?.url) {
-    console.error('Invalid task response:', task);
-    throw new Error('No upload URL in task response');
-  }
-
-  return task.data.result.form.url;
-}
-
-async function uploadHTMLFile(uploadUrl: string, html: string): Promise<void> {
-  const blob = new Blob([html], { type: 'text/html' });
-  const formData = new FormData();
-  formData.append('file', blob, 'contract.html');
-
-  const response = await fetch(uploadUrl, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to upload HTML: ${error}`);
-  }
-}
-
-async function waitForJobCompletion(jobId: string): Promise<CloudConvertJob> {
-  let attempts = 0;
-  const maxAttempts = 60;
-
-  while (attempts < maxAttempts) {
-    const response = await fetch(`${CLOUDCONVERT_API_URL}/jobs/${jobId}`, {
-      headers: {
-        'Authorization': `Bearer ${CLOUDCONVERT_API_KEY}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to check job status');
-    }
-
-    const job: CloudConvertJob = await response.json();
-
-    if (job.data.status === 'finished') {
-      return job;
-    }
-
-    if (job.data.status === 'error') {
-      console.error('CloudConvert job error:', job);
-      throw new Error('Job failed');
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    attempts++;
-  }
-
-  throw new Error('Job timeout after 120 seconds');
-}
-
-async function downloadPDF(url: string): Promise<Blob> {
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error('Failed to download PDF');
-  }
-
-  return await response.blob();
 }
