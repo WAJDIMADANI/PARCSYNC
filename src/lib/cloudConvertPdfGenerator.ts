@@ -2,20 +2,22 @@ const CLOUDCONVERT_API_KEY = import.meta.env.VITE_CLOUDCONVERT_API_KEY;
 const CLOUDCONVERT_API_URL = 'https://api.cloudconvert.com/v2';
 
 interface CloudConvertJob {
-  id: string;
-  status: string;
-  tasks: Array<{
+  data: {
     id: string;
-    name: string;
-    operation: string;
     status: string;
-    result?: {
-      files: Array<{
-        filename: string;
-        url: string;
-      }>;
-    };
-  }>;
+    tasks: Array<{
+      id: string;
+      name: string;
+      operation: string;
+      status: string;
+      result?: {
+        files: Array<{
+          filename: string;
+          url: string;
+        }>;
+      };
+    }>;
+  };
 }
 
 export async function generatePDFFromHTML(html: string): Promise<Blob> {
@@ -24,24 +26,41 @@ export async function generatePDFFromHTML(html: string): Promise<Blob> {
   }
 
   try {
+    console.log('🎯 Creating CloudConvert job...');
     const job = await createConversionJob();
-    const uploadTaskId = job.tasks.find(t => t.operation === 'import/upload')?.id;
-    const exportTaskId = job.tasks.find(t => t.operation === 'export/url')?.id;
+    console.log('✅ Job created:', job);
 
-    if (!uploadTaskId || !exportTaskId) {
+    if (!job.data || !job.data.tasks) {
+      console.error('❌ Invalid job structure:', job);
+      throw new Error('Invalid CloudConvert job response');
+    }
+
+    const tasksArray = Array.isArray(job.data.tasks) ? job.data.tasks : Object.values(job.data.tasks);
+    const uploadTask = tasksArray.find((t: any) => t.operation === 'import/upload');
+    const exportTask = tasksArray.find((t: any) => t.operation === 'export/url');
+
+    if (!uploadTask?.id || !exportTask?.id) {
+      console.error('❌ Missing task IDs:', { uploadTask, exportTask });
       throw new Error('Failed to get task IDs from CloudConvert');
     }
 
-    await uploadHTMLFile(uploadTaskId, html);
+    console.log('📤 Uploading HTML...');
+    await uploadHTMLFile(uploadTask.id, html);
 
-    const result = await waitForJobCompletion(job.id);
-    const exportTask = result.tasks.find(t => t.id === exportTaskId);
+    console.log('⏳ Waiting for conversion...');
+    const result = await waitForJobCompletion(job.data.id);
 
-    if (!exportTask?.result?.files?.[0]?.url) {
+    const resultTasksArray = Array.isArray(result.data.tasks) ? result.data.tasks : Object.values(result.data.tasks);
+    const finalExportTask = resultTasksArray.find((t: any) => t.id === exportTask.id);
+
+    if (!finalExportTask?.result?.files?.[0]?.url) {
+      console.error('❌ No PDF URL in result:', finalExportTask);
       throw new Error('No PDF file generated');
     }
 
-    const pdfBlob = await downloadPDF(exportTask.result.files[0].url);
+    console.log('⬇️ Downloading PDF...');
+    const pdfBlob = await downloadPDF(finalExportTask.result.files[0].url);
+    console.log('✅ PDF generated successfully');
     return pdfBlob;
   } catch (error) {
     console.error('CloudConvert error:', error);
@@ -117,7 +136,7 @@ async function uploadHTMLFile(taskId: string, html: string): Promise<void> {
 
 async function waitForJobCompletion(jobId: string): Promise<CloudConvertJob> {
   let attempts = 0;
-  const maxAttempts = 30;
+  const maxAttempts = 60;
 
   while (attempts < maxAttempts) {
     const response = await fetch(`${CLOUDCONVERT_API_URL}/jobs/${jobId}`, {
@@ -132,19 +151,20 @@ async function waitForJobCompletion(jobId: string): Promise<CloudConvertJob> {
 
     const job: CloudConvertJob = await response.json();
 
-    if (job.status === 'finished') {
+    if (job.data.status === 'finished') {
       return job;
     }
 
-    if (job.status === 'error') {
+    if (job.data.status === 'error') {
+      console.error('CloudConvert job error:', job);
       throw new Error('Job failed');
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
     attempts++;
   }
 
-  throw new Error('Job timeout');
+  throw new Error('Job timeout after 120 seconds');
 }
 
 async function downloadPDF(url: string): Promise<Blob> {
