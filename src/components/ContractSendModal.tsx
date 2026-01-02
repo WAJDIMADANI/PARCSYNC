@@ -589,6 +589,9 @@ export default function ContractSendModal({
       console.log('✅ Profil mise à jour');
       console.log('🎉 ===== SUCCÈS =====');
 
+      if (pdfUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(pdfUrl);
+      }
       setShowPreview(false);
       setShowSuccess(true);
 
@@ -600,6 +603,9 @@ export default function ContractSendModal({
       console.error('❌ ERREUR FINALE:', error);
       const errorTranslated = translateError(error);
       showError(errorTranslated.title, errorTranslated.message);
+      if (pdfUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(pdfUrl);
+      }
       setShowPreview(false);
     } finally {
       setSending(false);
@@ -875,13 +881,23 @@ export default function ContractSendModal({
         setPdfUrl('');
         setShowPreview(true);
 
-        // Générer l'URL CloudConvert pour la preview (plus rapide)
+        // Générer l'URL CloudConvert pour la preview
+        console.log('Contrat preview id:', fullContract.id, fullContract.modele?.nom, fullContract.profil?.nom);
         const html = generateContractHTML(fullContract);
+
+        // 1) CloudConvert renvoie une URL signée (souvent bloquée en iframe)
         const cloudConvertUrl = await htmlToPdfUrlCloudConvert(html);
 
-        console.log('✅ Aperçu PDF généré:', cloudConvertUrl);
+        // 2) On télécharge le PDF et on crée une URL blob (iframe OK)
+        const r = await fetch(cloudConvertUrl);
+        if (!r.ok) throw new Error(`Download PDF failed (${r.status})`);
 
-        setPdfUrl(cloudConvertUrl);
+        const blob = await r.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        console.log('✅ Aperçu PDF blobUrl:', blobUrl);
+        setPdfUrl(blobUrl);
+
         setSending(false);
       } catch (pdfError: any) {
         console.error('❌ Erreur génération PDF:', pdfError);
@@ -1413,6 +1429,9 @@ export default function ContractSendModal({
           pdfUrl={pdfUrl}
           employeeName={employeeName}
           onClose={() => {
+            if (pdfUrl?.startsWith('blob:')) {
+              URL.revokeObjectURL(pdfUrl);
+            }
             setShowPreview(false);
             setPdfUrl('');
             if (createdContractId) {
