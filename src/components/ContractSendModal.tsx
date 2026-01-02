@@ -7,6 +7,8 @@ import { ErrorModal } from './ErrorModal';
 import { translateError } from '../utils/errorTranslator';
 import { calculateTrialEndDate, formatDateFR } from '../lib/trialPeriodCalculator';
 import ContractPreviewBeforeSendModal from './ContractPreviewBeforeSendModal';
+import { generatePDFFromHTML } from '../lib/cloudConvertPdfGenerator';
+import { generateContractHTML } from '../lib/contractHTMLGenerator';
 
 interface ContractTemplate {
   id: string;
@@ -852,41 +854,66 @@ export default function ContractSendModal({
       // ✅ ÉTAPE 2: GÉNÉRATION DU PDF
       console.log('🎯 ===== ÉTAPE 2: GÉNÉRATION DU PDF =====');
 
-      const pdfResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-contract-pdf`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ contractId: contrat.id })
+      try {
+        // Récupérer les données complètes du contrat
+        const { data: fullContract, error: fetchError } = await supabase
+          .from('contrat')
+          .select(`
+            *,
+            modele:modele_id(nom, type_contrat),
+            profil:profil_id(prenom, nom, email)
+          `)
+          .eq('id', contrat.id)
+          .maybeSingle();
+
+        if (fetchError || !fullContract) {
+          console.error('❌ Erreur récupération contrat:', fetchError);
+          throw new Error('Impossible de récupérer les données du contrat');
         }
-      );
 
-      if (!pdfResponse.ok) {
-        const errorText = await pdfResponse.text();
-        console.error('❌ Erreur génération PDF:', errorText);
+        // Générer le HTML puis le PDF via CloudConvert côté front
+        const html = generateContractHTML(fullContract);
+        const pdfBlob = await generatePDFFromHTML(html);
+
+        // Uploader le PDF dans Supabase Storage
+        const profilId = contrat.profil_id;
+        const fileName = `documents/contrats/${profilId}/${contrat.id}-draft.pdf`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(fileName, pdfBlob, {
+            contentType: 'application/pdf',
+            upsert: true,
+          });
+
+        if (uploadError) {
+          console.error('❌ Erreur upload PDF:', uploadError);
+          throw new Error(`Erreur lors de l'upload du PDF: ${uploadError.message}`);
+        }
+
+        // Mettre à jour le contrat avec le path
+        const { error: updateError } = await supabase
+          .from('contrat')
+          .update({ fichier_contrat_url: fileName })
+          .eq('id', contrat.id);
+
+        if (updateError) {
+          console.error('❌ Erreur mise à jour contrat:', updateError);
+          throw new Error(`Erreur lors de la mise à jour du contrat: ${updateError.message}`);
+        }
+
+        console.log('✅ PDF généré et uploadé:', fileName);
+
+        setPdfUrl(fileName);
+        setShowPreview(true);
+        setSending(false);
+      } catch (pdfError: any) {
+        console.error('❌ Erreur génération PDF:', pdfError);
         await supabase.from('contrat').delete().eq('id', contrat.id);
-        showError('Erreur génération PDF', errorText);
+        showError('Erreur génération PDF', pdfError.message || 'Erreur inconnue');
         setSending(false);
         return;
       }
-
-      const pdfData = await pdfResponse.json();
-      console.log('✅ PDF généré:', pdfData);
-
-      if (!pdfData.url) {
-        console.error('❌ Pas d\'URL PDF dans la réponse');
-        await supabase.from('contrat').delete().eq('id', contrat.id);
-        showError('Erreur', 'Impossible de générer le PDF');
-        setSending(false);
-        return;
-      }
-
-      setPdfUrl(pdfData.url);
-      setShowPreview(true);
-      setSending(false);
     } catch (error: any) {
       console.error('❌ ERREUR FINALE:', error);
       const errorTranslated = translateError(error);

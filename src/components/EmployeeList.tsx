@@ -20,6 +20,8 @@ import { ConfirmInvalidIbanModal } from './ConfirmInvalidIbanModal';
 import { validateIban, cleanIban } from '../utils/ibanValidator';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 import { ProfileAvatar } from './ProfileAvatar';
+import { generatePDFFromHTML } from '../lib/cloudConvertPdfGenerator';
+import { generateContractHTML } from '../lib/contractHTMLGenerator';
 
 // Fonction utilitaire pour formater les dates sans problème de fuseau horaire
 function formatDateFR(dateStr: string | null | undefined): string {
@@ -4191,29 +4193,25 @@ function EmployeeDetailModal({
                                   // Si le contrat a un modèle mais pas encore de PDF, générer le PDF
                                   setToast({ type: 'success', message: 'Génération du PDF en cours...' });
 
-                                  const response = await fetch(
-                                    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-contract-pdf`,
-                                    {
-                                      method: 'POST',
-                                      headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-                                      },
-                                      body: JSON.stringify({
-                                        contractId: contract.id,
-                                        returnPdf: true
-                                      })
-                                    }
-                                  );
+                                  // Récupérer les données complètes du contrat
+                                  const { data: fullContract, error: fetchError } = await supabase
+                                    .from('contrat')
+                                    .select(`
+                                      *,
+                                      modele:modele_id(nom, type_contrat),
+                                      profil:profil_id(prenom, nom, email)
+                                    `)
+                                    .eq('id', contract.id)
+                                    .maybeSingle();
 
-                                  if (!response.ok) {
-                                    const errorText = await response.text();
-                                    console.error('Erreur génération PDF:', response.status, errorText);
-                                    throw new Error(`Erreur lors de la génération du PDF (${response.status})`);
+                                  if (fetchError || !fullContract) {
+                                    throw new Error('Impossible de récupérer les données du contrat');
                                   }
 
-                                  // La réponse est directement le PDF (blob)
-                                  const pdfBlob = await response.blob();
+                                  // Générer le HTML puis le PDF via CloudConvert
+                                  const html = generateContractHTML(fullContract);
+                                  const pdfBlob = await generatePDFFromHTML(html);
+
                                   const pdfUrl = URL.createObjectURL(pdfBlob);
                                   window.open(pdfUrl, '_blank');
                                   setToast({ type: 'success', message: 'PDF généré avec succès' });
