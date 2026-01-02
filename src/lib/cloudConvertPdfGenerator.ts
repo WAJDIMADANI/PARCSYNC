@@ -76,7 +76,7 @@ export async function htmlToPdfUrlCloudConvert(html: string): Promise<string> {
       "export-pdf": {
         operation: "export/url",
         input: "convert-pdf",
-        inline: false,
+        inline: true,
       },
     },
   };

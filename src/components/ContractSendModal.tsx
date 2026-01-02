@@ -7,7 +7,7 @@ import { ErrorModal } from './ErrorModal';
 import { translateError } from '../utils/errorTranslator';
 import { calculateTrialEndDate, formatDateFR } from '../lib/trialPeriodCalculator';
 import ContractPreviewBeforeSendModal from './ContractPreviewBeforeSendModal';
-import { generatePDFFromHTML } from '../lib/cloudConvertPdfGenerator';
+import { generatePDFFromHTML, htmlToPdfUrlCloudConvert } from '../lib/cloudConvertPdfGenerator';
 import { generateContractHTML } from '../lib/contractHTMLGenerator';
 
 interface ContractTemplate {
@@ -871,41 +871,17 @@ export default function ContractSendModal({
           throw new Error('Impossible de récupérer les données du contrat');
         }
 
-        // Générer le HTML puis le PDF via CloudConvert côté front
-        const html = generateContractHTML(fullContract);
-        const pdfBlob = await generatePDFFromHTML(html);
-
-        // Uploader le PDF dans Supabase Storage
-        const profilId = contrat.profil_id;
-        const fileName = `documents/contrats/${profilId}/${contrat.id}-draft.pdf`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('documents')
-          .upload(fileName, pdfBlob, {
-            contentType: 'application/pdf',
-            upsert: true,
-          });
-
-        if (uploadError) {
-          console.error('❌ Erreur upload PDF:', uploadError);
-          throw new Error(`Erreur lors de l'upload du PDF: ${uploadError.message}`);
-        }
-
-        // Mettre à jour le contrat avec le path
-        const { error: updateError } = await supabase
-          .from('contrat')
-          .update({ fichier_contrat_url: fileName })
-          .eq('id', contrat.id);
-
-        if (updateError) {
-          console.error('❌ Erreur mise à jour contrat:', updateError);
-          throw new Error(`Erreur lors de la mise à jour du contrat: ${updateError.message}`);
-        }
-
-        console.log('✅ PDF généré et uploadé:', fileName);
-
-        setPdfUrl(fileName);
+        // Ouvrir le modal immédiatement avec loader
+        setPdfUrl('');
         setShowPreview(true);
+
+        // Générer l'URL CloudConvert pour la preview (plus rapide)
+        const html = generateContractHTML(fullContract);
+        const cloudConvertUrl = await htmlToPdfUrlCloudConvert(html);
+
+        console.log('✅ Aperçu PDF généré:', cloudConvertUrl);
+
+        setPdfUrl(cloudConvertUrl);
         setSending(false);
       } catch (pdfError: any) {
         console.error('❌ Erreur génération PDF:', pdfError);
@@ -1432,7 +1408,7 @@ export default function ContractSendModal({
       </div>
       </div>
 
-      {showPreview && pdfUrl && (
+      {showPreview && (
         <ContractPreviewBeforeSendModal
           pdfUrl={pdfUrl}
           employeeName={employeeName}

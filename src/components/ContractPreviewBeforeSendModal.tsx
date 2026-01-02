@@ -38,12 +38,32 @@ export default function ContractPreviewBeforeSendModal({
 
         <div className="flex-1 overflow-hidden p-4">
           <div className="h-full border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-100">
-            <iframe
-              src={pdfUrl}
-              className="w-full h-full"
-              title="Aperçu du contrat"
-            />
+            {!pdfUrl ? (
+              <div className="h-full w-full flex items-center justify-center">
+                <LoadingSpinner size="md" text="Génération de l'aperçu..." />
+              </div>
+            ) : (
+              <iframe
+                key={pdfUrl}
+                src={pdfUrl}
+                className="w-full h-full"
+                title="Aperçu du contrat"
+              />
+            )}
           </div>
+
+          {pdfUrl && (
+            <div className="mt-2 text-right">
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Ouvrir dans un nouvel onglet
+              </a>
+            </div>
+          )}
         </div>
 
         <div className="border-t border-gray-200 px-6 py-4 flex gap-3 justify-end bg-gray-50 rounded-b-xl">
