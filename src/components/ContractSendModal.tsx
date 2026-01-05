@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Send, FileText, Building, DollarSign, Calendar, Clock, Award, CheckCircle, XCircle, Mail, Eye } from 'lucide-react';
+import { X, Send, FileText, Building, DollarSign, Calendar, Clock, Award, CheckCircle, XCircle, Mail } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { SuccessNotification } from './SuccessNotification';
 import { ErrorModal } from './ErrorModal';
 import { translateError } from '../utils/errorTranslator';
 import { calculateTrialEndDate, formatDateFR } from '../lib/trialPeriodCalculator';
-import ContractPreviewBeforeSendModal from './ContractPreviewBeforeSendModal';
-import { generatePDFFromHTML, htmlToPdfUrlCloudConvert } from '../lib/cloudConvertPdfGenerator';
-import { generateContractHTML } from '../lib/contractHTMLGenerator';
 
 interface ContractTemplate {
   id: string;
@@ -188,9 +185,6 @@ export default function ContractSendModal({
   const [renewTrial, setRenewTrial] = useState(false);
   const [trialPeriodInfo, setTrialPeriodInfo] = useState<{ endDate: string; description: string } | null>(null);
   const [errorInfo, setErrorInfo] = useState<{ title: string; message: string } | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string>('');
-  const [createdContractId, setCreatedContractId] = useState<string>('');
 
   const searchAddress = async (query: string) => {
     if (query.length < 3) {
@@ -517,94 +511,6 @@ export default function ContractSendModal({
     setErrorInfo({ title, message });
   };
 
-  const handleConfirmSend = async () => {
-    if (!createdContractId) {
-      showError('Erreur', 'Aucun contrat créé.');
-      return;
-    }
-
-    setSending(true);
-    try {
-      console.log('🎯 ===== ÉTAPE 3: ENVOI YOUSIGN =====');
-
-      const yousignPayload = {
-        contractId: createdContractId
-      };
-
-      console.log('📧 Envoi à Yousign...');
-
-      const yousignResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify(yousignPayload)
-        }
-      );
-
-      if (!yousignResponse.ok) {
-        const errorText = await yousignResponse.text();
-        console.error('⚠️ Yousign error (status ' + yousignResponse.status + '):', errorText);
-
-        if (yousignResponse.status === 0 || errorText.includes('CORS')) {
-          console.warn('⚠️ Erreur CORS, on continue quand même');
-        } else {
-          throw new Error(`Yousign error: ${errorText}`);
-        }
-      } else {
-        const yousignData = await yousignResponse.json();
-        console.log('✅ Yousign signature créée:', yousignData);
-      }
-
-      const { error: updateError } = await supabase
-        .from('contrat')
-        .update({ statut: 'envoye' })
-        .eq('id', createdContractId);
-
-      if (updateError) throw updateError;
-      console.log('✅ Statut contrat: envoye');
-
-      console.log('🎯 ===== ÉTAPE 4: UPDATE PROFIL =====');
-
-      const updateData: any = {
-        statut: 'contrat_envoye',
-        secteur_id: selectedSecteur || null
-      };
-
-      if (trialPeriodInfo?.endDate) {
-        updateData.date_fin_periode_essai = trialPeriodInfo.endDate;
-        console.log('✅ Date fin période d\'essai sauvegardée dans profil:', trialPeriodInfo.endDate);
-      }
-
-      const { error: profilError } = await supabase
-        .from('profil')
-        .update(updateData)
-        .eq('id', profilId);
-
-      if (profilError) throw profilError;
-
-      console.log('✅ Profil mise à jour');
-      console.log('🎉 ===== SUCCÈS =====');
-
-      setShowPreview(false);
-      setShowSuccess(true);
-
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 2500);
-    } catch (error: any) {
-      console.error('❌ ERREUR FINALE:', error);
-      const errorTranslated = translateError(error);
-      showError(errorTranslated.title, errorTranslated.message);
-      setShowPreview(false);
-    } finally {
-      setSending(false);
-    }
-  };
 
   const handleSend = async () => {
     if (!selectedTemplate) {
@@ -849,47 +755,78 @@ export default function ContractSendModal({
       }
 
       console.log('✅ Contrat créé:', contrat.id);
-      setCreatedContractId(contrat.id);
 
-      // ✅ ÉTAPE 2: GÉNÉRATION DU PDF
-      console.log('🎯 ===== ÉTAPE 2: GÉNÉRATION DU PDF =====');
+      // ✅ ÉTAPE 2: ENVOI DIRECT À YOUSIGN
+      console.log('🎯 ===== ÉTAPE 2: ENVOI YOUSIGN =====');
 
-      try {
-        // Récupérer les données complètes du contrat
-        const { data: fullContract, error: fetchError } = await supabase
-          .from('contrat')
-          .select(`
-            *,
-            modele:modele_id(nom, type_contrat),
-            profil:profil_id(prenom, nom, email)
-          `)
-          .eq('id', contrat.id)
-          .maybeSingle();
+      const yousignPayload = {
+        contractId: contrat.id
+      };
 
-        if (fetchError || !fullContract) {
-          console.error('❌ Erreur récupération contrat:', fetchError);
-          throw new Error('Impossible de récupérer les données du contrat');
+      console.log('📧 Envoi à Yousign...');
+
+      const yousignResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify(yousignPayload)
         }
+      );
 
-        // Ouvrir le modal immédiatement avec loader
-        setPdfUrl('');
-        setShowPreview(true);
+      if (!yousignResponse.ok) {
+        const errorText = await yousignResponse.text();
+        console.error('⚠️ Yousign error (status ' + yousignResponse.status + '):', errorText);
 
-        // Générer l'URL CloudConvert pour la preview (plus rapide)
-        const html = generateContractHTML(fullContract);
-        const cloudConvertUrl = await htmlToPdfUrlCloudConvert(html);
-
-        console.log('✅ Aperçu PDF généré:', cloudConvertUrl);
-
-        setPdfUrl(cloudConvertUrl);
-        setSending(false);
-      } catch (pdfError: any) {
-        console.error('❌ Erreur génération PDF:', pdfError);
-        await supabase.from('contrat').delete().eq('id', contrat.id);
-        showError('Erreur génération PDF', pdfError.message || 'Erreur inconnue');
-        setSending(false);
-        return;
+        if (yousignResponse.status === 0 || errorText.includes('CORS')) {
+          console.warn('⚠️ Erreur CORS, on continue quand même');
+        } else {
+          throw new Error(`Yousign error: ${errorText}`);
+        }
+      } else {
+        const yousignData = await yousignResponse.json();
+        console.log('✅ Yousign signature créée:', yousignData);
       }
+
+      const { error: updateError } = await supabase
+        .from('contrat')
+        .update({ statut: 'envoye' })
+        .eq('id', contrat.id);
+
+      if (updateError) throw updateError;
+      console.log('✅ Statut contrat: envoye');
+
+      console.log('🎯 ===== ÉTAPE 3: UPDATE PROFIL =====');
+
+      const updateData: any = {
+        statut: 'contrat_envoye',
+        secteur_id: selectedSecteur || null
+      };
+
+      if (trialPeriodInfo?.endDate) {
+        updateData.date_fin_periode_essai = trialPeriodInfo.endDate;
+        console.log('✅ Date fin période d\'essai sauvegardée dans profil:', trialPeriodInfo.endDate);
+      }
+
+      const { error: profilError } = await supabase
+        .from('profil')
+        .update(updateData)
+        .eq('id', profilId);
+
+      if (profilError) throw profilError;
+
+      console.log('✅ Profil mise à jour');
+      console.log('🎉 ===== SUCCÈS =====');
+
+      setShowSuccess(true);
+
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 2500);
     } catch (error: any) {
       console.error('❌ ERREUR FINALE:', error);
       const errorTranslated = translateError(error);
@@ -1407,23 +1344,6 @@ export default function ContractSendModal({
         </div>
       </div>
       </div>
-
-      {showPreview && (
-        <ContractPreviewBeforeSendModal
-          pdfUrl={pdfUrl}
-          employeeName={employeeName}
-          onClose={() => {
-            setShowPreview(false);
-            setPdfUrl('');
-            if (createdContractId) {
-              supabase.from('contrat').delete().eq('id', createdContractId);
-              setCreatedContractId('');
-            }
-          }}
-          onConfirm={handleConfirmSend}
-          loading={sending}
-        />
-      )}
     </>
   );
 }
