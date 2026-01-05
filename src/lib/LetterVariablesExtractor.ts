@@ -7,38 +7,66 @@ export interface VariableInfo {
 
 export class LetterVariablesExtractor {
   /**
-   * Normalise le XML en supprimant les balises qui fragmentent les variables
-   * Exemple : {{vil<w:r><w:t>le</w:t></w:r>}} devient {{ville}}
+   * Reconstruit le texte plain d'un XML Word en concaténant tous les <w:t>
    */
-  static normalizeXmlForVariables(xmlContent: string): string {
-    let result = xmlContent;
+  static extractPlainTextFromXml(xmlContent: string): string {
+    const textNodes: string[] = [];
 
-    // Trouver tous les blocs qui contiennent {{ ... }} mais fragmentés par des balises XML
-    // On cherche {{ puis n'importe quoi jusqu'à }} en capturant tout le contenu
-    const variablePattern = /\{\{([^}]*?(?:<[^>]+>[^}]*?)*)\}\}/g;
+    // Extraire tous les <w:t>, <w:instrText>, <w:delText>
+    const tagPatterns = [
+      /<w:t[^>]*>(.*?)<\/w:t>/gs,
+      /<w:instrText[^>]*>(.*?)<\/w:instrText>/gs,
+      /<w:delText[^>]*>(.*?)<\/w:delText>/gs
+    ];
 
-    result = result.replace(variablePattern, (match) => {
-      // Supprimer toutes les balises XML à l'intérieur de {{...}}
-      const cleaned = match.replace(/<[^>]+>/g, '');
-      return cleaned;
+    tagPatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(xmlContent)) !== null) {
+        if (match[1]) {
+          // Décoder les entités XML
+          const decoded = match[1]
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&apos;/g, "'");
+          textNodes.push(decoded);
+        }
+      }
     });
 
-    return result;
+    return textNodes.join('');
+  }
+
+  /**
+   * Normalise le texte en nettoyant les caractères invisibles
+   */
+  static normalizeText(text: string): string {
+    return text
+      // Remplacer espaces insécables par espaces normaux
+      .replace(/\u00A0/g, ' ')
+      // Supprimer zero-width characters
+      .replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
   }
 
   /**
    * Extrait les variables {{...}} d'un texte
    */
   static extractVariablesFromText(text: string): VariableInfo[] {
-    const regex = /\{\{([^}]+)\}\}/g;
+    // Normaliser le texte
+    const normalized = this.normalizeText(text);
+
+    // Regex pour capturer {{variable}} avec espaces/\u00A0 optionnels
+    const regex = /\{\{[\s\u00A0]*([a-zA-Z0-9_]+)[\s\u00A0]*\}\}/g;
     const matches = new Map<string, number>();
-    
+
     let match;
-    while ((match = regex.exec(text)) !== null) {
-      const varName = match[1].trim();
+    while ((match = regex.exec(normalized)) !== null) {
+      // Normaliser le nom en lowercase
+      const varName = match[1].toLowerCase().trim();
       matches.set(varName, (matches.get(varName) || 0) + 1);
     }
-    
+
     return Array.from(matches.entries()).map(([name, count]) => ({
       name,
       count
@@ -52,7 +80,7 @@ export class LetterVariablesExtractor {
   static async extractVariablesFromWordFile(file: File): Promise<VariableInfo[]> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const arrayBuffer = e.target?.result as ArrayBuffer;
@@ -73,28 +101,55 @@ export class LetterVariablesExtractor {
               return;
             }
 
-            // Lire le document.xml
-            const documentXml = unzipped['word/document.xml'];
-            if (!documentXml) {
-              reject(new Error('Fichier Word invalide: document.xml non trouvé'));
-              return;
-            }
-
-            // Convertir en string
             const decoder = new TextDecoder('utf-8');
-            const xmlContent = decoder.decode(documentXml);
+            const allVariables = new Map<string, number>();
 
-            // Normaliser le XML pour défragmenter les variables
-            // Word fragmente souvent {{ville}} en {{vil<w:r>le}}
-            const normalizedContent = this.normalizeXmlForVariables(xmlContent);
+            // Liste des parties à scanner
+            const partsToScan = [
+              { path: 'word/document.xml', name: 'Document principal' },
+              { path: 'word/header1.xml', name: 'En-tête 1' },
+              { path: 'word/header2.xml', name: 'En-tête 2' },
+              { path: 'word/header3.xml', name: 'En-tête 3' },
+              { path: 'word/footer1.xml', name: 'Pied de page 1' },
+              { path: 'word/footer2.xml', name: 'Pied de page 2' },
+              { path: 'word/footer3.xml', name: 'Pied de page 3' }
+            ];
 
-            // Extraire les variables du contenu normalisé
-            const variables = this.extractVariablesFromText(normalizedContent);
-            
-            console.log(`[LetterVariablesExtractor] ${variables.length} variables trouvées:`, 
-              variables.map(v => v.name));
-            
-            resolve(variables);
+            // Scanner chaque partie
+            partsToScan.forEach(part => {
+              const xmlData = unzipped[part.path];
+              if (!xmlData) {
+                return; // Cette partie n'existe pas, continuer
+              }
+
+              const xmlContent = decoder.decode(xmlData);
+
+              // Reconstruire le texte plain en concaténant tous les <w:t>
+              const plainText = this.extractPlainTextFromXml(xmlContent);
+
+              // Extraire les variables du texte reconstruit
+              const variables = this.extractVariablesFromText(plainText);
+
+              console.debug(`[${part.name}] ${variables.length} variable(s) trouvée(s):`,
+                variables.map(v => v.name));
+
+              // Fusionner dans la map globale
+              variables.forEach(v => {
+                const currentCount = allVariables.get(v.name) || 0;
+                allVariables.set(v.name, currentCount + v.count);
+              });
+            });
+
+            // Convertir en tableau final
+            const finalVariables = Array.from(allVariables.entries()).map(([name, count]) => ({
+              name,
+              count
+            }));
+
+            console.log(`[LetterVariablesExtractor] TOTAL: ${finalVariables.length} variable(s) unique(s):`,
+              finalVariables.map(v => v.name));
+
+            resolve(finalVariables);
           });
         } catch (error) {
           reject(error);
