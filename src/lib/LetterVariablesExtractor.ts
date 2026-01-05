@@ -7,6 +7,26 @@ export interface VariableInfo {
 
 export class LetterVariablesExtractor {
   /**
+   * Normalise le XML en supprimant les balises qui fragmentent les variables
+   * Exemple : {{vil<w:r><w:t>le</w:t></w:r>}} devient {{ville}}
+   */
+  static normalizeXmlForVariables(xmlContent: string): string {
+    let result = xmlContent;
+
+    // Trouver tous les blocs qui contiennent {{ ... }} mais fragmentés par des balises XML
+    // On cherche {{ puis n'importe quoi jusqu'à }} en capturant tout le contenu
+    const variablePattern = /\{\{([^}]*?(?:<[^>]+>[^}]*?)*)\}\}/g;
+
+    result = result.replace(variablePattern, (match) => {
+      // Supprimer toutes les balises XML à l'intérieur de {{...}}
+      const cleaned = match.replace(/<[^>]+>/g, '');
+      return cleaned;
+    });
+
+    return result;
+  }
+
+  /**
    * Extrait les variables {{...}} d'un texte
    */
   static extractVariablesFromText(text: string): VariableInfo[] {
@@ -64,8 +84,12 @@ export class LetterVariablesExtractor {
             const decoder = new TextDecoder('utf-8');
             const xmlContent = decoder.decode(documentXml);
 
-            // Extraire les variables
-            const variables = this.extractVariablesFromText(xmlContent);
+            // Normaliser le XML pour défragmenter les variables
+            // Word fragmente souvent {{ville}} en {{vil<w:r>le}}
+            const normalizedContent = this.normalizeXmlForVariables(xmlContent);
+
+            // Extraire les variables du contenu normalisé
+            const variables = this.extractVariablesFromText(normalizedContent);
             
             console.log(`[LetterVariablesExtractor] ${variables.length} variables trouvées:`, 
               variables.map(v => v.name));
