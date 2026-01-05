@@ -25,10 +25,19 @@ export function useLetterGeneration() {
   };
 
   /**
+   * Supprime les caractères interdits en XML
+   */
+  const sanitizeForXml = (text: string): string => {
+    // Supprimer 0x00–0x08, 0x0B, 0x0C, 0x0E–0x1F
+    return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+  };
+
+  /**
    * Encode les entités XML
    */
   const xmlEscape = (text: string): string => {
-    return text
+    const sanitized = sanitizeForXml(text);
+    return sanitized
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -129,7 +138,10 @@ export function useLetterGeneration() {
       return xmlContent;
     }
 
-    // 4. Pour chaque remplacement, modifier les w:t concernés
+    // 4. Trier les remplacements de la fin vers le début (right-to-left)
+    replacements.sort((a, b) => b.startChar - a.startChar);
+
+    // 5. Pour chaque remplacement, modifier les w:t concernés
     const modifiedNodes = [...wtNodes];
 
     replacements.forEach(replacement => {
@@ -173,10 +185,9 @@ export function useLetterGeneration() {
       console.debug(`[replaceVariablesAcrossWT] Replaced {{${replacement.varName}}}`);
     });
 
-    // 5. Rebuild le XML
+    // 6. Rebuild le XML (en partant de la fin pour ne pas décaler les indices)
     let result = xmlContent;
 
-    // Remplacer en partant de la fin pour ne pas décaler les indices
     for (let i = modifiedNodes.length - 1; i >= 0; i--) {
       const original = wtNodes[i];
       const modified = modifiedNodes[i];
@@ -189,6 +200,38 @@ export function useLetterGeneration() {
     }
 
     return result;
+  };
+
+  /**
+   * Valide le XML avec DOMParser
+   */
+  const validateXml = (xmlContent: string): boolean => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlContent, 'application/xml');
+
+    const parserError = doc.querySelector('parsererror');
+    if (parserError) {
+      console.error('[validateXml] XML parsing error detected:');
+      console.error(parserError.textContent);
+
+      // Extraire un extrait autour de l'erreur si possible
+      const errorText = parserError.textContent || '';
+      const match = errorText.match(/line (\d+)/);
+      if (match) {
+        const lineNum = parseInt(match[1], 10);
+        const lines = xmlContent.split('\n');
+        const start = Math.max(0, lineNum - 3);
+        const end = Math.min(lines.length, lineNum + 2);
+        console.error(`Context (lines ${start}-${end}):`);
+        for (let i = start; i < end; i++) {
+          console.error(`${i + 1}: ${lines[i].substring(0, 200)}`);
+        }
+      }
+
+      return false;
+    }
+
+    return true;
   };
 
   /**
@@ -252,6 +295,12 @@ export function useLetterGeneration() {
 
               const xmlContent = decoder.decode(xmlData);
               const replacedContent = replaceVariablesAcrossWT(xmlContent, options.variables);
+
+              // Valider le XML avant de l'encoder
+              if (!validateXml(replacedContent)) {
+                throw new Error(`XML invalide après remplacement dans ${partPath}`);
+              }
+
               unzipped[partPath] = encoder.encode(replacedContent);
             });
 
