@@ -176,8 +176,14 @@ export function GeneratedLettersList() {
       setSuccessMessage('PDF généré avec succès!');
       await fetchLetters();
     } catch (error) {
-      console.error('Erreur génération PDF:', error);
-      alert(`Erreur lors de la génération du PDF: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      console.error('Functions error:', error);
+      console.error('status:', (error as any)?.context?.status);
+      console.error('body:', (error as any)?.context?.body);
+
+      const status = (error as any)?.context?.status || 'unknown';
+      const body = (error as any)?.context?.body || (error instanceof Error ? error.message : 'Erreur inconnue');
+
+      alert(`Erreur PDF (status=${status}): ${body}`);
     } finally {
       setConvertingPdfId(null);
     }
