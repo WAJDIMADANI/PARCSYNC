@@ -102,6 +102,7 @@ export function OnboardingForm() {
   const [uploadProgress, setUploadProgress] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [restoredFromStorage, setRestoredFromStorage] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -109,9 +110,33 @@ export function OnboardingForm() {
     if (id) {
       setCandidatId(id);
       fetchCandidatData(id);
+    } else {
+      // Tenter de restaurer les données depuis localStorage
+      const savedData = localStorage.getItem('onboarding_form_data');
+      if (savedData) {
+        try {
+          const parsedData = JSON.parse(savedData);
+          setFormData(parsedData);
+          setRestoredFromStorage(true);
+          console.log('✅ Données du formulaire restaurées depuis localStorage');
+          // Masquer le message après 5 secondes
+          setTimeout(() => setRestoredFromStorage(false), 5000);
+        } catch (err) {
+          console.error('Erreur lors de la restauration des données:', err);
+        }
+      }
     }
     fetchSitesAndSecteurs();
   }, []);
+
+  // Sauvegarder automatiquement les données du formulaire
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      localStorage.setItem('onboarding_form_data', JSON.stringify(formData));
+    }, 1000); // Débounce de 1 seconde
+
+    return () => clearTimeout(timeoutId);
+  }, [formData]);
 
   const fetchCandidatData = async (id: string) => {
     try {
@@ -179,6 +204,9 @@ export function OnboardingForm() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: DocumentType) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
@@ -389,6 +417,10 @@ export function OnboardingForm() {
 
       await Promise.all(documentUploads);
 
+      // Nettoyer localStorage après succès
+      localStorage.removeItem('onboarding_form_data');
+      console.log('✅ Données de localStorage nettoyées après soumission réussie');
+
       setSuccess(true);
       setFormData({
         prenom: '',
@@ -488,7 +520,22 @@ export function OnboardingForm() {
           Complétez votre dossier pour finaliser votre embauche
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={(e) => {
+            // Empêcher la soumission du formulaire avec la touche Enter
+            if (e.key === 'Enter' && e.target instanceof HTMLInputElement && e.target.type !== 'submit') {
+              e.preventDefault();
+            }
+          }}
+          className="space-y-8"
+        >
+          {restoredFromStorage && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-xl text-sm font-medium">
+              Vos données ont été restaurées automatiquement
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium">
               {error}
@@ -686,6 +733,11 @@ function FormInput({ label, type = 'text', value, onChange, required = false, pl
 }
 
 function FileUploadField({ label, file, onChange, onRemove, accept, required = false }: { label: string; file: File | null; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; onRemove: () => void; accept?: string; required?: boolean }) {
+  const handleLabelClick = (e: React.MouseEvent<HTMLLabelElement>) => {
+    // Permettre le clic sur le label, mais empêcher la propagation
+    e.stopPropagation();
+  };
+
   return (
     <div>
       <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
@@ -693,15 +745,33 @@ function FileUploadField({ label, file, onChange, onRemove, accept, required = f
         <div className="flex items-center gap-3 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
           <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
           <span className="text-sm font-medium text-green-700 flex-1 truncate">{file.name}</span>
-          <button type="button" onClick={onRemove} className="p-1 hover:bg-green-100 rounded-lg transition-colors">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRemove();
+            }}
+            className="p-1 hover:bg-green-100 rounded-lg transition-colors"
+          >
             <X className="w-4 h-4 text-green-600" />
           </button>
         </div>
       ) : (
-        <label className="flex items-center justify-center gap-3 p-6 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group">
+        <label
+          onClick={handleLabelClick}
+          className="flex items-center justify-center gap-3 p-6 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group"
+        >
           <Upload className="w-6 h-6 text-slate-400 group-hover:text-primary-500 transition-colors" />
           <span className="text-sm font-medium text-slate-600 group-hover:text-primary-600 transition-colors">Charger un fichier (max. 10MB)</span>
-          <input type="file" onChange={onChange} accept={accept} required={required} className="sr-only" />
+          <input
+            type="file"
+            onChange={onChange}
+            accept={accept}
+            required={required}
+            onClick={(e) => e.stopPropagation()}
+            className="sr-only"
+          />
         </label>
       )}
     </div>
