@@ -13,17 +13,38 @@ export function useLetterGeneration() {
   const [error, setError] = useState<string | null>(null);
 
   /**
+   * Normalise le XML en supprimant les balises qui fragmentent les variables
+   * Exemple : {{vil<w:r>le}} devient {{ville}}
+   */
+  const normalizeXmlForVariables = (xmlContent: string): string => {
+    let result = xmlContent;
+
+    // Trouver tous les blocs qui contiennent {{ ... }} mais fragmentés par des balises XML
+    // On cherche {{ puis n'importe quoi jusqu'à }} en capturant tout le contenu
+    const variablePattern = /\{\{([^}]*?(?:<[^>]+>[^}]*?)*)\}\}/g;
+
+    result = result.replace(variablePattern, (match) => {
+      // Supprimer toutes les balises XML à l'intérieur de {{...}}
+      const cleaned = match.replace(/<[^>]+>/g, '');
+      return cleaned;
+    });
+
+    return result;
+  };
+
+  /**
    * Remplace les variables dans le contenu XML
    */
   const replaceVariablesInXml = (xmlContent: string, variables: Record<string, string>): string => {
-    let result = xmlContent;
+    // D'abord normaliser le XML pour défragmenter les variables
+    let result = normalizeXmlForVariables(xmlContent);
 
     // Remplacer chaque variable {{nom}} par sa valeur
     Object.entries(variables).forEach(([varName, value]) => {
       // Échappe les caractères spéciaux pour la regex
       const escapedVarName = varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`\\{\\{\\s*${escapedVarName}\\s*\\}\\}`, 'g');
-      
+
       // Remplace la variable par la valeur (échappe les caractères XML)
       const escapedValue = value
         .replace(/&/g, '&amp;')
@@ -31,7 +52,7 @@ export function useLetterGeneration() {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&apos;');
-      
+
       result = result.replace(regex, escapedValue);
     });
 
