@@ -25,10 +25,10 @@ export function useLetterGeneration() {
   };
 
   /**
-   * Supprime les caractères interdits en XML
+   * Supprime les caractères interdits en XML (mais garde \t \n \r)
    */
   const sanitizeForXml = (text: string): string => {
-    // Supprimer 0x00–0x08, 0x0B, 0x0C, 0x0E–0x1F
+    // Supprimer 0x00–0x08, 0x0B, 0x0C, 0x0E–0x1F (sauf 0x09=\t, 0x0A=\n, 0x0D=\r)
     return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
   };
 
@@ -47,61 +47,53 @@ export function useLetterGeneration() {
 
   /**
    * Remplace les variables même si elles sont fragmentées entre plusieurs <w:t>
+   * Utilise DOM parsing pour éviter de casser le XML
    */
-  const replaceVariablesAcrossWT = (xmlContent: string, variables: Record<string, string>): string => {
-    console.debug('[replaceVariablesAcrossWT] Variables à remplacer:', Object.keys(variables));
+  const replaceVariablesAcrossWT = (xmlContent: string, variables: Record<string, string>, xmlPath: string): string => {
+    console.debug(`[replaceVariablesAcrossWT] Processing ${xmlPath}, variables:`, Object.keys(variables));
 
-    // 1. Extraire tous les <w:t ...>TEXT</w:t> avec leurs positions
-    interface WTNode {
-      fullMatch: string;
-      openTag: string;
-      text: string;
-      closeTag: string;
-      startIndex: number;
-      endIndex: number;
+    // 1. Parser le XML avec DOMParser
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlContent, 'application/xml');
+
+    // Vérifier les erreurs de parsing
+    const parserError = doc.querySelector('parsererror');
+    if (parserError) {
+      console.error(`[replaceVariablesAcrossWT] Parse error in ${xmlPath}:`, parserError.textContent);
+      throw new Error(`XML parse error in ${xmlPath}`);
     }
 
-    const wtNodes: WTNode[] = [];
-    const wtRegex = /(<w:t[^>]*>)(.*?)(<\/w:t>)/gs;
-    let match;
+    // 2. Récupérer tous les nœuds <w:t>
+    const wordNamespace = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    let textNodes = doc.getElementsByTagNameNS(wordNamespace, 't');
 
-    while ((match = wtRegex.exec(xmlContent)) !== null) {
-      wtNodes.push({
-        fullMatch: match[0],
-        openTag: match[1],
-        text: match[2],
-        closeTag: match[3],
-        startIndex: match.index,
-        endIndex: match.index + match[0].length
-      });
+    // Fallback si le namespace ne fonctionne pas
+    if (!textNodes || textNodes.length === 0) {
+      textNodes = doc.getElementsByTagName('w:t');
     }
 
-    if (wtNodes.length === 0) {
+    if (!textNodes || textNodes.length === 0) {
+      console.debug(`[replaceVariablesAcrossWT] No w:t nodes found in ${xmlPath}`);
       return xmlContent;
     }
 
-    // 2. Reconstruire le plainText en concaténant tous les TEXT
-    const plainTextParts: string[] = [];
-    const plainTextToNodeMap: { charIndex: number; nodeIndex: number; nodeCharIndex: number }[] = [];
+    // 3. Construire segments avec les nodes et leur texte
+    interface Segment {
+      node: Element;
+      text: string;
+    }
 
-    wtNodes.forEach((node, nodeIndex) => {
-      const unescapedText = xmlUnescape(node.text);
-      const startCharIndex = plainTextParts.join('').length;
+    const segments: Segment[] = [];
+    for (let i = 0; i < textNodes.length; i++) {
+      const node = textNodes[i];
+      const text = node.textContent || '';
+      segments.push({ node, text });
+    }
 
-      for (let i = 0; i < unescapedText.length; i++) {
-        plainTextToNodeMap.push({
-          charIndex: startCharIndex + i,
-          nodeIndex: nodeIndex,
-          nodeCharIndex: i
-        });
-      }
+    // 4. Reconstruire le plainText (garder NBSP pour correspondance exacte)
+    const plainText = segments.map(s => s.text).join('');
 
-      plainTextParts.push(unescapedText);
-    });
-
-    const plainText = plainTextParts.join('');
-
-    // 3. Chercher les variables dans le plainText
+    // 5. Trouver les placeholders
     const variableRegex = /\{\{[\s\u00A0]*([a-zA-Z0-9_]+)[\s\u00A0]*\}\}/g;
     const replacements: {
       startChar: number;
@@ -124,82 +116,102 @@ export function useLetterGeneration() {
       }
 
       if (value) {
-        console.debug(`[replaceVariablesAcrossWT] Found placeholder {{${varName}}} = "${value}"`);
+        console.debug(`[replaceVariablesAcrossWT] Found {{${varName}}} in ${xmlPath} = "${value}"`);
         replacements.push({
           startChar: varMatch.index,
           endChar: varMatch.index + varMatch[0].length,
           varName: varName,
-          value: value
+          value: sanitizeForXml(value) // Sanitize ici
         });
       }
     }
 
     if (replacements.length === 0) {
+      console.debug(`[replaceVariablesAcrossWT] No replacements needed in ${xmlPath}`);
       return xmlContent;
     }
 
-    // 4. Trier les remplacements de la fin vers le début (right-to-left)
+    // Trier de droite à gauche
     replacements.sort((a, b) => b.startChar - a.startChar);
 
-    // 5. Pour chaque remplacement, modifier les w:t concernés
-    const modifiedNodes = [...wtNodes];
-
+    // 6. Appliquer les remplacements
     replacements.forEach(replacement => {
-      const startMapping = plainTextToNodeMap[replacement.startChar];
-      const endMapping = plainTextToNodeMap[replacement.endChar - 1];
+      console.debug(`[replaceVariablesAcrossWT] Replacing {{${replacement.varName}}} in ${xmlPath}`);
 
-      if (!startMapping || !endMapping) {
+      // Trouver les segments concernés
+      let cumul = 0;
+      let startSegIndex = -1;
+      let startOffset = 0;
+      let endSegIndex = -1;
+      let endOffset = 0;
+
+      for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        const segLen = seg.text.length;
+
+        // Début du placeholder
+        if (startSegIndex === -1 && cumul + segLen > replacement.startChar) {
+          startSegIndex = i;
+          startOffset = replacement.startChar - cumul;
+        }
+
+        // Fin du placeholder
+        if (endSegIndex === -1 && cumul + segLen >= replacement.endChar) {
+          endSegIndex = i;
+          endOffset = replacement.endChar - cumul;
+          break;
+        }
+
+        cumul += segLen;
+      }
+
+      if (startSegIndex === -1 || endSegIndex === -1) {
+        console.warn(`[replaceVariablesAcrossWT] Could not locate segments for {{${replacement.varName}}}`);
         return;
       }
 
-      const startNodeIndex = startMapping.nodeIndex;
-      const endNodeIndex = endMapping.nodeIndex;
+      // Modifier les textContent
+      if (startSegIndex === endSegIndex) {
+        // Même segment
+        const seg = segments[startSegIndex];
+        const prefix = seg.text.substring(0, startOffset);
+        const suffix = seg.text.substring(endOffset);
+        seg.node.textContent = prefix + replacement.value + suffix;
+        seg.text = seg.node.textContent || '';
+      } else {
+        // Multiple segments
+        const startSeg = segments[startSegIndex];
+        const endSeg = segments[endSegIndex];
 
-      console.debug(`[replaceVariablesAcrossWT] Replacing {{${replacement.varName}}} across nodes ${startNodeIndex} to ${endNodeIndex}`);
+        const prefix = startSeg.text.substring(0, startOffset);
+        const suffix = endSeg.text.substring(endOffset);
 
-      // Reconstituer les textes originaux (unescaped)
-      const nodeTexts = modifiedNodes.slice(startNodeIndex, endNodeIndex + 1).map(n => xmlUnescape(n.text));
+        startSeg.node.textContent = prefix + replacement.value;
+        startSeg.text = startSeg.node.textContent || '';
 
-      // Construire le nouveau texte complet
-      const beforeVar = nodeTexts[0].substring(0, startMapping.nodeCharIndex);
-      const afterVar = endNodeIndex === startNodeIndex
-        ? nodeTexts[0].substring(endMapping.nodeCharIndex + 1)
-        : nodeTexts[nodeTexts.length - 1].substring(endMapping.nodeCharIndex + 1);
+        // Vider les segments intermédiaires
+        for (let i = startSegIndex + 1; i < endSegIndex; i++) {
+          segments[i].node.textContent = '';
+          segments[i].text = '';
+        }
 
-      const newFullText = beforeVar + replacement.value + afterVar;
-
-      // Mettre le nouveau texte dans le premier node, vider les autres
-      modifiedNodes[startNodeIndex] = {
-        ...modifiedNodes[startNodeIndex],
-        text: xmlEscape(newFullText)
-      };
-
-      // Vider les nodes intermédiaires et le dernier (si différent du premier)
-      for (let i = startNodeIndex + 1; i <= endNodeIndex; i++) {
-        modifiedNodes[i] = {
-          ...modifiedNodes[i],
-          text: ''
-        };
+        endSeg.node.textContent = suffix;
+        endSeg.text = endSeg.node.textContent || '';
       }
 
-      console.debug(`[replaceVariablesAcrossWT] Replaced {{${replacement.varName}}}`);
+      console.debug(`[replaceVariablesAcrossWT] Replaced {{${replacement.varName}}} in ${xmlPath}`);
     });
 
-    // 6. Rebuild le XML (en partant de la fin pour ne pas décaler les indices)
-    let result = xmlContent;
+    // 7. Serializer
+    const serializer = new XMLSerializer();
+    const serializedXml = serializer.serializeToString(doc);
 
-    for (let i = modifiedNodes.length - 1; i >= 0; i--) {
-      const original = wtNodes[i];
-      const modified = modifiedNodes[i];
-
-      const newTag = modified.openTag + modified.text + modified.closeTag;
-
-      result = result.substring(0, original.startIndex) +
-               newTag +
-               result.substring(original.endIndex);
+    // 8. Valider le résultat
+    if (!validateXml(serializedXml)) {
+      throw new Error(`XML invalide après serialization dans ${xmlPath}`);
     }
 
-    return result;
+    return serializedXml;
   };
 
   /**
@@ -294,12 +306,7 @@ export function useLetterGeneration() {
               if (!xmlData) return;
 
               const xmlContent = decoder.decode(xmlData);
-              const replacedContent = replaceVariablesAcrossWT(xmlContent, options.variables);
-
-              // Valider le XML avant de l'encoder
-              if (!validateXml(replacedContent)) {
-                throw new Error(`XML invalide après remplacement dans ${partPath}`);
-              }
+              const replacedContent = replaceVariablesAcrossWT(xmlContent, options.variables, partPath);
 
               unzipped[partPath] = encoder.encode(replacedContent);
             });
