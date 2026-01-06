@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard, MapPin
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { supabase } from '../lib/supabase';
@@ -31,6 +31,7 @@ export type View =
   | 'compta/entrees'
   | 'compta/sorties'
   | 'compta/rib'
+  | 'compta/adresse'
   | 'dashboards/rh'
   | 'dashboards/parc'
   | 'exports/rh'
@@ -184,6 +185,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'compta/entrees', label: 'Entrées', icon: TrendingUp, enabled: true },
         { id: 'compta/sorties', label: 'Sorties', icon: TrendingDown, enabled: true },
         { id: 'compta/rib', label: 'RIB', icon: CreditCard, enabled: true },
+        { id: 'compta/adresse', label: 'Adresse', icon: MapPin, enabled: true },
       ]
     },
     {

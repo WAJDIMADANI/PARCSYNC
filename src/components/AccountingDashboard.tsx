@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, CreditCard } from 'lucide-react';
+import { TrendingUp, TrendingDown, CreditCard, MapPin } from 'lucide-react';
 import { ComptabiliteEntriesTab } from './ComptabiliteEntriesTab';
 import { ComptabiliteExitsTab } from './ComptabiliteExitsTab';
 import { ComptabiliteRibTab } from './ComptabiliteRibTab';
+import { ComptabiliteAdresseTab } from './ComptabiliteAdresseTab';
 import { View } from './Sidebar';
 
 interface AccountingDashboardProps {
@@ -11,7 +12,7 @@ interface AccountingDashboardProps {
 }
 
 export default function AccountingDashboard({ currentView, onViewChange }: AccountingDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'entrees' | 'sorties' | 'rib'>('entrees');
+  const [activeTab, setActiveTab] = useState<'entrees' | 'sorties' | 'rib' | 'adresse'>('entrees');
 
   useEffect(() => {
     if (currentView === 'compta/entrees') {
@@ -20,15 +21,18 @@ export default function AccountingDashboard({ currentView, onViewChange }: Accou
       setActiveTab('sorties');
     } else if (currentView === 'compta/rib') {
       setActiveTab('rib');
+    } else if (currentView === 'compta/adresse') {
+      setActiveTab('adresse');
     }
   }, [currentView]);
 
-  const handleTabChange = (tab: 'entrees' | 'sorties' | 'rib') => {
+  const handleTabChange = (tab: 'entrees' | 'sorties' | 'rib' | 'adresse') => {
     setActiveTab(tab);
     onViewChange(
       tab === 'entrees' ? 'compta/entrees' :
       tab === 'sorties' ? 'compta/sorties' :
-      'compta/rib'
+      tab === 'rib' ? 'compta/rib' :
+      'compta/adresse'
     );
   };
 
@@ -80,6 +84,17 @@ export default function AccountingDashboard({ currentView, onViewChange }: Accou
               <CreditCard className="w-5 h-5" />
               RIB
             </button>
+            <button
+              onClick={() => handleTabChange('adresse')}
+              className={`py-2 px-2 border-b-2 font-medium transition-colors flex items-center gap-2 ${
+                activeTab === 'adresse'
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <MapPin className="w-5 h-5" />
+              Adresse
+            </button>
           </div>
         </div>
       </div>
@@ -88,6 +103,7 @@ export default function AccountingDashboard({ currentView, onViewChange }: Accou
         {activeTab === 'entrees' && <ComptabiliteEntriesTab />}
         {activeTab === 'sorties' && <ComptabiliteExitsTab />}
         {activeTab === 'rib' && <ComptabiliteRibTab />}
+        {activeTab === 'adresse' && <ComptabiliteAdresseTab />}
       </div>
     </div>
   );
