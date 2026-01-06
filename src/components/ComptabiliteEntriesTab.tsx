@@ -4,16 +4,26 @@ import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
 
 interface Employee {
-  contrat_id: string;
   profil_id: string;
-  site_id: string | null;
+
+  "NOM": string;
+  "PRENOM": string;
+  "ADRESSE (RUE - CODE POSTALE - VILLE)": string | null;
+  "ADRESSE MAIL": string | null;
+  "DATE DE NAISSANCE": string | null;
+  "LIEU DE NAISSANCE": string | null;
+  "NATIONALITÉ": string | null;
+  "SECTEUR D'AFFECTATION": string | null;
+  "TITRE DE SÉJOUR O/N": string | null;
+  "TITRE DE SÉJOUR FIN VALIDITÉ": string | null;
+  "N°SECURITE SOCIALE": string | null;
+  "CONTRAT DE TRAVAIL": string | null;
+  "DATE ENTREE": string | null;
+  "DATE SORTIE FIN CONTRAT": string | null;
+  "IBAN": string | null;
+  "BIC": string | null;
+
   signed_at: string;
-  nom: string;
-  prenom: string;
-  email: string;
-  poste: string | null;
-  profil_statut: string;
-  contrat_statut: string;
 }
 
 export function ComptabiliteEntriesTab() {
@@ -31,21 +41,18 @@ export function ComptabiliteEntriesTab() {
 
     setLoading(true);
     try {
-      const startIso = `${dateDebut}T00:00:00.000Z`;
-
-      const endDate = new Date(`${dateFin}T00:00:00.000Z`);
-      endDate.setUTCDate(endDate.getUTCDate() + 1);
-      const endExclusiveIso = endDate.toISOString();
+      const from = `${dateDebut} 00:00:00+00`;
+      const to = `${dateFin} 23:59:59+00`;
 
       const { data, error } = await supabase
-        .from('v_compta_entrees')
-        .select('contrat_id, profil_id, site_id, signed_at, nom, prenom, email, poste, profil_statut, contrat_statut')
-        .gte('signed_at', startIso)
-        .lt('signed_at', endExclusiveIso)
+        .from('v_compta_entrees_export')
+        .select('*')
+        .gte('signed_at', from)
+        .lte('signed_at', to)
         .order('signed_at', { ascending: false });
 
       if (error) throw error;
-      setEmployees(data || []);
+      setEmployees((data as Employee[]) || []);
     } catch (err: any) {
       console.error('Erreur chargement entrées:', err);
       alert(err?.message ?? 'Erreur lors du chargement des entrées');
@@ -55,20 +62,12 @@ export function ComptabiliteEntriesTab() {
   };
 
   const handleExport = () => {
-    if (employees.length === 0) {
+    if (filteredEmployees.length === 0) {
       alert('Aucune donnée à exporter');
       return;
     }
 
-    const exportData = employees.map(emp => ({
-      'Nom': emp.nom,
-      'Prénom': emp.prenom,
-      'Email': emp.email,
-      'Poste': emp.poste,
-      'Date contrat signé': emp.signed_at ? new Date(emp.signed_at).toLocaleDateString('fr-FR') : '',
-      'Statut profil': emp.profil_statut,
-      'Statut contrat': emp.contrat_statut
-    }));
+    const exportData = filteredEmployees.map(({ profil_id, signed_at, ...rest }) => rest);
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -76,14 +75,16 @@ export function ComptabiliteEntriesTab() {
     XLSX.writeFile(wb, `entrees_${dateDebut}_${dateFin}.xlsx`);
   };
 
-  const filteredEmployees = employees.filter(emp => {
+  const filteredEmployees = employees.filter((emp) => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
+
     return (
-      emp.nom?.toLowerCase().includes(search) ||
-      emp.prenom?.toLowerCase().includes(search) ||
-      emp.email?.toLowerCase().includes(search) ||
-      emp.poste?.toLowerCase().includes(search)
+      (emp["NOM"] ?? '').toLowerCase().includes(search) ||
+      (emp["PRENOM"] ?? '').toLowerCase().includes(search) ||
+      (emp["ADRESSE MAIL"] ?? '').toLowerCase().includes(search) ||
+      (emp["SECTEUR D'AFFECTATION"] ?? '').toLowerCase().includes(search) ||
+      (emp["CONTRAT DE TRAVAIL"] ?? '').toLowerCase().includes(search)
     );
   });
 
@@ -188,30 +189,36 @@ export function ComptabiliteEntriesTab() {
                       Email
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Poste
+                      Contrat
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date contrat signé
+                      Date entrée
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date sortie
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredEmployees.map((emp) => (
-                    <tr key={emp.contrat_id} className="hover:bg-gray-50">
+                    <tr key={emp.profil_id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {emp.nom}
+                        {emp["NOM"]}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {emp.prenom}
+                        {emp["PRENOM"]}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {emp.email}
+                        {emp["ADRESSE MAIL"]}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {emp.poste}
+                        {emp["CONTRAT DE TRAVAIL"]}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {emp.signed_at ? new Date(emp.signed_at).toLocaleDateString('fr-FR') : '-'}
+                        {emp["DATE ENTREE"]}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {emp["DATE SORTIE FIN CONTRAT"]}
                       </td>
                     </tr>
                   ))}
