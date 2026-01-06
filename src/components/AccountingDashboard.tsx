@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, CreditCard } from 'lucide-react';
 import { ComptabiliteEntriesTab } from './ComptabiliteEntriesTab';
 import { ComptabiliteExitsTab } from './ComptabiliteExitsTab';
+import { ComptabiliteRibTab } from './ComptabiliteRibTab';
 import { View } from './Sidebar';
 
 interface AccountingDashboardProps {
@@ -10,19 +11,25 @@ interface AccountingDashboardProps {
 }
 
 export default function AccountingDashboard({ currentView, onViewChange }: AccountingDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'entrees' | 'sorties'>('entrees');
+  const [activeTab, setActiveTab] = useState<'entrees' | 'sorties' | 'rib'>('entrees');
 
   useEffect(() => {
     if (currentView === 'compta/entrees') {
       setActiveTab('entrees');
     } else if (currentView === 'compta/sorties') {
       setActiveTab('sorties');
+    } else if (currentView === 'compta/rib') {
+      setActiveTab('rib');
     }
   }, [currentView]);
 
-  const handleTabChange = (tab: 'entrees' | 'sorties') => {
+  const handleTabChange = (tab: 'entrees' | 'sorties' | 'rib') => {
     setActiveTab(tab);
-    onViewChange(tab === 'entrees' ? 'compta/entrees' : 'compta/sorties');
+    onViewChange(
+      tab === 'entrees' ? 'compta/entrees' :
+      tab === 'sorties' ? 'compta/sorties' :
+      'compta/rib'
+    );
   };
 
   return (
@@ -62,6 +69,17 @@ export default function AccountingDashboard({ currentView, onViewChange }: Accou
               <TrendingDown className="w-5 h-5" />
               Sorties
             </button>
+            <button
+              onClick={() => handleTabChange('rib')}
+              className={`py-2 px-2 border-b-2 font-medium transition-colors flex items-center gap-2 ${
+                activeTab === 'rib'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <CreditCard className="w-5 h-5" />
+              RIB
+            </button>
           </div>
         </div>
       </div>
@@ -69,6 +87,7 @@ export default function AccountingDashboard({ currentView, onViewChange }: Accou
       <div>
         {activeTab === 'entrees' && <ComptabiliteEntriesTab />}
         {activeTab === 'sorties' && <ComptabiliteExitsTab />}
+        {activeTab === 'rib' && <ComptabiliteRibTab />}
       </div>
     </div>
   );
