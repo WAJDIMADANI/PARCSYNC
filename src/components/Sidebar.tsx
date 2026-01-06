@@ -69,7 +69,7 @@ interface NavItem {
 
 export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['rh', 'parc', 'exports', 'admin'])
+    new Set(['rh', 'parc', 'compta', 'exports', 'admin'])
   );
   const [inboxCount, setInboxCount] = useState(0);
   const { hasPermission, permissions } = usePermissions();
@@ -223,6 +223,11 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       .map(item => {
         if (isSection(item) && item.children) {
           const visibleChildren = item.children.filter(child => {
+            // Comptabilité accessible à tous
+            if (child.id.startsWith('compta/')) {
+              return true;
+            }
+
             // Les nouvelles routes admin ont les mêmes perms que les anciennes
             let permissionId = child.id;
             if (child.id === 'admin/modeles-courriers-v2') {

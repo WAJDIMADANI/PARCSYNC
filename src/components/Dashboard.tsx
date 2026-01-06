@@ -93,7 +93,7 @@ export function Dashboard() {
         return <FinesList />;
       case 'compta/entrees':
       case 'compta/sorties':
-        return <AccountingDashboard />;
+        return <AccountingDashboard currentView={view} onViewChange={handleViewChange} />;
       case 'dashboards/rh':
         return <RHDashboard onNavigate={handleViewChange} />;
       case 'dashboards/parc':
