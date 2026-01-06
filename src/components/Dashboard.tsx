@@ -38,6 +38,7 @@ import { GenerateLetterV2Page } from './GenerateLetterV2Page';
 import { LetterTemplatesV2Manager } from './LetterTemplatesV2Manager';
 import { InboxPage } from './InboxPage';
 import { DemandesExternesManager } from './DemandesExternesManager';
+import AccountingDashboard from './AccountingDashboard';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('dashboards/rh');
@@ -90,6 +91,9 @@ export function Dashboard() {
         return <FuelList />;
       case 'parc/amendes':
         return <FinesList />;
+      case 'compta/entrees':
+      case 'compta/sorties':
+        return <AccountingDashboard />;
       case 'dashboards/rh':
         return <RHDashboard onNavigate={handleViewChange} />;
       case 'dashboards/parc':
@@ -159,6 +163,7 @@ export function Dashboard() {
                 {view === 'parc/maintenance' && 'Maintenance & Garage'}
                 {view === 'parc/carburant' && 'Carburant'}
                 {view === 'parc/amendes' && 'Amendes'}
+                {(view === 'compta/entrees' || view === 'compta/sorties') && 'Comptabilité'}
                 {view === 'dashboards/rh' && 'Tableau de bord RH'}
                 {view === 'dashboards/parc' && 'Tableau de bord Parc'}
                 {view === 'exports/rh' && 'Exports RH'}

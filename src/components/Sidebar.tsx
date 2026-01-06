@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { supabase } from '../lib/supabase';
@@ -28,6 +28,8 @@ export type View =
   | 'parc/maintenance'
   | 'parc/carburant'
   | 'parc/amendes'
+  | 'compta/entrees'
+  | 'compta/sorties'
   | 'dashboards/rh'
   | 'dashboards/parc'
   | 'exports/rh'
@@ -122,6 +124,8 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       onViewChange('dashboards/rh');
     } else if (sectionId === 'parc') {
       onViewChange('dashboards/parc');
+    } else if (sectionId === 'compta') {
+      onViewChange('compta/entrees');
     }
     toggleSection(sectionId);
   };
@@ -168,6 +172,16 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'parc/maintenance', label: 'Maintenance/Garage', icon: Wrench, enabled: true },
         { id: 'parc/carburant', label: 'Carburant', icon: Fuel, enabled: false },
         { id: 'parc/amendes', label: 'Amendes', icon: AlertTriangle, enabled: false },
+      ]
+    },
+    {
+      id: 'compta',
+      label: 'Comptabilité',
+      icon: BarChart3,
+      enabled: true,
+      children: [
+        { id: 'compta/entrees', label: 'Entrées', icon: TrendingUp, enabled: true },
+        { id: 'compta/sorties', label: 'Sorties', icon: TrendingDown, enabled: true },
       ]
     },
     {
