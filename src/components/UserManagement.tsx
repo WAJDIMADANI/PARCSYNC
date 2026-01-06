@@ -51,6 +51,10 @@ const AVAILABLE_PERMISSIONS = [
     { id: 'parc/ct-assurance', label: 'CT & Assurance' },
     { id: 'parc/maintenance', label: 'Maintenance' },
   ]},
+  { section: 'Comptabilité', permissions: [
+    { id: 'compta/entrees', label: 'Entrées' },
+    { id: 'compta/sorties', label: 'Sorties' },
+  ]},
   { section: 'Administration', permissions: [
     { id: 'admin/sites', label: 'Sites' },
     { id: 'admin/secteurs', label: 'Secteurs' },

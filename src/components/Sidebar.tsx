@@ -219,17 +219,12 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   };
 
   const filterNavigation = () => {
-    console.log('filterNavigation called, permissions:', permissions);
-
     return navigation
       .map(item => {
         if (isSection(item) && item.children) {
-          console.log(`Processing section: ${item.id}, children count:`, item.children?.length);
-
           const visibleChildren = item.children.filter(child => {
             // Comptabilité accessible à tous
             if (child.id.startsWith('compta/')) {
-              console.log(`✓ ${child.id} - Accessible (comptabilité)`);
               return true;
             }
 
@@ -241,21 +236,16 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
               permissionId = 'admin/generer-courrier';
             }
             const hasAccess = hasPermission(permissionId);
-            console.log(`${hasAccess ? '✓' : '✗'} ${child.id} - hasPermission(${permissionId}):`, hasAccess);
             return hasAccess;
           });
 
-          console.log(`Section ${item.id} - Visible children:`, visibleChildren.length, visibleChildren.map(c => c.id));
-
           if (visibleChildren.length === 0) {
-            console.log(`Section ${item.id} - HIDDEN (no visible children)`);
             return null;
           }
 
           return { ...item, children: visibleChildren };
         }
 
-        console.log(`Single item: ${item.id}`);
         return item;
       })
       .filter(Boolean) as (NavItem | NavSection)[];
