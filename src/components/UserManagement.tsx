@@ -54,6 +54,7 @@ const AVAILABLE_PERMISSIONS = [
   { section: 'Comptabilité', permissions: [
     { id: 'compta/entrees', label: 'Entrées' },
     { id: 'compta/sorties', label: 'Sorties' },
+    { id: 'compta/rib', label: 'RIB' },
   ]},
   { section: 'Administration', permissions: [
     { id: 'admin/sites', label: 'Sites' },
