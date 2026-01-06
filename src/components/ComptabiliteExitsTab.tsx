@@ -1,81 +1,53 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, X, Euro, Calendar, Search, Filter } from 'lucide-react';
+import { Calendar, Download, UserMinus, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import * as XLSX from 'xlsx';
 
-interface SortieComptable {
+interface Employee {
   id: string;
-  date: string;
-  montant: number;
-  categorie: string;
-  description: string | null;
-  reference: string | null;
-  mode_paiement: string | null;
-  fournisseur: string | null;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
+  matricule: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  poste: string;
+  site: string;
+  date_fin_contrat: string | null;
+  statut: string;
 }
 
-const CATEGORIES_SORTIES = [
-  'Achat',
-  'Loyer',
-  'Salaire',
-  'Charges sociales',
-  'Assurance',
-  'Électricité',
-  'Eau',
-  'Téléphone',
-  'Internet',
-  'Carburant',
-  'Maintenance',
-  'Fournitures',
-  'Autre'
-];
-
-const MODES_PAIEMENT = [
-  'Espèces',
-  'Chèque',
-  'Virement',
-  'Carte bancaire',
-  'Prélèvement'
-];
-
 export function ComptabiliteExitsTab() {
-  const { user } = useAuth();
-  const [sorties, setSorties] = useState<SortieComptable[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<SortieComptable | null>(null);
+  const [dateDebut, setDateDebut] = useState('');
+  const [dateFin, setDateFin] = useState('');
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategorie, setFilterCategorie] = useState<string>('');
-  const [filterDateDebut, setFilterDateDebut] = useState<string>('');
-  const [filterDateFin, setFilterDateFin] = useState<string>('');
 
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    montant: '',
-    categorie: '',
-    description: '',
-    reference: '',
-    mode_paiement: '',
-    fournisseur: ''
-  });
+  const fetchExits = async () => {
+    if (!dateDebut || !dateFin) {
+      alert('Veuillez sélectionner une plage de dates');
+      return;
+    }
 
-  useEffect(() => {
-    fetchSorties();
-  }, []);
-
-  const fetchSorties = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('sorties_comptables')
-        .select('*')
-        .order('date', { ascending: false });
+      let query = supabase
+        .from('profil')
+        .select('id, matricule, nom, prenom, email, telephone, poste, site, date_fin_contrat, statut')
+        .eq('statut', 'inactif')
+        .not('date_fin_contrat', 'is', null);
+
+      if (dateDebut) {
+        query = query.gte('date_fin_contrat', dateDebut);
+      }
+      if (dateFin) {
+        query = query.lte('date_fin_contrat', dateFin);
+      }
+
+      const { data, error } = await query.order('date_fin_contrat', { ascending: false });
 
       if (error) throw error;
-      setSorties(data || []);
+      setEmployees(data || []);
     } catch (err) {
       console.error('Erreur chargement sorties:', err);
       alert('Erreur lors du chargement des sorties');
@@ -84,382 +56,200 @@ export function ComptabiliteExitsTab() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.montant || !formData.categorie) {
-      alert('Veuillez remplir les champs obligatoires (montant et catégorie)');
+  const handleExport = () => {
+    if (employees.length === 0) {
+      alert('Aucune donnée à exporter');
       return;
     }
 
-    try {
-      const sortieData = {
-        date: formData.date,
-        montant: parseFloat(formData.montant),
-        categorie: formData.categorie,
-        description: formData.description || null,
-        reference: formData.reference || null,
-        mode_paiement: formData.mode_paiement || null,
-        fournisseur: formData.fournisseur || null,
-        created_by: user?.id || null
-      };
+    const exportData = employees.map(emp => ({
+      'Matricule': emp.matricule,
+      'Nom': emp.nom,
+      'Prénom': emp.prenom,
+      'Email': emp.email,
+      'Téléphone': emp.telephone,
+      'Poste': emp.poste,
+      'Site': emp.site,
+      'Date fin contrat': emp.date_fin_contrat ? new Date(emp.date_fin_contrat).toLocaleDateString('fr-FR') : '',
+      'Statut': emp.statut
+    }));
 
-      if (editingEntry) {
-        const { error } = await supabase
-          .from('sorties_comptables')
-          .update(sortieData)
-          .eq('id', editingEntry.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('sorties_comptables')
-          .insert([sortieData]);
-
-        if (error) throw error;
-      }
-
-      resetForm();
-      fetchSorties();
-    } catch (err) {
-      console.error('Erreur sauvegarde:', err);
-      alert('Erreur lors de la sauvegarde');
-    }
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sorties');
+    XLSX.writeFile(wb, `sorties_${dateDebut}_${dateFin}.xlsx`);
   };
 
-  const handleEdit = (entry: SortieComptable) => {
-    setEditingEntry(entry);
-    setFormData({
-      date: entry.date,
-      montant: entry.montant.toString(),
-      categorie: entry.categorie,
-      description: entry.description || '',
-      reference: entry.reference || '',
-      mode_paiement: entry.mode_paiement || '',
-      fournisseur: entry.fournisseur || ''
-    });
-    setShowAddModal(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette sortie ?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('sorties_comptables')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      fetchSorties();
-    } catch (err) {
-      console.error('Erreur suppression:', err);
-      alert('Erreur lors de la suppression');
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      date: new Date().toISOString().split('T')[0],
-      montant: '',
-      categorie: '',
-      description: '',
-      reference: '',
-      mode_paiement: '',
-      fournisseur: ''
-    });
-    setEditingEntry(null);
-    setShowAddModal(false);
-  };
-
-  const filteredSorties = sorties.filter(entry => {
-    const matchSearch = !searchTerm ||
-      entry.fournisseur?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.reference?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchCategorie = !filterCategorie || entry.categorie === filterCategorie;
-    const matchDateDebut = !filterDateDebut || entry.date >= filterDateDebut;
-    const matchDateFin = !filterDateFin || entry.date <= filterDateFin;
-
-    return matchSearch && matchCategorie && matchDateDebut && matchDateFin;
-  });
-
-  const totalSorties = filteredSorties.reduce((sum, entry) => sum + Number(entry.montant), 0);
-
-  if (loading) {
+  const filteredEmployees = employees.filter(emp => {
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      emp.matricule?.toLowerCase().includes(search) ||
+      emp.nom?.toLowerCase().includes(search) ||
+      emp.prenom?.toLowerCase().includes(search) ||
+      emp.email?.toLowerCase().includes(search) ||
+      emp.poste?.toLowerCase().includes(search) ||
+      emp.site?.toLowerCase().includes(search)
     );
-  }
+  });
 
   return (
     <div className="space-y-6">
-      {/* En-tête avec recherche et filtres */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Rechercher..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-        >
-          <Plus className="h-5 w-5" />
-          Nouvelle sortie
-        </button>
-      </div>
+      <div className="bg-gradient-to-r from-red-50 to-orange-50 p-6 rounded-lg border border-red-200">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <UserMinus className="h-6 w-6 text-red-600" />
+          Sorties de salariés
+        </h2>
+        <p className="text-gray-600 mb-6">
+          Consultez la liste des salariés ayant quitté l'entreprise sur une période donnée
+        </p>
 
-      {/* Filtres */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <Filter className="inline h-4 w-4 mr-1" />
-            Catégorie
-          </label>
-          <select
-            value={filterCategorie}
-            onChange={(e) => setFilterCategorie(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Calendar className="inline h-4 w-4 mr-1" />
+              Date début
+            </label>
+            <input
+              type="date"
+              value={dateDebut}
+              onChange={(e) => setDateDebut(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Calendar className="inline h-4 w-4 mr-1" />
+              Date fin
+            </label>
+            <input
+              type="date"
+              value={dateFin}
+              onChange={(e) => setDateFin(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            />
+          </div>
+
+          <button
+            onClick={fetchExits}
+            disabled={loading}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2"
           >
-            <option value="">Toutes</option>
-            {CATEGORIES_SORTIES.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <Calendar className="inline h-4 w-4 mr-1" />
-            Date début
-          </label>
-          <input
-            type="date"
-            value={filterDateDebut}
-            onChange={(e) => setFilterDateDebut(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <Calendar className="inline h-4 w-4 mr-1" />
-            Date fin
-          </label>
-          <input
-            type="date"
-            value={filterDateFin}
-            onChange={(e) => setFilterDateFin(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Chargement...
+              </>
+            ) : (
+              <>
+                <Search className="h-4 w-4" />
+                Rechercher
+              </>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Total */}
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-lg font-medium text-gray-700">Total des sorties</span>
-          <span className="text-2xl font-bold text-red-600">
-            <Euro className="inline h-6 w-6 mr-1" />
-            {totalSorties.toFixed(2)}
-          </span>
-        </div>
-      </div>
+      {employees.length > 0 && (
+        <>
+          <div className="flex items-center justify-between">
+            <div className="flex-1 relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <input
+                type="text"
+                placeholder="Rechercher par matricule, nom, email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              />
+            </div>
 
-      {/* Liste des sorties */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fournisseur</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Catégorie</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Référence</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mode paiement</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredSorties.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                    Aucune sortie trouvée
-                  </td>
-                </tr>
-              ) : (
-                filteredSorties.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(entry.date).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.fournisseur || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
-                        {entry.categorie}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{entry.description || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.reference || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.mode_paiement || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
-                      {Number(entry.montant).toFixed(2)} €
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleEdit(entry)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(entry.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Modal d'ajout/édition */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  {editingEntry ? 'Modifier la sortie' : 'Nouvelle sortie'}
-                </h3>
-                <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
-                  <X className="h-6 w-6" />
-                </button>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">
+                <span className="font-semibold text-red-600">{filteredEmployees.length}</span> sortie{filteredEmployees.length > 1 ? 's' : ''}
               </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Montant (€) <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.montant}
-                      onChange={(e) => setFormData({ ...formData, montant: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Catégorie <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={formData.categorie}
-                      onChange={(e) => setFormData({ ...formData, categorie: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Sélectionner</option>
-                      {CATEGORIES_SORTIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Mode de paiement</label>
-                    <select
-                      value={formData.mode_paiement}
-                      onChange={(e) => setFormData({ ...formData, mode_paiement: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Sélectionner</option>
-                      {MODES_PAIEMENT.map(mode => (
-                        <option key={mode} value={mode}>{mode}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fournisseur</label>
-                    <input
-                      type="text"
-                      value={formData.fournisseur}
-                      onChange={(e) => setFormData({ ...formData, fournisseur: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Référence</label>
-                    <input
-                      type="text"
-                      value={formData.reference}
-                      onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="submit"
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Save className="h-5 w-5" />
-                    {editingEntry ? 'Mettre à jour' : 'Enregistrer'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Annuler
-                  </button>
-                </div>
-              </form>
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                Exporter
+              </button>
             </div>
           </div>
+
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Matricule
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nom
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Prénom
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Téléphone
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Poste
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Site
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date fin contrat
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredEmployees.map((emp) => (
+                    <tr key={emp.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {emp.matricule}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {emp.nom}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {emp.prenom}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {emp.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {emp.telephone}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {emp.poste}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {emp.site}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {emp.date_fin_contrat ? new Date(emp.date_fin_contrat).toLocaleDateString('fr-FR') : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {!loading && employees.length === 0 && dateDebut && dateFin && (
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <UserMinus className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-gray-500">Aucune sortie trouvée pour cette période</p>
         </div>
       )}
     </div>

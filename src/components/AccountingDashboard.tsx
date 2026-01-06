@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { ComptabiliteEntriesTab } from './ComptabiliteEntriesTab';
 import { ComptabiliteExitsTab } from './ComptabiliteExitsTab';
 import { View } from './Sidebar';
@@ -30,11 +30,11 @@ export default function AccountingDashboard({ currentView, onViewChange }: Accou
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-3 bg-gradient-to-br from-green-500 to-blue-500 rounded-xl shadow-lg">
-            <DollarSign className="h-8 w-8 text-white" />
+            <TrendingUp className="h-8 w-8 text-white" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Comptabilité</h1>
-            <p className="text-gray-600">Gestion des entrées et sorties financières</p>
+            <p className="text-gray-600">Suivi des entrées et sorties de personnel</p>
           </div>
         </div>
 
