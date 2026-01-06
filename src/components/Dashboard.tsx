@@ -95,6 +95,7 @@ export function Dashboard() {
       case 'compta/sorties':
       case 'compta/rib':
       case 'compta/adresse':
+      case 'compta/avenants':
         return <AccountingDashboard currentView={view} onViewChange={handleViewChange} />;
       case 'dashboards/rh':
         return <RHDashboard onNavigate={handleViewChange} />;
@@ -166,7 +167,7 @@ export function Dashboard() {
                 {view === 'parc/maintenance' && 'Maintenance & Garage'}
                 {view === 'parc/carburant' && 'Carburant'}
                 {view === 'parc/amendes' && 'Amendes'}
-                {(view === 'compta/entrees' || view === 'compta/sorties' || view === 'compta/rib' || view === 'compta/adresse') && 'Comptabilité'}
+                {(view === 'compta/entrees' || view === 'compta/sorties' || view === 'compta/rib' || view === 'compta/adresse' || view === 'compta/avenants') && 'Comptabilité'}
                 {view === 'dashboards/rh' && 'Tableau de bord RH'}
                 {view === 'dashboards/parc' && 'Tableau de bord Parc'}
                 {view === 'exports/rh' && 'Exports RH'}

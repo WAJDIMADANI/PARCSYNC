@@ -32,6 +32,7 @@ export type View =
   | 'compta/sorties'
   | 'compta/rib'
   | 'compta/adresse'
+  | 'compta/avenants'
   | 'dashboards/rh'
   | 'dashboards/parc'
   | 'exports/rh'
@@ -186,6 +187,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'compta/sorties', label: 'Sorties', icon: TrendingDown, enabled: true },
         { id: 'compta/rib', label: 'RIB', icon: CreditCard, enabled: true },
         { id: 'compta/adresse', label: 'Adresse', icon: MapPin, enabled: true },
+        { id: 'compta/avenants', label: 'Avenants', icon: FileText, enabled: true },
       ]
     },
     {
