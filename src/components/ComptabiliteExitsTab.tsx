@@ -4,16 +4,15 @@ import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
 
 interface Employee {
-  contrat_id: string;
   profil_id: string;
-  site_id: string | null;
-  date_fin: string;
   nom: string;
   prenom: string;
   email: string;
   poste: string | null;
-  profil_statut: string;
-  contrat_statut: string;
+  statut: string;
+  date_sortie: string;
+  motif_depart: string | null;
+  commentaire_depart: string | null;
 }
 
 export function ComptabiliteExitsTab() {
@@ -33,10 +32,10 @@ export function ComptabiliteExitsTab() {
     try {
       const { data, error } = await supabase
         .from('v_compta_sorties')
-        .select('contrat_id, profil_id, site_id, date_fin, nom, prenom, email, poste, profil_statut, contrat_statut')
-        .gte('date_fin', dateDebut)
-        .lte('date_fin', dateFin)
-        .order('date_fin', { ascending: false });
+        .select('profil_id, nom, prenom, email, poste, statut, date_sortie, motif_depart, commentaire_depart')
+        .gte('date_sortie', dateDebut)
+        .lte('date_sortie', dateFin)
+        .order('date_sortie', { ascending: false });
 
       if (error) throw error;
       setEmployees(data || []);
@@ -58,10 +57,11 @@ export function ComptabiliteExitsTab() {
       'Nom': emp.nom,
       'Prénom': emp.prenom,
       'Email': emp.email,
-      'Poste': emp.poste,
-      'Date fin contrat': emp.date_fin ? new Date(emp.date_fin).toLocaleDateString('fr-FR') : '',
-      'Statut profil': emp.profil_statut,
-      'Statut contrat': emp.contrat_statut
+      'Poste': emp.poste ?? '',
+      'Date départ': emp.date_sortie ? new Date(emp.date_sortie).toLocaleDateString('fr-FR') : '',
+      'Motif départ': emp.motif_depart ?? '',
+      'Commentaire': emp.commentaire_depart ?? '',
+      'Statut': emp.statut
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -77,7 +77,9 @@ export function ComptabiliteExitsTab() {
       emp.nom?.toLowerCase().includes(search) ||
       emp.prenom?.toLowerCase().includes(search) ||
       emp.email?.toLowerCase().includes(search) ||
-      emp.poste?.toLowerCase().includes(search)
+      (emp.poste ?? '').toLowerCase().includes(search) ||
+      (emp.motif_depart ?? '').toLowerCase().includes(search) ||
+      (emp.commentaire_depart ?? '').toLowerCase().includes(search)
     );
   });
 
@@ -185,13 +187,19 @@ export function ComptabiliteExitsTab() {
                       Poste
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date fin contrat
+                      Date départ
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Motif
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Commentaire
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredEmployees.map((emp) => (
-                    <tr key={emp.contrat_id} className="hover:bg-gray-50">
+                    <tr key={emp.profil_id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {emp.nom}
                       </td>
@@ -205,7 +213,13 @@ export function ComptabiliteExitsTab() {
                         {emp.poste}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {emp.date_fin ? new Date(emp.date_fin).toLocaleDateString('fr-FR') : '-'}
+                        {emp.date_sortie ? new Date(emp.date_sortie).toLocaleDateString('fr-FR') : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {emp.motif_depart ?? '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {emp.commentaire_depart ?? '-'}
                       </td>
                     </tr>
                   ))}
