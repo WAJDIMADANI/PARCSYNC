@@ -4,16 +4,16 @@ import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
 
 interface Employee {
-  id: string;
-  matricule: string;
+  contrat_id: string;
+  profil_id: string;
+  site_id: string | null;
+  date_fin: string;
   nom: string;
   prenom: string;
   email: string;
-  telephone: string;
-  poste: string;
-  site: string;
-  date_fin_contrat: string | null;
-  statut: string;
+  poste: string | null;
+  profil_statut: string;
+  contrat_statut: string;
 }
 
 export function ComptabiliteExitsTab() {
@@ -31,26 +31,18 @@ export function ComptabiliteExitsTab() {
 
     setLoading(true);
     try {
-      let query = supabase
-        .from('profil')
-        .select('id, matricule, nom, prenom, email, telephone, poste, site, date_fin_contrat, statut')
-        .eq('statut', 'inactif')
-        .not('date_fin_contrat', 'is', null);
-
-      if (dateDebut) {
-        query = query.gte('date_fin_contrat', dateDebut);
-      }
-      if (dateFin) {
-        query = query.lte('date_fin_contrat', dateFin);
-      }
-
-      const { data, error } = await query.order('date_fin_contrat', { ascending: false });
+      const { data, error } = await supabase
+        .from('v_compta_sorties')
+        .select('contrat_id, profil_id, site_id, date_fin, nom, prenom, email, poste, profil_statut, contrat_statut')
+        .gte('date_fin', dateDebut)
+        .lte('date_fin', dateFin)
+        .order('date_fin', { ascending: false });
 
       if (error) throw error;
       setEmployees(data || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur chargement sorties:', err);
-      alert('Erreur lors du chargement des sorties');
+      alert(err?.message ?? 'Erreur lors du chargement des sorties');
     } finally {
       setLoading(false);
     }
@@ -63,15 +55,13 @@ export function ComptabiliteExitsTab() {
     }
 
     const exportData = employees.map(emp => ({
-      'Matricule': emp.matricule,
       'Nom': emp.nom,
       'Prénom': emp.prenom,
       'Email': emp.email,
-      'Téléphone': emp.telephone,
       'Poste': emp.poste,
-      'Site': emp.site,
-      'Date fin contrat': emp.date_fin_contrat ? new Date(emp.date_fin_contrat).toLocaleDateString('fr-FR') : '',
-      'Statut': emp.statut
+      'Date fin contrat': emp.date_fin ? new Date(emp.date_fin).toLocaleDateString('fr-FR') : '',
+      'Statut profil': emp.profil_statut,
+      'Statut contrat': emp.contrat_statut
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -84,12 +74,10 @@ export function ComptabiliteExitsTab() {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
-      emp.matricule?.toLowerCase().includes(search) ||
       emp.nom?.toLowerCase().includes(search) ||
       emp.prenom?.toLowerCase().includes(search) ||
       emp.email?.toLowerCase().includes(search) ||
-      emp.poste?.toLowerCase().includes(search) ||
-      emp.site?.toLowerCase().includes(search)
+      emp.poste?.toLowerCase().includes(search)
     );
   });
 
@@ -185,9 +173,6 @@ export function ComptabiliteExitsTab() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Matricule
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Nom
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -197,13 +182,7 @@ export function ComptabiliteExitsTab() {
                       Email
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Téléphone
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Poste
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Site
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Date fin contrat
@@ -212,10 +191,7 @@ export function ComptabiliteExitsTab() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredEmployees.map((emp) => (
-                    <tr key={emp.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {emp.matricule}
-                      </td>
+                    <tr key={emp.contrat_id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {emp.nom}
                       </td>
@@ -225,17 +201,11 @@ export function ComptabiliteExitsTab() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {emp.email}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {emp.telephone}
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {emp.poste}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {emp.site}
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {emp.date_fin_contrat ? new Date(emp.date_fin_contrat).toLocaleDateString('fr-FR') : '-'}
+                        {emp.date_fin ? new Date(emp.date_fin).toLocaleDateString('fr-FR') : '-'}
                       </td>
                     </tr>
                   ))}
