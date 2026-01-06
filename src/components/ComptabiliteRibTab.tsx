@@ -4,13 +4,12 @@ import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
 
 interface RibChange {
-  id: string;
   profil_id: string;
   changed_at: string;
   nom: string;
   prenom: string;
-  new_iban: string | null;
-  new_bic: string | null;
+  iban: string | null;
+  bic: string | null;
 }
 
 export function ComptabiliteRibTab() {
@@ -32,19 +31,15 @@ export function ComptabiliteRibTab() {
       const to = `${dateFin} 23:59:59+00`;
 
       const { data, error } = await supabase
-        .from('rib_change_history')
-        .select('id, profil_id, changed_at, nom, prenom, new_iban, new_bic')
+        .from('v_rib_last_change')
+        .select('profil_id, changed_at, nom, prenom, iban, bic')
         .gte('changed_at', from)
         .lte('changed_at', to)
         .order('changed_at', { ascending: false });
 
       if (error) throw error;
 
-      const filtered = (data || []).filter(
-        (item) => item.new_iban !== null || item.new_bic !== null
-      );
-
-      setRibChanges(filtered);
+      setRibChanges(data || []);
     } catch (err: any) {
       console.error('Erreur chargement changements RIB:', err);
       alert(err?.message ?? 'Erreur lors du chargement des changements RIB');
@@ -62,8 +57,8 @@ export function ComptabiliteRibTab() {
     const exportData = filteredRibChanges.map((item) => ({
       'NOM': item.nom,
       'PRENOM': item.prenom,
-      'RIB': item.new_iban || '',
-      'BIC': item.new_bic || ''
+      'RIB': item.iban || '',
+      'BIC': item.bic || ''
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -79,8 +74,8 @@ export function ComptabiliteRibTab() {
     return (
       (item.nom ?? '').toLowerCase().includes(search) ||
       (item.prenom ?? '').toLowerCase().includes(search) ||
-      (item.new_iban ?? '').toLowerCase().includes(search) ||
-      (item.new_bic ?? '').toLowerCase().includes(search)
+      (item.iban ?? '').toLowerCase().includes(search) ||
+      (item.bic ?? '').toLowerCase().includes(search)
     );
   });
 
@@ -194,7 +189,7 @@ export function ComptabiliteRibTab() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredRibChanges.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
+                    <tr key={item.profil_id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {item.nom}
                       </td>
@@ -202,10 +197,10 @@ export function ComptabiliteRibTab() {
                         {item.prenom}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.new_iban || '-'}
+                        {item.iban || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.new_bic || '-'}
+                        {item.bic || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {item.changed_at ? new Date(item.changed_at).toLocaleDateString('fr-FR') : '-'}
