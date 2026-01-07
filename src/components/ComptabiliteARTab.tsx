@@ -1,0 +1,638 @@
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { Search, Plus, X, Calendar, Clock, FileText, Download, Upload, Trash2 } from 'lucide-react';
+import * as XLSX from 'xlsx';
+
+interface AREvent {
+  id: string;
+  profil_id: string;
+  matricule: string;
+  nom: string;
+  prenom: string;
+  ar_type: 'ABSENCE' | 'RETARD';
+  start_date: string;
+  end_date: string | null;
+  retard_minutes: number | null;
+  retard_hours: number | null;
+  absence_days: number | null;
+  justifie: boolean;
+  note: string | null;
+  justificatif_file_path: string | null;
+  created_at: string;
+}
+
+interface Employee {
+  id: string;
+  matricule: string;
+  nom: string;
+  prenom: string;
+}
+
+export default function ComptabiliteARTab() {
+  const [events, setEvents] = useState<AREvent[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<AREvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
+
+  const [formData, setFormData] = useState({
+    ar_type: 'RETARD' as 'ABSENCE' | 'RETARD',
+    start_date: '',
+    end_date: '',
+    retard_minutes: 0,
+    justifie: false,
+    note: '',
+  });
+  const [justificatifFile, setJustificatifFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadEvents();
+    loadEmployees();
+  }, []);
+
+  useEffect(() => {
+    filterEvents();
+  }, [events, searchTerm, startDateFilter, endDateFilter]);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('v_compta_ar')
+        .select('*')
+        .order('start_date', { ascending: false });
+
+      if (error) throw error;
+      setEvents(data || []);
+    } catch (error) {
+      console.error('Error loading A&R events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadEmployees = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profil')
+        .select('id, matricule, nom, prenom')
+        .order('nom');
+
+      if (error) throw error;
+      setEmployees(data || []);
+    } catch (error) {
+      console.error('Error loading employees:', error);
+    }
+  };
+
+  const filterEvents = () => {
+    let filtered = [...events];
+
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (e) =>
+          e.matricule?.toLowerCase().includes(search) ||
+          e.nom?.toLowerCase().includes(search) ||
+          e.prenom?.toLowerCase().includes(search)
+      );
+    }
+
+    if (startDateFilter) {
+      filtered = filtered.filter((e) => e.start_date >= startDateFilter);
+    }
+
+    if (endDateFilter) {
+      filtered = filtered.filter((e) => e.start_date <= endDateFilter);
+    }
+
+    setFilteredEvents(filtered);
+  };
+
+  const filteredEmployees = employees.filter(
+    (emp) =>
+      emp.matricule?.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+      emp.nom?.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+      emp.prenom?.toLowerCase().includes(employeeSearch.toLowerCase())
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEmployee) return;
+
+    try {
+      setSaving(true);
+
+      let justificatif_path = null;
+      if (justificatifFile) {
+        const fileExt = justificatifFile.name.split('.').pop();
+        const fileName = `${selectedEmployee.id}_${Date.now()}.${fileExt}`;
+        const filePath = `ar-justificatifs/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(filePath, justificatifFile);
+
+        if (uploadError) throw uploadError;
+        justificatif_path = filePath;
+      }
+
+      const eventData: any = {
+        profil_id: selectedEmployee.id,
+        ar_type: formData.ar_type,
+        start_date: formData.start_date,
+        justifie: formData.justifie,
+        note: formData.note || null,
+        justificatif_file_path: justificatif_path,
+      };
+
+      if (formData.ar_type === 'RETARD') {
+        eventData.retard_minutes = formData.retard_minutes;
+        eventData.end_date = null;
+      } else {
+        eventData.end_date = formData.end_date;
+        eventData.retard_minutes = null;
+      }
+
+      const { error } = await supabase
+        .from('compta_ar_events')
+        .insert([eventData]);
+
+      if (error) throw error;
+
+      setShowModal(false);
+      resetForm();
+      loadEvents();
+    } catch (error: any) {
+      console.error('Error creating A&R event:', error);
+      alert('Erreur lors de la création: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetForm = () => {
+    setSelectedEmployee(null);
+    setEmployeeSearch('');
+    setFormData({
+      ar_type: 'RETARD',
+      start_date: '',
+      end_date: '',
+      retard_minutes: 0,
+      justifie: false,
+      note: '',
+    });
+    setJustificatifFile(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Supprimer cet événement ?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('compta_ar_events')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      loadEvents();
+    } catch (error: any) {
+      console.error('Error deleting event:', error);
+      alert('Erreur lors de la suppression: ' + error.message);
+    }
+  };
+
+  const exportToExcel = () => {
+    const exportData = filteredEvents.map((e) => ({
+      Matricule: e.matricule,
+      Nom: e.nom,
+      Prénom: e.prenom,
+      Type: e.ar_type,
+      'Date début': e.start_date,
+      'Date fin': e.end_date || '',
+      'Heures de retard': e.retard_hours || '',
+      'Jours d\'absence': e.absence_days || '',
+      Justifié: e.justifie ? 'OUI' : 'NON',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'A&R');
+    XLSX.writeFile(wb, `absences_retards_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('fr-FR');
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-800">Absences & Retards</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={exportToExcel}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            <Download className="w-4 h-4" />
+            Exporter Excel
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            Nouveau
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-4 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Recherche
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Matricule, nom, prénom..."
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Date début
+            </label>
+            <input
+              type="date"
+              value={startDateFilter}
+              onChange={(e) => setStartDateFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Date fin
+            </label>
+            <input
+              type="date"
+              value={endDateFilter}
+              onChange={(e) => setEndDateFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Matricule
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Nom
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Prénom
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date début
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date fin
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Durée
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Justifié
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredEvents.map((event) => (
+                  <tr key={event.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.matricule}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.nom}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.prenom}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          event.ar_type === 'ABSENCE'
+                            ? 'bg-orange-100 text-orange-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}
+                      >
+                        {event.ar_type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatDate(event.start_date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.end_date ? formatDate(event.end_date) : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.ar_type === 'RETARD'
+                        ? `${event.retard_hours}h`
+                        : `${event.absence_days}j`}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          event.justifie
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {event.justifie ? 'OUI' : 'NON'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <button
+                        onClick={() => handleDelete(event.id)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {filteredEvents.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              Aucun événement trouvé
+            </div>
+          )}
+        </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-xl font-bold text-gray-900">
+                Nouvel événement A&R
+              </h3>
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  resetForm();
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Salarié *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={
+                      selectedEmployee
+                        ? `${selectedEmployee.matricule} - ${selectedEmployee.nom} ${selectedEmployee.prenom}`
+                        : employeeSearch
+                    }
+                    onChange={(e) => {
+                      setEmployeeSearch(e.target.value);
+                      setSelectedEmployee(null);
+                      setShowEmployeeDropdown(true);
+                    }}
+                    onFocus={() => setShowEmployeeDropdown(true)}
+                    placeholder="Rechercher par matricule, nom ou prénom..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  {showEmployeeDropdown && filteredEmployees.length > 0 && !selectedEmployee && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredEmployees.map((emp) => (
+                        <button
+                          key={emp.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedEmployee(emp);
+                            setEmployeeSearch('');
+                            setShowEmployeeDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                        >
+                          {emp.matricule} - {emp.nom} {emp.prenom}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Type *
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="RETARD"
+                      checked={formData.ar_type === 'RETARD'}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ar_type: e.target.value as 'RETARD' })
+                      }
+                      className="mr-2"
+                    />
+                    Retard
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="ABSENCE"
+                      checked={formData.ar_type === 'ABSENCE'}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ar_type: e.target.value as 'ABSENCE' })
+                      }
+                      className="mr-2"
+                    />
+                    Absence
+                  </label>
+                </div>
+              </div>
+
+              {formData.ar_type === 'RETARD' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) =>
+                        setFormData({ ...formData, start_date: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Durée du retard (minutes) *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.retard_minutes}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          retard_minutes: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Soit {(formData.retard_minutes / 60).toFixed(2)} heure(s)
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date début *
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) =>
+                        setFormData({ ...formData, start_date: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date fin *
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) =>
+                        setFormData({ ...formData, end_date: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.justifie}
+                    onChange={(e) =>
+                      setFormData({ ...formData, justifie: e.target.checked })
+                    }
+                    className="mr-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Justifié</span>
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Note
+                </label>
+                <textarea
+                  value={formData.note}
+                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Note additionnelle..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Justificatif
+                </label>
+                <input
+                  type="file"
+                  onChange={(e) => setJustificatifFile(e.target.files?.[0] || null)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowModal(false);
+                    resetForm();
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving || !selectedEmployee}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, CreditCard, MapPin, FileText, HeartHandshake } from 'lucide-react';
+import { TrendingUp, TrendingDown, CreditCard, MapPin, FileText, HeartHandshake, Clock } from 'lucide-react';
 import { ComptabiliteEntriesTab } from './ComptabiliteEntriesTab';
 import { ComptabiliteExitsTab } from './ComptabiliteExitsTab';
 import { ComptabiliteRibTab } from './ComptabiliteRibTab';
 import { ComptabiliteAdresseTab } from './ComptabiliteAdresseTab';
 import { ComptabiliteAvenantTab } from './ComptabiliteAvenantTab';
 import { ComptabiliteMutuelleTab } from './ComptabiliteMutuelleTab';
+import ComptabiliteARTab from './ComptabiliteARTab';
 import { View } from './Sidebar';
 
 interface AccountingDashboardProps {
@@ -14,7 +15,7 @@ interface AccountingDashboardProps {
 }
 
 export default function AccountingDashboard({ currentView, onViewChange }: AccountingDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'entrees' | 'sorties' | 'rib' | 'adresse' | 'avenants' | 'mutuelle'>('entrees');
+  const [activeTab, setActiveTab] = useState<'entrees' | 'sorties' | 'rib' | 'adresse' | 'avenants' | 'mutuelle' | 'ar'>('entrees');
 
   useEffect(() => {
     if (currentView === 'compta/entrees') {
@@ -29,10 +30,12 @@ export default function AccountingDashboard({ currentView, onViewChange }: Accou
       setActiveTab('avenants');
     } else if (currentView === 'compta/mutuelle') {
       setActiveTab('mutuelle');
+    } else if (currentView === 'compta/ar') {
+      setActiveTab('ar');
     }
   }, [currentView]);
 
-  const handleTabChange = (tab: 'entrees' | 'sorties' | 'rib' | 'adresse' | 'avenants' | 'mutuelle') => {
+  const handleTabChange = (tab: 'entrees' | 'sorties' | 'rib' | 'adresse' | 'avenants' | 'mutuelle' | 'ar') => {
     setActiveTab(tab);
     onViewChange(
       tab === 'entrees' ? 'compta/entrees' :
@@ -40,7 +43,8 @@ export default function AccountingDashboard({ currentView, onViewChange }: Accou
       tab === 'rib' ? 'compta/rib' :
       tab === 'adresse' ? 'compta/adresse' :
       tab === 'avenants' ? 'compta/avenants' :
-      'compta/mutuelle'
+      tab === 'mutuelle' ? 'compta/mutuelle' :
+      'compta/ar'
     );
   };
 
@@ -125,6 +129,17 @@ export default function AccountingDashboard({ currentView, onViewChange }: Accou
               <HeartHandshake className="w-5 h-5" />
               Mutuelle
             </button>
+            <button
+              onClick={() => handleTabChange('ar')}
+              className={`py-2 px-2 border-b-2 font-medium transition-colors flex items-center gap-2 ${
+                activeTab === 'ar'
+                  ? 'border-amber-500 text-amber-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Clock className="w-5 h-5" />
+              A&R
+            </button>
           </div>
         </div>
       </div>
@@ -136,6 +151,7 @@ export default function AccountingDashboard({ currentView, onViewChange }: Accou
         {activeTab === 'adresse' && <ComptabiliteAdresseTab />}
         {activeTab === 'avenants' && <ComptabiliteAvenantTab />}
         {activeTab === 'mutuelle' && <ComptabiliteMutuelleTab />}
+        {activeTab === 'ar' && <ComptabiliteARTab />}
       </div>
     </div>
   );

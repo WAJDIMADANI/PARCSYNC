@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard, MapPin, HeartHandshake
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard, MapPin, HeartHandshake, Clock
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { supabase } from '../lib/supabase';
@@ -34,6 +34,7 @@ export type View =
   | 'compta/adresse'
   | 'compta/avenants'
   | 'compta/mutuelle'
+  | 'compta/ar'
   | 'dashboards/rh'
   | 'dashboards/parc'
   | 'exports/rh'
@@ -190,6 +191,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'compta/adresse', label: 'Adresse', icon: MapPin, enabled: true },
         { id: 'compta/avenants', label: 'Avenants', icon: FileText, enabled: true },
         { id: 'compta/mutuelle', label: 'Mutuelle', icon: HeartHandshake, enabled: true },
+        { id: 'compta/ar', label: 'A&R', icon: Clock, enabled: true },
       ]
     },
     {
