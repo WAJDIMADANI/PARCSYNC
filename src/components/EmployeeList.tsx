@@ -107,6 +107,9 @@ interface Employee {
   bic: string | null;
   modele_contrat: string | null;
   department_code: string | null;
+  mutuelle: boolean | null;
+  mutuelle_effective_since: string | null;
+  mutuelle_file_path: string | null;
 }
 
 interface Contract {
@@ -1182,6 +1185,14 @@ function EmployeeDetailModal({
   const [editedDateDebutContrat, setEditedDateDebutContrat] = useState('');
   const [editedDateFinContrat, setEditedDateFinContrat] = useState('');
 
+  // États pour mutuelle
+  const [isEditingMutuelle, setIsEditingMutuelle] = useState(false);
+  const [savingMutuelle, setSavingMutuelle] = useState(false);
+  const [editedMutuelle, setEditedMutuelle] = useState<boolean>(currentEmployee.mutuelle || false);
+  const [editedMutuelleDate, setEditedMutuelleDate] = useState(currentEmployee.mutuelle_effective_since || '');
+  const [mutuellePDFFile, setMutuellePDFFile] = useState<File | null>(null);
+  const [uploadingMutuellePDF, setUploadingMutuellePDF] = useState(false);
+
   // Synchroniser currentEmployee avec la prop employee quand elle change
   useEffect(() => {
     setCurrentEmployee(employee);
@@ -1224,7 +1235,12 @@ function EmployeeDetailModal({
       setEditedRole(employee.role || '');
       setEditedSecteurId(employee.secteur_id || '');
     }
-  }, [employee, isEditingPersonal, isEditingAddress, isEditingBanking, isEditingIdentity, isEditingContract]);
+
+    if (!isEditingMutuelle) {
+      setEditedMutuelle(employee.mutuelle || false);
+      setEditedMutuelleDate(employee.mutuelle_effective_since || '');
+    }
+  }, [employee, isEditingPersonal, isEditingAddress, isEditingBanking, isEditingIdentity, isEditingContract, isEditingMutuelle]);
 
   useEffect(() => {
     // Signaler que le modal est ouvert
@@ -2377,6 +2393,84 @@ function EmployeeDetailModal({
     setIsEditingIdentity(false);
   };
 
+  const handleSaveMutuelle = async () => {
+    setSavingMutuelle(true);
+    try {
+      let mutuellePath = currentEmployee.mutuelle_file_path;
+
+      if (mutuellePDFFile) {
+        setUploadingMutuellePDF(true);
+        const fileExtension = mutuellePDFFile.name.split('.').pop();
+        const timestamp = Date.now();
+        const filePath = `mutuelle/${currentEmployee.id}/mutuelle_${timestamp}.${fileExtension}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(filePath, mutuellePDFFile, {
+            contentType: mutuellePDFFile.type,
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+        mutuellePath = filePath;
+        setUploadingMutuellePDF(false);
+      }
+
+      const updateData: any = {
+        mutuelle: editedMutuelle,
+        mutuelle_effective_since: editedMutuelle ? (editedMutuelleDate || null) : null,
+        mutuelle_file_path: editedMutuelle ? mutuellePath : null
+      };
+
+      const { error } = await supabase
+        .from('profil')
+        .update(updateData)
+        .eq('id', currentEmployee.id);
+
+      if (error) throw error;
+
+      setCurrentEmployee({
+        ...currentEmployee,
+        mutuelle: editedMutuelle,
+        mutuelle_effective_since: editedMutuelle ? (editedMutuelleDate || null) : null,
+        mutuelle_file_path: editedMutuelle ? mutuellePath : null
+      });
+
+      setMutuellePDFFile(null);
+      setIsEditingMutuelle(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde des informations de mutuelle');
+    } finally {
+      setSavingMutuelle(false);
+      setUploadingMutuellePDF(false);
+    }
+  };
+
+  const handleCancelMutuelleEdit = () => {
+    setEditedMutuelle(currentEmployee.mutuelle || false);
+    setEditedMutuelleDate(currentEmployee.mutuelle_effective_since || '');
+    setMutuellePDFFile(null);
+    setIsEditingMutuelle(false);
+  };
+
+  const handleDownloadMutuelleFile = async () => {
+    if (!currentEmployee.mutuelle_file_path) return;
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(currentEmployee.mutuelle_file_path, 3600);
+
+      if (error) throw error;
+      window.open(data.signedUrl, '_blank');
+    } catch (error) {
+      console.error('Erreur téléchargement fichier mutuelle:', error);
+      alert('Erreur lors du téléchargement du fichier mutuelle');
+    }
+  };
+
   const handleDownloadContract = async (contractId: string) => {
     try {
       const contract = employeeContracts.find((c: any) => c.id === contractId);
@@ -3385,6 +3479,158 @@ function EmployeeDetailModal({
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Section Mutuelle */}
+          <div className={`border rounded-lg p-4 transition-colors ${isEditingMutuelle ? 'bg-teal-100 border-teal-300' : 'bg-teal-50 border-teal-200'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-teal-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Mutuelle</h3>
+              </div>
+              {!isEditingMutuelle ? (
+                <button
+                  onClick={() => setIsEditingMutuelle(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-teal-700 bg-white border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Modifier
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCancelMutuelleEdit}
+                    disabled={savingMutuelle}
+                    className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveMutuelle}
+                    disabled={savingMutuelle || uploadingMutuellePDF}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+                  >
+                    {savingMutuelle || uploadingMutuellePDF ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        {uploadingMutuellePDF ? 'Upload...' : 'Enregistrement...'}
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Enregistrer
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase">Adhésion mutuelle</label>
+                {!isEditingMutuelle ? (
+                  <p className="text-sm text-gray-900">{currentEmployee.mutuelle ? 'OUI' : 'NON'}</p>
+                ) : (
+                  <select
+                    value={editedMutuelle ? 'oui' : 'non'}
+                    onChange={(e) => {
+                      const newValue = e.target.value === 'oui';
+                      setEditedMutuelle(newValue);
+                      if (!newValue) {
+                        setEditedMutuelleDate('');
+                        setMutuellePDFFile(null);
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  >
+                    <option value="non">NON</option>
+                    <option value="oui">OUI</option>
+                  </select>
+                )}
+              </div>
+              {(editedMutuelle || currentEmployee.mutuelle) && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Date d'effet</label>
+                    {!isEditingMutuelle ? (
+                      <p className="text-sm text-gray-900">
+                        {currentEmployee.mutuelle_effective_since ? formatDateFR(currentEmployee.mutuelle_effective_since) : '-'}
+                      </p>
+                    ) : (
+                      <input
+                        type="date"
+                        value={editedMutuelleDate}
+                        onChange={(e) => setEditedMutuelleDate(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Document mutuelle</label>
+                    {!isEditingMutuelle ? (
+                      <div>
+                        {currentEmployee.mutuelle_file_path ? (
+                          <button
+                            onClick={handleDownloadMutuelleFile}
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-teal-700 bg-white border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors"
+                          >
+                            <Download className="w-4 h-4" />
+                            Télécharger
+                          </button>
+                        ) : (
+                          <p className="text-sm text-gray-500 italic">Aucun document</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {currentEmployee.mutuelle_file_path && !mutuellePDFFile && (
+                          <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-300">
+                            <File className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm text-gray-600">Document existant</span>
+                            <button
+                              onClick={handleDownloadMutuelleFile}
+                              className="ml-auto text-teal-600 hover:text-teal-700"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                        <div>
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 10 * 1024 * 1024) {
+                                  alert('Le fichier ne doit pas dépasser 10 MB');
+                                  return;
+                                }
+                                setMutuellePDFFile(file);
+                              }
+                            }}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">PDF, JPG ou PNG (max 10 MB)</p>
+                        </div>
+                        {mutuellePDFFile && (
+                          <div className="flex items-center gap-2 p-2 bg-teal-50 rounded-lg border border-teal-200">
+                            <File className="w-4 h-4 text-teal-600" />
+                            <span className="text-sm text-teal-900">{mutuellePDFFile.name}</span>
+                            <button
+                              onClick={() => setMutuellePDFFile(null)}
+                              className="ml-auto text-red-600 hover:text-red-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
