@@ -2102,9 +2102,10 @@ function EmployeeDetailModal({
 
       setIsEditingPersonal(false);
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde des informations personnelles');
+      const errorMessage = error?.message || error?.error_description || JSON.stringify(error);
+      alert(`Erreur lors de la sauvegarde des informations personnelles:\n${errorMessage}`);
     } finally {
       setSavingPersonal(false);
     }
@@ -2135,9 +2136,10 @@ function EmployeeDetailModal({
 
       setIsEditingAddress(false);
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde de l\'adresse');
+      const errorMessage = error?.message || error?.error_description || JSON.stringify(error);
+      alert(`Erreur lors de la sauvegarde de l'adresse:\n${errorMessage}`);
     } finally {
       setSavingAddress(false);
     }
@@ -2183,9 +2185,10 @@ function EmployeeDetailModal({
       setIsEditingBanking(false);
       setShowInvalidIbanModal(false);
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde des informations bancaires');
+      const errorMessage = error?.message || error?.error_description || JSON.stringify(error);
+      alert(`Erreur lors de la sauvegarde des informations bancaires:\n${errorMessage}`);
     } finally {
       setSavingBanking(false);
     }
@@ -2300,9 +2303,10 @@ function EmployeeDetailModal({
 
       setIsEditingContract(false);
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde des informations de contrat');
+      const errorMessage = error?.message || error?.error_description || JSON.stringify(error);
+      alert(`Erreur lors de la sauvegarde des informations de contrat:\n${errorMessage}`);
     } finally {
       setSavingContract(false);
     }
