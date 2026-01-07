@@ -42,6 +42,8 @@ export default function ComptabiliteARTab() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
+  const [searchingEmployees, setSearchingEmployees] = useState(false);
+  const employeeSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [formData, setFormData] = useState({
     ar_type: 'RETARD' as 'ABSENCE' | 'RETARD',
@@ -56,7 +58,6 @@ export default function ComptabiliteARTab() {
 
   useEffect(() => {
     loadEvents();
-    loadEmployees();
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
@@ -65,6 +66,26 @@ export default function ComptabiliteARTab() {
   useEffect(() => {
     filterEvents();
   }, [events, searchTerm, startDateFilter, endDateFilter]);
+
+  useEffect(() => {
+    if (employeeSearchTimeoutRef.current) {
+      clearTimeout(employeeSearchTimeoutRef.current);
+    }
+
+    if (employeeSearch.length >= 1) {
+      employeeSearchTimeoutRef.current = setTimeout(() => {
+        searchEmployees(employeeSearch);
+      }, 300);
+    } else {
+      setEmployees([]);
+    }
+
+    return () => {
+      if (employeeSearchTimeoutRef.current) {
+        clearTimeout(employeeSearchTimeoutRef.current);
+      }
+    };
+  }, [employeeSearch]);
 
   const loadEvents = async () => {
     try {
@@ -83,17 +104,40 @@ export default function ComptabiliteARTab() {
     }
   };
 
-  const loadEmployees = async () => {
+  const searchEmployees = async (searchTerm: string) => {
     try {
+      setSearchingEmployees(true);
+      const search = searchTerm.trim();
+
       const { data, error } = await supabase
         .from('profil')
-        .select('id, matricule, nom, prenom')
-        .order('nom');
+        .select('id, matricule_tca, nom, prenom')
+        .eq('role', 'salarie')
+        .or(`matricule_tca.ilike.%${search}%,nom.ilike.%${search}%,prenom.ilike.%${search}%`)
+        .order('nom')
+        .limit(20);
 
       if (error) throw error;
-      setEmployees(data || []);
+
+      const results = (data || []).map(emp => ({
+        id: emp.id,
+        matricule: emp.matricule_tca || '',
+        nom: emp.nom,
+        prenom: emp.prenom
+      }));
+
+      setEmployees(results);
+
+      if (results.length === 1 && search.toLowerCase() === results[0].matricule.toLowerCase()) {
+        setSelectedEmployee(results[0]);
+        setEmployeeSearch('');
+        setShowEmployeeDropdown(false);
+      }
     } catch (error) {
-      console.error('Error loading employees:', error);
+      console.error('Error searching employees:', error);
+      setEmployees([]);
+    } finally {
+      setSearchingEmployees(false);
     }
   };
 
@@ -121,12 +165,6 @@ export default function ComptabiliteARTab() {
     setFilteredEvents(filtered);
   };
 
-  const filteredEmployees = employees.filter(
-    (emp) =>
-      emp.matricule?.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-      emp.nom?.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-      emp.prenom?.toLowerCase().includes(employeeSearch.toLowerCase())
-  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +224,8 @@ export default function ComptabiliteARTab() {
   const resetForm = () => {
     setSelectedEmployee(null);
     setEmployeeSearch('');
+    setEmployees([]);
+    setShowEmployeeDropdown(false);
     setFormData({
       ar_type: 'RETARD',
       start_date: '',
@@ -473,11 +513,12 @@ export default function ComptabiliteARTab() {
                   Salarié *
                 </label>
                 <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input
                     type="text"
                     value={
                       selectedEmployee
-                        ? `${selectedEmployee.matricule} - ${selectedEmployee.nom} ${selectedEmployee.prenom}`
+                        ? `${selectedEmployee.matricule} - ${selectedEmployee.nom.toUpperCase()} ${selectedEmployee.prenom}`
                         : employeeSearch
                     }
                     onChange={(e) => {
@@ -485,14 +526,37 @@ export default function ComptabiliteARTab() {
                       setSelectedEmployee(null);
                       setShowEmployeeDropdown(true);
                     }}
-                    onFocus={() => setShowEmployeeDropdown(true)}
-                    placeholder="Rechercher par matricule, nom ou prénom..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    onFocus={() => {
+                      if (employeeSearch && !selectedEmployee) {
+                        setShowEmployeeDropdown(true);
+                      }
+                    }}
+                    placeholder="Tapez un matricule, nom ou prénom (min. 1 caractère)..."
+                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
                   />
-                  {showEmployeeDropdown && filteredEmployees.length > 0 && !selectedEmployee && (
+                  {searchingEmployees && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    </div>
+                  )}
+                  {selectedEmployee && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedEmployee(null);
+                        setEmployeeSearch('');
+                        setEmployees([]);
+                      }}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      title="Effacer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                  {showEmployeeDropdown && employees.length > 0 && !selectedEmployee && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {filteredEmployees.map((emp) => (
+                      {employees.map((emp) => (
                         <button
                           key={emp.id}
                           type="button"
@@ -501,14 +565,26 @@ export default function ComptabiliteARTab() {
                             setEmployeeSearch('');
                             setShowEmployeeDropdown(false);
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                          className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b last:border-b-0 transition-colors"
                         >
-                          {emp.matricule} - {emp.nom} {emp.prenom}
+                          <div className="font-medium text-gray-900">
+                            {emp.matricule} - {emp.nom.toUpperCase()} {emp.prenom}
+                          </div>
                         </button>
                       ))}
                     </div>
                   )}
+                  {!searchingEmployees && employeeSearch && employees.length === 0 && showEmployeeDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-center text-gray-500 text-sm">
+                      Aucun salarié trouvé
+                    </div>
+                  )}
                 </div>
+                {employeeSearch && employeeSearch.length < 1 && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Tapez au moins 1 caractère pour rechercher
+                  </p>
+                )}
               </div>
 
               <div>
