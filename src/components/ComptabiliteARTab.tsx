@@ -270,23 +270,36 @@ export default function ComptabiliteARTab() {
     }
   };
 
-  const exportToExcel = () => {
-    const exportData = filteredEvents.map((e) => ({
-      Matricule: e.matricule,
-      Nom: e.nom,
-      Prénom: e.prenom,
-      Type: e.ar_type,
-      'Date début': e.start_date,
-      'Date fin': e.end_date || '',
-      'Heures de retard': e.retard_hours || '',
-      'Jours d\'absence': e.absence_days || '',
-      Justifié: e.justifie ? 'OUI' : 'NON',
-    }));
+  const exportToExcel = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('v_compta_ar_export')
+        .select('*')
+        .order('start_date', { ascending: false });
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'A&R');
-    XLSX.writeFile(wb, `absences_retards_${new Date().toISOString().split('T')[0]}.xlsx`);
+      if (error) throw error;
+
+      const exportData = (data || []).map((e: any) => ({
+        Matricule: e.matricule,
+        Nom: e.nom,
+        Prénom: e.prenom,
+        Type: e.ar_type,
+        'Date début': e.start_date,
+        'Date fin': e.end_date || '',
+        'Heures de retard': e.retard_hours || '',
+        'Jours d\'absence': e.absence_days || '',
+        Justifié: e.justifie ? 'OUI' : 'NON',
+        Note: e.note || '',
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'A&R');
+      XLSX.writeFile(wb, `absences_retards_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error: any) {
+      console.error('Error exporting to Excel:', error);
+      alert('Erreur lors de l\'export: ' + error.message);
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -434,6 +447,9 @@ export default function ComptabiliteARTab() {
                     Justifié
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Note
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -482,6 +498,9 @@ export default function ComptabiliteARTab() {
                       >
                         {event.justifie ? 'OUI' : 'NON'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={event.note || ''}>
+                      {event.note || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center gap-2">
