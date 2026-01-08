@@ -237,6 +237,22 @@ export default function ComptabiliteARTab() {
     setJustificatifFile(null);
   };
 
+  const downloadJustificatif = async (path: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(path, 60);
+
+      if (error) throw error;
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (error: any) {
+      console.error('Error downloading justificatif:', error);
+      alert('Erreur lors du téléchargement: ' + error.message);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cet événement ?')) return;
 
@@ -468,13 +484,24 @@ export default function ComptabiliteARTab() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button
-                        onClick={() => handleDelete(event.id)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {event.justificatif_file_path && (
+                          <button
+                            onClick={() => downloadJustificatif(event.justificatif_file_path!)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Télécharger le justificatif"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(event.id)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
