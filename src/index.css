@@ -5,27 +5,27 @@
 @layer components {
   /* Optimisation responsive pour écrans 13 pouces */
   .card-compact {
-    @apply bg-white rounded-lg shadow p-3;
+    @apply bg-white rounded-lg shadow p-2;
   }
 
   .btn-compact {
-    @apply px-3 py-1.5 text-xs font-medium rounded-lg;
+    @apply px-2 py-1 text-xs font-medium rounded-md;
   }
 
   .input-compact {
-    @apply px-2 py-1.5 text-sm;
+    @apply px-1.5 py-1 text-xs;
   }
 
   .modal-compact {
-    @apply p-4;
+    @apply p-3;
   }
 
   .heading-compact {
-    @apply text-lg font-bold;
+    @apply text-base font-bold;
   }
 
   .subheading-compact {
-    @apply text-sm font-semibold;
+    @apply text-xs font-semibold;
   }
 
   /* Tables optimisées */
@@ -34,11 +34,24 @@
   }
 
   thead th {
-    @apply px-3 py-2 text-xs;
+    @apply px-2 py-1 text-xs;
   }
 
   tbody td {
-    @apply px-3 py-2 text-xs;
+    @apply px-2 py-1 text-xs;
+  }
+
+  /* Réduction globale des tailles */
+  input, select, textarea {
+    @apply text-xs;
+  }
+
+  button {
+    @apply text-xs;
+  }
+
+  label {
+    @apply text-xs;
   }
 }
 
