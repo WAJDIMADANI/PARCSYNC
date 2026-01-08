@@ -2,6 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /* Optimisation responsive pour écrans 13 pouces */
+  .card-compact {
+    @apply bg-white rounded-lg shadow p-3;
+  }
+
+  .btn-compact {
+    @apply px-3 py-1.5 text-xs font-medium rounded-lg;
+  }
+
+  .input-compact {
+    @apply px-2 py-1.5 text-sm;
+  }
+
+  .modal-compact {
+    @apply p-4;
+  }
+
+  .heading-compact {
+    @apply text-lg font-bold;
+  }
+
+  .subheading-compact {
+    @apply text-sm font-semibold;
+  }
+
+  /* Tables optimisées */
+  table {
+    @apply text-xs;
+  }
+
+  thead th {
+    @apply px-3 py-2 text-xs;
+  }
+
+  tbody td {
+    @apply px-3 py-2 text-xs;
+  }
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;

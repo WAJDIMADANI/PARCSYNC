@@ -264,25 +264,25 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   };
 
   return (
-    <div className="w-72 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 h-screen overflow-y-auto flex-shrink-0 shadow-2xl">
-      <div className="p-6 border-b border-slate-700/50">
-        <div className="flex items-center gap-3">
+    <div className="w-56 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 h-screen overflow-y-auto flex-shrink-0 shadow-2xl">
+      <div className="p-3 border-b border-slate-700/50">
+        <div className="flex items-center gap-2">
           <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-xl blur-lg opacity-50"></div>
-            <div className="relative bg-gradient-to-r from-primary-500 to-secondary-500 p-2.5 rounded-xl">
-              <Sparkles className="w-7 h-7 text-white" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg blur-lg opacity-50"></div>
+            <div className="relative bg-gradient-to-r from-primary-500 to-secondary-500 p-1.5 rounded-lg">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
           </div>
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+            <h1 className="text-base font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
               MAD IMPACT
             </h1>
-            <p className="text-xs font-medium text-accent-400">Vague 2 - Flotte</p>
+            <p className="text-[10px] font-medium text-accent-400">Vague 2 - Flotte</p>
           </div>
         </div>
       </div>
 
-      <nav className="p-4 space-y-1 pb-20">
+      <nav className="p-2 space-y-0.5 pb-16">
         {filterNavigation().map((item) => {
           if (isSection(item)) {
             const isExpanded = expandedSections.has(item.id);
@@ -293,27 +293,27 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
                 <button
                   onClick={() => item.enabled && handleSectionClick(item.id)}
                   disabled={!item.enabled}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                  className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg transition-all duration-200 ${
                     item.enabled
                       ? 'text-slate-200 hover:bg-slate-800/50 hover:shadow-soft'
                       : 'text-slate-600 cursor-not-allowed'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon className="w-5 h-5" />
-                    <span className="font-semibold text-sm">{item.label}</span>
+                  <div className="flex items-center gap-2">
+                    <Icon className="w-4 h-4" />
+                    <span className="font-semibold text-xs">{item.label}</span>
                   </div>
                   {item.enabled && (
                     isExpanded ? (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                      <ChevronDown className="w-3 h-3 text-slate-400" />
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                      <ChevronRight className="w-3 h-3 text-slate-400" />
                     )
                   )}
                 </button>
 
                 {isExpanded && item.children && (
-                  <div className="ml-2 mt-1 space-y-0.5">
+                  <div className="ml-1 mt-0.5 space-y-0.5">
                     {item.children.map((child) => {
                       const ChildIcon = child.icon;
                       const isActive = currentView === child.id;
@@ -323,7 +323,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
                           key={child.id}
                           onClick={() => child.enabled && onViewChange(child.id)}
                           disabled={!child.enabled}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm group ${
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all duration-200 text-xs group ${
                             isActive
                               ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-glow font-medium'
                               : child.enabled
@@ -331,7 +331,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
                               : 'text-slate-600 cursor-not-allowed'
                           }`}
                         >
-                          <ChildIcon className={`w-4 h-4 ${isActive ? 'animate-pulse' : ''}`} />
+                          <ChildIcon className={`w-3.5 h-3.5 ${isActive ? 'animate-pulse' : ''}`} />
                           <span>{child.label}</span>
                         </button>
                       );
@@ -349,7 +349,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
                 key={item.id}
                 onClick={() => item.enabled && onViewChange(item.id)}
                 disabled={!item.enabled}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all duration-200 ${
                   isActive
                     ? 'bg-gradient-to-r from-accent-500 to-accent-400 text-slate-900 shadow-glow font-semibold'
                     : item.enabled
@@ -357,10 +357,10 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
                     : 'text-slate-600 cursor-not-allowed'
                 }`}
               >
-                <Icon className={`w-5 h-5 ${item.id === 'inbox' && inboxCount > 0 ? 'text-red-400' : ''}`} />
-                <span className="text-sm font-medium">{item.label}</span>
+                <Icon className={`w-4 h-4 ${item.id === 'inbox' && inboxCount > 0 ? 'text-red-400' : ''}`} />
+                <span className="text-xs font-medium">{item.label}</span>
                 {item.id === 'inbox' && inboxCount > 0 && (
-                  <span className="ml-auto px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[24px] text-center shadow-lg animate-pulse">
+                  <span className="ml-auto px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[20px] text-center shadow-lg animate-pulse">
                     {inboxCount}
                   </span>
                 )}
@@ -370,9 +370,9 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         })}
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-slate-900 to-transparent">
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-2 border border-slate-700/50">
-          <p className="text-xs text-slate-400 text-center font-medium">
+      <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-slate-900 to-transparent">
+        <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-1.5 border border-slate-700/50">
+          <p className="text-[10px] text-slate-400 text-center font-medium">
             Propulsé par MAD IMPACT
           </p>
         </div>

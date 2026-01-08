@@ -147,10 +147,10 @@ export function Dashboard() {
       <Sidebar currentView={view} onViewChange={(v) => handleViewChange(v)} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 px-6 py-5 shadow-sm">
+        <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 px-4 py-2.5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              <h2 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
                 {view === 'setup' && 'Setup Check'}
                 {view === 'inbox' && 'Inbox'}
                 {view === 'rh/candidats' && 'Candidats'}
@@ -190,10 +190,10 @@ export function Dashboard() {
               </h2>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-xl">
-                <User className="w-4 h-4 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 rounded-lg">
+                <User className="w-3.5 h-3.5 text-slate-600" />
+                <span className="text-xs font-medium text-slate-700">
                   {appUserPrenom && appUserNom
                     ? `${appUserPrenom} ${appUserNom}`
                     : user?.email}
@@ -201,16 +201,16 @@ export function Dashboard() {
               </div>
               <button
                 onClick={() => signOut()}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-lg transition-all duration-200 shadow-soft hover:shadow-glow font-medium text-xs"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Déconnexion</span>
               </button>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-8 pb-20">
+        <main className="flex-1 overflow-y-auto p-4 pb-4">
           <div className="max-w-7xl mx-auto">
             {renderView()}
           </div>

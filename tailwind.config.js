@@ -2,6 +2,40 @@
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
+    fontSize: {
+      'xs': ['0.7rem', { lineHeight: '1rem' }],
+      'sm': ['0.8rem', { lineHeight: '1.15rem' }],
+      'base': ['0.875rem', { lineHeight: '1.25rem' }],
+      'lg': ['1rem', { lineHeight: '1.4rem' }],
+      'xl': ['1.125rem', { lineHeight: '1.5rem' }],
+      '2xl': ['1.25rem', { lineHeight: '1.75rem' }],
+      '3xl': ['1.5rem', { lineHeight: '2rem' }],
+    },
+    spacing: {
+      '0': '0px',
+      '0.5': '0.1rem',
+      '1': '0.2rem',
+      '1.5': '0.3rem',
+      '2': '0.4rem',
+      '2.5': '0.5rem',
+      '3': '0.6rem',
+      '3.5': '0.7rem',
+      '4': '0.8rem',
+      '5': '1rem',
+      '6': '1.2rem',
+      '7': '1.4rem',
+      '8': '1.6rem',
+      '10': '2rem',
+      '12': '2.4rem',
+      '16': '3.2rem',
+      '20': '4rem',
+      '24': '4.8rem',
+      '32': '6.4rem',
+      '40': '8rem',
+      '48': '9.6rem',
+      '56': '11.2rem',
+      '64': '12.8rem',
+    },
     extend: {
       colors: {
         primary: {
