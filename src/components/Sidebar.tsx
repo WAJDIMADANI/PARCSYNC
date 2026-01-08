@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard, MapPin, HeartHandshake, Clock
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard, MapPin, HeartHandshake, Clock, Banknote
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { supabase } from '../lib/supabase';
@@ -35,6 +35,7 @@ export type View =
   | 'compta/avenants'
   | 'compta/mutuelle'
   | 'compta/ar'
+  | 'compta/avance-frais'
   | 'dashboards/rh'
   | 'dashboards/parc'
   | 'exports/rh'
@@ -192,6 +193,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'compta/avenants', label: 'Avenants', icon: FileText, enabled: true },
         { id: 'compta/mutuelle', label: 'Mutuelle', icon: HeartHandshake, enabled: true },
         { id: 'compta/ar', label: 'A&R', icon: Clock, enabled: true },
+        { id: 'compta/avance-frais', label: 'Avance de frais', icon: Banknote, enabled: true },
       ]
     },
     {

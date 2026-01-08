@@ -59,6 +59,7 @@ const AVAILABLE_PERMISSIONS = [
     { id: 'compta/avenants', label: 'Avenants' },
     { id: 'compta/mutuelle', label: 'Mutuelle' },
     { id: 'compta/ar', label: 'A&R' },
+    { id: 'compta/avance-frais', label: 'Avance de frais' },
   ]},
   { section: 'Administration', permissions: [
     { id: 'admin/sites', label: 'Sites' },
