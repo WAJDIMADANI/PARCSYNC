@@ -2,40 +2,6 @@
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
-    fontSize: {
-      'xs': ['0.65rem', { lineHeight: '0.9rem' }],
-      'sm': ['0.75rem', { lineHeight: '1rem' }],
-      'base': ['0.8rem', { lineHeight: '1.1rem' }],
-      'lg': ['0.9rem', { lineHeight: '1.25rem' }],
-      'xl': ['1rem', { lineHeight: '1.35rem' }],
-      '2xl': ['1.1rem', { lineHeight: '1.5rem' }],
-      '3xl': ['1.25rem', { lineHeight: '1.75rem' }],
-    },
-    spacing: {
-      '0': '0px',
-      '0.5': '0.08rem',
-      '1': '0.15rem',
-      '1.5': '0.25rem',
-      '2': '0.35rem',
-      '2.5': '0.4rem',
-      '3': '0.5rem',
-      '3.5': '0.6rem',
-      '4': '0.7rem',
-      '5': '0.85rem',
-      '6': '1rem',
-      '7': '1.15rem',
-      '8': '1.3rem',
-      '10': '1.7rem',
-      '12': '2rem',
-      '16': '2.7rem',
-      '20': '3.5rem',
-      '24': '4rem',
-      '32': '5.5rem',
-      '40': '7rem',
-      '48': '8.5rem',
-      '56': '10rem',
-      '64': '11.5rem',
-    },
     extend: {
       colors: {
         primary: {

@@ -2,56 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer components {
-  /* Optimisation responsive pour écrans 13 pouces */
-  .card-compact {
-    @apply bg-white rounded-lg shadow p-2;
+/* Adaptation automatique pour écrans 13 pouces (1280-1440px) */
+@media screen and (max-width: 1440px) {
+  html {
+    font-size: 14px; /* Au lieu de 16px par défaut */
   }
 
-  .btn-compact {
-    @apply px-2 py-1 text-xs font-medium rounded-md;
+  /* Réduction automatique des espacements */
+  .p-6 { padding: 1rem !important; }
+  .p-8 { padding: 1.25rem !important; }
+  .px-6 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .py-6 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+  .px-8 { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
+  .py-8 { padding-top: 1.25rem !important; padding-bottom: 1.25rem !important; }
+
+  .gap-6 { gap: 1rem !important; }
+  .gap-8 { gap: 1.25rem !important; }
+
+  .space-x-6 > * + * { margin-left: 1rem !important; }
+  .space-y-6 > * + * { margin-top: 1rem !important; }
+
+  /* Adaptation des cartes */
+  .bg-white.rounded-lg {
+    padding: 0.875rem !important;
   }
 
-  .input-compact {
-    @apply px-1.5 py-1 text-xs;
+  /* Adaptation des modales */
+  .fixed.inset-0 > div {
+    max-width: 90vw !important;
+  }
+}
+
+/* Écrans 13 pouces petits (1280px) - encore plus compact */
+@media screen and (max-width: 1366px) {
+  html {
+    font-size: 13px;
   }
 
-  .modal-compact {
-    @apply p-3;
+  .p-6 { padding: 0.75rem !important; }
+  .p-8 { padding: 1rem !important; }
+  .px-6 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+  .py-6 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+
+  /* Tableaux plus compacts */
+  table th,
+  table td {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
   }
 
-  .heading-compact {
-    @apply text-base font-bold;
-  }
-
-  .subheading-compact {
-    @apply text-xs font-semibold;
-  }
-
-  /* Tables optimisées */
-  table {
-    @apply text-xs;
-  }
-
-  thead th {
-    @apply px-2 py-1 text-xs;
-  }
-
-  tbody td {
-    @apply px-2 py-1 text-xs;
-  }
-
-  /* Réduction globale des tailles */
-  input, select, textarea {
-    @apply text-xs;
-  }
-
+  /* Boutons plus compacts */
   button {
-    @apply text-xs;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
   }
 
-  label {
-    @apply text-xs;
+  /* Inputs plus compacts */
+  input, select, textarea {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
   }
 }
 
