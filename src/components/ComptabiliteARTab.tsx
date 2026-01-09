@@ -174,6 +174,15 @@ export default function ComptabiliteARTab() {
     try {
       setSaving(true);
 
+      if (formData.ar_type === 'RETARD') {
+        const minutes = parseInt(String(formData.retard_minutes), 10);
+        if (isNaN(minutes) || minutes <= 0) {
+          alert('Erreur: Minutes > 0 obligatoire pour un retard');
+          setSaving(false);
+          return;
+        }
+      }
+
       let justificatif_path = null;
       if (justificatifFile) {
         const fileExt = justificatifFile.name.split('.').pop();
@@ -190,16 +199,17 @@ export default function ComptabiliteARTab() {
 
       const eventData: any = {
         profil_id: selectedEmployee.id,
-        ar_type: formData.ar_type,
+        kind: formData.ar_type.toLowerCase(),
         start_date: formData.start_date,
         is_justified: formData.isJustified,
-        note: formData.note || null,
+        justification_note: formData.note || null,
         justificatif_file_path: justificatif_path,
       };
 
       if (formData.ar_type === 'RETARD') {
-        eventData.retard_minutes = formData.retard_minutes;
-        eventData.end_date = null;
+        const minutes = parseInt(String(formData.retard_minutes), 10);
+        eventData.retard_minutes = minutes;
+        eventData.end_date = formData.start_date;
       } else {
         eventData.end_date = formData.end_date;
         eventData.retard_minutes = null;
