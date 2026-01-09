@@ -9,14 +9,12 @@ interface AREvent {
   matricule: string;
   nom: string;
   prenom: string;
-  ar_type: 'ABSENCE' | 'RETARD';
-  start_date: string;
-  end_date: string | null;
+  poste: string | null;
+  kind: 'absence' | 'retard';
+  date_debut: string;
+  date_fin: string | null;
   retard_minutes: number | null;
-  retard_hours: number | null;
-  absence_days: number | null;
-  is_justified?: boolean;
-  justifie?: boolean;
+  is_justified: boolean;
   note: string | null;
   justificatif_file_path: string | null;
   created_at: string;
@@ -92,9 +90,9 @@ export default function ComptabiliteARTab() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('v_compta_ar')
+        .from('v_compta_ar_v2')
         .select('*')
-        .order('start_date', { ascending: false });
+        .order('date_debut', { ascending: false });
 
       if (error) throw error;
       setEvents(data || []);
@@ -156,11 +154,11 @@ export default function ComptabiliteARTab() {
     }
 
     if (startDateFilter) {
-      filtered = filtered.filter((e) => e.start_date >= startDateFilter);
+      filtered = filtered.filter((e) => e.date_debut >= startDateFilter);
     }
 
     if (endDateFilter) {
-      filtered = filtered.filter((e) => e.start_date <= endDateFilter);
+      filtered = filtered.filter((e) => e.date_debut <= endDateFilter);
     }
 
     setFilteredEvents(filtered);
@@ -284,9 +282,9 @@ export default function ComptabiliteARTab() {
   const exportToExcel = async () => {
     try {
       const { data, error } = await supabase
-        .from('v_compta_ar_export')
+        .from('v_compta_ar_v2')
         .select('*')
-        .order('start_date', { ascending: false });
+        .order('date_debut', { ascending: false });
 
       if (error) throw error;
 
@@ -294,11 +292,12 @@ export default function ComptabiliteARTab() {
         Matricule: e.matricule,
         Nom: e.nom,
         Prénom: e.prenom,
-        Type: e.ar_type,
-        'Date début': e.start_date,
-        'Date fin': e.end_date || '',
-        'Heures de retard': e.retard_hours || '',
-        'Jours d\'absence': e.absence_days || '',
+        Poste: e.poste || '',
+        Type: e.kind?.toUpperCase() || '',
+        'Date début': e.date_debut,
+        'Date fin': e.date_fin || '',
+        'Minutes de retard': e.retard_minutes || '',
+        'Heures de retard': e.retard_minutes ? (e.retard_minutes / 60).toFixed(2) : '',
         Justifié: e.is_justified ? 'OUI' : 'NON',
         Note: e.note || '',
       }));
@@ -480,24 +479,24 @@ export default function ComptabiliteARTab() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          event.ar_type === 'ABSENCE'
+                          event.kind === 'absence'
                             ? 'bg-orange-100 text-orange-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}
                       >
-                        {event.ar_type}
+                        {event.kind.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(event.start_date)}
+                      {formatDate(event.date_debut)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {event.end_date ? formatDate(event.end_date) : '-'}
+                      {event.date_fin ? formatDate(event.date_fin) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {event.ar_type === 'RETARD'
-                        ? `${event.retard_hours}h`
-                        : `${event.absence_days}j`}
+                      {event.kind === 'retard'
+                        ? `${event.retard_minutes} min (${(event.retard_minutes! / 60).toFixed(2)}h)`
+                        : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
