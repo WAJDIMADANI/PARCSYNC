@@ -235,9 +235,15 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       .map(item => {
         if (isSection(item) && item.children) {
           const visibleChildren = item.children.filter(child => {
-            // Comptabilité nécessite la permission "comptabilite"
+            // Comptabilité nécessite la permission "comptabilite" OU n'importe quelle permission compta/*
             if (child.id.startsWith('compta/')) {
-              return hasPermission('comptabilite');
+              // Vérifier d'abord la permission globale "comptabilite"
+              if (hasPermission('comptabilite')) {
+                return true;
+              }
+              // Sinon, vérifier si l'utilisateur a n'importe quelle permission compta/*
+              const hasAnyComptaPermission = permissions.some(p => p.startsWith('compta/'));
+              return hasAnyComptaPermission;
             }
 
             // Les nouvelles routes admin ont les mêmes perms que les anciennes

@@ -17,9 +17,12 @@ interface AccountingDashboardProps {
 }
 
 export default function AccountingDashboard({ currentView, onViewChange }: AccountingDashboardProps) {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, permissions } = usePermissions();
 
-  if (!hasPermission('comptabilite')) {
+  // Vérifier la permission globale "comptabilite" OU n'importe quelle permission compta/*
+  const hasComptaAccess = hasPermission('comptabilite') || permissions.some(p => p.startsWith('compta/'));
+
+  if (!hasComptaAccess) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
