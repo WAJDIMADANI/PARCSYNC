@@ -235,9 +235,9 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       .map(item => {
         if (isSection(item) && item.children) {
           const visibleChildren = item.children.filter(child => {
-            // Comptabilité accessible à tous
+            // Comptabilité nécessite la permission "comptabilite"
             if (child.id.startsWith('compta/')) {
-              return true;
+              return hasPermission('comptabilite');
             }
 
             // Les nouvelles routes admin ont les mêmes perms que les anciennes

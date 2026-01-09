@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, CreditCard, MapPin, FileText, HeartHandshake, Clock, Banknote } from 'lucide-react';
+import { TrendingUp, TrendingDown, CreditCard, MapPin, FileText, HeartHandshake, Clock, Banknote, ShieldOff } from 'lucide-react';
 import { ComptabiliteEntriesTab } from './ComptabiliteEntriesTab';
 import { ComptabiliteExitsTab } from './ComptabiliteExitsTab';
 import { ComptabiliteRibTab } from './ComptabiliteRibTab';
@@ -9,6 +9,7 @@ import { ComptabiliteMutuelleTab } from './ComptabiliteMutuelleTab';
 import ComptabiliteARTab from './ComptabiliteARTab';
 import ComptabiliteAvanceFraisTab from './ComptabiliteAvanceFraisTab';
 import { View } from './Sidebar';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 interface AccountingDashboardProps {
   currentView: View;
@@ -16,6 +17,26 @@ interface AccountingDashboardProps {
 }
 
 export default function AccountingDashboard({ currentView, onViewChange }: AccountingDashboardProps) {
+  const { hasPermission } = usePermissions();
+
+  if (!hasPermission('comptabilite')) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+            <ShieldOff className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Accès refusé</h2>
+          <p className="text-gray-600">
+            Vous n'avez pas la permission d'accéder au module Comptabilité.
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Contactez votre administrateur pour obtenir les droits nécessaires.
+          </p>
+        </div>
+      </div>
+    );
+  }
   const [activeTab, setActiveTab] = useState<'entrees' | 'sorties' | 'rib' | 'adresse' | 'avenants' | 'mutuelle' | 'ar' | 'avance-frais'>('entrees');
 
   useEffect(() => {
