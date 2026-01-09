@@ -280,21 +280,18 @@ export default function ComptabiliteARTab() {
 
       if (error) throw error;
 
-      const exportData = (data || []).map((e: any) => {
-        const justified = e.is_justified ?? e.justifie ?? false;
-        return {
-          Matricule: e.matricule,
-          Nom: e.nom,
-          Prénom: e.prenom,
-          Type: e.ar_type,
-          'Date début': e.start_date,
-          'Date fin': e.end_date || '',
-          'Heures de retard': e.retard_hours || '',
-          'Jours d\'absence': e.absence_days || '',
-          Justifié: justified ? 'OUI' : 'NON',
-          Note: e.note || '',
-        };
-      });
+      const exportData = (data || []).map((e: any) => ({
+        Matricule: e.matricule,
+        Nom: e.nom,
+        Prénom: e.prenom,
+        Type: e.ar_type,
+        'Date début': e.start_date,
+        'Date fin': e.end_date || '',
+        'Heures de retard': e.retard_hours || '',
+        'Jours d\'absence': e.absence_days || '',
+        Justifié: e.is_justified ? 'OUI' : 'NON',
+        Note: e.note || '',
+      }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
@@ -493,20 +490,15 @@ export default function ComptabiliteARTab() {
                         : `${event.absence_days}j`}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {(() => {
-                        const justified = event.is_justified ?? event.justifie ?? false;
-                        return (
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                              justified
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {justified ? 'OUI' : 'NON'}
-                          </span>
-                        );
-                      })()}
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          event.is_justified
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {event.is_justified ? 'OUI' : 'NON'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={event.note || ''}>
                       {event.note || '-'}
