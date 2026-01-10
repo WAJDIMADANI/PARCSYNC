@@ -13,7 +13,13 @@ interface AvanceFrais {
   montant: number;
   facture: 'A_FOURNIR' | 'TRANSMIS' | 'RECU';
   facture_file_path: string | null;
+  date_demande: string | null;
+  statut: 'en_attente' | 'validee' | 'refusee' | null;
+  commentaire_validation: string | null;
+  valide_par: string | null;
+  date_validation: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 interface Employee {
@@ -48,6 +54,7 @@ export default function ComptabiliteAvanceFraisTab() {
 
   const [justificatifFile, setJustificatifFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [demanderValidation, setDemanderValidation] = useState(false);
 
   useEffect(() => {
     loadRecords();
@@ -72,7 +79,7 @@ export default function ComptabiliteAvanceFraisTab() {
       const { data, error } = await supabase
         .from('v_compta_avance_frais')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('date_demande', { ascending: false });
 
       if (error) throw error;
       setRecords(data || []);
@@ -131,24 +138,29 @@ export default function ComptabiliteAvanceFraisTab() {
     setFilteredRecords(filtered);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, avecValidation: boolean = false) => {
     e.preventDefault();
     if (!selectedEmployee) return;
 
     try {
       setSaving(true);
 
+      const insertPayload: any = {
+        profil_id: selectedEmployee.id,
+        motif: formData.motif,
+        montant: parseFloat(formData.montant),
+        facture: formData.facture,
+        facture_file_path: null,
+      };
+
+      if (avecValidation) {
+        insertPayload.statut = 'en_attente';
+        insertPayload.date_demande = new Date().toISOString();
+      }
+
       const { data: insertData, error: insertError } = await supabase
         .from('compta_avance_frais')
-        .insert([
-          {
-            profil_id: selectedEmployee.id,
-            motif: formData.motif,
-            montant: parseFloat(formData.montant),
-            facture: formData.facture,
-            facture_file_path: null,
-          },
-        ])
+        .insert([insertPayload])
         .select('id')
         .single();
 
@@ -181,6 +193,10 @@ export default function ComptabiliteAvanceFraisTab() {
       setShowModal(false);
       resetForm();
       loadRecords();
+
+      if (avecValidation) {
+        alert('Avance de frais créée et envoyée en validation');
+      }
     } catch (error: any) {
       console.error('Error creating avance frais:', error);
       alert('Erreur lors de la création: ' + error.message);
@@ -200,6 +216,7 @@ export default function ComptabiliteAvanceFraisTab() {
       facture: 'A_FOURNIR',
     });
     setJustificatifFile(null);
+    setDemanderValidation(false);
   };
 
   const downloadJustificatif = async (path: string) => {
@@ -218,7 +235,12 @@ export default function ComptabiliteAvanceFraisTab() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, statut: string | null) => {
+    if (statut && statut !== 'en_attente') {
+      alert('Impossible de supprimer une avance validée ou refusée');
+      return;
+    }
+
     if (!confirm('Supprimer cette avance de frais ?')) return;
 
     try {
@@ -364,6 +386,9 @@ export default function ComptabiliteAvanceFraisTab() {
                     Facture
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Document
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -406,6 +431,25 @@ export default function ComptabiliteAvanceFraisTab() {
                           : 'Reçu'}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {!record.statut ? (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                          Brouillon
+                        </span>
+                      ) : record.statut === 'en_attente' ? (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                          En attente
+                        </span>
+                      ) : record.statut === 'validee' ? (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          Validée
+                        </span>
+                      ) : record.statut === 'refusee' ? (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                          Refusée
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {record.facture_file_path && (
                         <button
@@ -419,9 +463,18 @@ export default function ComptabiliteAvanceFraisTab() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <button
-                        onClick={() => handleDelete(record.id)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Supprimer"
+                        onClick={() => handleDelete(record.id, record.statut)}
+                        disabled={record.statut === 'validee' || record.statut === 'refusee'}
+                        className={`${
+                          record.statut === 'validee' || record.statut === 'refusee'
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-red-600 hover:text-red-900'
+                        }`}
+                        title={
+                          record.statut === 'validee' || record.statut === 'refusee'
+                            ? 'Impossible de supprimer'
+                            : 'Supprimer'
+                        }
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -457,7 +510,7 @@ export default function ComptabiliteAvanceFraisTab() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={(e) => handleSubmit(e, false)} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Salarié *
@@ -590,16 +643,24 @@ export default function ComptabiliteAvanceFraisTab() {
                     setShowModal(false);
                     resetForm();
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={saving || !selectedEmployee}
+                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Enregistrement...' : 'Enregistrer en brouillon'}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => handleSubmit(e as any, true)}
+                  disabled={saving || !selectedEmployee}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {saving ? 'Enregistrement...' : 'Enregistrer'}
+                  {saving ? 'Enregistrement...' : 'Enregistrer & Demander validation'}
                 </button>
               </div>
             </form>
