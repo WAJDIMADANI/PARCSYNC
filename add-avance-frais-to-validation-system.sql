@@ -84,8 +84,16 @@ SELECT
 
   CASE
     WHEN dv.demande_id IS NOT NULL THEN ds.statut
-    WHEN dv.avance_frais_id IS NOT NULL THEN COALESCE(af.statut, 'en_attente')
-    ELSE 'en_attente'
+    WHEN dv.avance_frais_id IS NOT NULL THEN
+      (
+        CASE
+          WHEN af.statut IS NULL THEN 'en_attente'::demande_statut
+          WHEN af.statut IN ('en_attente','en_cours') THEN af.statut::demande_statut
+          WHEN af.statut IN ('validee','refusee','traitee') THEN 'traitee'::demande_statut
+          ELSE 'en_attente'::demande_statut
+        END
+      )
+    ELSE 'en_attente'::demande_statut
   END as demande_statut,
 
   -- Informations du salarié
@@ -255,3 +263,6 @@ $$;
 
 -- Accorder les permissions
 GRANT EXECUTE ON FUNCTION valider_avance_frais(uuid, text, text) TO authenticated;
+
+-- Notifier PostgREST de recharger le schéma
+SELECT pg_notify('pgrst', 'reload schema');
