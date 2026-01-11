@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Plus, X, Download, Upload, Trash2, FileText } from 'lucide-react';
+import { Search, Plus, X, Download, Upload, Trash2, FileText, Send } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { RequestAvanceFraisValidationModal } from './RequestAvanceFraisValidationModal';
 
 interface AvanceFrais {
   id: string;
@@ -54,7 +55,8 @@ export default function ComptabiliteAvanceFraisTab() {
 
   const [justificatifFile, setJustificatifFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
-  const [demanderValidation, setDemanderValidation] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [selectedAvanceForValidation, setSelectedAvanceForValidation] = useState<AvanceFrais | null>(null);
 
   useEffect(() => {
     loadRecords();
@@ -79,7 +81,7 @@ export default function ComptabiliteAvanceFraisTab() {
       const { data, error } = await supabase
         .from('v_compta_avance_frais')
         .select('*')
-        .order('date_demande', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setRecords(data || []);
@@ -138,7 +140,7 @@ export default function ComptabiliteAvanceFraisTab() {
     setFilteredRecords(filtered);
   };
 
-  const handleSubmit = async (e: React.FormEvent, avecValidation: boolean = false) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmployee) return;
 
@@ -151,12 +153,9 @@ export default function ComptabiliteAvanceFraisTab() {
         montant: parseFloat(formData.montant),
         facture: formData.facture,
         facture_file_path: null,
+        statut: null,
+        date_demande: null,
       };
-
-      if (avecValidation) {
-        insertPayload.statut = 'en_attente';
-        insertPayload.date_demande = new Date().toISOString();
-      }
 
       const { data: insertData, error: insertError } = await supabase
         .from('compta_avance_frais')
@@ -193,10 +192,7 @@ export default function ComptabiliteAvanceFraisTab() {
       setShowModal(false);
       resetForm();
       loadRecords();
-
-      if (avecValidation) {
-        alert('Avance de frais créée et envoyée en validation');
-      }
+      alert('Avance de frais créée. Vous pouvez maintenant demander sa validation.');
     } catch (error: any) {
       console.error('Error creating avance frais:', error);
       alert('Erreur lors de la création: ' + error.message);
@@ -216,7 +212,6 @@ export default function ComptabiliteAvanceFraisTab() {
       facture: 'A_FOURNIR',
     });
     setJustificatifFile(null);
-    setDemanderValidation(false);
   };
 
   const downloadJustificatif = async (path: string) => {
@@ -236,7 +231,7 @@ export default function ComptabiliteAvanceFraisTab() {
   };
 
   const handleDelete = async (id: string, statut: string | null) => {
-    if (statut && statut !== 'en_attente') {
+    if (statut === 'validee' || statut === 'refusee') {
       alert('Impossible de supprimer une avance validée ou refusée');
       return;
     }
@@ -255,6 +250,11 @@ export default function ComptabiliteAvanceFraisTab() {
       console.error('Error deleting record:', error);
       alert('Erreur lors de la suppression: ' + error.message);
     }
+  };
+
+  const handleRequestValidation = (record: AvanceFrais) => {
+    setSelectedAvanceForValidation(record);
+    setShowValidationModal(true);
   };
 
   const exportToExcel = () => {
@@ -462,22 +462,34 @@ export default function ComptabiliteAvanceFraisTab() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button
-                        onClick={() => handleDelete(record.id, record.statut)}
-                        disabled={record.statut === 'validee' || record.statut === 'refusee'}
-                        className={`${
-                          record.statut === 'validee' || record.statut === 'refusee'
-                            ? 'text-gray-400 cursor-not-allowed'
-                            : 'text-red-600 hover:text-red-900'
-                        }`}
-                        title={
-                          record.statut === 'validee' || record.statut === 'refusee'
-                            ? 'Impossible de supprimer'
-                            : 'Supprimer'
-                        }
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {!record.statut && (
+                          <button
+                            onClick={() => handleRequestValidation(record)}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Demander validation"
+                          >
+                            <Send className="w-4 h-4" />
+                            <span className="text-xs font-medium">Demander validation</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(record.id, record.statut)}
+                          disabled={record.statut === 'validee' || record.statut === 'refusee'}
+                          className={`${
+                            record.statut === 'validee' || record.statut === 'refusee'
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : 'text-red-600 hover:text-red-900'
+                          }`}
+                          title={
+                            record.statut === 'validee' || record.statut === 'refusee'
+                              ? 'Impossible de supprimer'
+                              : 'Supprimer'
+                          }
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -510,7 +522,7 @@ export default function ComptabiliteAvanceFraisTab() {
               </button>
             </div>
 
-            <form onSubmit={(e) => handleSubmit(e, false)} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Salarié *
@@ -643,29 +655,41 @@ export default function ComptabiliteAvanceFraisTab() {
                     setShowModal(false);
                     resetForm();
                   }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={saving || !selectedEmployee}
-                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {saving ? 'Enregistrement...' : 'Enregistrer en brouillon'}
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => handleSubmit(e as any, true)}
-                  disabled={saving || !selectedEmployee}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {saving ? 'Enregistrement...' : 'Enregistrer & Demander validation'}
+                  {saving ? 'Enregistrement...' : 'Enregistrer'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {showValidationModal && selectedAvanceForValidation && (
+        <RequestAvanceFraisValidationModal
+          avanceFraisId={selectedAvanceForValidation.id}
+          avanceInfo={{
+            matricule: selectedAvanceForValidation.matricule,
+            nom: selectedAvanceForValidation.nom,
+            prenom: selectedAvanceForValidation.prenom,
+            motif: selectedAvanceForValidation.motif,
+            montant: selectedAvanceForValidation.montant,
+          }}
+          onClose={() => {
+            setShowValidationModal(false);
+            setSelectedAvanceForValidation(null);
+          }}
+          onSuccess={() => {
+            loadRecords();
+          }}
+        />
       )}
     </div>
   );
