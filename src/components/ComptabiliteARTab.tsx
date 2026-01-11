@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Search, Plus, X, Calendar, Clock, FileText, Download, Upload, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { Pagination } from './Pagination';
 
 interface AREvent {
   id: string;
@@ -36,6 +37,8 @@ export default function ComptabiliteARTab() {
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -65,6 +68,10 @@ export default function ComptabiliteARTab() {
   useEffect(() => {
     filterEvents();
   }, [events, searchTerm, startDateFilter, endDateFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     if (employeeSearchTimeoutRef.current) {
@@ -164,6 +171,8 @@ export default function ComptabiliteARTab() {
     setFilteredEvents(filtered);
   };
 
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedEvents = filteredEvents.slice(startIndex, startIndex + itemsPerPage);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -465,7 +474,7 @@ export default function ComptabiliteARTab() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredEvents.map((event) => (
+                {paginatedEvents.map((event) => (
                   <tr key={event.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {event.matricule}
@@ -541,6 +550,14 @@ export default function ComptabiliteARTab() {
             <div className="text-center py-12 text-gray-500">
               Aucun événement trouvé
             </div>
+          )}
+          {filteredEvents.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredEvents.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
           )}
         </div>
       )}

@@ -4,6 +4,7 @@ import { Search, Plus, X, Download, Upload, Trash2, FileText, Send } from 'lucid
 import * as XLSX from 'xlsx';
 import { RequestAvanceFraisValidationModal } from './RequestAvanceFraisValidationModal';
 import { SuccessNotification } from './SuccessNotification';
+import { Pagination } from './Pagination';
 
 interface AvanceFrais {
   id: string;
@@ -40,6 +41,8 @@ export default function ComptabiliteAvanceFraisTab() {
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [employeeSearch, setEmployeeSearch] = useState('');
@@ -67,6 +70,10 @@ export default function ComptabiliteAvanceFraisTab() {
   useEffect(() => {
     filterRecords();
   }, [records, searchTerm, startDateFilter, endDateFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     if (employeeSearch.length >= 2) {
@@ -141,6 +148,9 @@ export default function ComptabiliteAvanceFraisTab() {
 
     setFilteredRecords(filtered);
   };
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRecords = filteredRecords.slice(startIndex, startIndex + itemsPerPage);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -399,7 +409,7 @@ export default function ComptabiliteAvanceFraisTab() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredRecords.map((record) => (
+                {paginatedRecords.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {record.matricule}
@@ -503,6 +513,14 @@ export default function ComptabiliteAvanceFraisTab() {
           <div className="text-center py-12 text-gray-500">
             Aucune avance de frais trouvée
           </div>
+        )}
+        {filteredRecords.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredRecords.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
         )}
       </div>
 

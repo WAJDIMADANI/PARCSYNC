@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Download, HeartHandshake, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
+import { Pagination } from './Pagination';
 
 interface MutuelleData {
   profil_id: string;
@@ -16,6 +17,8 @@ export function ComptabiliteMutuelleTab() {
   const [mutuelleData, setMutuelleData] = useState<MutuelleData[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const fetchMutuelleData = async () => {
     setLoading(true);
@@ -82,6 +85,13 @@ export function ComptabiliteMutuelleTab() {
       (item.prenom ?? '').toLowerCase().includes(search)
     );
   });
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedMutuelleData = filteredMutuelleData.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -186,7 +196,7 @@ export function ComptabiliteMutuelleTab() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredMutuelleData.map((item) => (
+                  {paginatedMutuelleData.map((item) => (
                     <tr key={item.profil_id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {item.nom}
@@ -204,6 +214,14 @@ export function ComptabiliteMutuelleTab() {
                 </tbody>
               </table>
             </div>
+            {filteredMutuelleData.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredMutuelleData.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            )}
           </div>
         </>
       )}

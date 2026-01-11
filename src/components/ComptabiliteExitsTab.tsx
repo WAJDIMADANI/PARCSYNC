@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, Download, UserMinus, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
+import { Pagination } from './Pagination';
 
 interface Employee {
   profil_id: string;
@@ -21,6 +22,8 @@ export function ComptabiliteExitsTab() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const fetchExits = async () => {
     if (!dateDebut || !dateFin) {
@@ -82,6 +85,13 @@ export function ComptabiliteExitsTab() {
       (emp.commentaire_depart ?? '').toLowerCase().includes(search)
     );
   });
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedEmployees = filteredEmployees.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -198,7 +208,7 @@ export function ComptabiliteExitsTab() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredEmployees.map((emp) => (
+                  {paginatedEmployees.map((emp) => (
                     <tr key={emp.profil_id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {emp.nom}
@@ -226,6 +236,14 @@ export function ComptabiliteExitsTab() {
                 </tbody>
               </table>
             </div>
+            {filteredEmployees.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredEmployees.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            )}
           </div>
         </>
       )}
