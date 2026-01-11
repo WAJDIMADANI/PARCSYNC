@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Search, Plus, X, Download, Upload, Trash2, FileText, Send } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { RequestAvanceFraisValidationModal } from './RequestAvanceFraisValidationModal';
+import { SuccessNotification } from './SuccessNotification';
 
 interface AvanceFrais {
   id: string;
@@ -57,6 +58,7 @@ export default function ComptabiliteAvanceFraisTab() {
   const [saving, setSaving] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [selectedAvanceForValidation, setSelectedAvanceForValidation] = useState<AvanceFrais | null>(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   useEffect(() => {
     loadRecords();
@@ -192,7 +194,7 @@ export default function ComptabiliteAvanceFraisTab() {
       setShowModal(false);
       resetForm();
       loadRecords();
-      alert('Avance de frais créée. Vous pouvez maintenant demander sa validation.');
+      setShowSuccessMessage(true);
     } catch (error: any) {
       console.error('Error creating avance frais:', error);
       alert('Erreur lors de la création: ' + error.message);
@@ -689,6 +691,13 @@ export default function ComptabiliteAvanceFraisTab() {
           onSuccess={() => {
             loadRecords();
           }}
+        />
+      )}
+
+      {showSuccessMessage && (
+        <SuccessNotification
+          message="Avance de frais créée avec succès. Vous pouvez maintenant demander sa validation."
+          onClose={() => setShowSuccessMessage(false)}
         />
       )}
     </div>
