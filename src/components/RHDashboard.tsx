@@ -84,6 +84,7 @@ interface Stats {
 interface ValidationWithMessages {
   id: string;
   demande_id: string;
+  avance_frais_id?: string | null;
   demandeur_id: string;
   validateur_id: string;
   type_action: string;
@@ -106,6 +107,9 @@ interface ValidationWithMessages {
   validateur_nom: string | null;
   validateur_prenom: string | null;
   unread_count: number;
+  avance_montant?: number | null;
+  avance_facture?: 'A_FOURNIR' | 'TRANSMIS' | 'RECU' | null;
+  avance_facture_path?: string | null;
 }
 
 interface RHDashboardProps {

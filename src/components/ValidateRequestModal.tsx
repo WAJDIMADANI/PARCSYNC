@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, CheckCircle, XCircle, ArrowRight, Send, MessageSquare, Clock, User, AlertCircle } from 'lucide-react';
+import { X, CheckCircle, XCircle, ArrowRight, Send, MessageSquare, Clock, User, AlertCircle, Download, Euro, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { usePermissions } from '../contexts/PermissionsContext';
 
@@ -20,6 +20,7 @@ interface Message {
 interface Validation {
   id: string;
   demande_id: string;
+  avance_frais_id?: string | null;
   demandeur_id: string;
   validateur_id: string;
   type_action: string;
@@ -44,6 +45,10 @@ interface Validation {
   validateur_email: string | null;
   validateur_nom: string | null;
   validateur_prenom: string | null;
+
+  avance_montant?: number | null;
+  avance_facture?: 'A_FOURNIR' | 'TRANSMIS' | 'RECU' | null;
+  avance_facture_path?: string | null;
 }
 
 interface ValidateRequestModalProps {
@@ -232,6 +237,22 @@ export function ValidateRequestModal({ validation, onClose, onSuccess }: Validat
     }
   };
 
+  const downloadJustificatif = async (path: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('compta-avance-frais')
+        .createSignedUrl(path, 60);
+
+      if (error) throw error;
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (err: any) {
+      console.error('Error downloading justificatif:', err);
+      setError('Erreur lors du téléchargement du justificatif');
+    }
+  };
+
   const getTypeActionLabel = (type: string) => {
     switch (type) {
       case 'modification_demande': return 'Modification de la demande';
@@ -244,6 +265,7 @@ export function ValidateRequestModal({ validation, onClose, onSuccess }: Validat
   };
 
   const isReadOnly = validation.statut !== 'en_attente';
+  const isAvanceFrais = validation.avance_frais_id != null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -326,6 +348,77 @@ export function ValidateRequestModal({ validation, onClose, onSuccess }: Validat
                 <p className="text-xs font-medium text-blue-800 uppercase tracking-wide mb-2">Message de demande</p>
                 <p className="text-sm text-blue-900 whitespace-pre-wrap">{validation.message_demande}</p>
               </div>
+
+              {isAvanceFrais && (
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <h4 className="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
+                    <Euro className="w-4 h-4" />
+                    Détails avance de frais
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Salarié</p>
+                      <p className="text-sm text-green-900 mt-1">
+                        {validation.matricule_salarie && (
+                          <span className="font-medium">{validation.matricule_salarie} - </span>
+                        )}
+                        {validation.nom_salarie} {validation.prenom_salarie}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Motif</p>
+                      <p className="text-sm text-green-900 mt-1 whitespace-pre-wrap">
+                        {validation.demande_description}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Montant</p>
+                        <p className="text-sm text-green-900 mt-1 font-semibold flex items-center gap-1">
+                          <Euro className="w-4 h-4" />
+                          {validation.avance_montant?.toFixed(2)} €
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Facture</p>
+                        <p className="text-sm text-green-900 mt-1">
+                          {validation.avance_facture === 'A_FOURNIR' && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                              À fournir
+                            </span>
+                          )}
+                          {validation.avance_facture === 'TRANSMIS' && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                              Transmis
+                            </span>
+                          )}
+                          {validation.avance_facture === 'RECU' && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                              Reçu
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {validation.avance_facture_path && (
+                      <div>
+                        <p className="text-xs font-medium text-green-700 uppercase tracking-wide mb-2">Justificatif</p>
+                        <button
+                          onClick={() => downloadJustificatif(validation.avance_facture_path!)}
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                        >
+                          <Download className="w-4 h-4" />
+                          Télécharger le justificatif
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4 flex flex-col h-full">

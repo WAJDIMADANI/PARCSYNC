@@ -11,6 +11,7 @@ import Toast from './Toast';
 interface Validation {
   id: string;
   demande_id: string;
+  avance_frais_id?: string | null;
   demandeur_id: string;
   validateur_id: string;
   type_action: 'modification_demande' | 'suppression_demande' | 'changement_priorite' | 'reassignation' | 'autre';
@@ -40,6 +41,10 @@ interface Validation {
 
   messages_non_lus_validateur: number;
   messages_non_lus_demandeur: number;
+
+  avance_montant?: number | null;
+  avance_facture?: 'A_FOURNIR' | 'TRANSMIS' | 'RECU' | null;
+  avance_facture_path?: string | null;
 }
 
 interface AvanceFrais {
