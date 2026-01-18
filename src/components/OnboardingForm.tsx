@@ -681,6 +681,22 @@ export function OnboardingForm() {
               Documents obligatoires
             </h2>
             <div className="space-y-4">
+              <div>
+                <label htmlFor="type_piece_identite" className="block text-sm font-semibold text-slate-700 mb-2">
+                  Type de pièce d'identité *
+                </label>
+                <select
+                  id="type_piece_identite"
+                  value={formData.type_piece_identite}
+                  onChange={(e) => setFormData({ ...formData, type_piece_identite: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                  required
+                >
+                  <option value="carte_identite">Carte d'identité</option>
+                  <option value="passeport">Passeport</option>
+                  <option value="carte_sejour">Carte de séjour</option>
+                </select>
+              </div>
               <FileUploadField label="Carte d'identité RECTO *" file={files.cni_recto} onChange={(e) => handleFileChange(e, 'cni_recto')} onRemove={() => removeFile('cni_recto')} accept="image/*,.pdf" required />
               <FileUploadField label="Carte d'identité VERSO *" file={files.cni_verso} onChange={(e) => handleFileChange(e, 'cni_verso')} onRemove={() => removeFile('cni_verso')} accept="image/*,.pdf" required />
               <FileUploadField label="Carte Vitale ou attestation *" file={files.carte_vitale} onChange={(e) => handleFileChange(e, 'carte_vitale')} onRemove={() => removeFile('carte_vitale')} accept="image/*,.pdf" required />
