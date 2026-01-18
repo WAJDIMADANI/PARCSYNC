@@ -700,6 +700,24 @@ export function OnboardingForm() {
                   <option value="carte_sejour">Carte de séjour</option>
                 </select>
               </div>
+              {formData.type_piece_identite === 'carte_sejour' && (
+                <div>
+                  <label htmlFor="titre_sejour_fin_validite" className="block text-sm font-semibold text-slate-700 mb-2">
+                    Date de fin de validité du titre de séjour *
+                  </label>
+                  <input
+                    type="date"
+                    id="titre_sejour_fin_validite"
+                    value={formData.titre_sejour_fin_validite}
+                    onChange={(e) => setFormData({ ...formData, titre_sejour_fin_validite: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                    required
+                  />
+                  <p className="mt-2 text-xs text-slate-600">
+                    Veuillez indiquer la date de fin de validité de votre titre de séjour
+                  </p>
+                </div>
+              )}
               <FileUploadField label="Carte d'identité RECTO *" file={files.cni_recto} onChange={(e) => handleFileChange(e, 'cni_recto')} onRemove={() => removeFile('cni_recto')} accept="image/*,.pdf" required />
               <FileUploadField label="Carte d'identité VERSO *" file={files.cni_verso} onChange={(e) => handleFileChange(e, 'cni_verso')} onRemove={() => removeFile('cni_verso')} accept="image/*,.pdf" required />
               <FileUploadField label="Carte Vitale ou attestation *" file={files.carte_vitale} onChange={(e) => handleFileChange(e, 'carte_vitale')} onRemove={() => removeFile('carte_vitale')} accept="image/*,.pdf" required />
