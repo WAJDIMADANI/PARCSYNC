@@ -608,10 +608,14 @@ export function ImportSalariesBulk() {
       .map((r) => getColumnValue(r, columnMap, 'email'))
       .filter((e) => e);
 
-    const { data: existingEmails } = await supabase
-      .from('profil')
-      .select('email')
-      .in('email', emailsToCheck);
+    let existingEmails: any[] = [];
+    if (emailsToCheck.length > 0) {
+      const { data } = await supabase
+        .from('profil')
+        .select('email')
+        .in('email', emailsToCheck);
+      existingEmails = data || [];
+    }
 
     const existingEmailSet = new Set(existingEmails?.map((e) => e.email.toLowerCase()) || []);
 
@@ -620,10 +624,14 @@ export function ImportSalariesBulk() {
       .map((r) => getColumnValue(r, columnMap, 'matricule_tca'))
       .filter((m) => m);
 
-    const { data: existingMatricules } = await supabase
-      .from('profil')
-      .select('id, matricule_tca, nom, prenom, email')
-      .in('matricule_tca', matriculesToCheck);
+    let existingMatricules: any[] = [];
+    if (matriculesToCheck.length > 0) {
+      const { data } = await supabase
+        .from('profil')
+        .select('id, matricule_tca, nom, prenom, email')
+        .in('matricule_tca', matriculesToCheck);
+      existingMatricules = data || [];
+    }
 
     const existingMatriculeMap = new Map(
       existingMatricules?.map((p) => [p.matricule_tca, { id: p.id, nom: p.nom, prenom: p.prenom, email: p.email }]) || []
