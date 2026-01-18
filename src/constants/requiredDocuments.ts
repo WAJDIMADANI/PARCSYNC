@@ -1,4 +1,4 @@
-import { Car, CreditCard, Heart, Briefcase } from 'lucide-react';
+import { Car, CreditCard, Heart, Briefcase, FileText } from 'lucide-react';
 
 export interface RequiredDocumentConfig {
   value: string;
@@ -23,9 +23,9 @@ export const REQUIRED_DOCUMENTS: RequiredDocumentConfig[] = [
     icon: CreditCard
   },
   {
-    value: 'rib',
-    label: 'RIB',
-    icon: Briefcase
+    value: 'casier_judiciaire',
+    label: 'B3 casier judiciaire',
+    icon: FileText
   },
   {
     value: 'permis_recto',
@@ -36,6 +36,21 @@ export const REQUIRED_DOCUMENTS: RequiredDocumentConfig[] = [
     value: 'permis_verso',
     label: 'Permis de conduire (Verso)',
     icon: Car
+  },
+  {
+    value: 'attestation_points',
+    label: 'Point permis',
+    icon: FileText
+  },
+  {
+    value: 'rib',
+    label: 'RIB',
+    icon: Briefcase
+  },
+  {
+    value: 'dpae',
+    label: 'DPAE',
+    icon: FileText
   },
   {
     value: 'certificat_medical',
