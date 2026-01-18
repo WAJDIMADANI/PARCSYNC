@@ -167,8 +167,6 @@ function getLatestActiveContract(employeeId: string, contracts: Contract[]): str
 }
 
 export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
-  console.log('EmployeeList rendering, initialProfilId:', initialProfilId);
-
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
@@ -263,11 +261,9 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   }, [employees, isModalOpen]);
 
   const fetchData = async (silent = false) => {
-    console.log('fetchData called, silent:', silent, 'activeTab:', activeTab);
     if (!silent) setLoading(true);
 
     try {
-      console.log('Starting data fetch...');
       // Construire la requête selon l'onglet actif
       let employeesQuery = supabase
         .from('profil')
@@ -309,17 +305,9 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
       setSites(sitesRes.data || []);
       setSecteurs(secteursRes.data || []);
 
-      if (!silent) {
-        console.log('✅ Données chargées:', {
-          employees: employeesRes.data?.length,
-          contracts: contractsRes.data?.length
-        });
-      }
     } catch (error) {
-      console.error('❌ Erreur chargement données:', error);
-      alert('Erreur lors du chargement des données: ' + (error as Error).message);
+      console.error('Erreur chargement données:', error);
     } finally {
-      console.log('fetchData finally block, setting loading to false');
       setLoading(false);
       setRefreshing(false);
     }
@@ -616,18 +604,13 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
 
   const hasActiveFilters = filterStatut || filterSecteur || filterTypeContrat;
 
-  console.log('EmployeeList render, loading:', loading, 'employees count:', employees.length);
-
   if (loading) {
-    console.log('Showing loading spinner');
     return (
       <div className="flex items-center justify-center h-64">
         <LoadingSpinner size="lg" text="Chargement des employés..." />
       </div>
     );
   }
-
-  console.log('About to render main EmployeeList UI');
 
   return (
     <div>
