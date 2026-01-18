@@ -11,13 +11,17 @@ interface MissingDocumentsReminderModalProps {
 }
 
 const DOCUMENT_LABELS: Record<string, string> = {
-  'permis_recto': 'Permis de conduire (Recto)',
-  'permis_verso': 'Permis de conduire (Verso)',
   'cni_recto': 'Carte d\'identité (Recto)',
   'cni_verso': 'Carte d\'identité (Verso)',
   'carte_vitale': 'Carte vitale',
-  'certificat_medical': 'Certificat médical',
+  'casier_judiciaire': 'B3 casier judiciaire',
+  'permis_recto': 'Permis de conduire (Recto)',
+  'permis_verso': 'Permis de conduire (Verso)',
+  'attestation_points': 'Point permis',
   'rib': 'RIB',
+  'dpae': 'DPAE',
+  'certificat_medical': 'Certificat médical',
+  'titre_sejour': 'Titre de séjour'
 };
 
 export default function MissingDocumentsReminderModal({

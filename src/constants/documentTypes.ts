@@ -28,9 +28,9 @@ export const DOCUMENT_TYPES: DocumentTypeConfig[] = [
     requiresExpiration: false
   },
   {
-    value: 'rib',
-    label: 'RIB',
-    icon: Briefcase,
+    value: 'casier_judiciaire',
+    label: 'B3 casier judiciaire',
+    icon: FileText,
     requiresExpiration: false
   },
   {
@@ -43,6 +43,24 @@ export const DOCUMENT_TYPES: DocumentTypeConfig[] = [
     value: 'permis_verso',
     label: 'Permis de conduire (Verso)',
     icon: Car,
+    requiresExpiration: false
+  },
+  {
+    value: 'attestation_points',
+    label: 'Point permis',
+    icon: FileText,
+    requiresExpiration: false
+  },
+  {
+    value: 'rib',
+    label: 'RIB',
+    icon: Briefcase,
+    requiresExpiration: false
+  },
+  {
+    value: 'dpae',
+    label: 'DPAE',
+    icon: FileText,
     requiresExpiration: false
   },
   {

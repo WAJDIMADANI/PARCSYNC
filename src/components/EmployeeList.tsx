@@ -1983,12 +1983,15 @@ function EmployeeDetailModal({
     const labels: Record<string, string> = {
       'cni_recto': 'CNI Recto',
       'cni_verso': 'CNI Verso',
-      'rib': 'RIB',
       'carte_vitale': 'Carte Vitale',
+      'casier_judiciaire': 'B3 casier judiciaire',
       'permis_recto': 'Permis (recto)',
       'permis_verso': 'Permis (verso)',
-      'casier_judiciaire': 'Casier judiciaire',
-      'attestation_points': 'Attestation de points',
+      'attestation_points': 'Point permis',
+      'rib': 'RIB',
+      'dpae': 'DPAE',
+      'certificat_medical': 'Certificat médical',
+      'titre_sejour': 'Titre de séjour',
       'cv': 'CV',
       'lettre_motivation': 'Lettre de motivation',
       'autres': 'Autres'
