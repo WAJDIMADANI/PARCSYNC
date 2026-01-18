@@ -324,6 +324,7 @@ export function OnboardingForm() {
             bic: formData.bic || null,
             site_id: formData.site_id || null,
             secteur_id: formData.secteur_id || null,
+            type_piece_identite: formData.type_piece_identite,
           })
           .eq('id', finalEmployeeId);
 
@@ -356,6 +357,7 @@ export function OnboardingForm() {
               bic: formData.bic || null,
               site_id: formData.site_id || null,
               secteur_id: formData.secteur_id || null,
+              type_piece_identite: formData.type_piece_identite,
               candidat_id: candidatId || null,
               statut: 'en_attente_contrat',
               role: 'salarie',
