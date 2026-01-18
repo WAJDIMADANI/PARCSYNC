@@ -326,6 +326,7 @@ export function OnboardingForm() {
             site_id: formData.site_id || null,
             secteur_id: formData.secteur_id || null,
             type_piece_identite: formData.type_piece_identite,
+            titre_sejour_fin_validite: formData.type_piece_identite === 'carte_sejour' ? (formData.titre_sejour_fin_validite || null) : null,
           })
           .eq('id', finalEmployeeId);
 
@@ -359,6 +360,7 @@ export function OnboardingForm() {
               site_id: formData.site_id || null,
               secteur_id: formData.secteur_id || null,
               type_piece_identite: formData.type_piece_identite,
+              titre_sejour_fin_validite: formData.type_piece_identite === 'carte_sejour' ? (formData.titre_sejour_fin_validite || null) : null,
               candidat_id: candidatId || null,
               statut: 'en_attente_contrat',
               role: 'salarie',
