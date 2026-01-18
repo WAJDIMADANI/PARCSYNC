@@ -84,6 +84,7 @@ export function OnboardingForm() {
     nir: '',
     site_id: '',
     secteur_id: '',
+    type_piece_identite: 'carte_identite',
     consentement_rgpd: false,
   });
   const [files, setFiles] = useState<Record<DocumentType, File | null>>({
