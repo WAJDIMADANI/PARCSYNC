@@ -51,6 +51,7 @@ export function Dashboard() {
   };
 
   const renderView = () => {
+    console.log('Dashboard renderView, current view:', view, 'viewParams:', viewParams);
     switch (view) {
       case 'setup':
         return <SetupCheck />;
@@ -59,6 +60,7 @@ export function Dashboard() {
       case 'rh/candidats':
         return <CandidateList />;
       case 'rh/salaries':
+        console.log('Rendering EmployeeList with profilId:', viewParams?.profilId);
         return <EmployeeList initialProfilId={viewParams?.profilId} />;
       case 'rh/documents':
         return <DocumentsManager />;
@@ -141,6 +143,8 @@ export function Dashboard() {
         return <CandidateList />;
     }
   };
+
+  console.log('Dashboard render, view:', view, 'user:', user?.email);
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
