@@ -78,10 +78,8 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     new Set(['rh', 'parc', 'compta', 'exports', 'admin'])
   );
   const [inboxCount, setInboxCount] = useState(0);
-  const { hasPermission, permissions } = usePermissions();
+  const { hasPermission } = usePermissions();
   const { user } = useAuth();
-
-  console.log('Sidebar - Current permissions:', permissions);
 
   useEffect(() => {
     if (!user) return;

@@ -30,41 +30,29 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
-    console.log('⏰ useEffect triggered - loading permissions...');
+    console.log('PermissionsContext effect triggered, user:', user?.id);
+    let timeoutId: NodeJS.Timeout;
 
     const loadPermissions = async () => {
       if (!user) {
-        console.warn('⚠️ No user found in AuthContext - user is null/undefined');
+        console.log('No user in PermissionsContext, setting loading to false');
         setAppUser(null);
         setPermissions([]);
         setLoading(false);
         return;
       }
 
-      try {
-        const timestamp = new Date().toISOString();
-        console.log('🔍 ============================================');
-        console.log('🔍 PERMISSIONS LOADING - ' + timestamp);
-        console.log('🔍 ============================================');
-        console.log('🔍 Step 1: User exists');
-        console.log('  - user.id:', user.id);
-        console.log('  - user.email:', user.email);
-        console.log('  - user.email type:', typeof user.email);
+      console.log('Loading permissions for user:', user.email);
 
+      try {
         const emailToSearch = user.email?.trim().toLowerCase();
-        console.log('  - email to search (trimmed, lowercase):', `"${emailToSearch}"`);
 
         if (!emailToSearch) {
-          console.error('❌ Email is empty after trim!');
           setAppUser(null);
           setPermissions([]);
           setLoading(false);
           return;
         }
-
-        console.log('🔍 Step 2: Querying utilisateur_avec_permissions VIEW');
-        console.log('  - Query: SELECT * FROM utilisateur_avec_permissions');
-        console.log('  - Filter: .eq("email", "' + emailToSearch + '")');
 
         const { data, error } = await supabase
           .from('utilisateur_avec_permissions')
@@ -72,95 +60,47 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
           .eq('email', emailToSearch)
           .maybeSingle();
 
-        console.log('🔍 Step 3: Query result received');
-        console.log('  - data:', data);
-        console.log('  - error:', error);
-
         if (error) {
-          console.error('❌ Database error:', error);
-          console.error('❌ Error message:', error.message);
-          console.error('❌ Error code:', error.code);
+          console.error('Error loading permissions:', error);
           setAppUser(null);
           setPermissions([]);
         } else if (data) {
-          console.log('✅ ============================================');
-          console.log('✅ USER DATA FOUND!');
-          console.log('✅ ============================================');
-          console.log('  - User ID:', data.id);
-          console.log('  - User email:', data.email);
-          console.log('  - User name:', data.prenom + ' ' + data.nom);
-          console.log('  - User active:', data.actif);
-          console.log('📋 PERMISSIONS ARRAY:', JSON.stringify(data.permissions, null, 2));
-          console.log('📊 PERMISSIONS COUNT:', data.permissions?.length || 0);
-
-          if (data.permissions && data.permissions.length > 0) {
-            console.log('📋 PERMISSIONS BY CATEGORY:');
-            const categorized: Record<string, string[]> = {};
-            data.permissions.forEach((perm: string) => {
-              const category = perm.split('/')[0];
-              if (!categorized[category]) categorized[category] = [];
-              categorized[category].push(perm);
-            });
-            Object.keys(categorized).sort().forEach(category => {
-              console.log(`  - ${category}: ${categorized[category].length} permissions`);
-              categorized[category].forEach(perm => {
-                console.log(`    • ${perm}`);
-              });
-            });
-          }
-
+          console.log('Permissions loaded successfully:', data.permissions?.length || 0);
           setAppUser(data as AppUser);
           setPermissions(data.permissions || []);
-
-          console.log('✅ STATE UPDATED - Permissions set in context');
         } else {
-          console.warn('⚠️ ============================================');
-          console.warn('⚠️ NO USER DATA FOUND');
-          console.warn('⚠️ ============================================');
-          console.warn('  - Searched email:', emailToSearch);
-          console.warn('  - View returned: NULL');
-          console.warn('  - Possible causes:');
-          console.warn('    1. User does not exist in app_utilisateur');
-          console.warn('    2. Email does not match (case-sensitive issue)');
-          console.warn('    3. User exists but has no permissions');
-          console.warn('  - Please verify with SQL:');
-          console.warn('    SELECT * FROM utilisateur_avec_permissions WHERE email = \'' + emailToSearch + '\';');
-
+          console.warn('No data found for user');
           setAppUser(null);
           setPermissions([]);
         }
       } catch (error) {
-        console.error('❌ ============================================');
-        console.error('❌ EXCEPTION DURING PERMISSIONS LOADING');
-        console.error('❌ ============================================');
-        console.error('❌ Error:', error);
+        console.error('Exception loading permissions:', error);
         setAppUser(null);
         setPermissions([]);
       } finally {
+        console.log('PermissionsContext loading complete, setting loading to false');
         setLoading(false);
-        console.log('✅ Permission loading complete - timestamp:', new Date().toISOString());
-        console.log('🔍 ============================================');
       }
     };
 
+    // Timeout de sécurité : après 5 secondes, forcer le déverrouillage
+    timeoutId = setTimeout(() => {
+      console.warn('Permission loading timeout - forcing unlock');
+      setLoading(false);
+    }, 5000);
+
     loadPermissions();
-  }, [user?.id, refreshTrigger]); // Re-run when user ID changes or manual refresh triggered
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [user?.id, refreshTrigger]);
 
   const hasPermission = (sectionId: string): boolean => {
-    const has = permissions.includes(sectionId);
-    console.log(`🔐 Checking permission "${sectionId}":`, has ? '✅ ALLOWED' : '❌ DENIED');
-
-    if (!has && permissions.length > 0) {
-      console.log(`   Available permissions (${permissions.length}):`, permissions);
-    } else if (!has && permissions.length === 0) {
-      console.log('   ⚠️ No permissions loaded - user may need to refresh or permissions are empty');
-    }
-
-    return has;
+    return permissions.includes(sectionId);
   };
 
   const refreshPermissions = async () => {
-    console.log('🔄 Manually refreshing permissions...');
     setRefreshTrigger(prev => prev + 1);
   };
 

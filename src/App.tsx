@@ -19,12 +19,23 @@ function AppContent() {
   const [needsAdminSetup, setNeedsAdminSetup] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
 
+  // Debug log
+  console.log('AppContent render:', {
+    loading,
+    checkingSetup,
+    hasUser: !!user,
+    path,
+    needsAdminSetup
+  });
+
   useEffect(() => {
     let isMounted = true;
 
     const checkAdminSetup = async () => {
+      console.log('checkAdminSetup running, user:', user?.id);
       try {
         if (!user) {
+          console.log('No user, stopping setup check');
           if (isMounted) {
             setCheckingSetup(false);
           }
