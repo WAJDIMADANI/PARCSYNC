@@ -11,9 +11,9 @@ export function CRMEmails() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Envois d'emails groupés</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">Envoi d'emails</h1>
         <p className="text-slate-600">
-          Envoyez des emails groupés aux salariés via les templates Brevo
+          Envoyez des emails personnalisés à vos salariés
         </p>
       </div>
 

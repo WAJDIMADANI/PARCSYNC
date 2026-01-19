@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Send, Users, Loader2, CheckCircle } from 'lucide-react';
+import { Search, Send, Users, Loader2, CheckCircle, X } from 'lucide-react';
 
 interface Profil {
   id: string;
@@ -15,15 +15,15 @@ interface Profil {
 export function CRMEmailsNew() {
   const [mode, setMode] = useState<'all' | 'selected'>('selected');
   const [searchTerm, setSearchTerm] = useState('');
-  const [profils, setProfils] = useState<Profil[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [allProfils, setAllProfils] = useState<Profil[]>([]);
+  const [selectedProfils, setSelectedProfils] = useState<Profil[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const [brevoTemplateId, setBrevoTemplateId] = useState('');
-  const [tags, setTags] = useState('crm');
-  const [params, setParams] = useState('{}');
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     loadProfils();
@@ -41,7 +41,7 @@ export function CRMEmailsNew() {
         .order('nom', { ascending: true });
 
       if (error) throw error;
-      setProfils(data || []);
+      setAllProfils(data || []);
     } catch (error) {
       console.error('Erreur chargement profils:', error);
     } finally {
@@ -49,53 +49,40 @@ export function CRMEmailsNew() {
     }
   };
 
-  const filteredProfils = profils.filter(p => {
+  const filteredProfils = allProfils.filter(p => {
     const term = searchTerm.toLowerCase();
     return (
       p.matricule?.toLowerCase().includes(term) ||
       p.nom?.toLowerCase().includes(term) ||
-      p.prenom?.toLowerCase().includes(term) ||
-      p.email?.toLowerCase().includes(term)
+      p.prenom?.toLowerCase().includes(term)
     );
   });
 
-  const handleToggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
+  const handleSelectProfil = (profil: Profil) => {
+    if (!selectedProfils.find(p => p.id === profil.id)) {
+      setSelectedProfils([...selectedProfils, profil]);
     }
-    setSelectedIds(newSelected);
+    setSearchTerm('');
+    setShowSearchResults(false);
   };
 
-  const handleSelectAll = () => {
-    if (selectedIds.size === filteredProfils.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredProfils.map(p => p.id)));
-    }
+  const handleRemoveProfil = (profilId: string) => {
+    setSelectedProfils(selectedProfils.filter(p => p.id !== profilId));
   };
 
   const handleSend = async () => {
-    if (mode === 'selected' && selectedIds.size === 0) {
+    if (!subject.trim()) {
+      alert('Veuillez saisir un objet');
+      return;
+    }
+
+    if (!message.trim()) {
+      alert('Veuillez saisir un message');
+      return;
+    }
+
+    if (mode === 'selected' && selectedProfils.length === 0) {
       alert('Veuillez sélectionner au moins un salarié');
-      return;
-    }
-
-    const templateId = parseInt(brevoTemplateId);
-    if (!templateId || templateId <= 0) {
-      alert('Veuillez entrer un ID de template Brevo valide');
-      return;
-    }
-
-    let parsedParams = {};
-    try {
-      if (params.trim()) {
-        parsedParams = JSON.parse(params);
-      }
-    } catch (e) {
-      alert('Format JSON invalide pour les paramètres');
       return;
     }
 
@@ -108,13 +95,12 @@ export function CRMEmailsNew() {
 
       const payload = {
         mode,
-        brevo_template_id: templateId,
-        params: parsedParams,
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-        ...(mode === 'selected' && { profilIds: Array.from(selectedIds) })
+        subject,
+        message,
+        ...(mode === 'selected' && { profilIds: selectedProfils.map(p => p.id) })
       };
 
-      const { data, error } = await supabase.functions.invoke('envoyer-crm-bulk-email', {
+      const { data, error } = await supabase.functions.invoke('send-simple-email', {
         body: payload,
         headers: {
           Authorization: `Bearer ${session.access_token}`
@@ -128,9 +114,9 @@ export function CRMEmailsNew() {
       }
 
       setSuccess(true);
-      setSelectedIds(new Set());
-      setBrevoTemplateId('');
-      setParams('{}');
+      setSelectedProfils([]);
+      setSubject('');
+      setMessage('');
 
       setTimeout(() => setSuccess(false), 5000);
     } catch (error: any) {
@@ -141,17 +127,17 @@ export function CRMEmailsNew() {
     }
   };
 
-  const recipientCount = mode === 'all' ? profils.length : selectedIds.size;
+  const recipientCount = mode === 'all' ? allProfils.length : selectedProfils.length;
 
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-slate-800 mb-4">Nouvel envoi d'emails</h2>
+        <h2 className="text-xl font-semibold text-slate-800 mb-4">Nouvel envoi d'email</h2>
 
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              Mode d'envoi
+              Destinataires
             </label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2">
@@ -162,7 +148,7 @@ export function CRMEmailsNew() {
                   onChange={(e) => setMode(e.target.value as 'selected')}
                   className="text-blue-600"
                 />
-                <span className="text-sm">Sélection manuelle</span>
+                <span className="text-sm">Sélectionner des salariés</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -177,130 +163,95 @@ export function CRMEmailsNew() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              ID Template Brevo *
-            </label>
-            <input
-              type="number"
-              value={brevoTemplateId}
-              onChange={(e) => setBrevoTemplateId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Ex: 123"
-            />
-          </div>
+          {mode === 'selected' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Rechercher des salariés *
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setShowSearchResults(e.target.value.length > 0);
+                  }}
+                  onFocus={() => setShowSearchResults(searchTerm.length > 0)}
+                  placeholder="Tapez le matricule, nom ou prénom..."
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Tags (séparés par des virgules)
-            </label>
-            <input
-              type="text"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Ex: crm, newsletter"
-            />
-          </div>
+                {showSearchResults && filteredProfils.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredProfils.slice(0, 10).map((profil) => (
+                      <button
+                        key={profil.id}
+                        onClick={() => handleSelectProfil(profil)}
+                        className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-slate-100 last:border-b-0"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-medium text-slate-900">{profil.nom} {profil.prenom}</span>
+                            <span className="text-slate-500 text-sm ml-2">({profil.matricule})</span>
+                          </div>
+                          <span className="text-xs text-slate-500">{profil.email}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Paramètres (JSON)
-            </label>
-            <textarea
-              value={params}
-              onChange={(e) => setParams(e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-              placeholder='{"key": "value"}'
-            />
-            <p className="text-xs text-slate-500 mt-1">Variables globales pour tous les destinataires</p>
-          </div>
-        </div>
-      </div>
-
-      {mode === 'selected' && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-800">
-              Sélectionner les destinataires ({selectedIds.size} sélectionnés)
-            </h3>
-            <button
-              onClick={handleSelectAll}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              {selectedIds.size === filteredProfils.length ? 'Tout désélectionner' : 'Tout sélectionner'}
-            </button>
-          </div>
-
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Rechercher par matricule, nom, prénom..."
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-            </div>
-          ) : (
-            <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-lg">
-              <table className="w-full">
-                <thead className="bg-slate-50 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.size === filteredProfils.length && filteredProfils.length > 0}
-                        onChange={handleSelectAll}
-                        className="rounded"
-                      />
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Matricule</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Nom</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Prénom</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Email</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {filteredProfils.map((profil) => (
-                    <tr
+              {selectedProfils.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedProfils.map((profil) => (
+                    <div
                       key={profil.id}
-                      onClick={() => handleToggleSelect(profil.id)}
-                      className="hover:bg-slate-50 cursor-pointer"
+                      className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm"
                     >
-                      <td className="px-4 py-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(profil.id)}
-                          onChange={() => handleToggleSelect(profil.id)}
-                          className="rounded"
-                        />
-                      </td>
-                      <td className="px-4 py-2 text-sm text-slate-700">{profil.matricule}</td>
-                      <td className="px-4 py-2 text-sm text-slate-900 font-medium">{profil.nom}</td>
-                      <td className="px-4 py-2 text-sm text-slate-700">{profil.prenom}</td>
-                      <td className="px-4 py-2 text-sm text-slate-600">{profil.email}</td>
-                    </tr>
+                      <span>{profil.nom} {profil.prenom}</span>
+                      <span className="text-blue-500">({profil.matricule})</span>
+                      <button
+                        onClick={() => handleRemoveProfil(profil.id)}
+                        className="hover:text-blue-900"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-              {filteredProfils.length === 0 && (
-                <div className="text-center py-8 text-slate-500">
-                  Aucun salarié trouvé
                 </div>
               )}
             </div>
           )}
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Objet de l'email *
+            </label>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: Rappel important"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Message *
+            </label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={8}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Écrivez votre message ici..."
+            />
+          </div>
         </div>
-      )}
+      </div>
 
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between">
@@ -313,7 +264,7 @@ export function CRMEmailsNew() {
 
           <button
             onClick={handleSend}
-            disabled={sending || !brevoTemplateId || (mode === 'selected' && selectedIds.size === 0)}
+            disabled={sending || !subject || !message || (mode === 'selected' && selectedProfils.length === 0)}
             className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
           >
             {sending ? (
