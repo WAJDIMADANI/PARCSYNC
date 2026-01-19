@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Send, Users, Loader2, CheckCircle, X } from 'lucide-react';
+import { Search, Send, Users, Loader2, CheckCircle, X, AlertTriangle } from 'lucide-react';
 
 interface Profil {
   id: string;
   matricule: string;
   nom: string;
   prenom: string;
-  email: string;
+  email: string | null;
   is_staff: boolean;
   date_sortie: string | null;
 }
@@ -37,7 +37,6 @@ export function CRMEmailsNew() {
         .select('id, matricule, nom, prenom, email, is_staff, date_sortie')
         .eq('is_staff', true)
         .is('date_sortie', null)
-        .not('email', 'is', null)
         .order('nom', { ascending: true });
 
       if (error) throw error;
@@ -92,6 +91,24 @@ export function CRMEmailsNew() {
       return;
     }
 
+    // Vérifier si des profils sélectionnés ont un email
+    if (mode === 'selected') {
+      const profilsWithEmail = selectedProfils.filter(p => p.email);
+      const profilsWithoutEmail = selectedProfils.filter(p => !p.email);
+
+      if (profilsWithEmail.length === 0) {
+        alert('Aucun des salariés sélectionnés n\'a d\'email renseigné. Impossible d\'envoyer l\'email.');
+        return;
+      }
+
+      if (profilsWithoutEmail.length > 0) {
+        const names = profilsWithoutEmail.map(p => `${p.nom} ${p.prenom}`).join(', ');
+        if (!confirm(`${profilsWithoutEmail.length} salarié(s) n'ont pas d'email et ne recevront pas l'email:\n\n${names}\n\nVoulez-vous continuer l'envoi pour les autres ?`)) {
+          return;
+        }
+      }
+    }
+
     setSending(true);
     setSuccess(false);
 
@@ -133,7 +150,9 @@ export function CRMEmailsNew() {
     }
   };
 
-  const recipientCount = mode === 'all' ? allProfils.length : selectedProfils.length;
+  const recipientCount = mode === 'all'
+    ? allProfils.filter(p => p.email).length
+    : selectedProfils.filter(p => p.email).length;
 
   return (
     <div className="space-y-6">
@@ -211,15 +230,22 @@ export function CRMEmailsNew() {
                         >
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex-1">
-                              <div className="font-medium text-slate-900">
-                                {profil.nom} {profil.prenom}
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-slate-900">
+                                  {profil.nom} {profil.prenom}
+                                </span>
+                                {!profil.email && (
+                                  <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded">
+                                    Pas d'email
+                                  </span>
+                                )}
                               </div>
                               <div className="text-xs text-slate-500">
                                 Matricule: {profil.matricule}
                               </div>
                             </div>
                             <div className="text-xs text-slate-500 text-right">
-                              {profil.email}
+                              {profil.email || <span className="text-amber-600">Non renseigné</span>}
                             </div>
                           </div>
                         </button>
@@ -235,27 +261,46 @@ export function CRMEmailsNew() {
 
               {!loading && allProfils.length === 0 && (
                 <p className="text-sm text-amber-600 mt-2">
-                  Aucun salarié disponible. Vérifiez que les salariés ont une adresse email.
+                  Aucun salarié disponible.
                 </p>
               )}
 
               {selectedProfils.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {selectedProfils.map((profil) => (
-                    <div
-                      key={profil.id}
-                      className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm"
-                    >
-                      <span>{profil.nom} {profil.prenom}</span>
-                      <span className="text-blue-500">({profil.matricule})</span>
-                      <button
-                        onClick={() => handleRemoveProfil(profil.id)}
-                        className="hover:text-blue-900"
+                <div className="mt-3 space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProfils.map((profil) => (
+                      <div
+                        key={profil.id}
+                        className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
+                          profil.email
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}
                       >
-                        <X className="w-4 h-4" />
-                      </button>
+                        <span>{profil.nom} {profil.prenom}</span>
+                        <span className={profil.email ? 'text-blue-500' : 'text-amber-600'}>
+                          ({profil.matricule})
+                        </span>
+                        {!profil.email && (
+                          <AlertTriangle className="w-3 h-3" />
+                        )}
+                        <button
+                          onClick={() => handleRemoveProfil(profil.id)}
+                          className={profil.email ? 'hover:text-blue-900' : 'hover:text-amber-900'}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {selectedProfils.some(p => !p.email) && (
+                    <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <p>
+                        Certains salariés n'ont pas d'email renseigné. L'email ne leur sera pas envoyé.
+                      </p>
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>
@@ -293,9 +338,16 @@ export function CRMEmailsNew() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Users className="w-5 h-5 text-slate-600" />
-            <span className="text-sm text-slate-700">
-              {recipientCount} destinataire{recipientCount > 1 ? 's' : ''}
-            </span>
+            <div className="flex flex-col">
+              <span className="text-sm text-slate-700">
+                {recipientCount} destinataire{recipientCount > 1 ? 's' : ''}
+              </span>
+              {mode === 'selected' && selectedProfils.length > recipientCount && (
+                <span className="text-xs text-amber-600">
+                  ({selectedProfils.length - recipientCount} sans email)
+                </span>
+              )}
+            </div>
           </div>
 
           <button
