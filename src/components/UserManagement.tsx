@@ -38,6 +38,7 @@ const AVAILABLE_PERMISSIONS = [
     { id: 'rh/candidats', label: 'Candidats' },
     { id: 'rh/salaries', label: 'Salariés' },
     { id: 'rh/courriers', label: 'Courriers' },
+    { id: 'rh/emails', label: 'Emails CRM' },
     { id: 'rh/alertes', label: 'Alertes' },
     { id: 'rh/notifications', label: 'Notifications' },
     { id: 'rh/incidents', label: 'Incidents' },
