@@ -20,6 +20,7 @@ export function CRMEmailsNew() {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [sendResult, setSendResult] = useState<{ successCount: number; total: number } | null>(null);
 
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -140,11 +141,18 @@ export function CRMEmailsNew() {
       }
 
       setSuccess(true);
+      setSendResult({
+        successCount: data.successCount || 0,
+        total: data.total || 0
+      });
       setSelectedProfils([]);
       setSubject('');
       setMessage('');
 
-      setTimeout(() => setSuccess(false), 5000);
+      setTimeout(() => {
+        setSuccess(false);
+        setSendResult(null);
+      }, 5000);
     } catch (error: any) {
       console.error('Erreur envoi:', error);
       alert(`Erreur: ${error.message}`);
@@ -377,6 +385,78 @@ export function CRMEmailsNew() {
           </button>
         </div>
       </div>
+
+      {/* Modal de succès fluide */}
+      {success && sendResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            onClick={() => {
+              setSuccess(false);
+              setSendResult(null);
+            }}
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 animate-slideUp">
+            {/* Icône de succès avec animation */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-green-100 rounded-full animate-ping opacity-75" />
+                <div className="relative bg-gradient-to-br from-green-400 to-green-600 rounded-full p-4">
+                  <CheckCircle className="w-12 h-12 text-white" strokeWidth={2.5} />
+                </div>
+              </div>
+            </div>
+
+            {/* Titre */}
+            <h3 className="text-2xl font-bold text-center text-slate-800 mb-2">
+              Emails envoyés avec succès !
+            </h3>
+
+            {/* Statistiques */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 mb-6 border border-green-200">
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <Users className="w-6 h-6 text-green-600" />
+                <span className="text-4xl font-bold text-green-600">
+                  {sendResult.successCount}
+                </span>
+              </div>
+              <p className="text-center text-slate-600">
+                {sendResult.successCount === sendResult.total ? (
+                  <span className="font-medium">
+                    {sendResult.total} destinataire{sendResult.total > 1 ? 's' : ''} ont reçu l'email
+                  </span>
+                ) : (
+                  <span>
+                    sur {sendResult.total} destinataire{sendResult.total > 1 ? 's' : ''}
+                  </span>
+                )}
+              </p>
+            </div>
+
+            {/* Message de confirmation */}
+            <p className="text-center text-slate-500 text-sm mb-6">
+              Les emails ont été envoyés et enregistrés dans l'historique
+            </p>
+
+            {/* Bouton de fermeture */}
+            <button
+              onClick={() => {
+                setSuccess(false);
+                setSendResult(null);
+              }}
+              className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-medium hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              Fermer
+            </button>
+
+            {/* Indicateur de fermeture automatique */}
+            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-400">
+              <div className="w-2 h-2 bg-slate-300 rounded-full animate-pulse" />
+              <span>Fermeture automatique dans 5 secondes</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
