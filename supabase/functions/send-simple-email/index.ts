@@ -50,7 +50,7 @@ Deno.serve(async (req: Request) => {
     let profils = [];
 
     if (mode === 'all') {
-      const response = await fetch(`${supabaseUrl}/rest/v1/profil?select=id,nom,prenom,email&is_staff=eq.true&date_sortie=is.null&email=not.is.null`, {
+      const response = await fetch(`${supabaseUrl}/rest/v1/profil?select=id,nom,prenom,email&date_sortie=is.null&email=not.is.null`, {
         headers: {
           'apikey': supabaseServiceKey,
           'Authorization': `Bearer ${supabaseServiceKey}`,

@@ -8,7 +8,6 @@ interface Profil {
   nom: string;
   prenom: string;
   email: string | null;
-  is_staff: boolean;
   date_sortie: string | null;
 }
 
@@ -34,8 +33,7 @@ export function CRMEmailsNew() {
     try {
       const { data, error } = await supabase
         .from('profil')
-        .select('id, matricule:matricule_tca, nom, prenom, email, is_staff, date_sortie')
-        .eq('is_staff', true)
+        .select('id, matricule:matricule_tca, nom, prenom, email, date_sortie')
         .is('date_sortie', null)
         .order('nom', { ascending: true });
 
@@ -44,7 +42,7 @@ export function CRMEmailsNew() {
         throw error;
       }
 
-      console.log('Profils chargés:', data?.length || 0);
+      console.log('Profils chargés:', data?.length || 0, 'Erreur:', error);
       setAllProfils(data || []);
     } catch (error) {
       console.error('Erreur chargement profils:', error);
