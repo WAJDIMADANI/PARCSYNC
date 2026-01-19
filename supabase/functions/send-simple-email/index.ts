@@ -4,7 +4,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, apikey",
 };
 
 interface RequestPayload {
@@ -14,15 +14,20 @@ interface RequestPayload {
   profilIds?: string[];
 }
 
+function safeJsonParse(txt: string) {
+  try {
+    return JSON.parse(txt);
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    // =========================
-    // 0) ENV + PAYLOAD
-    // =========================
     const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
     if (!BREVO_API_KEY) throw new Error("BREVO_API_KEY non configurée");
 
@@ -32,7 +37,7 @@ Deno.serve(async (req: Request) => {
     console.log("[send-simple-email] Payload reçu:", {
       mode,
       subject,
-      profilIdsCount: profilIds?.length ?? 0,
+      profilIdsCount: profilIds?.length,
     });
 
     if (!subject || !message) {
@@ -46,24 +51,23 @@ Deno.serve(async (req: Request) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     if (!supabaseUrl || !supabaseAnonKey) throw new Error("Configuration Supabase manquante");
 
-    // =========================
-    // 1) AUTH JWT
-    // =========================
+    // JWT utilisateur
     const authHeader = req.headers.get("Authorization") ?? "";
-    const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-    if (!jwt) {
-      console.error("[send-simple-email] JWT manquant");
+    if (!authHeader.startsWith("Bearer ")) {
+      console.error("[send-simple-email] Authorization Bearer manquant");
       return new Response(JSON.stringify({ ok: false, error: "Non authentifié" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Client Supabase (RLS) avec JWT user
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${jwt}` } },
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false },
     });
 
-    // Plus fiable : ne PAS passer jwt en param, il est déjà dans les headers
+    // Vérifier user (évite AuthSessionMissingError)
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     if (userErr || !userData?.user?.id) {
       console.error("[send-simple-email] Erreur auth:", userErr);
@@ -72,12 +76,9 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
     const authUid = userData.user.id;
 
-    // =========================
-    // 2) APP USER
-    // =========================
+    // Trouver app_utilisateur
     const { data: appUser, error: appErr } = await supabase
       .from("app_utilisateur")
       .select("id, email, prenom, nom")
@@ -94,9 +95,7 @@ Deno.serve(async (req: Request) => {
 
     console.log("[send-simple-email] App user:", appUser.id);
 
-    // =========================
-    // 3) CHARGER PROFILS
-    // =========================
+    // Charger profils
     let query = supabase.from("profil").select("id, email, prenom, nom, date_sortie");
 
     if (mode === "all") {
@@ -111,13 +110,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const { data: profils, error: profilErr } = await query;
-
     if (profilErr) {
       console.error("[send-simple-email] Erreur chargement profils:", profilErr);
       throw new Error(`Erreur récupération des profils: ${profilErr.message}`);
     }
 
-    const validProfils = (profils ?? []).filter((p) => !!p.email);
+    const validProfils = (profils || []).filter((p) => p.email);
     console.log("[send-simple-email] Profils chargés:", validProfils.length);
 
     if (validProfils.length === 0) {
@@ -127,9 +125,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // =========================
-    // 4) CREER BATCH
-    // =========================
+    // Créer batch CRM
     const { data: batch, error: batchErr } = await supabase
       .from("crm_email_batches")
       .insert({
@@ -146,18 +142,16 @@ Deno.serve(async (req: Request) => {
 
     if (batchErr || !batch?.id) {
       console.error("[send-simple-email] Erreur création batch:", batchErr);
-      return new Response(
-        JSON.stringify({ ok: false, error: `Erreur création batch: ${batchErr?.message || "inconnu"}` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ ok: false, error: `Erreur création batch: ${batchErr?.message || "inconnu"}` }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const batchId = batch.id;
     console.log("[send-simple-email] Batch créé:", batchId);
 
-    // =========================
-    // 5) INSERER RECIPIENTS
-    // =========================
+    // Insérer recipients
     const recipientRows = validProfils.map((p) => ({
       batch_id: batchId,
       profil_id: p.id,
@@ -172,48 +166,42 @@ Deno.serve(async (req: Request) => {
 
     if (recInsErr) {
       console.error("[send-simple-email] Erreur insertion recipients:", recInsErr);
-      await supabase
-        .from("crm_email_batches")
-        .update({ status: "failed", failed_count: validProfils.length })
-        .eq("id", batchId);
-
+      await supabase.from("crm_email_batches").update({ status: "failed", failed_count: validProfils.length }).eq("id", batchId);
       return new Response(JSON.stringify({ ok: false, error: `Erreur insertion recipients: ${recInsErr.message}` }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // =========================
-    // 6) ENVOI BREVO
-    // =========================
     let successCount = 0;
     let failureCount = 0;
 
+    // ✅ Sender validé (TCA)
+    const SENDER_NAME = "TRANSPORT CLASSE AFFAIRE";
+    const SENDER_EMAIL = "pierre.chopar12@gmail.com";
+
     for (const profil of validProfils) {
       try {
-        const fullName = `${profil.prenom || ""} ${profil.nom || ""}`.trim();
-
         const emailPayload = {
-          sender: {
-            name: "MAD IMPACT",
-            email: "noreply@mad-impact.com",
-          },
-          to: [{ email: profil.email, name: fullName }],
+          sender: { name: SENDER_NAME, email: SENDER_EMAIL },
+          to: [{ email: profil.email, name: `${profil.prenom || ""} ${profil.nom || ""}`.trim() }],
           subject,
-          htmlContent: `<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"></head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <p>Bonjour ${fullName},</p>
-    <div style="white-space: pre-wrap; margin: 20px 0;">${message}</div>
-    <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
-    <p style="color: #666; font-size: 12px;">
-      Cordialement,<br> L'équipe MAD IMPACT
-    </p>
-  </div>
-</body>
-</html>`,
+          htmlContent: `
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"></head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+              <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <p>Bonjour ${profil.prenom || ""} ${profil.nom || ""},</p>
+                <div style="white-space: pre-wrap; margin: 20px 0;">${message}</div>
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+                <p style="color: #666; font-size: 12px;">
+                  Cordialement,<br>L'équipe TRANSPORT CLASSE AFFAIRE
+                </p>
+              </div>
+            </body>
+            </html>
+          `,
           tags: ["crm_simple"],
         };
 
@@ -227,41 +215,25 @@ Deno.serve(async (req: Request) => {
           body: JSON.stringify(emailPayload),
         });
 
-        // IMPORTANT : toujours lire le body
-        const brevoText = await brevoResponse.text();
-        console.log("[send-simple-email] Brevo status:", brevoResponse.status, brevoText);
+        const brevoTxt = await brevoResponse.text();
+        console.log("[send-simple-email] Brevo status:", brevoResponse.status, brevoTxt);
 
         if (!brevoResponse.ok) {
-          throw new Error(`Brevo ${brevoResponse.status}: ${brevoText}`);
+          throw new Error(`Brevo error ${brevoResponse.status}: ${brevoTxt}`);
         }
 
-        // Brevo renvoie messageId si accepté
-        let messageId: string | null = null;
-        try {
-          const brevoJson = JSON.parse(brevoText);
-          messageId = brevoJson?.messageId ?? null;
-        } catch {
-          messageId = null;
-        }
-
-        if (!messageId) {
-          throw new Error(`Brevo response without messageId: ${brevoText}`);
-        }
+        const brevoJson = safeJsonParse(brevoTxt);
+        const messageId = brevoJson?.messageId ?? null;
 
         successCount++;
 
-        // update recipient => sent + messageId
-        const { error: updRecErr } = await supabase
+        await supabase
           .from("crm_email_recipients")
           .update({ status: "sent", brevo_message_id: messageId, error: null })
           .eq("batch_id", batchId)
           .eq("profil_id", profil.id);
 
-        if (updRecErr) {
-          console.error("[send-simple-email] Erreur update recipient:", updRecErr);
-        }
-
-        // log email_logs (si la table a ces colonnes)
+        // email_logs (optionnel) : ne doit jamais casser l’envoi
         const { error: logErr } = await supabase.from("email_logs").insert({
           profil_id: profil.id,
           email_to: profil.email,
@@ -271,24 +243,19 @@ Deno.serve(async (req: Request) => {
           type_email: "crm_simple",
         });
 
-        if (logErr) {
-          console.error("[send-simple-email] Erreur email_logs:", logErr);
-        }
-      } catch (error: any) {
+        if (logErr) console.error("[send-simple-email] Erreur email_logs:", logErr);
+      } catch (err: any) {
+        console.error(`[send-simple-email] Erreur envoi à ${profil.email}:`, err);
         failureCount++;
-        console.error(`[send-simple-email] Erreur envoi à ${profil.email}:`, error?.message ?? error);
 
         await supabase
           .from("crm_email_recipients")
-          .update({ status: "failed", error: String(error?.message ?? error) })
+          .update({ status: "failed", error: err?.message || "Erreur inconnue" })
           .eq("batch_id", batchId)
           .eq("profil_id", profil.id);
       }
     }
 
-    // =========================
-    // 7) FINALISER BATCH
-    // =========================
     const finalStatus = failureCount === 0 ? "sent" : successCount > 0 ? "partial" : "failed";
 
     await supabase
@@ -303,13 +270,13 @@ Deno.serve(async (req: Request) => {
 
     console.log("[send-simple-email] Envoi terminé:", { batchId, successCount, failureCount });
 
-    return new Response(
-      JSON.stringify({ ok: true, batchId, successCount, failureCount, total: validProfils.length }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ ok: true, batchId, successCount, failureCount, total: validProfils.length }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error: any) {
     console.error("Erreur:", error);
-    return new Response(JSON.stringify({ ok: false, error: String(error?.message ?? error) }), {
+    return new Response(JSON.stringify({ ok: false, error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
