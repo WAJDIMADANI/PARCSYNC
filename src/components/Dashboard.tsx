@@ -39,6 +39,7 @@ import { LetterTemplatesV2Manager } from './LetterTemplatesV2Manager';
 import { InboxPage } from './InboxPage';
 import { DemandesExternesManager } from './DemandesExternesManager';
 import AccountingDashboard from './AccountingDashboard';
+import { CRMEmails } from './CRMEmails';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('dashboards/rh');
@@ -81,6 +82,8 @@ export function Dashboard() {
         return <DemandesPage />;
       case 'rh/validations':
         return <ValidationsPage />;
+      case 'rh/emails':
+        return <CRMEmails />;
       case 'parc/vehicules':
         return <VehicleList />;
       case 'parc/ct-assurance':
