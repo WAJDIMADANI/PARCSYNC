@@ -127,6 +127,8 @@ export function CRMEmailsNew() {
         ...(mode === 'selected' && { profilIds: selectedProfils.map(p => p.id) })
       };
 
+      console.log('[Emails] Payload envoyé:', payload);
+
       const { data, error } = await supabase.functions.invoke('send-simple-email', {
         body: payload,
         headers: {
@@ -134,11 +136,23 @@ export function CRMEmailsNew() {
         }
       });
 
-      if (error) throw error;
+      console.log('[Emails] Réponse function:', { data, error });
+
+      if (error) {
+        console.error('[Emails] Erreur invoke:', error);
+        throw error;
+      }
 
       if (!data?.ok) {
+        console.error('[Emails] Réponse non-ok:', data);
         throw new Error(data?.error || 'Erreur inconnue');
       }
+
+      if (!data.batchId) {
+        console.warn('[Emails] Pas de batchId dans la réponse');
+      }
+
+      console.log('[Emails] Succès! BatchId:', data.batchId, 'Envoyés:', data.successCount);
 
       setSuccess(true);
       setSendResult({
@@ -154,8 +168,8 @@ export function CRMEmailsNew() {
         setSendResult(null);
       }, 5000);
     } catch (error: any) {
-      console.error('Erreur envoi:', error);
-      alert(`Erreur: ${error.message}`);
+      console.error('[Emails] Erreur globale:', error);
+      alert(`Erreur: ${error.message || 'Erreur inconnue'}`);
     } finally {
       setSending(false);
     }
