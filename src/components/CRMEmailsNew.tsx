@@ -50,11 +50,17 @@ export function CRMEmailsNew() {
   };
 
   const filteredProfils = allProfils.filter(p => {
-    const term = searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return false;
+
+    const matriculeStr = p.matricule ? String(p.matricule).toLowerCase() : '';
+    const nomStr = p.nom ? p.nom.toLowerCase() : '';
+    const prenomStr = p.prenom ? p.prenom.toLowerCase() : '';
+
     return (
-      p.matricule?.toLowerCase().includes(term) ||
-      p.nom?.toLowerCase().includes(term) ||
-      p.prenom?.toLowerCase().includes(term)
+      matriculeStr.includes(term) ||
+      nomStr.includes(term) ||
+      prenomStr.includes(term)
     );
   });
 
@@ -167,6 +173,11 @@ export function CRMEmailsNew() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Rechercher des salariés *
+                {allProfils.length > 0 && (
+                  <span className="text-xs text-slate-500 font-normal ml-2">
+                    ({allProfils.length} salariés disponibles)
+                  </span>
+                )}
               </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -175,33 +186,58 @@ export function CRMEmailsNew() {
                   value={searchTerm}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
-                    setShowSearchResults(e.target.value.length > 0);
+                    setShowSearchResults(e.target.value.trim().length > 0);
                   }}
-                  onFocus={() => setShowSearchResults(searchTerm.length > 0)}
+                  onFocus={() => setShowSearchResults(searchTerm.trim().length > 0)}
+                  onBlur={() => {
+                    setTimeout(() => setShowSearchResults(false), 200);
+                  }}
                   placeholder="Tapez le matricule, nom ou prénom..."
                   className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  disabled={loading}
                 />
+                {loading && (
+                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 animate-spin" />
+                )}
 
-                {showSearchResults && filteredProfils.length > 0 && (
+                {showSearchResults && searchTerm.trim().length > 0 && !loading && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {filteredProfils.slice(0, 10).map((profil) => (
-                      <button
-                        key={profil.id}
-                        onClick={() => handleSelectProfil(profil)}
-                        className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-slate-100 last:border-b-0"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="font-medium text-slate-900">{profil.nom} {profil.prenom}</span>
-                            <span className="text-slate-500 text-sm ml-2">({profil.matricule})</span>
+                    {filteredProfils.length > 0 ? (
+                      filteredProfils.slice(0, 10).map((profil) => (
+                        <button
+                          key={profil.id}
+                          onClick={() => handleSelectProfil(profil)}
+                          className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-slate-100 last:border-b-0"
+                        >
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="font-medium text-slate-900">
+                                {profil.nom} {profil.prenom}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                Matricule: {profil.matricule}
+                              </div>
+                            </div>
+                            <div className="text-xs text-slate-500 text-right">
+                              {profil.email}
+                            </div>
                           </div>
-                          <span className="text-xs text-slate-500">{profil.email}</span>
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-slate-500 text-center">
+                        Aucun salarié trouvé pour "{searchTerm}"
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
+
+              {!loading && allProfils.length === 0 && (
+                <p className="text-sm text-amber-600 mt-2">
+                  Aucun salarié disponible. Vérifiez que les salariés ont une adresse email.
+                </p>
+              )}
 
               {selectedProfils.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
