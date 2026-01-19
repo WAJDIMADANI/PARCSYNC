@@ -39,7 +39,12 @@ export function CRMEmailsNew() {
         .is('date_sortie', null)
         .order('nom', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur SQL:', error);
+        throw error;
+      }
+
+      console.log('Profils chargés:', data?.length || 0);
       setAllProfils(data || []);
     } catch (error) {
       console.error('Erreur chargement profils:', error);
