@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Loader2, CheckCircle, XCircle, Clock, Mail, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Clock, Mail, ChevronDown, ChevronRight, Tag } from 'lucide-react';
 
 interface EmailBatch {
   id: string;
   created_at: string;
   created_by: string;
-  mode: 'all' | 'selected';
+  mode: 'all' | 'selected' | 'sector';
   brevo_template_id: number;
   params: Record<string, unknown>;
   tags: string[];
@@ -15,6 +15,7 @@ interface EmailBatch {
   sent_count: number;
   failed_count: number;
   sent_at: string | null;
+  target_secteur_ids?: string[] | null;
   creator?: {
     prenom: string;
     nom: string;
@@ -39,6 +40,7 @@ export function CRMEmailsHistory() {
   const [expandedBatch, setExpandedBatch] = useState<string | null>(null);
   const [recipients, setRecipients] = useState<Record<string, EmailRecipient[]>>({});
   const [loadingRecipients, setLoadingRecipients] = useState<Record<string, boolean>>({});
+  const [secteurNames, setSecteurNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadBatches();
@@ -61,6 +63,29 @@ export function CRMEmailsHistory() {
 
       if (error) throw error;
       setBatches(data || []);
+
+      // Charger les noms des secteurs pour les batches qui ont target_secteur_ids
+      const allSecteurIds = new Set<string>();
+      (data || []).forEach(batch => {
+        if (batch.target_secteur_ids && Array.isArray(batch.target_secteur_ids)) {
+          batch.target_secteur_ids.forEach((id: string) => allSecteurIds.add(id));
+        }
+      });
+
+      if (allSecteurIds.size > 0) {
+        const { data: secteursData, error: secteursError } = await supabase
+          .from('secteur')
+          .select('id, nom')
+          .in('id', Array.from(allSecteurIds));
+
+        if (!secteursError && secteursData) {
+          const namesMap: Record<string, string> = {};
+          secteursData.forEach(s => {
+            namesMap[s.id] = s.nom;
+          });
+          setSecteurNames(namesMap);
+        }
+      }
     } catch (error) {
       console.error('Erreur chargement batches:', error);
     } finally {
@@ -197,13 +222,28 @@ export function CRMEmailsHistory() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <span className="font-semibold text-slate-900">
-                          Template #{batch.brevo_template_id}
+                          {batch.params?.subject ? String(batch.params.subject) : `Template #${batch.brevo_template_id}`}
                         </span>
                         {getStatusBadge(batch.status)}
                         <span className="text-xs text-slate-500 px-2 py-1 bg-slate-100 rounded-full">
-                          {batch.mode === 'all' ? 'Tous les salariés' : 'Sélection'}
+                          {batch.mode === 'all' ? 'Tous les salariés' : batch.mode === 'sector' ? 'Par secteur' : 'Sélection'}
                         </span>
                       </div>
+
+                      {batch.mode === 'sector' && batch.target_secteur_ids && Array.isArray(batch.target_secteur_ids) && batch.target_secteur_ids.length > 0 && (
+                        <div className="mb-2 flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-slate-600">Secteurs ciblés:</span>
+                          {batch.target_secteur_ids.map((secteurId: string) => (
+                            <span
+                              key={secteurId}
+                              className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full"
+                            >
+                              <Tag className="w-3 h-3" />
+                              {secteurNames[secteurId] || secteurId}
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>

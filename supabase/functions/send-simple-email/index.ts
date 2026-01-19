@@ -8,10 +8,11 @@ const corsHeaders = {
 };
 
 interface RequestPayload {
-  mode: "all" | "selected";
+  mode: "all" | "selected" | "sector";
   subject: string;
   message: string;
   profilIds?: string[];
+  secteurIds?: string[];
 }
 
 function safeJsonParse(txt: string) {
@@ -32,12 +33,13 @@ Deno.serve(async (req: Request) => {
     if (!BREVO_API_KEY) throw new Error("BREVO_API_KEY non configurée");
 
     const payload: RequestPayload = await req.json();
-    const { mode, subject, message, profilIds } = payload;
+    const { mode, subject, message, profilIds, secteurIds } = payload;
 
     console.log("[send-simple-email] Payload reçu:", {
       mode,
       subject,
       profilIdsCount: profilIds?.length,
+      secteurIdsCount: secteurIds?.length,
     });
 
     if (!subject || !message) {
@@ -96,12 +98,14 @@ Deno.serve(async (req: Request) => {
     console.log("[send-simple-email] App user:", appUser.id);
 
     // Charger profils
-    let query = supabase.from("profil").select("id, email, prenom, nom, date_sortie");
+    let query = supabase.from("profil").select("id, email, prenom, nom, date_sortie, secteur_id");
 
     if (mode === "all") {
       query = query.is("date_sortie", null).not("email", "is", null);
     } else if (mode === "selected" && profilIds && profilIds.length > 0) {
       query = query.in("id", profilIds);
+    } else if (mode === "sector" && secteurIds && secteurIds.length > 0) {
+      query = query.in("secteur_id", secteurIds).is("date_sortie", null);
     } else {
       return new Response(JSON.stringify({ ok: false, error: "Aucun destinataire spécifié" }), {
         status: 400,
@@ -126,17 +130,24 @@ Deno.serve(async (req: Request) => {
     }
 
     // Créer batch CRM
+    const batchData: any = {
+      created_by: appUser.id,
+      mode,
+      brevo_template_id: 0,
+      params: { subject, message },
+      tags: ["crm_simple"],
+      status: "sending",
+      total_recipients: validProfils.length,
+    };
+
+    // Ajouter les secteur IDs si mode secteur
+    if (mode === "sector" && secteurIds && secteurIds.length > 0) {
+      batchData.target_secteur_ids = secteurIds;
+    }
+
     const { data: batch, error: batchErr } = await supabase
       .from("crm_email_batches")
-      .insert({
-        created_by: appUser.id,
-        mode,
-        brevo_template_id: 0,
-        params: { subject, message },
-        tags: ["crm_simple"],
-        status: "sending",
-        total_recipients: validProfils.length,
-      })
+      .insert(batchData)
       .select("id")
       .single();
 

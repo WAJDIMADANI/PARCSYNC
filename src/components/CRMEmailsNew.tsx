@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Send, Users, Loader2, CheckCircle, X, AlertTriangle } from 'lucide-react';
+import { Search, Send, Users, Loader2, CheckCircle, X, AlertTriangle, Tag } from 'lucide-react';
 
 interface Profil {
   id: string;
@@ -9,10 +9,16 @@ interface Profil {
   prenom: string;
   email: string | null;
   date_sortie: string | null;
+  secteur_id?: string | null;
+}
+
+interface Secteur {
+  id: string;
+  nom: string;
 }
 
 export function CRMEmailsNew() {
-  const [mode, setMode] = useState<'all' | 'selected'>('selected');
+  const [mode, setMode] = useState<'all' | 'selected' | 'sector'>('selected');
   const [searchTerm, setSearchTerm] = useState('');
   const [allProfils, setAllProfils] = useState<Profil[]>([]);
   const [selectedProfils, setSelectedProfils] = useState<Profil[]>([]);
@@ -25,8 +31,16 @@ export function CRMEmailsNew() {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
 
+  // États pour le mode secteur
+  const [secteurs, setSecteurs] = useState<Secteur[]>([]);
+  const [selectedSecteurs, setSelectedSecteurs] = useState<Secteur[]>([]);
+  const [loadingSecteurs, setLoadingSecteurs] = useState(false);
+  const [profilsBySecteur, setProfilsBySecteur] = useState<Profil[]>([]);
+  const [loadingProfilsSecteur, setLoadingProfilsSecteur] = useState(false);
+
   useEffect(() => {
     loadProfils();
+    loadSecteurs();
   }, []);
 
   const loadProfils = async () => {
@@ -34,7 +48,7 @@ export function CRMEmailsNew() {
     try {
       const { data, error } = await supabase
         .from('profil')
-        .select('id, matricule:matricule_tca, nom, prenom, email, date_sortie')
+        .select('id, matricule:matricule_tca, nom, prenom, email, date_sortie, secteur_id')
         .is('date_sortie', null)
         .order('nom', { ascending: true });
 
@@ -49,6 +63,57 @@ export function CRMEmailsNew() {
       console.error('Erreur chargement profils:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSecteurs = async () => {
+    setLoadingSecteurs(true);
+    try {
+      const { data, error } = await supabase
+        .from('secteur')
+        .select('id, nom')
+        .order('nom', { ascending: true });
+
+      if (error) throw error;
+      setSecteurs(data || []);
+    } catch (error) {
+      console.error('Erreur chargement secteurs:', error);
+    } finally {
+      setLoadingSecteurs(false);
+    }
+  };
+
+  // Charger les profils quand on sélectionne des secteurs
+  useEffect(() => {
+    if (mode === 'sector' && selectedSecteurs.length > 0) {
+      loadProfilsBySecteur();
+    } else {
+      setProfilsBySecteur([]);
+    }
+  }, [selectedSecteurs, mode]);
+
+  const loadProfilsBySecteur = async () => {
+    if (selectedSecteurs.length === 0) {
+      setProfilsBySecteur([]);
+      return;
+    }
+
+    setLoadingProfilsSecteur(true);
+    try {
+      const secteurIds = selectedSecteurs.map(s => s.id);
+      const { data, error } = await supabase
+        .from('profil')
+        .select('id, matricule:matricule_tca, nom, prenom, email, date_sortie, secteur_id')
+        .in('secteur_id', secteurIds)
+        .is('date_sortie', null)
+        .order('nom', { ascending: true });
+
+      if (error) throw error;
+      setProfilsBySecteur(data || []);
+    } catch (error) {
+      console.error('Erreur chargement profils par secteur:', error);
+    } finally {
+      setLoadingProfilsSecteur(false);
     }
   };
 
@@ -79,6 +144,14 @@ export function CRMEmailsNew() {
     setSelectedProfils(selectedProfils.filter(p => p.id !== profilId));
   };
 
+  const handleToggleSecteur = (secteur: Secteur) => {
+    if (selectedSecteurs.find(s => s.id === secteur.id)) {
+      setSelectedSecteurs(selectedSecteurs.filter(s => s.id !== secteur.id));
+    } else {
+      setSelectedSecteurs([...selectedSecteurs, secteur]);
+    }
+  };
+
   const handleSend = async () => {
     if (!subject.trim()) {
       alert('Veuillez saisir un objet');
@@ -92,6 +165,11 @@ export function CRMEmailsNew() {
 
     if (mode === 'selected' && selectedProfils.length === 0) {
       alert('Veuillez sélectionner au moins un salarié');
+      return;
+    }
+
+    if (mode === 'sector' && selectedSecteurs.length === 0) {
+      alert('Veuillez sélectionner au moins un secteur');
       return;
     }
 
@@ -113,6 +191,23 @@ export function CRMEmailsNew() {
       }
     }
 
+    // Vérifier pour le mode secteur
+    if (mode === 'sector') {
+      const profilsWithEmail = profilsBySecteur.filter(p => p.email);
+      const profilsWithoutEmail = profilsBySecteur.filter(p => !p.email);
+
+      if (profilsWithEmail.length === 0) {
+        alert('Aucun salarié dans les secteurs sélectionnés n\'a d\'email renseigné. Impossible d\'envoyer l\'email.');
+        return;
+      }
+
+      if (profilsWithoutEmail.length > 0) {
+        if (!confirm(`${profilsWithoutEmail.length} salarié(s) dans les secteurs sélectionnés n'ont pas d'email et ne recevront pas l'email.\n\nVoulez-vous continuer l'envoi pour les autres ?`)) {
+          return;
+        }
+      }
+    }
+
     setSending(true);
     setSuccess(false);
 
@@ -124,7 +219,8 @@ export function CRMEmailsNew() {
         mode,
         subject,
         message,
-        ...(mode === 'selected' && { profilIds: selectedProfils.map(p => p.id) })
+        ...(mode === 'selected' && { profilIds: selectedProfils.map(p => p.id) }),
+        ...(mode === 'sector' && { secteurIds: selectedSecteurs.map(s => s.id) })
       };
 
       console.log('[Emails] Payload envoyé:', payload);
@@ -160,6 +256,7 @@ export function CRMEmailsNew() {
         total: data.total || 0
       });
       setSelectedProfils([]);
+      setSelectedSecteurs([]);
       setSubject('');
       setMessage('');
 
@@ -177,6 +274,8 @@ export function CRMEmailsNew() {
 
   const recipientCount = mode === 'all'
     ? allProfils.filter(p => p.email).length
+    : mode === 'sector'
+    ? profilsBySecteur.filter(p => p.email).length
     : selectedProfils.filter(p => p.email).length;
 
   return (
@@ -189,7 +288,7 @@ export function CRMEmailsNew() {
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Destinataires
             </label>
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
@@ -199,6 +298,16 @@ export function CRMEmailsNew() {
                   className="text-blue-600"
                 />
                 <span className="text-sm">Sélectionner des salariés</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value="sector"
+                  checked={mode === 'sector'}
+                  onChange={(e) => setMode(e.target.value as 'sector')}
+                  className="text-blue-600"
+                />
+                <span className="text-sm">Par secteur</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -331,6 +440,105 @@ export function CRMEmailsNew() {
             </div>
           )}
 
+          {mode === 'sector' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Sélectionner des secteurs *
+                {secteurs.length > 0 && (
+                  <span className="text-xs text-slate-500 font-normal ml-2">
+                    ({secteurs.length} secteurs disponibles)
+                  </span>
+                )}
+              </label>
+
+              {loadingSecteurs ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                </div>
+              ) : (
+                <div className="border border-slate-300 rounded-lg p-4 max-h-60 overflow-y-auto">
+                  {secteurs.length === 0 ? (
+                    <p className="text-sm text-slate-500 text-center py-4">
+                      Aucun secteur disponible
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {secteurs.map((secteur) => (
+                        <label
+                          key={secteur.id}
+                          className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedSecteurs.some(s => s.id === secteur.id)}
+                            onChange={() => handleToggleSecteur(secteur)}
+                            className="text-blue-600 rounded"
+                          />
+                          <Tag className="w-4 h-4 text-slate-400" />
+                          <span className="text-sm text-slate-700 flex-1">
+                            {secteur.nom}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {selectedSecteurs.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSecteurs.map((secteur) => (
+                      <div
+                        key={secteur.id}
+                        className="flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm"
+                      >
+                        <Tag className="w-3 h-3" />
+                        <span>{secteur.nom}</span>
+                        <button
+                          onClick={() => handleToggleSecteur(secteur)}
+                          className="hover:text-purple-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {loadingProfilsSecteur ? (
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Chargement des salariés...</span>
+                    </div>
+                  ) : (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Users className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium text-blue-900">
+                          {profilsBySecteur.length} salarié{profilsBySecteur.length > 1 ? 's' : ''} trouvé{profilsBySecteur.length > 1 ? 's' : ''}
+                        </span>
+                        {profilsBySecteur.filter(p => p.email).length < profilsBySecteur.length && (
+                          <span className="text-amber-600">
+                            ({profilsBySecteur.length - profilsBySecteur.filter(p => p.email).length} sans email ignoré{(profilsBySecteur.length - profilsBySecteur.filter(p => p.email).length) > 1 ? 's' : ''})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {profilsBySecteur.some(p => !p.email) && (
+                    <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <p>
+                        Certains salariés de ces secteurs n'ont pas d'email renseigné. L'email ne leur sera pas envoyé.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Objet de l'email *
@@ -372,12 +580,17 @@ export function CRMEmailsNew() {
                   ({selectedProfils.length - recipientCount} sans email)
                 </span>
               )}
+              {mode === 'sector' && profilsBySecteur.length > recipientCount && (
+                <span className="text-xs text-amber-600">
+                  ({profilsBySecteur.length - recipientCount} sans email)
+                </span>
+              )}
             </div>
           </div>
 
           <button
             onClick={handleSend}
-            disabled={sending || !subject || !message || (mode === 'selected' && selectedProfils.length === 0)}
+            disabled={sending || !subject || !message || (mode === 'selected' && selectedProfils.length === 0) || (mode === 'sector' && selectedSecteurs.length === 0)}
             className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
           >
             {sending ? (
