@@ -32,7 +32,7 @@ export default function EntriesTab() {
     try {
       let query = supabase
         .from('profil')
-        .select('id, matricule, nom, prenom, email, telephone, poste, site, date_contrat_signe')
+        .select('id, matricule:matricule_tca, nom, prenom, email, telephone, poste, site, date_contrat_signe')
         .eq('statut', 'actif');
 
       if (dateDebut) {

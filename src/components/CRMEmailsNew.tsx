@@ -34,7 +34,7 @@ export function CRMEmailsNew() {
     try {
       const { data, error } = await supabase
         .from('profil')
-        .select('id, matricule, nom, prenom, email, is_staff, date_sortie')
+        .select('id, matricule:matricule_tca, nom, prenom, email, is_staff, date_sortie')
         .eq('is_staff', true)
         .is('date_sortie', null)
         .order('nom', { ascending: true });
