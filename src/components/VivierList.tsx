@@ -7,6 +7,7 @@ import { GENRE_OPTIONS } from '../constants/genreOptions';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 import { sanitizeUuidFields } from '../utils/uuidHelper';
 import CodeCouleurModal from './CodeCouleurModal';
+import { Pagination } from './Pagination';
 
 const STATUT_CANDIDATURE = [
   { value: 'candidature_recue', label: 'Candidature reçue' },
@@ -112,6 +113,8 @@ export function VivierList() {
   const [availableDepartements, setAvailableDepartements] = useState<string[]>([]);
   const [showCodeCouleurModal, setShowCodeCouleurModal] = useState(false);
   const [editingCodeCandidate, setEditingCodeCandidate] = useState<VivierCandidate | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(25);
 
   useEffect(() => {
     fetchData();
@@ -271,6 +274,15 @@ export function VivierList() {
       return matchesSearch && matchesDepartment;
     });
 
+  const paginatedCandidates = filteredCandidates.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, departementFilter]);
+
   const openCodeCouleurModal = (candidate: VivierCandidate) => {
     setEditingCodeCandidate(candidate);
     setShowCodeCouleurModal(true);
@@ -413,7 +425,7 @@ export function VivierList() {
                 </tr>
               </thead>
             <tbody className="bg-white divide-y divide-gray-50">
-              {filteredCandidates.map((candidate) => {
+              {paginatedCandidates.map((candidate) => {
                 const codeCouleur = CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh);
 
                 return (
@@ -497,6 +509,15 @@ export function VivierList() {
             </tbody>
           </table>
           </div>
+
+          {filteredCandidates.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredCandidates.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          )}
         </div>
       )}
 
