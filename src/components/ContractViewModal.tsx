@@ -126,16 +126,15 @@ export default function ContractViewModal({
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async (contractId: string) => {
     try {
       setDownloading(true);
-
-      console.log('🔽 [DEBUG] Téléchargement - contractId envoyé:', contract.id);
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Non connecté");
 
-      const response = await fetch(
+      console.log("[SIGNED DOWNLOAD] contractId envoyé =", contractId);
+
+      const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-contract`,
         {
           method: "POST",
@@ -144,30 +143,32 @@ export default function ContractViewModal({
             "Authorization": `Bearer ${session.access_token}`,
             "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ contractId: contract.id }),
+          body: JSON.stringify({ contractId }),
         }
       );
 
-      console.log('📊 [DEBUG] Response status:', response.status);
-      console.log('📊 [DEBUG] Content-Type:', response.headers.get('Content-Type'));
-      console.log('📊 [DEBUG] X-Contract-Id:', response.headers.get('X-Contract-Id'));
-      console.log('📊 [DEBUG] X-Yousign-Request-Id:', response.headers.get('X-Yousign-Request-Id'));
+      const ct = res.headers.get("content-type") || "";
+      console.log("[SIGNED DOWNLOAD] status =", res.status, "content-type =", ct);
+      console.log("[SIGNED DOWNLOAD] X-Contract-Id =", res.headers.get("X-Contract-Id"));
+      console.log("[SIGNED DOWNLOAD] X-Yousign-Request-Id =", res.headers.get("X-Yousign-Request-Id"));
 
-      if (!response.ok) {
-        throw new Error(await response.text());
+      if (!res.ok || ct.includes("application/json")) {
+        const txt = await res.text();
+        console.log("[SIGNED DOWNLOAD] error body =", txt);
+        throw new Error(txt || "Téléchargement impossible");
       }
 
-      const blob = await response.blob();
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-
       const a = document.createElement("a");
       a.href = url;
-      a.download = `contrat_${contract.id}_signed.pdf`;
+      a.download = `contrat_${contractId}_signed.${ct.includes("zip") ? "zip" : "pdf"}`;
+      document.body.appendChild(a);
       a.click();
-
+      a.remove();
       URL.revokeObjectURL(url);
-    } catch (error: any) {
-      alert("Erreur lors du téléchargement: " + error.message);
+    } catch (e: any) {
+      alert("Erreur téléchargement signé: " + (e?.message ?? e));
     } finally {
       setDownloading(false);
     }
@@ -217,7 +218,7 @@ export default function ContractViewModal({
             )}
             {contract.statut === 'signe' && (
               <button
-                onClick={handleDownload}
+                onClick={() => handleDownload(contract.id)}
                 disabled={downloading}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                 title="Télécharger le PDF signé depuis Yousign"
