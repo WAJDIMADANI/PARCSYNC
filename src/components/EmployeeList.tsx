@@ -2474,28 +2474,24 @@ function EmployeeDetailModal({
 
   const handleDownloadContract = async (contractId: string) => {
     try {
-      const contract = employeeContracts.find((c: any) => c.id === contractId);
-
-      if (!contract) {
-        alert('Contrat introuvable');
-        return;
-      }
-
-      if (contract.fichier_signe_url) {
-        // Utiliser le système spécifique pour les contrats manuels
-        if (isManualContract(contract)) {
-          const fullUrl = await resolveContractUrl(contract);
-          window.open(fullUrl, '_blank');
-        } else {
-          // Système existant pour les contrats générés
-          const fullUrl = await resolveDocUrl({
-            fichier_url: contract.fichier_signe_url,
-            storage_path: contract.signed_storage_path
-          });
-          window.open(fullUrl, '_blank');
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-contract`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({ contractId })
         }
+      );
+
+      const data = await response.json();
+
+      if (data.success && data.url) {
+        window.open(data.url, '_blank');
       } else {
-        alert('PDF non disponible pour ce contrat');
+        alert('Erreur: ' + (data.error || 'Impossible de télécharger le PDF'));
       }
     } catch (error: any) {
       console.error('Erreur lors du téléchargement:', error);
