@@ -114,7 +114,7 @@ export function VivierList() {
   const [showCodeCouleurModal, setShowCodeCouleurModal] = useState(false);
   const [editingCodeCandidate, setEditingCodeCandidate] = useState<VivierCandidate | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(25);
+  const [itemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchData();
