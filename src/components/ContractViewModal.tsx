@@ -9,6 +9,7 @@ interface Contract {
   statut: string;
   variables?: string;
   date_signature?: string;
+  yousign_signed_at?: string;
 }
 
 interface ContractViewModalProps {
@@ -129,6 +130,8 @@ export default function ContractViewModal({
     try {
       setDownloading(true);
 
+      console.log('🔽 [DEBUG] Téléchargement - contractId envoyé:', contract.id);
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Non connecté");
 
@@ -145,6 +148,11 @@ export default function ContractViewModal({
         }
       );
 
+      console.log('📊 [DEBUG] Response status:', response.status);
+      console.log('📊 [DEBUG] Content-Type:', response.headers.get('Content-Type'));
+      console.log('📊 [DEBUG] X-Contract-Id:', response.headers.get('X-Contract-Id'));
+      console.log('📊 [DEBUG] X-Yousign-Request-Id:', response.headers.get('X-Yousign-Request-Id'));
+
       if (!response.ok) {
         throw new Error(await response.text());
       }
@@ -152,7 +160,6 @@ export default function ContractViewModal({
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
 
-      // Télécharger le fichier
       const a = document.createElement("a");
       a.href = url;
       a.download = `contrat_${contract.id}_signed.pdf`;
@@ -196,13 +203,16 @@ export default function ContractViewModal({
                   <FileText size={20} />
                   {showHtml ? 'Voir PDF' : 'Voir modèle'}
                 </button>
-                <button
-                  onClick={() => window.open(pdfUrl, '_blank')}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                  title="Ouvrir dans un nouvel onglet"
-                >
-                  <ExternalLink size={20} />
-                </button>
+                {!contract.yousign_signed_at && (
+                  <button
+                    onClick={() => window.open(pdfUrl, '_blank')}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                    title="Ouvrir l'aperçu du contrat non signé"
+                  >
+                    <ExternalLink size={20} />
+                    Ouvrir l'aperçu (non signé)
+                  </button>
+                )}
               </>
             )}
             {contract.statut === 'signe' && (
@@ -210,10 +220,10 @@ export default function ContractViewModal({
                 onClick={handleDownload}
                 disabled={downloading}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-                title="Télécharger le PDF signé"
+                title="Télécharger le PDF signé depuis Yousign"
               >
                 <Download size={20} />
-                {downloading ? 'Téléchargement...' : 'Télécharger PDF'}
+                {downloading ? 'Téléchargement...' : 'Télécharger signé (Yousign)'}
               </button>
             )}
             <button
