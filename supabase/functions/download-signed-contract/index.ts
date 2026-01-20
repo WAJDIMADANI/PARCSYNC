@@ -1,192 +1,95 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-interface DownloadRequest {
-  contractId: string;
-}
-
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
-  }
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { contractId }: DownloadRequest = await req.json();
+    const { contractId } = await req.json();
+    if (!contractId) {
+      return new Response("Missing contractId", { status: 400, headers: corsHeaders });
+    }
 
-    console.log("Downloading signed contract for:", contractId);
-
-    const YOUSIGN_API_KEY = Deno.env.get("YOUSIGN_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const YOUSIGN_API_KEY = Deno.env.get("YOUSIGN_API_KEY");
+    const YOUSIGN_BASE_URL = Deno.env.get("YOUSIGN_BASE_URL") ?? "https://api.yousign.app";
 
-    if (!YOUSIGN_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Configuration missing");
+    if (!SUPABASE_URL || !SERVICE_ROLE || !YOUSIGN_API_KEY) {
+      throw new Error(
+        "Missing env vars (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / YOUSIGN_API_KEY)"
+      );
     }
 
-    // Récupérer les informations du contrat
-    const contractResponse = await fetch(
-      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=*,modele:modele_id(nom)`,
+    // 1) Lire le contrat (service role)
+    const contractRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}&select=id,yousign_signature_request_id,yousign_signed_at`,
       {
         headers: {
-          "apikey": SUPABASE_SERVICE_ROLE_KEY,
-          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        }
-      }
-    );
-
-    if (!contractResponse.ok) {
-      throw new Error("Contract not found");
-    }
-
-    const contracts = await contractResponse.json();
-    const contract = contracts[0];
-
-    if (!contract || !contract.yousign_signature_request_id) {
-      throw new Error("No Yousign signature request ID found");
-    }
-
-    const signatureRequestId = contract.yousign_signature_request_id;
-
-    // Récupérer les détails de la signature request pour obtenir le document ID
-    console.log("Fetching signature request details...");
-    const signatureRequestResponse = await fetch(
-      `https://api.yousign.app/v3/signature_requests/${signatureRequestId}`,
-      {
-        headers: {
-          "Authorization": `Bearer ${YOUSIGN_API_KEY}`,
-        }
-      }
-    );
-
-    if (!signatureRequestResponse.ok) {
-      throw new Error("Failed to fetch signature request details");
-    }
-
-    const signatureRequestData = await signatureRequestResponse.json();
-    const documentId = signatureRequestData.documents?.[0]?.id;
-
-    if (!documentId) {
-      throw new Error("No document found in signature request");
-    }
-
-    console.log("Document ID:", documentId);
-
-    // Télécharger le document signé
-    console.log("Downloading signed document...");
-    const downloadUrl = `https://api.yousign.app/v3/signature_requests/${signatureRequestId}/documents/${documentId}/download`;
-
-    const downloadResponse = await fetch(downloadUrl, {
-      headers: {
-        "Authorization": `Bearer ${YOUSIGN_API_KEY}`,
-      },
-    });
-
-    if (!downloadResponse.ok) {
-      const errorText = await downloadResponse.text();
-      console.error("Download error:", errorText);
-      throw new Error(`Failed to download signed document: ${downloadResponse.statusText}`);
-    }
-
-    const pdfBlob = await downloadResponse.blob();
-    const pdfBuffer = await pdfBlob.arrayBuffer();
-    console.log("PDF downloaded, size:", pdfBuffer.byteLength, "bytes");
-
-    // Uploader vers Supabase Storage using convention: documents/contrats/{profil_id}/{contrat_id}-signed.pdf
-    const profilId = contract.profil_id;
-    const fileName = `documents/contrats/${profilId}/${contractId}-signed.pdf`;
-    console.log("Uploading to storage:", fileName);
-
-    const uploadResponse = await fetch(
-      `${SUPABASE_URL}/storage/v1/object/documents/${fileName}`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/pdf',
+          apikey: SERVICE_ROLE,
+          Authorization: `Bearer ${SERVICE_ROLE}`,
         },
-        body: pdfBuffer,
       }
     );
 
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error("Upload error:", errorText);
-      throw new Error(`Failed to upload to storage: ${errorText}`);
+    if (!contractRes.ok) {
+      const t = await contractRes.text();
+      throw new Error(`Failed to fetch contract: ${t}`);
     }
 
-    console.log("Uploaded to storage path:", fileName);
+    const rows = await contractRes.json();
+    const contract = rows?.[0];
 
-    // Mettre à jour le contrat avec le chemin storage (pas l'URL complète)
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/contrat?id=eq.${contractId}`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({
-          fichier_signe_url: fileName,
-        })
-      }
+    if (!contract?.yousign_signature_request_id) {
+      throw new Error("No yousign_signature_request_id on this contract");
+    }
+    if (!contract?.yousign_signed_at) {
+      throw new Error("Contract not signed on Yousign yet");
+    }
+
+    const signatureRequestId = contract.yousign_signature_request_id as string;
+
+    // 2) Télécharger les documents signés (PDF si 1 doc, ZIP si plusieurs)
+    const dlRes = await fetch(
+      `${YOUSIGN_BASE_URL}/v3/signature_requests/${signatureRequestId}/documents/download`,
+      { headers: { Authorization: `Bearer ${YOUSIGN_API_KEY}` } }
     );
 
-    // Créer une entrée dans la table document
-    const modeleName = contract.modele?.nom || 'Contrat de travail';
+    if (!dlRes.ok) {
+      const t = await dlRes.text();
+      throw new Error(`Failed to download signed document(s): ${t}`);
+    }
 
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/document`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({
-          proprietaire_type: 'profil',
-          proprietaire_id: contract.profil_id,
-          type: 'contrat',
-          fichier_url: fileName,
-          statut: 'valide',
-        })
-      }
-    );
+    const contentType = dlRes.headers.get("content-type") ?? "application/octet-stream";
+    const bytes = new Uint8Array(await dlRes.arrayBuffer());
 
-    console.log("Document entry created successfully");
+    // Extension selon le type
+    const isZip = contentType.toLowerCase().includes("zip");
+    const isPdf = contentType.toLowerCase().includes("pdf");
+    const ext = isZip ? "zip" : isPdf ? "pdf" : "bin";
 
-    // Retourner directement le PDF
-    return new Response(pdfBuffer, {
+    // 3) Retourner le fichier au navigateur + headers debug
+    return new Response(bytes, {
+      status: 200,
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="contrat_${contractId}_signed.pdf"`,
+        // Permettre au navigateur de lire ces headers (debug)
+        "Access-Control-Expose-Headers": "X-Contract-Id, X-Yousign-Request-Id",
+        "X-Contract-Id": contractId,
+        "X-Yousign-Request-Id": signatureRequestId,
+        "Content-Type": contentType,
+        "Content-Disposition": `attachment; filename="contrat_${contractId}_signed.${ext}"`,
       },
     });
-  } catch (error) {
-    console.error("Error in download-signed-contract:", error);
+  } catch (e) {
     return new Response(
-      JSON.stringify({
-        error: error.message,
-        success: false
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
+      JSON.stringify({ success: false, error: String(e?.message ?? e) }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
