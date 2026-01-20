@@ -511,12 +511,20 @@ export function VivierList() {
           </div>
 
           {filteredCandidates.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalItems={filteredCandidates.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-            />
+            <div className="border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+              {filteredCandidates.length > itemsPerPage ? (
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={filteredCandidates.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              ) : (
+                <div className="text-sm text-gray-700">
+                  <span className="font-medium">{filteredCandidates.length}</span> candidat{filteredCandidates.length > 1 ? 's' : ''} au total
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}
