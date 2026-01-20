@@ -6,6 +6,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { GENRE_OPTIONS } from '../constants/genreOptions';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 import { sanitizeUuidFields } from '../utils/uuidHelper';
+import CodeCouleurModal from './CodeCouleurModal';
 
 const STATUT_CANDIDATURE = [
   { value: 'candidature_recue', label: 'Candidature reçue' },
@@ -13,6 +14,14 @@ const STATUT_CANDIDATURE = [
   { value: 'entretien', label: 'Entretien' },
   { value: 'pre_embauche', label: 'Pré-embauche' },
   { value: 'candidature_rejetee', label: 'Candidature rejetée' }
+];
+
+const CODE_COULEUR_RH = [
+  { value: 'vert', label: 'Vert', color: 'bg-green-500' },
+  { value: 'orange', label: 'Orange', color: 'bg-orange-500' },
+  { value: 'jaune', label: 'Jaune', color: 'bg-yellow-500' },
+  { value: 'rouge', label: 'Rouge', color: 'bg-red-500' },
+  { value: 'bleu', label: 'Bleu', color: 'bg-blue-500' },
 ];
 
 interface VivierCandidate {
@@ -101,6 +110,8 @@ export function VivierList() {
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; newStatus: string; candidateId: string } | null>(null);
   const [departementFilter, setDepartementFilter] = useState<string>('');
   const [availableDepartements, setAvailableDepartements] = useState<string[]>([]);
+  const [showCodeCouleurModal, setShowCodeCouleurModal] = useState(false);
+  const [editingCodeCandidate, setEditingCodeCandidate] = useState<VivierCandidate | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -260,6 +271,34 @@ export function VivierList() {
       return matchesSearch && matchesDepartment;
     });
 
+  const openCodeCouleurModal = (candidate: VivierCandidate) => {
+    setEditingCodeCandidate(candidate);
+    setShowCodeCouleurModal(true);
+  };
+
+  const handleCodeCouleurChange = async (codeCouleur: string | null, noteInterne: string) => {
+    if (!editingCodeCandidate) return;
+
+    try {
+      const { error } = await supabase
+        .from('candidat')
+        .update({
+          code_couleur_rh: codeCouleur,
+          note_interne: noteInterne || null
+        })
+        .eq('id', editingCodeCandidate.candidat_id);
+
+      if (error) throw error;
+
+      await fetchData();
+      setShowCodeCouleurModal(false);
+      setEditingCodeCandidate(null);
+    } catch (error) {
+      console.error('Erreur mise à jour code couleur:', error);
+      throw error;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -311,11 +350,11 @@ export function VivierList() {
       ) : (
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
           <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-gray-100 min-w-[1200px]">
+            <table className="w-full divide-y divide-gray-100">
               <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
                 <tr>
                   <th
-                    className="w-32 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200"
+                    className="w-28 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200"
                     onClick={() => handleSort('nom')}
                   >
                     <div className="flex items-center gap-1">
@@ -326,7 +365,7 @@ export function VivierList() {
                     </div>
                   </th>
                   <th
-                    className="w-32 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200"
+                    className="w-28 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200"
                     onClick={() => handleSort('prenom')}
                   >
                     <div className="flex items-center gap-1">
@@ -336,99 +375,125 @@ export function VivierList() {
                       )}
                     </div>
                   </th>
-                  <th className="w-28 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="w-24 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Ville
                   </th>
-                  <th className="w-16 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="w-12 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Dép.
                   </th>
-                  <th className="w-28 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="w-24 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Téléphone
                   </th>
-                  <th className="w-36 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Poste souhaité
+                  <th className="w-28 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Poste
                   </th>
                   <th
-                    className="w-32 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200"
+                    className="w-28 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200"
                     onClick={() => handleSort('date_disponibilite')}
                   >
                     <div className="flex items-center gap-1">
-                      Disponibilité
+                      Dispo.
                       {sortConfig.key === 'date_disponibilite' && (
                         <span className="text-blue-600">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </div>
                   </th>
+                  <th className="w-16 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Date
+                  </th>
                   <th className="w-20 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Code
+                  </th>
+                  <th className="w-16 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Docs
                   </th>
-                  <th className="w-44 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="w-36 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Statut
                   </th>
                 </tr>
               </thead>
             <tbody className="bg-white divide-y divide-gray-50">
-              {filteredCandidates.map((candidate) => (
-                <tr
-                  key={candidate.id}
-                  className="hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50 cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg"
-                  onClick={() => setSelectedCandidateId(candidate.candidat_id)}
-                >
-                  <td className="px-2 py-2 text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors">
-                    <div className="truncate" title={candidate.nom}>{candidate.nom}</div>
-                  </td>
-                  <td className="px-2 py-2 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">
-                    <div className="truncate" title={candidate.prenom}>{candidate.prenom}</div>
-                  </td>
-                  <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate" title={candidate.candidat_ville || candidate.ville || '-'}>
-                    {candidate.candidat_ville || candidate.ville || '-'}
-                  </td>
-                  <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
-                    {candidate.candidat_department_code || candidate.department_code || '-'}
-                  </td>
-                  <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
-                    {candidate.tel || candidate.telephone || '-'}
-                  </td>
-                  <td className="px-2 py-2 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
-                    <div className="truncate" title={candidate.poste || candidate.poste_souhaite || '-'}>{candidate.poste || candidate.poste_souhaite || '-'}</div>
-                  </td>
-                  <td className="px-2 py-2 text-xs font-medium text-gray-900 group-hover:text-blue-900 transition-colors">
-                    <div className="truncate" title={formatDisponibilite(candidate)}>{formatDisponibilite(candidate)}</div>
-                  </td>
-                  <td className="px-1 py-2">
-                    {(!candidate.cv_url && !candidate.lettre_motivation_url && !candidate.carte_identite_recto_url && !candidate.carte_identite_verso_url) ? (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-300 whitespace-nowrap">
-                        KO
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-300 whitespace-nowrap">
-                        OK
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
-                    <select
-                      value={candidate.statut_candidature || 'vivier'}
-                      onChange={async (e) => {
-                        try {
-                          await supabase
-                            .from('candidat')
-                            .update({ statut_candidature: e.target.value })
-                            .eq('id', candidate.candidat_id);
-                          fetchData();
-                        } catch (error) {
-                          console.error('Erreur mise à jour statut:', error);
-                        }
-                      }}
-                      className="text-[11px] border border-gray-200 rounded-md px-1.5 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-500 bg-white hover:border-gray-300 transition-all w-full font-medium"
-                    >
-                      {STATUT_CANDIDATURE.map(s => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))}
+              {filteredCandidates.map((candidate) => {
+                const codeCouleur = CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh);
+
+                return (
+                  <tr
+                    key={candidate.id}
+                    className="hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50 cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg"
+                    onClick={() => setSelectedCandidateId(candidate.candidat_id)}
+                  >
+                    <td className="px-2 py-2 text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors">
+                      <div className="truncate" title={candidate.nom}>{candidate.nom}</div>
+                    </td>
+                    <td className="px-2 py-2 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">
+                      <div className="truncate" title={candidate.prenom}>{candidate.prenom}</div>
+                    </td>
+                    <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate" title={candidate.candidat_ville || candidate.ville || '-'}>
+                      {candidate.candidat_ville || candidate.ville || '-'}
+                    </td>
+                    <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
+                      {candidate.candidat_department_code || candidate.department_code || '-'}
+                    </td>
+                    <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
+                      {candidate.tel || candidate.telephone || '-'}
+                    </td>
+                    <td className="px-2 py-2 text-xs font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
+                      <div className="truncate" title={candidate.poste || candidate.poste_souhaite || '-'}>{candidate.poste || candidate.poste_souhaite || '-'}</div>
+                    </td>
+                    <td className="px-2 py-2 text-xs font-medium text-gray-900 group-hover:text-blue-900 transition-colors">
+                      <div className="truncate" title={formatDisponibilite(candidate)}>{formatDisponibilite(candidate)}</div>
+                    </td>
+                    <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
+                      {candidate.created_at ? new Date(candidate.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : '-'}
+                    </td>
+                    <td className="px-1 py-2" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => openCodeCouleurModal(candidate)}
+                        className="flex items-center gap-1 text-[11px] border border-gray-200 rounded-md px-1.5 py-1 w-full bg-white hover:bg-blue-50 hover:border-blue-300 focus:ring-1 focus:ring-blue-400 transition-all truncate font-medium"
+                        title={codeCouleur?.label || 'Aucun code couleur'}
+                      >
+                        <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                          candidate.code_couleur_rh
+                            ? codeCouleur?.color
+                            : 'border-2 border-gray-300'
+                        }`}></div>
+                      </button>
+                    </td>
+                    <td className="px-1 py-2">
+                      {(!candidate.cv_url && !candidate.lettre_motivation_url && !candidate.carte_identite_recto_url && !candidate.carte_identite_verso_url) ? (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-300 whitespace-nowrap">
+                          KO
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-300 whitespace-nowrap">
+                          OK
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={candidate.statut_candidature || 'vivier'}
+                        onChange={async (e) => {
+                          try {
+                            await supabase
+                              .from('candidat')
+                              .update({ statut_candidature: e.target.value })
+                              .eq('id', candidate.candidat_id);
+                            fetchData();
+                          } catch (error) {
+                            console.error('Erreur mise à jour statut:', error);
+                          }
+                        }}
+                        className="text-[11px] border border-gray-200 rounded-md px-1.5 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-500 bg-white hover:border-gray-300 transition-all w-full font-medium"
+                      >
+                        {STATUT_CANDIDATURE.map(s => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           </div>
@@ -488,6 +553,20 @@ export function VivierList() {
             setConfirmModal(null);
             fetchData();
           }}
+        />
+      )}
+
+      {showCodeCouleurModal && editingCodeCandidate && (
+        <CodeCouleurModal
+          isOpen={showCodeCouleurModal}
+          currentValue={editingCodeCandidate.code_couleur_rh || null}
+          candidateName={`${editingCodeCandidate.prenom} ${editingCodeCandidate.nom}`}
+          currentNote={editingCodeCandidate.note_interne}
+          onClose={() => {
+            setShowCodeCouleurModal(false);
+            setEditingCodeCandidate(null);
+          }}
+          onSave={handleCodeCouleurChange}
         />
       )}
     </div>
