@@ -125,32 +125,42 @@ export default function ContractViewModal({
     }
   };
 
-  // ✅ FONCTION CORRIGÉE - Télécharge le PDF signé depuis Yousign
   const handleDownload = async () => {
     try {
       setDownloading(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Non connecté");
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-contract`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`,
+            "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ contractId: contract.id })
+          body: JSON.stringify({ contractId: contract.id }),
         }
       );
 
-      const data = await response.json();
-
-      if (data.success && data.url) {
-        // Ouvrir le PDF dans un nouvel onglet
-        window.open(data.url, '_blank');
-      } else {
-        alert('Erreur: ' + (data.error || 'Impossible de télécharger le PDF'));
+      if (!response.ok) {
+        throw new Error(await response.text());
       }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      // Télécharger le fichier
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `contrat_${contract.id}_signed.pdf`;
+      a.click();
+
+      URL.revokeObjectURL(url);
     } catch (error: any) {
-      alert('Erreur lors du téléchargement: ' + error.message);
+      alert("Erreur lors du téléchargement: " + error.message);
     } finally {
       setDownloading(false);
     }

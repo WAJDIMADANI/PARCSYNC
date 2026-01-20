@@ -165,44 +165,14 @@ Deno.serve(async (req: Request) => {
 
     console.log("Document entry created successfully");
 
-    // Générer une URL signée pour le fichier
-    const signedUrlResponse = await fetch(
-      `${SUPABASE_URL}/storage/v1/object/sign/documents/${fileName}`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          expiresIn: 3600
-        })
-      }
-    );
-
-    if (!signedUrlResponse.ok) {
-      const errorText = await signedUrlResponse.text();
-      console.error("Failed to generate signed URL:", errorText);
-      throw new Error("Failed to generate signed URL");
-    }
-
-    const signedUrlData = await signedUrlResponse.json();
-    const signedUrl = `${SUPABASE_URL}/storage/v1${signedUrlData.signedURL}`;
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        url: signedUrl,
-        fileUrl: fileName,
-        message: "Document signé téléchargé et ajouté aux documents"
-      }),
-      {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    // Retourner directement le PDF
+    return new Response(pdfBuffer, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="contrat_${contractId}_signed.pdf"`,
+      },
+    });
   } catch (error) {
     console.error("Error in download-signed-contract:", error);
     return new Response(
