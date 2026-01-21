@@ -4436,8 +4436,12 @@ function EmployeeDetailModal({
                           <button
                             onClick={async () => {
                               try {
+                                // Si le contrat a été signé via Yousign, télécharger depuis Yousign
+                                if (contract.yousign_signature_request_id && contract.statut === 'signé') {
+                                  await handleDownloadContract(contract.id);
+                                }
                                 // Si le contrat a un PDF (signé ou non)
-                                if (contract.fichier_signe_url || contract.signed_storage_path) {
+                                else if (contract.fichier_signe_url || contract.signed_storage_path) {
                                   // Utiliser le système spécifique pour les contrats manuels
                                   if (isManualContract(contract)) {
                                     const url = await resolveContractUrl(contract);
