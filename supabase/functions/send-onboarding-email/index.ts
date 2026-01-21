@@ -23,13 +23,12 @@ Deno.serve(async (req: Request) => {
     const { candidateEmail, candidateName, candidateId }: RequestPayload = await req.json();
 
     const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
-    const APP_URL = Deno.env.get("APP_URL") || "http://localhost:5173";
 
     if (!BREVO_API_KEY) {
       throw new Error("BREVO_API_KEY not configured");
     }
 
-    const onboardingLink = `${APP_URL}/onboarding?id=${candidateId}`;
+    const onboardingLink = `https://crm.tca-transport.com/onboarding?id=${candidateId}`;
 
     const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
