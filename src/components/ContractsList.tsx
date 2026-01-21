@@ -230,28 +230,46 @@ export function ContractsList() {
   // ✅ FONCTION CORRIGÉE - Télécharge le PDF signé depuis Yousign
   const onDownloadPdf = async (contractId: string) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Non connecté");
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-signed-contract`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
           },
           body: JSON.stringify({ contractId })
         }
       );
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      console.log('[DOWNLOAD SIGNED] status =', response.status, 'content-type =', contentType);
 
-      if (data.success && data.url) {
-        // Ouvrir le PDF dans un nouvel onglet
-        window.open(data.url, '_blank');
-      } else {
-        alert('Erreur: ' + (data.error || 'Impossible de télécharger le PDF'));
+      // Si la réponse est du JSON, c'est une erreur
+      if (!response.ok || contentType.includes('application/json')) {
+        const errorText = await response.text();
+        console.log('[DOWNLOAD SIGNED] error =', errorText);
+        throw new Error(errorText || 'Téléchargement impossible');
       }
+
+      // Télécharger le fichier binaire (PDF ou ZIP)
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contrat_${contractId}_signed.${contentType.includes('zip') ? 'zip' : 'pdf'}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
     } catch (error: any) {
-      alert('Erreur lors du téléchargement: ' + error.message);
+      console.error('Erreur lors du téléchargement:', error);
+      alert('Erreur lors du téléchargement du contrat signé: ' + error.message);
     }
   };
 
