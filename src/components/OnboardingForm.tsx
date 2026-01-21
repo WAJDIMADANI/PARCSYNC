@@ -605,7 +605,7 @@ export function OnboardingForm() {
                 </select>
               </div>
               <FormInput label="Nationalité *" value={formData.nationalite} onChange={(v) => setFormData({ ...formData, nationalite: v })} required />
-              <FormInput label="Numéro de Sécurité Sociale *" value={formData.numero_securite_sociale} onChange={(v) => setFormData({ ...formData, numero_securite_sociale: v })} placeholder="X XX XX XX XXX XXX XX" required />
+              <FormInput label="Numéro de Sécurité Sociale *" value={formData.numero_securite_sociale} onChange={(v) => setFormData({ ...formData, numero_securite_sociale: v })} placeholder="Avec ou sans espaces (ex: 1 23 45 67 890 123 45)" required />
             </div>
           </div>
 

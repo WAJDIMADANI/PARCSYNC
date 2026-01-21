@@ -3015,8 +3015,7 @@ function EmployeeDetailModal({
                     value={editedNumeroSS}
                     onChange={(e) => setEditedNumeroSS(e.target.value)}
                     className="w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="1 23 45 67 890 123 45"
-                    maxLength={15}
+                    placeholder="1 23 45 67 890 123 45 (avec ou sans espaces)"
                   />
                 )}
               </div>

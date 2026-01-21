@@ -1444,7 +1444,7 @@ function CandidateModal({
                 value={formData.numero_securite_sociale}
                 onChange={(e) => setFormData({ ...formData, numero_securite_sociale: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                placeholder="X XX XX XX XXX XXX XX"
+                placeholder="Avec ou sans espaces (ex: 1 23 45 67 890 123 45)"
               />
             </div>
 

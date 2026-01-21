@@ -453,7 +453,7 @@ export function ImportSalarieTest() {
               label="Numéro de Sécurité Sociale"
               value={formData.numero_securite_sociale}
               onChange={(v) => setFormData({ ...formData, numero_securite_sociale: v })}
-              placeholder="X XX XX XX XXX XXX XX"
+              placeholder="Avec ou sans espaces (ex: 1 23 45 67 890 123 45)"
             />
             <FormInput
               label="Fin de validité titre de séjour"
