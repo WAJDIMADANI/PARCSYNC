@@ -4,7 +4,7 @@ import { LogOut, User } from 'lucide-react';
 import { Sidebar, View } from './Sidebar';
 import { EmployeeList } from './EmployeeList';
 import { CandidateList } from './CandidateList';
-import { VehicleList } from './VehicleList';
+import { VehicleListNew } from './VehicleListNew';
 import { FuelList } from './FuelList';
 import { FinesList } from './FinesList';
 import { ContractsList } from './ContractsList';
@@ -85,7 +85,7 @@ export function Dashboard() {
       case 'rh/emails':
         return <CRMEmails />;
       case 'parc/vehicules':
-        return <VehicleList />;
+        return <VehicleListNew />;
       case 'parc/ct-assurance':
         return <CTAssuranceList />;
       case 'parc/maintenance':

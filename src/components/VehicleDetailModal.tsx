@@ -1,0 +1,754 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import {
+  X,
+  Car,
+  Edit,
+  Save,
+  Upload,
+  Trash2,
+  Plus,
+  Calendar,
+  User,
+  FileText,
+  Clock,
+  Download
+} from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
+import { AttributionModal } from './AttributionModal';
+
+interface Chauffeur {
+  id: string;
+  nom: string;
+  prenom: string;
+  matricule_tca: string;
+  type_attribution: 'principal' | 'secondaire';
+  date_debut: string;
+  loueur_id: string | null;
+  loueur_nom: string | null;
+}
+
+interface Vehicle {
+  id: string;
+  immatriculation: string;
+  immat_norm: string;
+  reference_tca: string | null;
+  marque: string | null;
+  modele: string | null;
+  annee: number | null;
+  type: string | null;
+  statut: string;
+  date_mise_en_service: string | null;
+  date_fin_service: string | null;
+  photo_path: string | null;
+  site_id: string | null;
+  created_at: string;
+  chauffeurs_actifs: Chauffeur[];
+  nb_chauffeurs_actifs: number;
+}
+
+interface Attribution {
+  id: string;
+  vehicule_id: string;
+  profil_id: string;
+  loueur_id: string | null;
+  date_debut: string;
+  date_fin: string | null;
+  type_attribution: 'principal' | 'secondaire';
+  notes: string | null;
+  created_at: string;
+  profil: {
+    id: string;
+    nom: string;
+    prenom: string;
+    matricule_tca: string;
+  };
+  loueur: {
+    id: string;
+    nom: string;
+  } | null;
+}
+
+interface Props {
+  vehicle: Vehicle;
+  onClose: () => void;
+  onUpdate: () => void;
+  photoUrl?: string;
+}
+
+type Tab = 'info' | 'current' | 'history';
+
+export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate, photoUrl: initialPhotoUrl }: Props) {
+  const [activeTab, setActiveTab] = useState<Tab>('info');
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(initialPhotoUrl);
+  const [showAttributionModal, setShowAttributionModal] = useState(false);
+
+  const [vehicle, setVehicle] = useState(initialVehicle);
+  const [editedVehicle, setEditedVehicle] = useState(initialVehicle);
+
+  const [attributions, setAttributions] = useState<Attribution[]>([]);
+  const [loadingAttributions, setLoadingAttributions] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchAttributions();
+    }
+  }, [activeTab]);
+
+  const fetchAttributions = async () => {
+    setLoadingAttributions(true);
+    try {
+      const { data, error } = await supabase
+        .from('attribution_vehicule')
+        .select(`
+          *,
+          profil:profil_id(id, nom, prenom, matricule_tca),
+          loueur:loueur_id(id, nom)
+        `)
+        .eq('vehicule_id', vehicle.id)
+        .order('date_debut', { ascending: false });
+
+      if (error) throw error;
+      setAttributions(data || []);
+    } catch (error) {
+      console.error('Erreur chargement attributions:', error);
+    } finally {
+      setLoadingAttributions(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('vehicule')
+        .update({
+          reference_tca: editedVehicle.reference_tca,
+          marque: editedVehicle.marque,
+          modele: editedVehicle.modele,
+          annee: editedVehicle.annee,
+          type: editedVehicle.type,
+          statut: editedVehicle.statut,
+          date_mise_en_service: editedVehicle.date_mise_en_service,
+          date_fin_service: editedVehicle.date_fin_service,
+        })
+        .eq('id', vehicle.id);
+
+      if (error) throw error;
+
+      setVehicle(editedVehicle);
+      setIsEditing(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Erreur sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Veuillez sélectionner une image');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La taille de l\'image ne doit pas dépasser 5MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      if (vehicle.photo_path) {
+        await supabase.storage
+          .from('vehicle-photos')
+          .remove([vehicle.photo_path]);
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${vehicle.id}/photo.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('vehicle-photos')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { error: updateError } = await supabase
+        .from('vehicule')
+        .update({ photo_path: fileName })
+        .eq('id', vehicle.id);
+
+      if (updateError) throw updateError;
+
+      const { data: signedUrl } = await supabase.storage
+        .from('vehicle-photos')
+        .createSignedUrl(fileName, 3600);
+
+      if (signedUrl) {
+        setPhotoUrl(signedUrl.signedUrl);
+      }
+
+      onUpdate();
+    } catch (error) {
+      console.error('Erreur upload photo:', error);
+      alert('Erreur lors de l\'upload de la photo');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    if (!vehicle.photo_path) return;
+    if (!confirm('Voulez-vous vraiment supprimer cette photo?')) return;
+
+    try {
+      await supabase.storage
+        .from('vehicle-photos')
+        .remove([vehicle.photo_path]);
+
+      const { error } = await supabase
+        .from('vehicule')
+        .update({ photo_path: null })
+        .eq('id', vehicle.id);
+
+      if (error) throw error;
+
+      setPhotoUrl(undefined);
+      onUpdate();
+    } catch (error) {
+      console.error('Erreur suppression photo:', error);
+      alert('Erreur lors de la suppression de la photo');
+    }
+  };
+
+  const handleEndAttribution = async (attribution: Attribution) => {
+    if (!confirm('Voulez-vous terminer cette attribution?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('attribution_vehicule')
+        .update({ date_fin: new Date().toISOString().split('T')[0] })
+        .eq('id', attribution.id);
+
+      if (error) throw error;
+
+      fetchAttributions();
+      onUpdate();
+    } catch (error) {
+      console.error('Erreur fin attribution:', error);
+      alert('Erreur lors de la fin de l\'attribution');
+    }
+  };
+
+  const currentAttributions = attributions.filter(a => !a.date_fin);
+  const historicalAttributions = attributions.filter(a => a.date_fin);
+
+  const getStatusBadge = (statut: string) => {
+    const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+      actif: { bg: 'bg-green-100', text: 'text-green-700', label: 'Actif' },
+      maintenance: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Maintenance' },
+      'hors service': { bg: 'bg-red-100', text: 'text-red-700', label: 'Hors service' },
+      'en location': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'En location' },
+    };
+
+    const config = statusConfig[statut.toLowerCase()] || { bg: 'bg-gray-100', text: 'text-gray-700', label: statut };
+
+    return (
+      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.bg} ${config.text}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const calculateDuration = (dateDebut: string, dateFin: string | null) => {
+    const start = new Date(dateDebut);
+    const end = dateFin ? new Date(dateFin) : new Date();
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 30) return `${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+    const diffMonths = Math.floor(diffDays / 30);
+    return `${diffMonths} mois`;
+  };
+
+  const exportHistory = () => {
+    const csv = [
+      ['Chauffeur', 'Matricule TCA', 'Type', 'Loueur', 'Date début', 'Date fin', 'Durée', 'Statut'].join(','),
+      ...attributions.map(a => [
+        `${a.profil.prenom} ${a.profil.nom}`,
+        a.profil.matricule_tca || '',
+        a.type_attribution,
+        a.loueur?.nom || 'Propriété TCA',
+        new Date(a.date_debut).toLocaleDateString('fr-FR'),
+        a.date_fin ? new Date(a.date_fin).toLocaleDateString('fr-FR') : 'En cours',
+        calculateDuration(a.date_debut, a.date_fin),
+        a.date_fin ? 'Terminée' : 'Active'
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `historique_${vehicle.immatriculation}_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-16 flex items-center justify-center bg-gray-100 rounded-lg overflow-hidden">
+                {photoUrl ? (
+                  <img src={photoUrl} alt={vehicle.immatriculation} className="w-full h-full object-cover" />
+                ) : (
+                  <Car className="w-10 h-10 text-gray-400" />
+                )}
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{vehicle.immatriculation}</h2>
+                {vehicle.reference_tca && (
+                  <p className="text-sm text-gray-600">Réf. TCA: {vehicle.reference_tca}</p>
+                )}
+              </div>
+              {getStatusBadge(vehicle.statut)}
+            </div>
+            <div className="flex items-center gap-2">
+              {activeTab === 'info' && (
+                <>
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          setEditedVehicle(vehicle);
+                          setIsEditing(false);
+                        }}
+                        className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        {saving ? <LoadingSpinner size="sm" /> : <Save className="w-4 h-4 mr-2" />}
+                        Enregistrer
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Modifier
+                    </button>
+                  )}
+                </>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="border-b border-gray-200 px-6">
+            <nav className="flex gap-4">
+              <button
+                onClick={() => setActiveTab('info')}
+                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'info'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Informations
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('current')}
+                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'current'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Attributions actuelles
+                  {currentAttributions.length > 0 && (
+                    <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                      {currentAttributions.length}
+                    </span>
+                  )}
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'history'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Historique complet
+                </div>
+              </button>
+            </nav>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            {activeTab === 'info' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Identification</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Immatriculation</label>
+                      <input
+                        type="text"
+                        value={vehicle.immatriculation}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Référence TCA</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.reference_tca || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, reference_tca: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Marque</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.marque || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, marque: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Modèle</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.modele || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, modele: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Année</label>
+                      <input
+                        type="number"
+                        value={editedVehicle.annee || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, annee: e.target.value ? Number(e.target.value) : null })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.type || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, type: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Photo du véhicule</h3>
+                  <div className="flex items-start gap-4">
+                    <div className="w-48 h-36 flex items-center justify-center bg-gray-100 rounded-lg overflow-hidden">
+                      {uploading ? (
+                        <LoadingSpinner size="lg" />
+                      ) : photoUrl ? (
+                        <img src={photoUrl} alt={vehicle.immatriculation} className="w-full h-full object-cover" />
+                      ) : (
+                        <Car className="w-20 h-20 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+                        <Upload className="w-4 h-4 mr-2" />
+                        {photoUrl ? 'Changer la photo' : 'Ajouter une photo'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      {photoUrl && (
+                        <button
+                          onClick={handleDeletePhoto}
+                          className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors ml-2"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Supprimer la photo
+                        </button>
+                      )}
+                      <p className="text-sm text-gray-500">Format accepté: JPG, PNG, WebP (max 5MB)</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Statut et dates</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                      <select
+                        value={editedVehicle.statut}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, statut: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      >
+                        <option value="actif">Actif</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="hors service">Hors service</option>
+                        <option value="en location">En location</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Date de mise en service</label>
+                      <input
+                        type="date"
+                        value={editedVehicle.date_mise_en_service || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, date_mise_en_service: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Date de fin de service</label>
+                      <input
+                        type="date"
+                        value={editedVehicle.date_fin_service || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, date_fin_service: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'current' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Attributions en cours</h3>
+                  <button
+                    onClick={() => setShowAttributionModal(true)}
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nouvelle attribution
+                  </button>
+                </div>
+
+                {currentAttributions.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg">
+                    <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg font-medium mb-2">Ce véhicule n'est pas attribué actuellement</p>
+                    <p className="text-gray-500 mb-4">Créez une attribution pour assigner ce véhicule à un chauffeur</p>
+                    <button
+                      onClick={() => setShowAttributionModal(true)}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Créer une attribution
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {currentAttributions.map((attribution) => (
+                      <div key={attribution.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {attribution.profil.prenom} {attribution.profil.nom}
+                              </p>
+                              {attribution.profil.matricule_tca && (
+                                <p className="text-sm text-gray-500">TCA: {attribution.profil.matricule_tca}</p>
+                              )}
+                            </div>
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                            attribution.type_attribution === 'principal'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {attribution.type_attribution === 'principal' ? 'Principal' : 'Secondaire'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center text-gray-600">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Depuis le {new Date(attribution.date_debut).toLocaleDateString('fr-FR')}
+                            <span className="ml-2 text-gray-400">({calculateDuration(attribution.date_debut, null)})</span>
+                          </div>
+                          <div className="flex items-center text-gray-600">
+                            <FileText className="w-4 h-4 mr-2" />
+                            {attribution.loueur?.nom || 'Propriété TCA'}
+                          </div>
+                          {attribution.notes && (
+                            <div className="mt-2 p-2 bg-gray-50 rounded text-gray-700">
+                              {attribution.notes}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
+                          <button
+                            onClick={() => handleEndAttribution(attribution)}
+                            className="flex-1 px-3 py-2 bg-red-50 text-red-700 rounded hover:bg-red-100 transition-colors text-sm font-medium"
+                          >
+                            Terminer l'attribution
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'history' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Historique complet des attributions</h3>
+                  <button
+                    onClick={exportHistory}
+                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export CSV
+                  </button>
+                </div>
+
+                {loadingAttributions ? (
+                  <div className="flex items-center justify-center py-12">
+                    <LoadingSpinner size="lg" text="Chargement de l'historique..." />
+                  </div>
+                ) : attributions.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg">
+                    <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg font-medium">Aucun historique d'attribution</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {attributions.map((attribution, idx) => (
+                      <div
+                        key={attribution.id}
+                        className={`bg-white border rounded-lg p-4 ${
+                          attribution.date_fin ? 'border-gray-200' : 'border-blue-300 bg-blue-50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3">
+                            <div className="relative">
+                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <User className="w-5 h-5 text-blue-600" />
+                              </div>
+                              {idx < attributions.length - 1 && (
+                                <div className="absolute top-10 left-1/2 transform -translate-x-1/2 w-0.5 h-8 bg-gray-300"></div>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-semibold text-gray-900">
+                                  {attribution.profil.prenom} {attribution.profil.nom}
+                                </p>
+                                {attribution.profil.matricule_tca && (
+                                  <span className="text-sm text-gray-500">({attribution.profil.matricule_tca})</span>
+                                )}
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                  attribution.type_attribution === 'principal'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {attribution.type_attribution === 'principal' ? 'P' : 'S'}
+                                </span>
+                                {!attribution.date_fin && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    Active
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 mb-1">
+                                {attribution.loueur?.nom || 'Propriété TCA'}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                Du {new Date(attribution.date_debut).toLocaleDateString('fr-FR')}
+                                {attribution.date_fin ? ` au ${new Date(attribution.date_fin).toLocaleDateString('fr-FR')}` : ' - En cours'}
+                                <span className="ml-2 text-gray-400">
+                                  ({calculateDuration(attribution.date_debut, attribution.date_fin)})
+                                </span>
+                              </p>
+                              {attribution.notes && (
+                                <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700">
+                                  {attribution.notes}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showAttributionModal && (
+        <AttributionModal
+          vehicleId={vehicle.id}
+          onClose={() => setShowAttributionModal(false)}
+          onSuccess={() => {
+            setShowAttributionModal(false);
+            fetchAttributions();
+            onUpdate();
+          }}
+        />
+      )}
+    </>
+  );
+}
