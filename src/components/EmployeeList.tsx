@@ -22,6 +22,7 @@ import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 import { ProfileAvatar } from './ProfileAvatar';
 import { generatePDFFromHTML } from '../lib/cloudConvertPdfGenerator';
 import { generateContractHTML } from '../lib/contractHTMLGenerator';
+import { ConfirmDeleteProfilModal } from './ConfirmDeleteProfilModal';
 
 // Fonction utilitaire pour formater les dates sans problème de fuseau horaire
 function formatDateFR(dateStr: string | null | undefined): string {
@@ -187,6 +188,10 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const [activeTab, setActiveTab] = useState<'salaries' | 'sortants'>('salaries');
   const hasProcessedInitialProfile = useRef(false);
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+
   useEffect(() => {
     // Réinitialiser la page courante quand on change d'onglet
     setCurrentPage(1);
@@ -273,7 +278,8 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
           secteur:secteur_id(id, nom),
           manager:manager_id(prenom, nom)
         `)
-        .eq('role', 'salarie');
+        .eq('role', 'salarie')
+        .is('deleted_at', null);
 
       if (activeTab === 'salaries') {
         // Onglet Salariés : exclure statut='inactif', trier par dernière modification
@@ -316,6 +322,36 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchData();
+  };
+
+  const handleDeleteProfil = async () => {
+    if (!selectedEmployee) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('profil')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', selectedEmployee.id);
+
+      if (error) throw error;
+
+      setDeleteSuccess(true);
+      setShowDeleteConfirm(false);
+      setIsModalOpen(false);
+      setSelectedEmployee(null);
+
+      await fetchData();
+
+      setTimeout(() => {
+        setDeleteSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Erreur lors de l\'archivage du profil:', error);
+      alert('Erreur lors de la suppression du profil');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const getEmployeeContractStatus = (employeeId: string): string | null => {
@@ -2730,12 +2766,28 @@ function EmployeeDetailModal({
                 </div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-xl transition-colors"
-            >
-              <X className="w-6 h-6 text-white" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-red-500/90 hover:bg-red-600 text-white rounded-lg transition-colors font-medium"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Supprimer</span>
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="sm:hidden w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-xl transition-colors"
+                title="Supprimer ce profil"
+              >
+                <Trash2 className="w-5 h-5 text-red-200" />
+              </button>
+              <button
+                onClick={onClose}
+                className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+            </div>
           </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -5201,6 +5253,22 @@ function EmployeeDetailModal({
       onConfirm={() => handleSaveBanking(true)}
       onCancel={() => setShowInvalidIbanModal(false)}
     />
+
+    <ConfirmDeleteProfilModal
+      isOpen={showDeleteConfirm}
+      profilName={selectedEmployee ? `${selectedEmployee.prenom} ${selectedEmployee.nom}` : ''}
+      onConfirm={handleDeleteProfil}
+      onCancel={() => setShowDeleteConfirm(false)}
+      isDeleting={isDeleting}
+    />
+
+    {deleteSuccess && (
+      <Toast
+        type="success"
+        message="Profil archivé avec succès"
+        onClose={() => setDeleteSuccess(false)}
+      />
+    )}
     </>
   );
 }

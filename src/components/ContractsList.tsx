@@ -84,7 +84,8 @@ export function ContractsList() {
       const { data: profils, error: profilsError } = await supabase
         .from('profil')
         .select('id, nom, prenom, email, modele_contrat, date_entree, secteur_id, secteur:secteur_id(nom)')
-        .in('id', profilIds);
+        .in('id', profilIds)
+        .is('deleted_at', null);
 
       if (profilsError) console.error('Erreur profils:', profilsError);
 

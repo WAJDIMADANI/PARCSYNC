@@ -338,7 +338,8 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
     try {
       const { data: profils } = await supabase
         .from('profil')
-        .select('statut, date_entree, date_sortie');
+        .select('statut, date_entree, date_sortie')
+        .is('deleted_at', null);
 
       if (!profils) return;
 
@@ -359,6 +360,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .select('id', { count: 'exact', head: true })
         .eq('role', 'salarie')
         .eq('statut', 'actif')
+        .is('deleted_at', null)
         .not('date_fin_periode_essai', 'is', null)
         .gte('date_fin_periode_essai', today);
 

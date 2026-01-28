@@ -50,6 +50,7 @@ export function CRMEmailsNew() {
         .from('profil')
         .select('id, matricule:matricule_tca, nom, prenom, email, date_sortie, secteur_id')
         .is('date_sortie', null)
+        .is('deleted_at', null)
         .order('nom', { ascending: true });
 
       if (error) {
@@ -106,6 +107,7 @@ export function CRMEmailsNew() {
         .select('id, matricule:matricule_tca, nom, prenom, email, date_sortie, secteur_id')
         .in('secteur_id', secteurIds)
         .is('date_sortie', null)
+        .is('deleted_at', null)
         .order('nom', { ascending: true });
 
       if (error) throw error;
