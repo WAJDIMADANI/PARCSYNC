@@ -327,13 +327,37 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     }
   };
 
-  const filteredBrands = brands.filter(b =>
-    b.nom.toLowerCase().includes(brandSearch.toLowerCase())
-  );
+  const filteredBrands = (() => {
+    const q = brandSearch.trim().toLowerCase();
+    if (!q) return brands;
 
-  const filteredModels = models.filter(m =>
-    m.nom.toLowerCase().includes(modelSearch.toLowerCase())
-  );
+    const score = (name: string) => {
+      const n = name.toLowerCase();
+      if (n.startsWith(q)) return 2;
+      if (n.includes(q)) return 1;
+      return -1;
+    };
+
+    return brands
+      .filter(b => score(b.nom) >= 0)
+      .sort((a, b) => score(b.nom) - score(a.nom) || a.nom.localeCompare(b.nom));
+  })();
+
+  const filteredModels = (() => {
+    const q = modelSearch.trim().toLowerCase();
+    if (!q) return models;
+
+    const score = (name: string) => {
+      const n = name.toLowerCase();
+      if (n.startsWith(q)) return 2;
+      if (n.includes(q)) return 1;
+      return -1;
+    };
+
+    return models
+      .filter(m => score(m.nom) >= 0)
+      .sort((a, b) => score(b.nom) - score(a.nom) || a.nom.localeCompare(b.nom));
+  })();
 
   const renderStep = () => {
     switch (currentStep) {
