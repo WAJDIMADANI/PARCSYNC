@@ -39,6 +39,17 @@ interface DocumentFile {
   date_expiration?: string;
 }
 
+interface Brand {
+  id: string;
+  nom: string;
+}
+
+interface Model {
+  id: string;
+  nom: string;
+  marque_id: string;
+}
+
 const STEPS = [
   { id: 1, title: 'Informations générales', icon: Car },
   { id: 2, title: 'Références et dates', icon: FileText },
@@ -48,6 +59,8 @@ const STEPS = [
   { id: 6, title: 'Documents', icon: FileText },
 ];
 
+const OTHER_OPTION = '__other__';
+
 export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -55,6 +68,15 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
+
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
+  const [selectedBrandId, setSelectedBrandId] = useState<string>('');
+  const [selectedModelId, setSelectedModelId] = useState<string>('');
+  const [customBrand, setCustomBrand] = useState<string>('');
+  const [customModel, setCustomModel] = useState<string>('');
+  const [brandSearch, setBrandSearch] = useState<string>('');
+  const [modelSearch, setModelSearch] = useState<string>('');
 
   const [formData, setFormData] = useState<VehicleFormData>({
     immatriculation: '',
@@ -74,6 +96,86 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     kilometrage_actuel: '',
     statut: 'actif',
   });
+
+  useEffect(() => {
+    fetchBrands();
+  }, []);
+
+  const fetchBrands = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vehicule_marque')
+        .select('id, nom')
+        .order('nom');
+
+      if (error) throw error;
+      setBrands(data || []);
+    } catch (error) {
+      console.error('Erreur chargement marques:', error);
+    }
+  };
+
+  const fetchModels = async (brandId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('vehicule_modele')
+        .select('id, nom, marque_id')
+        .eq('marque_id', brandId)
+        .order('nom');
+
+      if (error) throw error;
+      setModels(data || []);
+    } catch (error) {
+      console.error('Erreur chargement modèles:', error);
+    }
+  };
+
+  const handleBrandChange = (value: string) => {
+    setSelectedBrandId(value);
+    setSelectedModelId('');
+    setCustomModel('');
+    setModelSearch('');
+    setModels([]);
+
+    if (value === OTHER_OPTION) {
+      setFormData(prev => ({ ...prev, marque: '', modele: '' }));
+      setCustomBrand('');
+    } else if (value) {
+      const brand = brands.find(b => b.id === value);
+      if (brand) {
+        setFormData(prev => ({ ...prev, marque: brand.nom, modele: '' }));
+        fetchModels(value);
+      }
+    } else {
+      setFormData(prev => ({ ...prev, marque: '', modele: '' }));
+    }
+  };
+
+  const handleModelChange = (value: string) => {
+    setSelectedModelId(value);
+
+    if (value === OTHER_OPTION) {
+      setFormData(prev => ({ ...prev, modele: '' }));
+      setCustomModel('');
+    } else if (value) {
+      const model = models.find(m => m.id === value);
+      if (model) {
+        setFormData(prev => ({ ...prev, modele: model.nom }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, modele: '' }));
+    }
+  };
+
+  const handleCustomBrandChange = (value: string) => {
+    setCustomBrand(value);
+    setFormData(prev => ({ ...prev, marque: value }));
+  };
+
+  const handleCustomModelChange = (value: string) => {
+    setCustomModel(value);
+    setFormData(prev => ({ ...prev, modele: value }));
+  };
 
   const handleInputChange = (field: keyof VehicleFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -225,6 +327,14 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     }
   };
 
+  const filteredBrands = brands.filter(b =>
+    b.nom.toLowerCase().includes(brandSearch.toLowerCase())
+  );
+
+  const filteredModels = models.filter(m =>
+    m.nom.toLowerCase().includes(modelSearch.toLowerCase())
+  );
+
   const renderStep = () => {
     switch (currentStep) {
       case 1:
@@ -244,60 +354,143 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Marque <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.marque}
-                  onChange={(e) => handleInputChange('marque', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Modèle <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.modele}
-                  onChange={(e) => handleInputChange('modele', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Marque <span className="text-red-500">*</span>
+              </label>
+              {selectedBrandId === OTHER_OPTION ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={customBrand}
+                    onChange={(e) => handleCustomBrandChange(e.target.value)}
+                    placeholder="Saisir la marque"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => {
+                      setSelectedBrandId('');
+                      setCustomBrand('');
+                      setFormData(prev => ({ ...prev, marque: '' }));
+                    }}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    ← Revenir à la liste
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={brandSearch}
+                    onChange={(e) => setBrandSearch(e.target.value)}
+                    placeholder="Rechercher une marque..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <select
+                    value={selectedBrandId}
+                    onChange={(e) => handleBrandChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    size={8}
+                    required
+                  >
+                    <option value="">-- Sélectionner une marque --</option>
+                    {filteredBrands.map(brand => (
+                      <option key={brand.id} value={brand.id}>
+                        {brand.nom}
+                      </option>
+                    ))}
+                    <option value={OTHER_OPTION}>Autre...</option>
+                  </select>
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Année</label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Modèle <span className="text-red-500">*</span>
+              </label>
+              {selectedModelId === OTHER_OPTION ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={customModel}
+                    onChange={(e) => handleCustomModelChange(e.target.value)}
+                    placeholder="Saisir le modèle"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => {
+                      setSelectedModelId('');
+                      setCustomModel('');
+                      setFormData(prev => ({ ...prev, modele: '' }));
+                    }}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    ← Revenir à la liste
+                  </button>
+                </div>
+              ) : selectedBrandId && selectedBrandId !== OTHER_OPTION ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={modelSearch}
+                    onChange={(e) => setModelSearch(e.target.value)}
+                    placeholder="Rechercher un modèle..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <select
+                    value={selectedModelId}
+                    onChange={(e) => handleModelChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    size={8}
+                    required
+                  >
+                    <option value="">-- Sélectionner un modèle --</option>
+                    {filteredModels.map(model => (
+                      <option key={model.id} value={model.id}>
+                        {model.nom}
+                      </option>
+                    ))}
+                    <option value={OTHER_OPTION}>Autre...</option>
+                  </select>
+                </div>
+              ) : (
                 <input
-                  type="number"
-                  value={formData.annee}
-                  onChange={(e) => handleInputChange('annee', e.target.value ? parseInt(e.target.value) : '')}
-                  min="1900"
-                  max={new Date().getFullYear() + 1}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  type="text"
+                  disabled
+                  placeholder={selectedBrandId === OTHER_OPTION ? 'Saisir d\'abord la marque' : 'Sélectionner d\'abord une marque'}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
                 />
-              </div>
+              )}
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => handleInputChange('type', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="VL">VL (Véhicule Léger)</option>
-                  <option value="VUL">VUL (Véhicule Utilitaire Léger)</option>
-                  <option value="PL">PL (Poids Lourd)</option>
-                  <option value="TC">TC (Transport en Commun)</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <select
+                value={formData.type}
+                onChange={(e) => handleInputChange('type', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="VL">VL (Véhicule Léger)</option>
+                <option value="VUL">VUL (Véhicule Utilitaire Léger)</option>
+                <option value="PL">PL (Poids Lourd)</option>
+                <option value="TC">TC (Transport en Commun)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Année</label>
+              <input
+                type="number"
+                value={formData.annee}
+                onChange={(e) => handleInputChange('annee', e.target.value ? parseInt(e.target.value) : '')}
+                min="1900"
+                max={new Date().getFullYear() + 1}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
             </div>
 
             <div>
