@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDetailModal } from './VehicleDetailModal';
+import { VehicleCreateModal } from './VehicleCreateModal';
 
 interface Chauffeur {
   id: string;
@@ -63,6 +64,7 @@ export function VehicleListNew() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>({
     statut: '',
@@ -263,6 +265,7 @@ export function VehicleListNew() {
           </p>
         </div>
         <button
+          onClick={() => setShowCreateModal(true)}
           className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
         >
           <Plus className="w-5 h-5 mr-2" />
@@ -737,6 +740,13 @@ export function VehicleListNew() {
           onClose={() => setSelectedVehicle(null)}
           onUpdate={fetchVehicles}
           photoUrl={photoUrls[selectedVehicle.id]}
+        />
+      )}
+
+      {showCreateModal && (
+        <VehicleCreateModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={fetchVehicles}
         />
       )}
     </div>
