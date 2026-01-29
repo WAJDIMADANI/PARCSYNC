@@ -110,6 +110,26 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
   const [attributions, setAttributions] = useState<Attribution[]>([]);
   const [loadingAttributions, setLoadingAttributions] = useState(false);
 
+  // Fonction pour refetch les données du véhicule
+  const fetchVehicleDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vehicule')
+        .select('*')
+        .eq('id', vehicle.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setVehicle(data as Vehicle);
+        setEditedVehicle(data as Vehicle);
+      }
+    } catch (error) {
+      console.error('Erreur chargement détails véhicule:', JSON.stringify(error, null, 2));
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'history') {
       fetchAttributions();
@@ -203,9 +223,11 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
 
       if (error) throw error;
 
-      setVehicle(editedVehicle);
+      // Refetch les données pour avoir les valeurs à jour
+      await fetchVehicleDetails();
+
       setIsEditing(false);
-      onUpdate();
+      onUpdate(); // Refetch la liste des véhicules aussi
     } catch (error) {
       console.error('Erreur sauvegarde:', JSON.stringify(error, null, 2));
       console.error('Erreur détaillée:', error);
@@ -261,6 +283,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
         setPhotoUrl(signedUrl.signedUrl);
       }
 
+      // Refetch les données du véhicule pour avoir le photo_path à jour
+      await fetchVehicleDetails();
       onUpdate();
     } catch (error) {
       console.error('Erreur upload photo:', error);
@@ -287,6 +311,9 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
       if (error) throw error;
 
       setPhotoUrl(undefined);
+
+      // Refetch les données du véhicule
+      await fetchVehicleDetails();
       onUpdate();
     } catch (error) {
       console.error('Erreur suppression photo:', error);
@@ -1164,11 +1191,13 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
       {showKilometrageModal && (
         <UpdateKilometrageModal
           vehicleId={vehicle.id}
-          currentKm={(vehicle as any).kilometrage_actuel || null}
+          currentKm={vehicle.kilometrage_actuel || null}
           onClose={() => setShowKilometrageModal(false)}
-          onSuccess={() => {
+          onSuccess={async () => {
+            // Refetch les données du véhicule pour voir le km à jour instantanément
+            await fetchVehicleDetails();
             setShowKilometrageModal(false);
-            onUpdate();
+            onUpdate(); // Refetch la liste aussi
           }}
         />
       )}
