@@ -808,7 +808,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Assurance</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Type d'assurance</label>
                       <div className="flex gap-4">
@@ -834,26 +834,31 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                         </label>
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Compagnie d'assurance</label>
-                      <input
-                        type="text"
-                        value={(editedVehicle as any).assurance_compagnie || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, assurance_compagnie: e.target.value } as any)}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de contrat</label>
-                      <input
-                        type="text"
-                        value={(editedVehicle as any).assurance_numero_contrat || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, assurance_numero_contrat: e.target.value } as any)}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                      />
-                    </div>
+
+                    {(editedVehicle as any).assurance_type === 'externe' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Compagnie d'assurance</label>
+                          <input
+                            type="text"
+                            value={(editedVehicle as any).assurance_compagnie || ''}
+                            onChange={(e) => setEditedVehicle({ ...editedVehicle, assurance_compagnie: e.target.value } as any)}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de contrat</label>
+                          <input
+                            type="text"
+                            value={(editedVehicle as any).assurance_numero_contrat || ''}
+                            onChange={(e) => setEditedVehicle({ ...editedVehicle, assurance_numero_contrat: e.target.value } as any)}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -894,9 +899,9 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                     <Car className="w-5 h-5 text-gray-700" />
                     <h3 className="text-lg font-semibold text-gray-900">Matériel embarqué</h3>
                   </div>
-                  {(vehicle as any).materiel_embarque && Array.isArray((vehicle as any).materiel_embarque) && (vehicle as any).materiel_embarque.length > 0 ? (
-                    <div className="space-y-2">
-                      {(vehicle as any).materiel_embarque.map((eq: any, idx: number) => (
+                  <div className="space-y-2">
+                    {(vehicle as any).materiel_embarque && Array.isArray((vehicle as any).materiel_embarque) && (vehicle as any).materiel_embarque.length > 0 ? (
+                      (vehicle as any).materiel_embarque.map((eq: any, idx: number) => (
                         <div key={idx} className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
@@ -917,11 +922,30 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                             />
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">Aucun équipement enregistré</p>
-                  )}
+                      ))
+                    ) : (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                          <input
+                            type="text"
+                            disabled
+                            placeholder="Ex: Terminal de paiement"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
+                          <input
+                            type="text"
+                            disabled
+                            placeholder="Ex: 1"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
