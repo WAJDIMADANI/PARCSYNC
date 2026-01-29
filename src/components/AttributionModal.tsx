@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, ChevronRight, ChevronLeft, AlertTriangle, Check } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, AlertTriangle, Check, Users, User, Building2 } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import LocataireExterneSelector from './LocataireExterneSelector';
 
 interface Profil {
   id: string;
@@ -17,32 +18,53 @@ interface Loueur {
   actif: boolean;
 }
 
+interface LocataireExterne {
+  id: string;
+  type: 'personne' | 'entreprise';
+  nom: string;
+  telephone: string | null;
+  email: string | null;
+  adresse: string | null;
+  notes: string | null;
+}
+
 interface Props {
   vehicleId: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
+type LocataireType = 'salarie' | 'personne_externe' | 'entreprise_externe' | null;
+
 export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [locataireType, setLocataireType] = useState<LocataireType>(null);
+
+  // Pour salarié TCA
   const [profils, setProfils] = useState<Profil[]>([]);
   const [loueurs, setLoueurs] = useState<Loueur[]>([]);
-
   const [searchChauffeur, setSearchChauffeur] = useState('');
   const [selectedProfilId, setSelectedProfilId] = useState('');
   const [selectedLoueurId, setSelectedLoueurId] = useState<string>('');
   const [typeAttribution, setTypeAttribution] = useState<'principal' | 'secondaire'>('principal');
-  const [dateDebut, setDateDebut] = useState(new Date().toISOString().split('T')[0]);
-  const [notes, setNotes] = useState('');
 
+  // Pour locataire externe
+  const [selectedLocataireExterne, setSelectedLocataireExterne] = useState<LocataireExterne | null>(null);
+
+  // Commun
+  const [dateDebut, setDateDebut] = useState(new Date().toISOString().split('T')[0]);
+  const [dateFin, setDateFin] = useState('');
+  const [notes, setNotes] = useState('');
   const [warningMessage, setWarningMessage] = useState('');
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (locataireType === 'salarie') {
+      fetchData();
+    }
+  }, [locataireType]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -90,54 +112,97 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
     return data;
   };
 
-  const handleNext = async () => {
-    if (step === 1) {
-      if (!selectedProfilId) {
-        alert('Veuillez sélectionner un chauffeur');
-        return;
-      }
+  const handleSelectLocataireType = (type: LocataireType) => {
+    setLocataireType(type);
+    setStep(2);
+  };
 
-      if (typeAttribution === 'principal') {
-        const existing = await checkExistingPrincipalAttribution(selectedProfilId);
-        if (existing) {
-          const vehicleImmat = (existing.vehicule as any)?.immatriculation || 'un véhicule';
-          setWarningMessage(
-            `⚠️ Attention: Ce chauffeur a déjà une attribution principale active sur ${vehicleImmat}. Vous pouvez continuer mais cela créera une deuxième attribution principale.`
-          );
+  const handleNext = async () => {
+    if (step === 2) {
+      if (locataireType === 'salarie') {
+        if (!selectedProfilId) {
+          alert('Veuillez sélectionner un chauffeur');
+          return;
+        }
+
+        if (typeAttribution === 'principal') {
+          const existing = await checkExistingPrincipalAttribution(selectedProfilId);
+          if (existing) {
+            const vehicleImmat = (existing.vehicule as any)?.immatriculation || 'un véhicule';
+            setWarningMessage(
+              `⚠️ Attention: Ce chauffeur a déjà une attribution principale active sur ${vehicleImmat}. Vous pouvez continuer mais cela créera une deuxième attribution principale.`
+            );
+          }
+        }
+      } else {
+        if (!selectedLocataireExterne) {
+          alert('Veuillez sélectionner ou créer un locataire externe');
+          return;
         }
       }
 
-      setStep(2);
+      setStep(3);
     }
   };
 
   const handleBack = () => {
-    setStep(1);
-    setWarningMessage('');
+    if (step === 2) {
+      setStep(1);
+      setLocataireType(null);
+      setSelectedProfilId('');
+      setSelectedLocataireExterne(null);
+    } else if (step === 3) {
+      setStep(2);
+      setWarningMessage('');
+    }
   };
 
   const handleSubmit = async () => {
-    if (!selectedProfilId || !dateDebut) {
-      alert('Veuillez remplir tous les champs obligatoires');
+    if (!dateDebut) {
+      alert('Veuillez renseigner la date de début');
+      return;
+    }
+
+    if (dateFin && new Date(dateFin) < new Date(dateDebut)) {
+      alert('La date de fin doit être postérieure à la date de début');
+      return;
+    }
+
+    if (locataireType === 'salarie' && !selectedProfilId) {
+      alert('Veuillez sélectionner un chauffeur');
+      return;
+    }
+
+    if ((locataireType === 'personne_externe' || locataireType === 'entreprise_externe') && !selectedLocataireExterne) {
+      alert('Veuillez sélectionner un locataire externe');
       return;
     }
 
     setSaving(true);
     try {
+      const attributionData: any = {
+        vehicule_id: vehicleId,
+        date_debut: dateDebut,
+        date_fin: dateFin || null,
+        notes: notes || null
+      };
+
+      if (locataireType === 'salarie') {
+        attributionData.profil_id = selectedProfilId;
+        attributionData.loueur_id = selectedLoueurId || null;
+        attributionData.type_attribution = typeAttribution;
+      } else {
+        attributionData.locataire_externe_id = selectedLocataireExterne?.id;
+        attributionData.type_attribution = null;
+      }
+
       const { error } = await supabase
         .from('attribution_vehicule')
-        .insert({
-          vehicule_id: vehicleId,
-          profil_id: selectedProfilId,
-          loueur_id: selectedLoueurId || null,
-          type_attribution: typeAttribution,
-          date_debut: dateDebut,
-          notes: notes || null
-        });
+        .insert(attributionData);
 
       if (error) throw error;
 
-      if (typeAttribution === 'principal') {
+      if (locataireType === 'salarie' && typeAttribution === 'principal') {
         const { error: updateError } = await supabase
           .from('vehicule')
           .update({ locataire_type: null })
@@ -169,6 +234,8 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
   const selectedProfil = profils.find(p => p.id === selectedProfilId);
   const selectedLoueur = loueurs.find(l => l.id === selectedLoueurId);
 
+  const totalSteps = 3;
+
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -186,7 +253,7 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Nouvelle attribution</h2>
             <p className="text-sm text-gray-600 mt-1">
-              Étape {step} sur 2
+              Étape {step} sur {totalSteps}
             </p>
           </div>
           <button
@@ -205,18 +272,85 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
               }`}>
                 {step > 1 ? <Check className="w-5 h-5" /> : '1'}
               </div>
-              <div className={`w-20 h-1 mx-2 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+              <div className={`w-16 h-1 mx-2 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
                 step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
               }`}>
-                2
+                {step > 2 ? <Check className="w-5 h-5" /> : '2'}
+              </div>
+              <div className={`w-16 h-1 mx-2 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                3
               </div>
             </div>
           </div>
 
           {step === 1 && (
             <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900">Sélection du chauffeur et du loueur</h3>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-4">
+                Type de locataire
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button
+                  onClick={() => handleSelectLocataireType('salarie')}
+                  className="group border-2 border-gray-300 rounded-xl p-6 hover:border-blue-500 hover:shadow-lg transition-all"
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors">
+                      <Users className="h-8 w-8 text-blue-600 group-hover:text-white" />
+                    </div>
+                    <div className="text-center">
+                      <h4 className="font-semibold text-gray-900 mb-1">Salarié TCA</h4>
+                      <p className="text-sm text-gray-600">
+                        Attribution à un salarié de l'entreprise
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleSelectLocataireType('personne_externe')}
+                  className="group border-2 border-gray-300 rounded-xl p-6 hover:border-green-500 hover:shadow-lg transition-all"
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-600 transition-colors">
+                      <User className="h-8 w-8 text-green-600 group-hover:text-white" />
+                    </div>
+                    <div className="text-center">
+                      <h4 className="font-semibold text-gray-900 mb-1">Personne externe</h4>
+                      <p className="text-sm text-gray-600">
+                        Location à une personne physique
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleSelectLocataireType('entreprise_externe')}
+                  className="group border-2 border-gray-300 rounded-xl p-6 hover:border-purple-500 hover:shadow-lg transition-all"
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-600 transition-colors">
+                      <Building2 className="h-8 w-8 text-purple-600 group-hover:text-white" />
+                    </div>
+                    <div className="text-center">
+                      <h4 className="font-semibold text-gray-900 mb-1">Entreprise externe</h4>
+                      <p className="text-sm text-gray-600">
+                        Location à une entreprise
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && locataireType === 'salarie' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900">Sélection du chauffeur</h3>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -362,7 +496,21 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
             </div>
           )}
 
-          {step === 2 && (
+          {step === 2 && (locataireType === 'personne_externe' || locataireType === 'entreprise_externe') && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Sélection du locataire {locataireType === 'personne_externe' ? 'personne' : 'entreprise'}
+              </h3>
+
+              <LocataireExterneSelector
+                type={locataireType === 'personne_externe' ? 'personne' : 'entreprise'}
+                onSelect={setSelectedLocataireExterne}
+                selectedId={selectedLocataireExterne?.id}
+              />
+            </div>
+          )}
+
+          {step === 3 && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900">Détails de l'attribution</h3>
 
@@ -376,42 +524,91 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-semibold text-blue-900 mb-3">Récapitulatif de la sélection</h4>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-blue-700">Chauffeur:</span>
-                    <span className="text-blue-900 font-medium">
-                      {selectedProfil?.prenom} {selectedProfil?.nom}
-                      {selectedProfil?.matricule_tca && ` (${selectedProfil.matricule_tca})`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-blue-700">Loueur:</span>
-                    <span className="text-blue-900 font-medium">
-                      {selectedLoueur?.nom || 'Propriété TCA'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-blue-700">Type:</span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                      typeAttribution === 'principal'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {typeAttribution === 'principal' ? 'Principal' : 'Secondaire'}
-                    </span>
-                  </div>
+                  {locataireType === 'salarie' ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Type:</span>
+                        <span className="text-blue-900 font-medium">Salarié TCA</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Chauffeur:</span>
+                        <span className="text-blue-900 font-medium">
+                          {selectedProfil?.prenom} {selectedProfil?.nom}
+                          {selectedProfil?.matricule_tca && ` (${selectedProfil.matricule_tca})`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Loueur:</span>
+                        <span className="text-blue-900 font-medium">
+                          {selectedLoueur?.nom || 'Propriété TCA'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Attribution:</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          typeAttribution === 'principal'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {typeAttribution === 'principal' ? 'Principal' : 'Secondaire'}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Type:</span>
+                        <span className="text-blue-900 font-medium">
+                          {locataireType === 'personne_externe' ? 'Personne externe' : 'Entreprise externe'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Locataire:</span>
+                        <span className="text-blue-900 font-medium">
+                          {selectedLocataireExterne?.nom}
+                        </span>
+                      </div>
+                      {selectedLocataireExterne?.telephone && (
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Téléphone:</span>
+                          <span className="text-blue-900 font-medium">
+                            {selectedLocataireExterne.telephone}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date de début <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={dateDebut}
-                  onChange={(e) => setDateDebut(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date de début <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={dateDebut}
+                    onChange={(e) => setDateDebut(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date de fin (optionnel)
+                  </label>
+                  <input
+                    type="date"
+                    value={dateFin}
+                    onChange={(e) => setDateFin(e.target.value)}
+                    min={dateDebut}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Pour les locations temporaires
+                  </p>
+                </div>
               </div>
 
               <div>
@@ -445,10 +642,14 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
             )}
           </button>
 
-          {step === 1 ? (
+          {step < 3 ? (
             <button
               onClick={handleNext}
-              disabled={!selectedProfilId}
+              disabled={
+                (step === 1 && !locataireType) ||
+                (step === 2 && locataireType === 'salarie' && !selectedProfilId) ||
+                (step === 2 && locataireType !== 'salarie' && !selectedLocataireExterne)
+              }
               className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Suivant
@@ -457,7 +658,7 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
           ) : (
             <button
               onClick={handleSubmit}
-              disabled={saving || !selectedProfilId || !dateDebut}
+              disabled={saving || !dateDebut}
               className="inline-flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? <LoadingSpinner size="sm" /> : <Check className="w-4 h-4 mr-2" />}

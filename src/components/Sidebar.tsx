@@ -29,6 +29,7 @@ export type View =
   | 'parc/maintenance'
   | 'parc/carburant'
   | 'parc/amendes'
+  | 'parc/locataires-externes'
   | 'compta/entrees'
   | 'compta/sorties'
   | 'compta/rib'
@@ -174,6 +175,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       enabled: true,
       children: [
         { id: 'parc/vehicules', label: 'Véhicules', icon: Car, enabled: true },
+        { id: 'parc/locataires-externes', label: 'Locataires externes', icon: Building, enabled: true },
         { id: 'parc/ct-assurance', label: 'CT & Assurance', icon: Shield, enabled: true },
         { id: 'parc/maintenance', label: 'Maintenance/Garage', icon: Wrench, enabled: true },
         { id: 'parc/carburant', label: 'Carburant', icon: Fuel, enabled: false },

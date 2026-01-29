@@ -40,6 +40,7 @@ import { InboxPage } from './InboxPage';
 import { DemandesExternesManager } from './DemandesExternesManager';
 import AccountingDashboard from './AccountingDashboard';
 import { CRMEmails } from './CRMEmails';
+import LocatairesExternesManager from './LocatairesExternesManager';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('dashboards/rh');
@@ -86,6 +87,8 @@ export function Dashboard() {
         return <CRMEmails />;
       case 'parc/vehicules':
         return <VehicleListNew />;
+      case 'parc/locataires-externes':
+        return <LocatairesExternesManager />;
       case 'parc/ct-assurance':
         return <CTAssuranceList />;
       case 'parc/maintenance':
@@ -169,6 +172,7 @@ export function Dashboard() {
                 {view === 'rh/demandes' && 'Demandes Standardistes'}
                 {view === 'rh/validations' && 'Validations'}
                 {view === 'parc/vehicules' && 'Véhicules'}
+                {view === 'parc/locataires-externes' && 'Locataires externes'}
                 {view === 'parc/ct-assurance' && 'CT & Assurance'}
                 {view === 'parc/maintenance' && 'Maintenance & Garage'}
                 {view === 'parc/carburant' && 'Carburant'}
