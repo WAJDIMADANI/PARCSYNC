@@ -370,33 +370,19 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
       case 1:
         return (
           <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Immatriculation <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.immatriculation}
-                  onChange={(e) => handleInputChange('immatriculation', e.target.value.toUpperCase())}
-                  placeholder="AB-123-CD"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Année</label>
-                <input
-                  type="number"
-                  value={formData.annee}
-                  onChange={(e) => handleInputChange('annee', e.target.value ? parseInt(e.target.value) : '')}
-                  min="1900"
-                  max={new Date().getFullYear() + 1}
-                  placeholder={new Date().getFullYear().toString()}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Immatriculation <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.immatriculation}
+                onChange={(e) => handleInputChange('immatriculation', e.target.value.toUpperCase())}
+                placeholder="AB-123-CD ou AB123CD"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">Avec ou sans tirets</p>
             </div>
 
             <div>
@@ -847,7 +833,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        {docType === 'carte_grise' ? (
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1.5">Date d'émission</label>
                             <input
@@ -857,16 +843,28 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
                               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             />
                           </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1.5">Date d'expiration</label>
-                            <input
-                              type="date"
-                              value={doc.date_expiration || ''}
-                              onChange={(e) => updateDocumentDates(documents.indexOf(doc), 'date_expiration', e.target.value)}
-                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            />
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1.5">Date d'émission</label>
+                              <input
+                                type="date"
+                                value={doc.date_emission || ''}
+                                onChange={(e) => updateDocumentDates(documents.indexOf(doc), 'date_emission', e.target.value)}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1.5">Date d'expiration</label>
+                              <input
+                                type="date"
+                                value={doc.date_expiration || ''}
+                                onChange={(e) => updateDocumentDates(documents.indexOf(doc), 'date_expiration', e.target.value)}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                              />
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     ) : (
                       <div className="relative">
