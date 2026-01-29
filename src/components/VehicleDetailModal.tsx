@@ -112,6 +112,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
 
   // Fonction pour refetch les données du véhicule
   const fetchVehicleDetails = async () => {
+    console.log('[fetchVehicleDetails] Début refetch pour vehicule ID:', vehicle.id);
     try {
       const { data, error } = await supabase
         .from('vehicule')
@@ -119,19 +120,30 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
         .eq('id', vehicle.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[fetchVehicleDetails] Erreur:', JSON.stringify(error, null, 2));
+        throw error;
+      }
 
       if (data) {
-        setVehicle(data as Vehicle);
-        setEditedVehicle(data as Vehicle);
+        console.log('[fetchVehicleDetails] Données reçues:', data);
+        const updatedVehicle = {
+          ...data,
+          chauffeurs_actifs: vehicle.chauffeurs_actifs || [],
+          nb_chauffeurs_actifs: vehicle.nb_chauffeurs_actifs || 0
+        } as Vehicle;
+        setVehicle(updatedVehicle);
+        setEditedVehicle(updatedVehicle);
+        console.log('[fetchVehicleDetails] État mis à jour avec succès');
       }
     } catch (error) {
-      console.error('Erreur chargement détails véhicule:', JSON.stringify(error, null, 2));
+      console.error('[fetchVehicleDetails] Erreur chargement détails véhicule:', JSON.stringify(error, null, 2));
+      alert('Erreur lors du rechargement des données. Voir la console.');
     }
   };
 
   useEffect(() => {
-    if (activeTab === 'history') {
+    if (activeTab === 'history' || activeTab === 'current') {
       fetchAttributions();
     }
     // Désactiver le mode édition lors du changement d'onglet
@@ -194,6 +206,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
   };
 
   const handleSave = async () => {
+    console.log('[handleSave] Début sauvegarde pour vehicule ID:', vehicle.id);
     setSaving(true);
     try {
       const updateData = cleanPayloadForUpdate({
@@ -216,22 +229,35 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
         kilometrage_actuel: editedVehicle.kilometrage_actuel,
       });
 
-      const { error } = await supabase
+      console.log('[handleSave] Données à envoyer:', updateData);
+
+      const { data, error } = await supabase
         .from('vehicule')
         .update(updateData)
-        .eq('id', vehicle.id);
+        .eq('id', vehicle.id)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[handleSave] Erreur UPDATE:', JSON.stringify(error, null, 2));
+        throw error;
+      }
+
+      console.log('[handleSave] UPDATE réussi, données retournées:', data);
 
       // Refetch les données pour avoir les valeurs à jour
       await fetchVehicleDetails();
 
       setIsEditing(false);
+      console.log('[handleSave] Mode édition désactivé');
+
       onUpdate(); // Refetch la liste des véhicules aussi
+
+      alert('✓ Modifications enregistrées avec succès');
     } catch (error) {
-      console.error('Erreur sauvegarde:', JSON.stringify(error, null, 2));
-      console.error('Erreur détaillée:', error);
-      alert('Erreur lors de la sauvegarde. Voir la console pour plus de détails.');
+      console.error('[handleSave] Erreur sauvegarde:', JSON.stringify(error, null, 2));
+      console.error('[handleSave] Erreur détaillée:', error);
+      alert('Erreur lors de la sauvegarde. Voir la console (F12) pour plus de détails.');
     } finally {
       setSaving(false);
     }
@@ -417,7 +443,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
               {getStatusBadge(vehicle.statut)}
             </div>
             <div className="flex items-center gap-2">
-              {(activeTab === 'info' || activeTab === 'insurance') && (
+              {(activeTab === 'info' || activeTab === 'insurance' || activeTab === 'equipment') && (
                 <>
                   {isEditing ? (
                     <>
@@ -1041,6 +1067,9 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                     <Car className="w-5 h-5 text-gray-700" />
                     <h3 className="text-lg font-semibold text-gray-900">Matériel embarqué</h3>
                   </div>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Cette section est en lecture seule. Le matériel embarqué sera géré dans une future version.
+                  </p>
                   <div className="space-y-2">
                     {(vehicle as any).materiel_embarque && Array.isArray((vehicle as any).materiel_embarque) && (vehicle as any).materiel_embarque.length > 0 ? (
                       (vehicle as any).materiel_embarque.map((eq: any, idx: number) => (
@@ -1066,25 +1095,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                         </div>
                       ))
                     ) : (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                          <input
-                            type="text"
-                            disabled
-                            placeholder="Ex: Terminal de paiement"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
-                          <input
-                            type="text"
-                            disabled
-                            placeholder="Ex: 1"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
-                          />
-                        </div>
+                      <div className="text-center py-8 text-gray-500">
+                        Aucun matériel embarqué enregistré
                       </div>
                     )}
                   </div>
@@ -1097,20 +1109,22 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                       <label className="block text-sm font-medium text-gray-700 mb-2">Fournisseur</label>
                       <input
                         type="text"
-                        value={(vehicle as any).carte_essence_fournisseur || ''}
-                        disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                        placeholder="Non renseigné"
+                        value={isEditing ? (editedVehicle.carte_essence_fournisseur || '') : (vehicle.carte_essence_fournisseur || '')}
+                        onChange={(e) => isEditing && setEditedVehicle({ ...editedVehicle, carte_essence_fournisseur: e.target.value })}
+                        disabled={!isEditing}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${isEditing ? 'focus:ring-2 focus:ring-blue-500' : 'bg-gray-50'}`}
+                        placeholder={isEditing ? "Ex: Total, Shell, BP..." : "Non renseigné"}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de carte</label>
                       <input
                         type="text"
-                        value={(vehicle as any).carte_essence_numero || ''}
-                        disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                        placeholder="Non renseigné"
+                        value={isEditing ? (editedVehicle.carte_essence_numero || '') : (vehicle.carte_essence_numero || '')}
+                        onChange={(e) => isEditing && setEditedVehicle({ ...editedVehicle, carte_essence_numero: e.target.value })}
+                        disabled={!isEditing}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${isEditing ? 'focus:ring-2 focus:ring-blue-500' : 'bg-gray-50'}`}
+                        placeholder={isEditing ? "Numéro de carte" : "Non renseigné"}
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -1118,8 +1132,9 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={(vehicle as any).carte_essence_attribuee || false}
-                          disabled
+                          checked={isEditing ? (editedVehicle.carte_essence_attribuee || false) : (vehicle.carte_essence_attribuee || false)}
+                          onChange={(e) => isEditing && setEditedVehicle({ ...editedVehicle, carte_essence_attribuee: e.target.checked })}
+                          disabled={!isEditing}
                           className="rounded"
                         />
                         <span className="text-sm text-gray-700">Carte attribuée</span>

@@ -63,17 +63,23 @@ export function VehicleDocuments({ vehicleId }: VehicleDocumentsProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    console.log('[VehicleDocuments] Début upload fichier:', file.name, 'Type:', type);
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${vehicleId}/${type}-${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
+      console.log('[VehicleDocuments] Upload vers storage, chemin:', fileName);
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from('documents-vehicules')
         .upload(fileName, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('[VehicleDocuments] Erreur storage upload:', JSON.stringify(uploadError, null, 2));
+        throw uploadError;
+      }
 
+      console.log('[VehicleDocuments] Upload storage OK, insertion en DB...');
       const { error: dbError } = await supabase
         .from('document_vehicule')
         .insert([{
@@ -86,17 +92,28 @@ export function VehicleDocuments({ vehicleId }: VehicleDocumentsProps) {
         }]);
 
       if (dbError) {
-        console.error('Erreur insertion document:', JSON.stringify(dbError, null, 2));
-        console.error('Erreur détaillée:', dbError);
+        console.error('[VehicleDocuments] Erreur insertion DB:', JSON.stringify(dbError, null, 2));
+        console.error('[VehicleDocuments] Erreur détaillée:', dbError);
         throw dbError;
       }
 
+      console.log('[VehicleDocuments] Document enregistré avec succès');
       setUploadData({ date_emission: '', date_expiration: '' });
       setSelectedType('');
-      fetchDocuments();
-    } catch (error) {
-      console.error('Erreur upload document:', error);
-      alert('Erreur lors de l\'upload du document');
+      await fetchDocuments();
+      alert('✓ Document ajouté avec succès');
+    } catch (error: any) {
+      console.error('[VehicleDocuments] Erreur upload document:', JSON.stringify(error, null, 2));
+      console.error('[VehicleDocuments] Erreur détaillée:', error);
+
+      let errorMessage = 'Erreur lors de l\'upload du document';
+      if (error?.message?.includes('not found') || error?.statusCode === 404) {
+        errorMessage = 'Erreur : Le bucket de stockage n\'existe pas. Exécutez FIX-COMPLET-MODULE-VEHICULES.sql';
+      } else if (error?.message) {
+        errorMessage = `Erreur : ${error.message}`;
+      }
+
+      alert(errorMessage + '\n\nVoir la console (F12) pour plus de détails.');
     } finally {
       setUploading(false);
     }
