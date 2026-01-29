@@ -62,6 +62,12 @@ interface Vehicle {
   created_at: string;
   chauffeurs_actifs: Chauffeur[];
   nb_chauffeurs_actifs: number;
+  locataire_type: string | null;
+  locataire_nom_libre: string | null;
+  proprietaire_carte_grise: string | null;
+  loueur_type: string | null;
+  loueur_chauffeur_id: string | null;
+  loueur_nom_externe: string | null;
 }
 
 interface Attribution {
@@ -195,7 +201,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
       }
     });
 
-    const stringFields = ['reference_tca', 'marque', 'modele', 'type', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero'];
+    const stringFields = ['reference_tca', 'marque', 'modele', 'type', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero', 'locataire_nom_libre', 'proprietaire_carte_grise', 'loueur_nom_externe'];
     stringFields.forEach(field => {
       if (cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -227,6 +233,12 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
         carte_essence_numero: editedVehicle.carte_essence_numero,
         carte_essence_attribuee: editedVehicle.carte_essence_attribuee,
         kilometrage_actuel: editedVehicle.kilometrage_actuel,
+        locataire_type: editedVehicle.locataire_type,
+        locataire_nom_libre: editedVehicle.locataire_nom_libre,
+        proprietaire_carte_grise: editedVehicle.proprietaire_carte_grise,
+        loueur_type: editedVehicle.loueur_type,
+        loueur_chauffeur_id: editedVehicle.loueur_chauffeur_id,
+        loueur_nom_externe: editedVehicle.loueur_nom_externe,
       });
 
       console.log('[handleSave] Données à envoyer:', updateData);
@@ -753,6 +765,154 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                           value={new Date(editedVehicle.derniere_maj_kilometrage).toLocaleDateString('fr-FR')}
                           disabled
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Gestion du locataire actuel</h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-blue-800">
+                      Le locataire est défini automatiquement si un chauffeur est attribué en tant que conducteur principal.
+                      Si aucun chauffeur n'est attribué, vous pouvez définir manuellement le type de locataire.
+                    </p>
+                  </div>
+
+                  {vehicle.chauffeurs_actifs?.some(c => c.type_attribution === 'principal') ? (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Locataire actuel</label>
+                      <div className="text-sm text-gray-900 font-medium">
+                        {vehicle.chauffeurs_actifs.find(c => c.type_attribution === 'principal')?.prenom}{' '}
+                        {vehicle.chauffeurs_actifs.find(c => c.type_attribution === 'principal')?.nom}{' '}
+                        ({vehicle.chauffeurs_actifs.find(c => c.type_attribution === 'principal')?.matricule_tca})
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Défini automatiquement via l'attribution principale</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Type de locataire</label>
+                        <select
+                          value={editedVehicle.locataire_type || 'sur_parc'}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, locataire_type: e.target.value || null, locataire_nom_libre: e.target.value === 'libre' ? editedVehicle.locataire_nom_libre : null })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        >
+                          <option value="sur_parc">Sur parc</option>
+                          <option value="epave">EPAVE</option>
+                          <option value="vendu">Vendu</option>
+                          <option value="libre">Saisie libre</option>
+                        </select>
+                      </div>
+
+                      {editedVehicle.locataire_type === 'libre' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Nom du locataire</label>
+                          <input
+                            type="text"
+                            value={editedVehicle.locataire_nom_libre || ''}
+                            onChange={(e) => setEditedVehicle({ ...editedVehicle, locataire_nom_libre: e.target.value })}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                            placeholder="Ex: Entreprise ABC, Jean Dupont..."
+                            maxLength={100}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Propriétaire (carte grise)</h3>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nom du propriétaire légal inscrit sur la carte grise
+                    </label>
+                    <input
+                      type="text"
+                      value={editedVehicle.proprietaire_carte_grise || ''}
+                      onChange={(e) => setEditedVehicle({ ...editedVehicle, proprietaire_carte_grise: e.target.value })}
+                      disabled={!isEditing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      placeholder="Ex: TCA TRANSPORT, Jean Dupont..."
+                      maxLength={150}
+                    />
+                    <p className="text-sm text-gray-500 mt-1">Le nom exact tel qu'il apparaît sur la carte grise</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Gestion du loueur</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">De qui louons-nous ce véhicule ?</label>
+                      <select
+                        value={editedVehicle.loueur_type || ''}
+                        onChange={(e) => {
+                          const newType = e.target.value || null;
+                          setEditedVehicle({
+                            ...editedVehicle,
+                            loueur_type: newType,
+                            loueur_chauffeur_id: newType === 'chauffeur_tca' ? editedVehicle.loueur_chauffeur_id : null,
+                            loueur_nom_externe: newType === 'chauffeur_tca' ? null : editedVehicle.loueur_nom_externe
+                          });
+                        }}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      >
+                        <option value="">Aucun (propriété TCA)</option>
+                        <option value="chauffeur_tca">Salarié TCA</option>
+                        <option value="entreprise">Entreprise externe</option>
+                        <option value="personne_externe">Personne externe</option>
+                      </select>
+                    </div>
+
+                    {editedVehicle.loueur_type === 'chauffeur_tca' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Sélectionner le chauffeur</label>
+                        <input
+                          type="text"
+                          value={editedVehicle.loueur_chauffeur_id || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, loueur_chauffeur_id: e.target.value })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="ID du chauffeur (UUID)"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                          Recherchez un chauffeur dans la liste des employés et copiez son ID
+                        </p>
+                      </div>
+                    )}
+
+                    {editedVehicle.loueur_type === 'entreprise' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Nom de l'entreprise</label>
+                        <input
+                          type="text"
+                          value={editedVehicle.loueur_nom_externe || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, loueur_nom_externe: e.target.value })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="Ex: HERTZ, EUROPCAR, SIXT, AVIS, BUDGET..."
+                          maxLength={150}
+                        />
+                      </div>
+                    )}
+
+                    {editedVehicle.loueur_type === 'personne_externe' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la personne</label>
+                        <input
+                          type="text"
+                          value={editedVehicle.loueur_nom_externe || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, loueur_nom_externe: e.target.value })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="Ex: M. Jean Dupont"
+                          maxLength={150}
                         />
                       </div>
                     )}

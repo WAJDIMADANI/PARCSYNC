@@ -137,6 +137,17 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
 
       if (error) throw error;
 
+      if (typeAttribution === 'principal') {
+        const { error: updateError } = await supabase
+          .from('vehicule')
+          .update({ locataire_type: null })
+          .eq('id', vehicleId);
+
+        if (updateError) {
+          console.error('Erreur mise à jour locataire_type:', updateError);
+        }
+      }
+
       onSuccess();
     } catch (error: any) {
       console.error('Erreur création attribution:', error);

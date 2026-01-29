@@ -10,7 +10,10 @@ import {
   Plus,
   RefreshCw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  User,
+  UserCircle,
+  Building2
 } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDetailModal } from './VehicleDetailModal';
@@ -44,6 +47,14 @@ interface Vehicle {
   created_at: string;
   chauffeurs_actifs: Chauffeur[];
   nb_chauffeurs_actifs: number;
+  locataire_type: string | null;
+  locataire_nom_libre: string | null;
+  locataire_affiche: string;
+  proprietaire_carte_grise: string | null;
+  loueur_type: string | null;
+  loueur_chauffeur_id: string | null;
+  loueur_nom_externe: string | null;
+  loueur_affiche: string;
 }
 
 interface FilterState {
@@ -54,7 +65,7 @@ interface FilterState {
   referenceTCA: string;
 }
 
-type SortField = 'immatriculation' | 'reference_tca' | 'marque' | 'modele' | 'annee' | 'statut';
+type SortField = 'immatriculation' | 'reference_tca' | 'marque' | 'modele' | 'statut' | 'locataire_affiche' | 'proprietaire_carte_grise' | 'loueur_affiche';
 type SortOrder = 'asc' | 'desc';
 
 export function VehicleListNew() {
@@ -146,18 +157,11 @@ export function VehicleListNew() {
         const refMatch = v.reference_tca?.toLowerCase().includes(searchLower);
         const marqueMatch = v.marque?.toLowerCase().includes(searchLower);
         const modeleMatch = v.modele?.toLowerCase().includes(searchLower);
+        const locataireMatch = v.locataire_affiche?.toLowerCase().includes(searchLower);
+        const proprietaireMatch = v.proprietaire_carte_grise?.toLowerCase().includes(searchLower);
+        const loueurMatch = v.loueur_affiche?.toLowerCase().includes(searchLower);
 
-        const chauffeurMatch = v.chauffeurs_actifs.some(c =>
-          c.nom?.toLowerCase().includes(searchLower) ||
-          c.prenom?.toLowerCase().includes(searchLower) ||
-          c.matricule_tca?.toLowerCase().includes(searchLower)
-        );
-
-        const loueurMatch = v.chauffeurs_actifs.some(c =>
-          c.loueur_nom?.toLowerCase().includes(searchLower)
-        );
-
-        return immatMatch || refMatch || marqueMatch || modeleMatch || chauffeurMatch || loueurMatch;
+        return immatMatch || refMatch || marqueMatch || modeleMatch || locataireMatch || proprietaireMatch || loueurMatch;
       });
     }
 
@@ -247,6 +251,94 @@ export function VehicleListNew() {
     );
   };
 
+  const getLocataireBadge = (vehicle: Vehicle) => {
+    const locataire = vehicle.locataire_affiche;
+
+    if (!locataire || locataire === 'Non défini') {
+      return <span className="text-xs text-gray-400">Non défini</span>;
+    }
+
+    if (vehicle.locataire_type === null) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 max-w-[180px] truncate">
+          <User className="w-3 h-3 mr-1 flex-shrink-0" />
+          <span className="truncate">{locataire}</span>
+        </span>
+      );
+    }
+
+    if (vehicle.locataire_type === 'sur_parc') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          Sur parc
+        </span>
+      );
+    }
+
+    if (vehicle.locataire_type === 'epave') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          EPAVE
+        </span>
+      );
+    }
+
+    if (vehicle.locataire_type === 'vendu') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+          Vendu
+        </span>
+      );
+    }
+
+    if (vehicle.locataire_type === 'libre') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 max-w-[180px] truncate">
+          <span className="truncate">{locataire}</span>
+        </span>
+      );
+    }
+
+    return <span className="text-xs text-gray-600 max-w-[180px] truncate block">{locataire}</span>;
+  };
+
+  const getLoueurBadge = (vehicle: Vehicle) => {
+    const loueur = vehicle.loueur_affiche;
+
+    if (!loueur || loueur === '-') {
+      return <span className="text-xs text-gray-400">-</span>;
+    }
+
+    if (vehicle.loueur_type === 'chauffeur_tca') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 max-w-[180px] truncate">
+          <UserCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+          <span className="truncate">{loueur}</span>
+        </span>
+      );
+    }
+
+    if (vehicle.loueur_type === 'entreprise') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 max-w-[180px] truncate">
+          <Building2 className="w-3 h-3 mr-1 flex-shrink-0" />
+          <span className="truncate">{loueur}</span>
+        </span>
+      );
+    }
+
+    if (vehicle.loueur_type === 'personne_externe') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 max-w-[180px] truncate">
+          <User className="w-3 h-3 mr-1 flex-shrink-0" />
+          <span className="truncate">{loueur}</span>
+        </span>
+      );
+    }
+
+    return <span className="text-xs text-gray-600 max-w-[180px] truncate block">{loueur}</span>;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -279,7 +371,7 @@ export function VehicleListNew() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Rechercher par immatriculation, référence TCA, nom chauffeur, loueur..."
+              placeholder="Rechercher par immatriculation, référence TCA, locataire, propriétaire, loueur..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -417,8 +509,10 @@ export function VehicleListNew() {
                     <option value="reference_tca">Référence TCA</option>
                     <option value="marque">Marque</option>
                     <option value="modele">Modèle</option>
-                    <option value="annee">Année</option>
+                    <option value="locataire_affiche">Nom du locataire</option>
                     <option value="statut">Statut</option>
+                    <option value="proprietaire_carte_grise">Propriétaire</option>
+                    <option value="loueur_affiche">Loueur</option>
                   </select>
                 </div>
 
@@ -476,9 +570,6 @@ export function VehicleListNew() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Photo
-                    </th>
                     <th
                       scope="col"
                       className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
@@ -517,12 +608,12 @@ export function VehicleListNew() {
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => handleSort('annee')}
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleSort('locataire_affiche')}
                     >
-                      <div className="flex items-center justify-center">
-                        Année
-                        {sortField === 'annee' && (
+                      <div className="flex items-center">
+                        Nom du locataire
+                        {sortField === 'locataire_affiche' && (
                           sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
                         )}
                       </div>
@@ -539,11 +630,29 @@ export function VehicleListNew() {
                         )}
                       </div>
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Chauffeurs
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleSort('proprietaire_carte_grise')}
+                    >
+                      <div className="flex items-center">
+                        Propriétaire
+                        {sortField === 'proprietaire_carte_grise' && (
+                          sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                        )}
+                      </div>
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Loueur
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleSort('loueur_affiche')}
+                    >
+                      <div className="flex items-center">
+                        Loueur
+                        {sortField === 'loueur_affiche' && (
+                          sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                        )}
+                      </div>
                     </th>
                     <th scope="col" className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Actions
@@ -559,15 +668,6 @@ export function VehicleListNew() {
                       }`}
                       onClick={() => setSelectedVehicle(vehicle)}
                     >
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="w-14 h-14 flex items-center justify-center bg-gray-100 rounded-lg overflow-hidden">
-                          {photoUrls[vehicle.id] ? (
-                            <img src={photoUrls[vehicle.id]} alt={vehicle.immatriculation} className="w-full h-full object-cover" />
-                          ) : (
-                            <Car className="w-8 h-8 text-gray-400" />
-                          )}
-                        </div>
-                      </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="text-sm font-bold text-gray-900">{vehicle.immatriculation}</div>
                       </td>
@@ -586,52 +686,22 @@ export function VehicleListNew() {
                           <div className="text-gray-600">{vehicle.modele || '-'}</div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-center">
-                        <div className="text-sm text-gray-900">{vehicle.annee || '-'}</div>
+                      <td className="px-4 py-4">
+                        <div className="text-sm">
+                          {getLocataireBadge(vehicle)}
+                        </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         {getStatusBadge(vehicle.statut)}
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-sm">
-                          {vehicle.chauffeurs_actifs.length > 0 ? (
-                            <div className="space-y-1">
-                              {vehicle.chauffeurs_actifs.map((chauffeur, idx) => (
-                                <div key={idx} className="flex items-center gap-2">
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                    chauffeur.type_attribution === 'principal'
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-gray-100 text-gray-800'
-                                  }`}>
-                                    {chauffeur.type_attribution === 'principal' ? 'P' : 'S'}
-                                  </span>
-                                  <span className="text-gray-900">
-                                    {chauffeur.prenom} {chauffeur.nom}
-                                  </span>
-                                  {chauffeur.matricule_tca && (
-                                    <span className="text-xs text-gray-500">({chauffeur.matricule_tca})</span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-xs">Non attribué</span>
-                          )}
+                        <div className="text-sm text-gray-900 max-w-[150px] truncate" title={vehicle.proprietaire_carte_grise || ''}>
+                          {vehicle.proprietaire_carte_grise || <span className="text-gray-400">-</span>}
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-sm text-gray-900">
-                          {vehicle.chauffeurs_actifs.length > 0 ? (
-                            <div className="space-y-1">
-                              {[...new Set(vehicle.chauffeurs_actifs.map(c => c.loueur_nom || 'Propriété TCA'))].map((loueur, idx) => (
-                                <div key={idx} className={loueur === 'Propriété TCA' ? 'text-green-700 font-medium' : ''}>
-                                  {loueur}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-xs">-</span>
-                          )}
+                        <div className="text-sm">
+                          {getLoueurBadge(vehicle)}
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
