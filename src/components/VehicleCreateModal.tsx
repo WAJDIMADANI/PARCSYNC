@@ -21,6 +21,7 @@ interface VehicleFormData {
   assurance_compagnie: string;
   assurance_numero_contrat: string;
   licence_transport_numero: string;
+  carte_essence_fournisseur: string;
   carte_essence_numero: string;
   carte_essence_attribuee: boolean;
   kilometrage_actuel: number | '';
@@ -93,6 +94,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     assurance_compagnie: '',
     assurance_numero_contrat: '',
     licence_transport_numero: '',
+    carte_essence_fournisseur: '',
     carte_essence_numero: '',
     carte_essence_attribuee: false,
     kilometrage_actuel: '',
@@ -691,17 +693,31 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
 
             <div className="border-t border-gray-200 pt-5 mt-6 space-y-4">
               <h4 className="text-base font-semibold text-gray-900">Carte essence</h4>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Numéro de carte essence
-                </label>
-                <input
-                  type="text"
-                  value={formData.carte_essence_numero}
-                  onChange={(e) => handleInputChange('carte_essence_numero', e.target.value)}
-                  placeholder="Ex: CE-123456"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Fournisseur
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.carte_essence_fournisseur}
+                    onChange={(e) => handleInputChange('carte_essence_fournisseur', e.target.value)}
+                    placeholder="Ex: Total, Shell, etc."
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Numéro de carte essence
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.carte_essence_numero}
+                    onChange={(e) => handleInputChange('carte_essence_numero', e.target.value)}
+                    placeholder="Ex: CE-123456"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
               </div>
 
               <div>

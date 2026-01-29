@@ -822,28 +822,24 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                         </label>
                       </div>
                     </div>
-                    {(vehicle as any).assurance_type === 'externe' && (
-                      <>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Compagnie d'assurance</label>
-                          <input
-                            type="text"
-                            value={(vehicle as any).assurance_compagnie || ''}
-                            disabled
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de contrat</label>
-                          <input
-                            type="text"
-                            value={(vehicle as any).assurance_numero_contrat || ''}
-                            disabled
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                          />
-                        </div>
-                      </>
-                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Compagnie d'assurance</label>
+                      <input
+                        type="text"
+                        value={(vehicle as any).assurance_compagnie || ''}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de contrat</label>
+                      <input
+                        type="text"
+                        value={(vehicle as any).assurance_numero_contrat || ''}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -878,28 +874,37 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
             {activeTab === 'equipment' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Matériel embarqué</h3>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Car className="w-5 h-5 text-gray-700" />
+                    <h3 className="text-lg font-semibold text-gray-900">Matériel embarqué</h3>
+                  </div>
                   {(vehicle as any).materiel_embarque && Array.isArray((vehicle as any).materiel_embarque) && (vehicle as any).materiel_embarque.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {(vehicle as any).materiel_embarque.map((eq: any, idx: number) => (
-                        <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <Package className="w-5 h-5 text-blue-600" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-900">{eq.type}</p>
-                              <p className="text-sm text-gray-600">Quantité: {eq.quantite}</p>
-                            </div>
+                        <div key={idx} className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                            <input
+                              type="text"
+                              value={eq.type || ''}
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
+                            <input
+                              type="text"
+                              value={eq.quantite || ''}
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                            />
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12 bg-gray-50 rounded-lg">
-                      <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">Aucun équipement enregistré</p>
-                    </div>
+                    <p className="text-sm text-gray-500">Aucun équipement enregistré</p>
                   )}
                 </div>
 
@@ -907,15 +912,26 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Carte essence</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de carte</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Fournisseur</label>
                       <input
                         type="text"
-                        value={(vehicle as any).carte_essence_numero || 'Non renseigné'}
+                        value={(vehicle as any).carte_essence_fournisseur || ''}
                         disabled
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                        placeholder="Non renseigné"
                       />
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de carte</label>
+                      <input
+                        type="text"
+                        value={(vehicle as any).carte_essence_numero || ''}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                        placeholder="Non renseigné"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
                       <div className="flex items-center gap-2">
                         <input
