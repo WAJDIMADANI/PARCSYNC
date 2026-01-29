@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, ChevronLeft, ChevronRight, Check, Car, FileText, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Car, FileText, Image as ImageIcon, Plus, Trash2, Search, ChevronDown } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface VehicleCreateModalProps {
@@ -59,8 +59,6 @@ const STEPS = [
   { id: 6, title: 'Documents', icon: FileText },
 ];
 
-const OTHER_OPTION = '__other__';
-
 export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -73,10 +71,14 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
   const [models, setModels] = useState<Model[]>([]);
   const [selectedBrandId, setSelectedBrandId] = useState<string>('');
   const [selectedModelId, setSelectedModelId] = useState<string>('');
-  const [customBrand, setCustomBrand] = useState<string>('');
-  const [customModel, setCustomModel] = useState<string>('');
   const [brandSearch, setBrandSearch] = useState<string>('');
   const [modelSearch, setModelSearch] = useState<string>('');
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const brandInputRef = useRef<HTMLInputElement>(null);
+  const modelInputRef = useRef<HTMLInputElement>(null);
+  const brandDropdownRef = useRef<HTMLDivElement>(null);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState<VehicleFormData>({
     immatriculation: '',
@@ -99,6 +101,22 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
 
   useEffect(() => {
     fetchBrands();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (brandDropdownRef.current && !brandDropdownRef.current.contains(event.target as Node) &&
+          brandInputRef.current && !brandInputRef.current.contains(event.target as Node)) {
+        setShowBrandDropdown(false);
+      }
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target as Node) &&
+          modelInputRef.current && !modelInputRef.current.contains(event.target as Node)) {
+        setShowModelDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const fetchBrands = async () => {
@@ -130,51 +148,39 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     }
   };
 
-  const handleBrandChange = (value: string) => {
-    setSelectedBrandId(value);
+  const handleBrandSelect = (brand: Brand) => {
+    setSelectedBrandId(brand.id);
+    setBrandSearch(brand.nom);
+    setFormData(prev => ({ ...prev, marque: brand.nom, modele: '' }));
+    setShowBrandDropdown(false);
     setSelectedModelId('');
-    setCustomModel('');
     setModelSearch('');
     setModels([]);
-
-    if (value === OTHER_OPTION) {
-      setFormData(prev => ({ ...prev, marque: '', modele: '' }));
-      setCustomBrand('');
-    } else if (value) {
-      const brand = brands.find(b => b.id === value);
-      if (brand) {
-        setFormData(prev => ({ ...prev, marque: brand.nom, modele: '' }));
-        fetchModels(value);
-      }
-    } else {
-      setFormData(prev => ({ ...prev, marque: '', modele: '' }));
-    }
+    fetchModels(brand.id);
   };
 
-  const handleModelChange = (value: string) => {
-    setSelectedModelId(value);
-
-    if (value === OTHER_OPTION) {
-      setFormData(prev => ({ ...prev, modele: '' }));
-      setCustomModel('');
-    } else if (value) {
-      const model = models.find(m => m.id === value);
-      if (model) {
-        setFormData(prev => ({ ...prev, modele: model.nom }));
-      }
-    } else {
-      setFormData(prev => ({ ...prev, modele: '' }));
-    }
+  const handleModelSelect = (model: Model) => {
+    setSelectedModelId(model.id);
+    setModelSearch(model.nom);
+    setFormData(prev => ({ ...prev, modele: model.nom }));
+    setShowModelDropdown(false);
   };
 
-  const handleCustomBrandChange = (value: string) => {
-    setCustomBrand(value);
-    setFormData(prev => ({ ...prev, marque: value }));
+  const handleBrandInputChange = (value: string) => {
+    setBrandSearch(value);
+    setFormData(prev => ({ ...prev, marque: value, modele: '' }));
+    setShowBrandDropdown(true);
+    setSelectedBrandId('');
+    setSelectedModelId('');
+    setModelSearch('');
+    setModels([]);
   };
 
-  const handleCustomModelChange = (value: string) => {
-    setCustomModel(value);
+  const handleModelInputChange = (value: string) => {
+    setModelSearch(value);
     setFormData(prev => ({ ...prev, modele: value }));
+    setShowModelDropdown(true);
+    setSelectedModelId('');
   };
 
   const handleInputChange = (field: keyof VehicleFormData, value: any) => {
@@ -363,281 +369,276 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Immatriculation <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.immatriculation}
-                onChange={(e) => handleInputChange('immatriculation', e.target.value.toUpperCase())}
-                placeholder="AB-123-CD"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Marque <span className="text-red-500">*</span>
-              </label>
-              {selectedBrandId === OTHER_OPTION ? (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={customBrand}
-                    onChange={(e) => handleCustomBrandChange(e.target.value)}
-                    placeholder="Saisir la marque"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => {
-                      setSelectedBrandId('');
-                      setCustomBrand('');
-                      setFormData(prev => ({ ...prev, marque: '' }));
-                    }}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    ← Revenir à la liste
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={brandSearch}
-                    onChange={(e) => setBrandSearch(e.target.value)}
-                    placeholder="Rechercher une marque..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                  <select
-                    value={selectedBrandId}
-                    onChange={(e) => handleBrandChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    size={8}
-                    required
-                  >
-                    <option value="">-- Sélectionner une marque --</option>
-                    {filteredBrands.map(brand => (
-                      <option key={brand.id} value={brand.id}>
-                        {brand.nom}
-                      </option>
-                    ))}
-                    <option value={OTHER_OPTION}>Autre...</option>
-                  </select>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Modèle <span className="text-red-500">*</span>
-              </label>
-              {selectedModelId === OTHER_OPTION ? (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={customModel}
-                    onChange={(e) => handleCustomModelChange(e.target.value)}
-                    placeholder="Saisir le modèle"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => {
-                      setSelectedModelId('');
-                      setCustomModel('');
-                      setFormData(prev => ({ ...prev, modele: '' }));
-                    }}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    ← Revenir à la liste
-                  </button>
-                </div>
-              ) : selectedBrandId && selectedBrandId !== OTHER_OPTION ? (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={modelSearch}
-                    onChange={(e) => setModelSearch(e.target.value)}
-                    placeholder="Rechercher un modèle..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                  <select
-                    value={selectedModelId}
-                    onChange={(e) => handleModelChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    size={8}
-                    required
-                  >
-                    <option value="">-- Sélectionner un modèle --</option>
-                    {filteredModels.map(model => (
-                      <option key={model.id} value={model.id}>
-                        {model.nom}
-                      </option>
-                    ))}
-                    <option value={OTHER_OPTION}>Autre...</option>
-                  </select>
-                </div>
-              ) : (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Immatriculation <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
-                  disabled
-                  placeholder={selectedBrandId === OTHER_OPTION ? 'Saisir d\'abord la marque' : 'Sélectionner d\'abord une marque'}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                  value={formData.immatriculation}
+                  onChange={(e) => handleInputChange('immatriculation', e.target.value.toUpperCase())}
+                  placeholder="AB-123-CD"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  required
                 />
-              )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Année</label>
+                <input
+                  type="number"
+                  value={formData.annee}
+                  onChange={(e) => handleInputChange('annee', e.target.value ? parseInt(e.target.value) : '')}
+                  min="1900"
+                  max={new Date().getFullYear() + 1}
+                  placeholder={new Date().getFullYear().toString()}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select
-                value={formData.type}
-                onChange={(e) => handleInputChange('type', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="VL">VL (Véhicule Léger)</option>
-                <option value="VUL">VUL (Véhicule Utilitaire Léger)</option>
-                <option value="PL">PL (Poids Lourd)</option>
-                <option value="TC">TC (Transport en Commun)</option>
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Marque <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    ref={brandInputRef}
+                    type="text"
+                    value={brandSearch}
+                    onChange={(e) => handleBrandInputChange(e.target.value)}
+                    onFocus={() => setShowBrandDropdown(true)}
+                    placeholder="Rechercher ou saisir une marque..."
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    required
+                  />
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                </div>
+                {showBrandDropdown && filteredBrands.length > 0 && (
+                  <div
+                    ref={brandDropdownRef}
+                    className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                  >
+                    {filteredBrands.slice(0, 50).map((brand) => (
+                      <button
+                        key={brand.id}
+                        type="button"
+                        onClick={() => handleBrandSelect(brand)}
+                        className="w-full px-4 py-2.5 text-left hover:bg-blue-50 transition-colors flex items-center justify-between group"
+                      >
+                        <span className="text-gray-700 group-hover:text-blue-600 font-medium">{brand.nom}</span>
+                        {selectedBrandId === brand.id && (
+                          <Check className="w-4 h-4 text-blue-600" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Année</label>
-              <input
-                type="number"
-                value={formData.annee}
-                onChange={(e) => handleInputChange('annee', e.target.value ? parseInt(e.target.value) : '')}
-                min="1900"
-                max={new Date().getFullYear() + 1}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Modèle <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    ref={modelInputRef}
+                    type="text"
+                    value={modelSearch}
+                    onChange={(e) => handleModelInputChange(e.target.value)}
+                    onFocus={() => {
+                      if (selectedBrandId || brandSearch) {
+                        setShowModelDropdown(true);
+                      }
+                    }}
+                    placeholder={selectedBrandId || brandSearch ? "Rechercher ou saisir un modèle..." : "Sélectionnez d'abord une marque"}
+                    disabled={!selectedBrandId && !brandSearch}
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-50 disabled:text-gray-500"
+                    required
+                  />
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                </div>
+                {showModelDropdown && filteredModels.length > 0 && (
+                  <div
+                    ref={modelDropdownRef}
+                    className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                  >
+                    {filteredModels.slice(0, 50).map((model) => (
+                      <button
+                        key={model.id}
+                        type="button"
+                        onClick={() => handleModelSelect(model)}
+                        className="w-full px-4 py-2.5 text-left hover:bg-blue-50 transition-colors flex items-center justify-between group"
+                      >
+                        <span className="text-gray-700 group-hover:text-blue-600 font-medium">{model.nom}</span>
+                        {selectedModelId === model.id && (
+                          <Check className="w-4 h-4 text-blue-600" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
-              <select
-                value={formData.statut}
-                onChange={(e) => handleInputChange('statut', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="actif">Actif</option>
-                <option value="maintenance">En maintenance</option>
-                <option value="hors service">Hors service</option>
-                <option value="en location">En location</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Type de véhicule</label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => handleInputChange('type', e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                >
+                  <option value="VL">VL - Véhicule Léger</option>
+                  <option value="VUL">VUL - Véhicule Utilitaire Léger</option>
+                  <option value="PL">PL - Poids Lourd</option>
+                  <option value="TC">TC - Transport en Commun</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                <select
+                  value={formData.statut}
+                  onChange={(e) => handleInputChange('statut', e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                >
+                  <option value="actif">✓ Actif</option>
+                  <option value="maintenance">🔧 En maintenance</option>
+                  <option value="hors service">✗ Hors service</option>
+                  <option value="en location">📋 En location</option>
+                </select>
+              </div>
             </div>
           </div>
         );
 
       case 2:
         return (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Référence TCA</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Référence TCA</label>
               <input
                 type="text"
                 value={formData.reference_tca}
                 onChange={(e) => handleInputChange('reference_tca', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Ex: TCA-2024-001"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de 1ère mise en circulation
-              </label>
-              <input
-                type="date"
-                value={formData.date_premiere_mise_en_circulation}
-                onChange={(e) => handleInputChange('date_premiere_mise_en_circulation', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date de 1ère mise en circulation
+                </label>
+                <input
+                  type="date"
+                  value={formData.date_premiere_mise_en_circulation}
+                  onChange={(e) => handleInputChange('date_premiere_mise_en_circulation', e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de mise en service
-              </label>
-              <input
-                type="date"
-                value={formData.date_mise_en_service}
-                onChange={(e) => handleInputChange('date_mise_en_service', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date de mise en service
+                </label>
+                <input
+                  type="date"
+                  value={formData.date_mise_en_service}
+                  onChange={(e) => handleInputChange('date_mise_en_service', e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
             </div>
           </div>
         );
 
       case 3:
         return (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type d'assurance</label>
-              <div className="flex gap-4">
-                <label className="flex items-center">
+              <label className="block text-sm font-medium text-gray-700 mb-3">Type d'assurance</label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  formData.assurance_type === 'tca'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}>
                   <input
                     type="radio"
                     value="tca"
                     checked={formData.assurance_type === 'tca'}
                     onChange={(e) => handleInputChange('assurance_type', e.target.value)}
-                    className="mr-2"
+                    className="mr-3 w-4 h-4 text-blue-600"
                   />
-                  Assuré TCA
+                  <span className="font-medium text-gray-700">Assuré TCA</span>
                 </label>
-                <label className="flex items-center">
+                <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  formData.assurance_type === 'externe'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}>
                   <input
                     type="radio"
                     value="externe"
                     checked={formData.assurance_type === 'externe'}
                     onChange={(e) => handleInputChange('assurance_type', e.target.value)}
-                    className="mr-2"
+                    className="mr-3 w-4 h-4 text-blue-600"
                   />
-                  Assuré ailleurs
+                  <span className="font-medium text-gray-700">Assurance externe</span>
                 </label>
               </div>
             </div>
 
             {formData.assurance_type === 'externe' && (
-              <>
+              <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Compagnie d'assurance
                   </label>
                   <input
                     type="text"
                     value={formData.assurance_compagnie}
                     onChange={(e) => handleInputChange('assurance_compagnie', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ex: AXA, Allianz, Groupama..."
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Numéro de contrat
                   </label>
                   <input
                     type="text"
                     value={formData.assurance_numero_contrat}
                     onChange={(e) => handleInputChange('assurance_numero_contrat', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ex: 123456789"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
                 </div>
-              </>
+              </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Licence de transport (numéro)
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Licence de transport
               </label>
               <input
                 type="text"
                 value={formData.licence_transport_numero}
                 onChange={(e) => handleInputChange('licence_transport_numero', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Numéro de licence"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>
           </div>
@@ -645,48 +646,55 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
 
       case 4:
         return (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">Matériel embarqué</h3>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Matériel embarqué</h3>
+                <p className="text-sm text-gray-500 mt-1">Optionnel - Ajoutez les équipements du véhicule</p>
+              </div>
               <button
+                type="button"
                 onClick={addEquipment}
-                className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
               >
-                <Plus className="w-4 h-4 mr-1" />
+                <Plus className="w-4 h-4 mr-2" />
                 Ajouter
               </button>
             </div>
 
             {equipments.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
-                Aucun équipement ajouté. Cliquez sur "Ajouter" pour en ajouter un.
-              </p>
+              <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <Car className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500">Aucun équipement ajouté</p>
+                <p className="text-sm text-gray-400 mt-1">Cliquez sur "Ajouter" pour ajouter du matériel</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {equipments.map((eq, idx) => (
-                  <div key={idx} className="flex gap-3 items-start p-3 bg-gray-50 rounded-lg">
+                  <div key={idx} className="flex gap-3 items-center p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
                     <div className="flex-1">
                       <input
                         type="text"
                         value={eq.type}
                         onChange={(e) => updateEquipment(idx, 'type', e.target.value)}
-                        placeholder="Type d'équipement (ex: siège bébé)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Type d'équipement (ex: siège bébé, GPS, etc.)"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       />
                     </div>
-                    <div className="w-24">
+                    <div className="w-28">
                       <input
                         type="number"
                         value={eq.quantite}
                         onChange={(e) => updateEquipment(idx, 'quantite', parseInt(e.target.value) || 1)}
                         min="1"
                         placeholder="Qté"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-center"
                       />
                     </div>
                     <button
+                      type="button"
                       onClick={() => removeEquipment(idx)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                      className="p-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -695,28 +703,34 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
               </div>
             )}
 
-            <div className="border-t border-gray-200 pt-4 mt-6">
+            <div className="border-t border-gray-200 pt-5 mt-6 space-y-4">
+              <h4 className="text-base font-semibold text-gray-900">Carte essence</h4>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Numéro carte essence
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Numéro de carte essence
                 </label>
                 <input
                   type="text"
                   value={formData.carte_essence_numero}
                   onChange={(e) => handleInputChange('carte_essence_numero', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ex: CE-123456"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>
 
-              <div className="mt-3">
-                <label className="flex items-center">
+              <div>
+                <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  formData.carte_essence_attribuee
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}>
                   <input
                     type="checkbox"
                     checked={formData.carte_essence_attribuee}
                     onChange={(e) => handleInputChange('carte_essence_attribuee', e.target.checked)}
-                    className="mr-2"
+                    className="mr-3 w-4 h-4 text-green-600"
                   />
-                  <span className="text-sm font-medium text-gray-700">Carte essence attribuée</span>
+                  <span className="text-sm font-medium text-gray-700">Carte essence attribuée au véhicule</span>
                 </label>
               </div>
             </div>
@@ -725,119 +739,160 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
 
       case 5:
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Kilométrage actuel
               </label>
-              <input
-                type="number"
-                value={formData.kilometrage_actuel}
-                onChange={(e) => handleInputChange('kilometrage_actuel', e.target.value ? parseInt(e.target.value) : '')}
-                min="0"
-                placeholder="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-sm text-gray-500 mt-1">
+              <div className="relative">
+                <input
+                  type="number"
+                  value={formData.kilometrage_actuel}
+                  onChange={(e) => handleInputChange('kilometrage_actuel', e.target.value ? parseInt(e.target.value) : '')}
+                  min="0"
+                  placeholder="0"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">km</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-2 flex items-start">
+                <span className="text-blue-500 mr-1">ℹ</span>
                 Ce kilométrage sera enregistré comme valeur initiale dans l'historique
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
                 Photo du véhicule
               </label>
-              <div className="flex items-start gap-4">
-                <div className="flex-1">
+              {photoPreview ? (
+                <div className="relative">
+                  <div className="rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-50">
+                    <img src={photoPreview} alt="Aperçu" className="w-full h-64 object-cover" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhotoFile(null);
+                      setPhotoPreview('');
+                    }}
+                    className="absolute top-3 right-3 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handlePhotoChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="hidden"
+                    id="photo-upload"
                   />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Formats acceptés: JPG, PNG (max 5MB)
-                  </p>
+                  <label
+                    htmlFor="photo-upload"
+                    className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
+                  >
+                    <ImageIcon className="w-12 h-12 text-gray-400 mb-3" />
+                    <span className="text-sm font-medium text-gray-700">Cliquez pour ajouter une photo</span>
+                    <span className="text-xs text-gray-500 mt-1">JPG, PNG (max 5MB)</span>
+                  </label>
                 </div>
-                {photoPreview && (
-                  <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200">
-                    <img src={photoPreview} alt="Aperçu" className="w-full h-full object-cover" />
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
         );
 
       case 6:
         return (
-          <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-blue-800">
-                Vous pouvez uploader les documents maintenant ou les ajouter plus tard depuis la fiche du véhicule.
-              </p>
+          <div className="space-y-5">
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start">
+                <FileText className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900">Documents optionnels</p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Vous pouvez ajouter les documents maintenant ou plus tard depuis la fiche du véhicule
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {['carte_grise', 'assurance', 'carte_ris', 'controle_technique'].map((docType) => {
-              const doc = documents.find(d => d.type === docType);
-              const labels: Record<string, string> = {
-                carte_grise: 'Carte grise',
-                assurance: 'Assurance',
-                carte_ris: 'Carte RIS',
-                controle_technique: 'Contrôle technique',
-              };
+            <div className="grid gap-4">
+              {['carte_grise', 'assurance', 'carte_ris', 'controle_technique'].map((docType) => {
+                const doc = documents.find(d => d.type === docType);
+                const labels: Record<string, string> = {
+                  carte_grise: 'Carte grise',
+                  assurance: 'Assurance',
+                  carte_ris: 'Carte RIS',
+                  controle_technique: 'Contrôle technique',
+                };
 
-              return (
-                <div key={docType} className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-3">{labels[docType]}</h4>
-                  {doc ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between bg-gray-50 p-3 rounded">
-                        <span className="text-sm text-gray-700">{doc.file.name}</span>
-                        <button
-                          onClick={() => removeDocument(documents.indexOf(doc))}
-                          className="text-red-600 hover:text-red-700"
+                return (
+                  <div key={docType} className="border-2 border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors">
+                    <h4 className="font-semibold text-gray-900 mb-3">{labels[docType]}</h4>
+                    {doc ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between bg-green-50 border border-green-200 p-3 rounded-lg">
+                          <div className="flex items-center flex-1 min-w-0">
+                            <Check className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                            <span className="text-sm text-gray-700 truncate">{doc.file.name}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeDocument(documents.indexOf(doc))}
+                            className="ml-3 p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1.5">Date d'émission</label>
+                            <input
+                              type="date"
+                              value={doc.date_emission || ''}
+                              onChange={(e) => updateDocumentDates(documents.indexOf(doc), 'date_emission', e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1.5">Date d'expiration</label>
+                            <input
+                              type="date"
+                              value={doc.date_expiration || ''}
+                              onChange={(e) => updateDocumentDates(documents.indexOf(doc), 'date_expiration', e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) addDocument(file, docType as DocumentFile['type']);
+                          }}
+                          className="hidden"
+                          id={`doc-${docType}`}
+                        />
+                        <label
+                          htmlFor={`doc-${docType}`}
+                          className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          <Plus className="w-5 h-5 text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-600">Ajouter un fichier</span>
+                        </label>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">Date d'émission</label>
-                          <input
-                            type="date"
-                            value={doc.date_emission || ''}
-                            onChange={(e) => updateDocumentDates(documents.indexOf(doc), 'date_emission', e.target.value)}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">Date d'expiration</label>
-                          <input
-                            type="date"
-                            value={doc.date_expiration || ''}
-                            onChange={(e) => updateDocumentDates(documents.indexOf(doc), 'date_expiration', e.target.value)}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) addDocument(file, docType as DocumentFile['type']);
-                        }}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
 
@@ -847,16 +902,24 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Ajouter un véhicule</h2>
-          <button onClick={onClose} className="text-white hover:bg-blue-800 p-2 rounded-lg transition-colors">
+        <div className="bg-gradient-to-r from-blue-600 via-blue-600 to-blue-700 text-white px-8 py-6 flex justify-between items-center">
+          <div className="flex items-center">
+            <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-4">
+              <Car className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">Nouveau véhicule</h2>
+              <p className="text-blue-100 text-sm mt-0.5">Ajoutez un véhicule au parc</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-all">
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-8 py-5 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center justify-between">
             {STEPS.map((step, idx) => {
               const Icon = step.icon;
@@ -867,19 +930,19 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
                 <div key={step.id} className="flex items-center flex-1">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all shadow-sm ${
                         isCompleted
-                          ? 'bg-green-500 text-white'
+                          ? 'bg-green-500 text-white shadow-green-200'
                           : isActive
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 text-gray-500'
+                          ? 'bg-blue-600 text-white shadow-blue-200 ring-4 ring-blue-100'
+                          : 'bg-white border-2 border-gray-300 text-gray-400'
                       }`}
                     >
                       {isCompleted ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
                     </div>
                     <span
-                      className={`text-xs mt-1 text-center ${
-                        isActive ? 'text-blue-600 font-medium' : 'text-gray-500'
+                      className={`text-xs mt-2 text-center font-medium transition-colors ${
+                        isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
                       }`}
                     >
                       {step.title}
@@ -887,8 +950,8 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
                   </div>
                   {idx < STEPS.length - 1 && (
                     <div
-                      className={`flex-1 h-1 mx-2 ${
-                        currentStep > step.id ? 'bg-green-500' : 'bg-gray-200'
+                      className={`flex-1 h-1 mx-3 rounded-full transition-all ${
+                        currentStep > step.id ? 'bg-green-500' : 'bg-gray-300'
                       }`}
                     />
                   )}
@@ -898,35 +961,48 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-8 py-6">
           {renderStep()}
         </div>
 
-        <div className="border-t border-gray-200 px-6 py-4 flex justify-between items-center bg-gray-50">
+        <div className="border-t border-gray-200 px-8 py-5 flex justify-between items-center bg-white">
           <button
+            type="button"
             onClick={handlePrevious}
             disabled={currentStep === 1}
-            className={`inline-flex items-center px-4 py-2 rounded-lg font-medium ${
+            className={`inline-flex items-center px-5 py-2.5 rounded-lg font-medium transition-all ${
               currentStep === 1
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
             }`}
           >
             <ChevronLeft className="w-5 h-5 mr-1" />
             Précédent
           </button>
 
-          <span className="text-sm text-gray-600">
-            Étape {currentStep} sur {STEPS.length}
-          </span>
+          <div className="flex items-center gap-2">
+            {STEPS.map((step) => (
+              <div
+                key={step.id}
+                className={`h-2 rounded-full transition-all ${
+                  step.id === currentStep
+                    ? 'w-8 bg-blue-600'
+                    : step.id < currentStep
+                    ? 'w-2 bg-green-500'
+                    : 'w-2 bg-gray-300'
+                }`}
+              />
+            ))}
+          </div>
 
           {currentStep < STEPS.length ? (
             <button
+              type="button"
               onClick={handleNext}
               disabled={!validateStep(currentStep)}
-              className={`inline-flex items-center px-4 py-2 rounded-lg font-medium ${
+              className={`inline-flex items-center px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm ${
                 validateStep(currentStep)
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
@@ -935,14 +1011,15 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
             </button>
           ) : (
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={loading || !validateStep(currentStep)}
-              className="inline-flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed shadow-sm hover:shadow-md transition-all"
             >
               {loading ? (
                 <>
                   <LoadingSpinner size="sm" />
-                  <span className="ml-2">Création...</span>
+                  <span className="ml-2">Création en cours...</span>
                 </>
               ) : (
                 <>
