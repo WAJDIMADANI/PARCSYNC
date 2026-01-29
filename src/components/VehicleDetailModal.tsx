@@ -103,6 +103,11 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
     if (activeTab === 'history') {
       fetchAttributions();
     }
+    // Désactiver le mode édition lors du changement d'onglet
+    if (isEditing) {
+      setIsEditing(false);
+      setEditedVehicle(vehicle);
+    }
   }, [activeTab]);
 
   const fetchAttributions = async () => {
@@ -141,6 +146,11 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
           statut: editedVehicle.statut,
           date_mise_en_service: editedVehicle.date_mise_en_service,
           date_fin_service: editedVehicle.date_fin_service,
+          assurance_type: (editedVehicle as any).assurance_type,
+          assurance_compagnie: (editedVehicle as any).assurance_compagnie,
+          assurance_numero_contrat: (editedVehicle as any).assurance_numero_contrat,
+          date_premiere_mise_en_circulation: (editedVehicle as any).date_premiere_mise_en_circulation,
+          licence_transport_numero: (editedVehicle as any).licence_transport_numero,
         })
         .eq('id', vehicle.id);
 
@@ -332,7 +342,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
               {getStatusBadge(vehicle.statut)}
             </div>
             <div className="flex items-center gap-2">
-              {activeTab === 'info' && (
+              {(activeTab === 'info' || activeTab === 'insurance') && (
                 <>
                   {isEditing ? (
                     <>
@@ -805,7 +815,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                         <label className="flex items-center">
                           <input
                             type="radio"
-                            checked={(vehicle as any).assurance_type === 'tca'}
+                            checked={(editedVehicle as any).assurance_type === 'tca'}
+                            onChange={() => setEditedVehicle({ ...editedVehicle, assurance_type: 'tca' } as any)}
                             disabled={!isEditing}
                             className="mr-2"
                           />
@@ -814,7 +825,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                         <label className="flex items-center">
                           <input
                             type="radio"
-                            checked={(vehicle as any).assurance_type === 'externe'}
+                            checked={(editedVehicle as any).assurance_type === 'externe'}
+                            onChange={() => setEditedVehicle({ ...editedVehicle, assurance_type: 'externe' } as any)}
                             disabled={!isEditing}
                             className="mr-2"
                           />
@@ -826,18 +838,20 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                       <label className="block text-sm font-medium text-gray-700 mb-2">Compagnie d'assurance</label>
                       <input
                         type="text"
-                        value={(vehicle as any).assurance_compagnie || ''}
-                        disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                        value={(editedVehicle as any).assurance_compagnie || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, assurance_compagnie: e.target.value } as any)}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de contrat</label>
                       <input
                         type="text"
-                        value={(vehicle as any).assurance_numero_contrat || ''}
-                        disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                        value={(editedVehicle as any).assurance_numero_contrat || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, assurance_numero_contrat: e.target.value } as any)}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                       />
                     </div>
                   </div>
@@ -849,9 +863,10 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                     <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de licence</label>
                     <input
                       type="text"
-                      value={(vehicle as any).licence_transport_numero || ''}
-                      disabled
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                      value={(editedVehicle as any).licence_transport_numero || ''}
+                      onChange={(e) => setEditedVehicle({ ...editedVehicle, licence_transport_numero: e.target.value } as any)}
+                      disabled={!isEditing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                     />
                   </div>
                 </div>
@@ -862,9 +877,10 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                     <label className="block text-sm font-medium text-gray-700 mb-2">Date de 1ère mise en circulation</label>
                     <input
                       type="date"
-                      value={(vehicle as any).date_premiere_mise_en_circulation || ''}
-                      disabled
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                      value={(editedVehicle as any).date_premiere_mise_en_circulation || ''}
+                      onChange={(e) => setEditedVehicle({ ...editedVehicle, date_premiere_mise_en_circulation: e.target.value } as any)}
+                      disabled={!isEditing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                     />
                   </div>
                 </div>
