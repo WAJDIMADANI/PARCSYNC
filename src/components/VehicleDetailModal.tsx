@@ -46,8 +46,19 @@ interface Vehicle {
   statut: string;
   date_mise_en_service: string | null;
   date_fin_service: string | null;
+  date_premiere_mise_en_circulation: string | null;
   photo_path: string | null;
   site_id: string | null;
+  assurance_type: 'tca' | 'externe' | null;
+  assurance_compagnie: string | null;
+  assurance_numero_contrat: string | null;
+  licence_transport_numero: string | null;
+  carte_essence_fournisseur: string | null;
+  carte_essence_numero: string | null;
+  carte_essence_attribuee: boolean;
+  kilometrage_actuel: number | null;
+  derniere_maj_kilometrage: string | null;
+  materiel_embarque: any[] | null;
   created_at: string;
   chauffeurs_actifs: Chauffeur[];
   nb_chauffeurs_actifs: number;
@@ -142,13 +153,20 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
       }
     });
 
-    const integerFields = ['annee'];
+    const integerFields = ['annee', 'kilometrage_actuel'];
     integerFields.forEach(field => {
       if (cleaned[field] === '' || cleaned[field] === undefined) {
         cleaned[field] = null;
       } else if (typeof cleaned[field] === 'string') {
         const num = Number(cleaned[field]);
         cleaned[field] = isNaN(num) ? null : num;
+      }
+    });
+
+    const stringFields = ['reference_tca', 'marque', 'modele', 'type', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero'];
+    stringFields.forEach(field => {
+      if (cleaned[field] === undefined) {
+        cleaned[field] = null;
       }
     });
 
@@ -167,11 +185,15 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
         statut: editedVehicle.statut,
         date_mise_en_service: editedVehicle.date_mise_en_service,
         date_fin_service: editedVehicle.date_fin_service,
-        assurance_type: (editedVehicle as any).assurance_type,
-        assurance_compagnie: (editedVehicle as any).assurance_compagnie,
-        assurance_numero_contrat: (editedVehicle as any).assurance_numero_contrat,
-        date_premiere_mise_en_circulation: (editedVehicle as any).date_premiere_mise_en_circulation,
-        licence_transport_numero: (editedVehicle as any).licence_transport_numero,
+        date_premiere_mise_en_circulation: editedVehicle.date_premiere_mise_en_circulation,
+        assurance_type: editedVehicle.assurance_type,
+        assurance_compagnie: editedVehicle.assurance_compagnie,
+        assurance_numero_contrat: editedVehicle.assurance_numero_contrat,
+        licence_transport_numero: editedVehicle.licence_transport_numero,
+        carte_essence_fournisseur: editedVehicle.carte_essence_fournisseur,
+        carte_essence_numero: editedVehicle.carte_essence_numero,
+        carte_essence_attribuee: editedVehicle.carte_essence_attribuee,
+        kilometrage_actuel: editedVehicle.kilometrage_actuel,
       });
 
       const { error } = await supabase
@@ -655,6 +677,34 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                     </div>
                   </div>
                 </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Kilométrage</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Kilométrage actuel (km)</label>
+                      <input
+                        type="number"
+                        value={editedVehicle.kilometrage_actuel || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, kilometrage_actuel: e.target.value ? Number(e.target.value) : null })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: 150000"
+                      />
+                    </div>
+                    {editedVehicle.derniere_maj_kilometrage && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Dernière mise à jour</label>
+                        <input
+                          type="text"
+                          value={new Date(editedVehicle.derniere_maj_kilometrage).toLocaleDateString('fr-FR')}
+                          disabled
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -906,11 +956,52 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                     <label className="block text-sm font-medium text-gray-700 mb-2">Date de 1ère mise en circulation</label>
                     <input
                       type="date"
-                      value={(editedVehicle as any).date_premiere_mise_en_circulation || ''}
-                      onChange={(e) => setEditedVehicle({ ...editedVehicle, date_premiere_mise_en_circulation: e.target.value } as any)}
+                      value={editedVehicle.date_premiere_mise_en_circulation || ''}
+                      onChange={(e) => setEditedVehicle({ ...editedVehicle, date_premiere_mise_en_circulation: e.target.value })}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Carte essence</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={editedVehicle.carte_essence_attribuee || false}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, carte_essence_attribuee: e.target.checked })}
+                          disabled={!isEditing}
+                          className="mr-2 h-4 w-4 rounded border-gray-300"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Carte essence attribuée</span>
+                      </label>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Fournisseur</label>
+                        <input
+                          type="text"
+                          value={editedVehicle.carte_essence_fournisseur || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, carte_essence_fournisseur: e.target.value })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="Ex: Total, Shell, etc."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de carte</label>
+                        <input
+                          type="text"
+                          value={editedVehicle.carte_essence_numero || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, carte_essence_numero: e.target.value })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

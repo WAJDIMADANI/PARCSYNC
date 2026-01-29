@@ -52,7 +52,8 @@ export function VehicleDocuments({ vehicleId }: VehicleDocumentsProps) {
       if (error) throw error;
       setDocuments(data || []);
     } catch (error) {
-      console.error('Erreur chargement documents:', error);
+      console.error('Erreur chargement documents:', JSON.stringify(error, null, 2));
+      console.error('Erreur détaillée:', error);
     } finally {
       setLoading(false);
     }
@@ -84,7 +85,11 @@ export function VehicleDocuments({ vehicleId }: VehicleDocumentsProps) {
           date_expiration: uploadData.date_expiration || null,
         }]);
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Erreur insertion document:', JSON.stringify(dbError, null, 2));
+        console.error('Erreur détaillée:', dbError);
+        throw dbError;
+      }
 
       setUploadData({ date_emission: '', date_expiration: '' });
       setSelectedType('');
