@@ -110,16 +110,21 @@ La migration SQL effectue automatiquement :
 
 ### Étape 1 : Exécuter la migration SQL
 
-Exécutez le fichier de migration dans votre base de données Supabase :
+**IMPORTANT : Utilisez le fichier corrigé !**
 
+Exécutez le fichier de migration corrigé dans votre base de données Supabase :
+
+Via l'interface Supabase SQL Editor :
+1. Ouvrez le SQL Editor dans votre dashboard Supabase
+2. Copiez le contenu du fichier **`EXECUTER-MAINTENANT-LOCATAIRE-PROPRIETAIRE-LOUEUR.sql`**
+3. Exécutez la requête
+
+Ou via psql :
 ```bash
-psql -h your-db-host -U postgres -d postgres -f add-locataire-proprietaire-loueur-system.sql
+psql -h your-db-host -U postgres -d postgres -f EXECUTER-MAINTENANT-LOCATAIRE-PROPRIETAIRE-LOUEUR.sql
 ```
 
-Ou via l'interface Supabase SQL Editor :
-1. Ouvrez le SQL Editor dans votre dashboard Supabase
-2. Copiez le contenu du fichier `add-locataire-proprietaire-loueur-system.sql`
-3. Exécutez la requête
+**Note :** Ce fichier contient la correction de l'erreur `la colonne l.nom_entreprise n'existe pas`. La colonne correcte est `l.nom`.
 
 ### Étape 2 : Vérifier la migration
 

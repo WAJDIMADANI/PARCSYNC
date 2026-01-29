@@ -215,7 +215,7 @@ SELECT
         'type_attribution', av.type_attribution,
         'date_debut', av.date_debut,
         'loueur_id', l.id,
-        'loueur_nom', l.nom_entreprise
+        'loueur_nom', l.nom
       )
     ) FILTER (WHERE av.profil_id IS NOT NULL AND av.date_fin IS NULL),
     '[]'::jsonb
