@@ -132,26 +132,51 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
     }
   };
 
+  const cleanPayloadForUpdate = (data: any) => {
+    const cleaned = { ...data };
+
+    const dateFields = ['date_premiere_mise_en_circulation', 'date_mise_en_service', 'date_fin_service'];
+    dateFields.forEach(field => {
+      if (cleaned[field] === '' || cleaned[field] === undefined) {
+        cleaned[field] = null;
+      }
+    });
+
+    const integerFields = ['annee'];
+    integerFields.forEach(field => {
+      if (cleaned[field] === '' || cleaned[field] === undefined) {
+        cleaned[field] = null;
+      } else if (typeof cleaned[field] === 'string') {
+        const num = Number(cleaned[field]);
+        cleaned[field] = isNaN(num) ? null : num;
+      }
+    });
+
+    return cleaned;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      const updateData = cleanPayloadForUpdate({
+        reference_tca: editedVehicle.reference_tca,
+        marque: editedVehicle.marque,
+        modele: editedVehicle.modele,
+        annee: editedVehicle.annee,
+        type: editedVehicle.type,
+        statut: editedVehicle.statut,
+        date_mise_en_service: editedVehicle.date_mise_en_service,
+        date_fin_service: editedVehicle.date_fin_service,
+        assurance_type: (editedVehicle as any).assurance_type,
+        assurance_compagnie: (editedVehicle as any).assurance_compagnie,
+        assurance_numero_contrat: (editedVehicle as any).assurance_numero_contrat,
+        date_premiere_mise_en_circulation: (editedVehicle as any).date_premiere_mise_en_circulation,
+        licence_transport_numero: (editedVehicle as any).licence_transport_numero,
+      });
+
       const { error } = await supabase
         .from('vehicule')
-        .update({
-          reference_tca: editedVehicle.reference_tca,
-          marque: editedVehicle.marque,
-          modele: editedVehicle.modele,
-          annee: editedVehicle.annee,
-          type: editedVehicle.type,
-          statut: editedVehicle.statut,
-          date_mise_en_service: editedVehicle.date_mise_en_service,
-          date_fin_service: editedVehicle.date_fin_service,
-          assurance_type: (editedVehicle as any).assurance_type,
-          assurance_compagnie: (editedVehicle as any).assurance_compagnie,
-          assurance_numero_contrat: (editedVehicle as any).assurance_numero_contrat,
-          date_premiere_mise_en_circulation: (editedVehicle as any).date_premiere_mise_en_circulation,
-          licence_transport_numero: (editedVehicle as any).licence_transport_numero,
-        })
+        .update(updateData)
         .eq('id', vehicle.id);
 
       if (error) throw error;
@@ -160,8 +185,9 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
       setIsEditing(false);
       onUpdate();
     } catch (error) {
-      console.error('Erreur sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde');
+      console.error('Erreur sauvegarde:', JSON.stringify(error, null, 2));
+      console.error('Erreur détaillée:', error);
+      alert('Erreur lors de la sauvegarde. Voir la console pour plus de détails.');
     } finally {
       setSaving(false);
     }

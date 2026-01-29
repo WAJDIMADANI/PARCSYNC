@@ -258,6 +258,33 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     setCurrentStep(prev => Math.max(1, prev - 1));
   };
 
+  const cleanPayloadForInsert = (data: any) => {
+    const cleaned = { ...data };
+
+    const dateFields = ['date_premiere_mise_en_circulation', 'date_mise_en_service', 'derniere_maj_kilometrage'];
+    dateFields.forEach(field => {
+      if (cleaned[field] === '' || cleaned[field] === undefined) {
+        cleaned[field] = null;
+      }
+    });
+
+    const integerFields = ['annee', 'kilometrage_actuel'];
+    integerFields.forEach(field => {
+      if (cleaned[field] === '' || cleaned[field] === undefined) {
+        cleaned[field] = null;
+      } else if (typeof cleaned[field] === 'string') {
+        const num = Number(cleaned[field]);
+        cleaned[field] = isNaN(num) ? null : num;
+      }
+    });
+
+    if (cleaned.materiel_embarque === '' || cleaned.materiel_embarque === undefined) {
+      cleaned.materiel_embarque = null;
+    }
+
+    return cleaned;
+  };
+
   const handleSubmit = async () => {
     if (!validateStep(currentStep)) return;
 
@@ -277,14 +304,12 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
         if (uploadError) throw uploadError;
       }
 
-      const vehicleData = {
+      const vehicleData = cleanPayloadForInsert({
         ...formData,
-        annee: formData.annee || null,
-        kilometrage_actuel: formData.kilometrage_actuel || null,
         derniere_maj_kilometrage: formData.kilometrage_actuel ? new Date().toISOString().split('T')[0] : null,
         materiel_embarque: equipments.filter(eq => eq.type && eq.quantite > 0),
         photo_path: photoPath,
-      };
+      });
 
       const { data: vehicle, error: vehicleError } = await supabase
         .from('vehicule')
@@ -328,8 +353,9 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Erreur création véhicule:', error);
-      alert('Erreur lors de la création du véhicule');
+      console.error('Erreur création véhicule:', JSON.stringify(error, null, 2));
+      console.error('Erreur détaillée:', error);
+      alert('Erreur lors de la création du véhicule. Voir la console pour plus de détails.');
     } finally {
       setLoading(false);
     }
