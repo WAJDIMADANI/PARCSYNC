@@ -587,35 +587,33 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
               </div>
             </div>
 
-            {formData.assurance_type === 'externe' && (
-              <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Compagnie d'assurance
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.assurance_compagnie}
-                    onChange={(e) => handleInputChange('assurance_compagnie', e.target.value)}
-                    placeholder="Ex: AXA, Allianz, Groupama..."
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Numéro de contrat
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.assurance_numero_contrat}
-                    onChange={(e) => handleInputChange('assurance_numero_contrat', e.target.value)}
-                    placeholder="Ex: 123456789"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
-                </div>
+            <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Compagnie d'assurance
+                </label>
+                <input
+                  type="text"
+                  value={formData.assurance_compagnie}
+                  onChange={(e) => handleInputChange('assurance_compagnie', e.target.value)}
+                  placeholder="Ex: AXA, Allianz, Groupama..."
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
               </div>
-            )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Numéro de contrat
+                </label>
+                <input
+                  type="text"
+                  value={formData.assurance_numero_contrat}
+                  onChange={(e) => handleInputChange('assurance_numero_contrat', e.target.value)}
+                  placeholder="Ex: 123456789"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -835,30 +835,28 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                       </div>
                     </div>
 
-                    {(editedVehicle as any).assurance_type === 'externe' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Compagnie d'assurance</label>
-                          <input
-                            type="text"
-                            value={(editedVehicle as any).assurance_compagnie || ''}
-                            onChange={(e) => setEditedVehicle({ ...editedVehicle, assurance_compagnie: e.target.value } as any)}
-                            disabled={!isEditing}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de contrat</label>
-                          <input
-                            type="text"
-                            value={(editedVehicle as any).assurance_numero_contrat || ''}
-                            onChange={(e) => setEditedVehicle({ ...editedVehicle, assurance_numero_contrat: e.target.value } as any)}
-                            disabled={!isEditing}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                          />
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Compagnie d'assurance</label>
+                        <input
+                          type="text"
+                          value={(editedVehicle as any).assurance_compagnie || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, assurance_compagnie: e.target.value } as any)}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        />
                       </div>
-                    )}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de contrat</label>
+                        <input
+                          type="text"
+                          value={(editedVehicle as any).assurance_numero_contrat || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, assurance_numero_contrat: e.target.value } as any)}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
