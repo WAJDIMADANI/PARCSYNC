@@ -122,7 +122,11 @@ WHERE locataire_type IS NULL;
 -- ÉTAPE 4 : RECRÉER LA VUE v_vehicles_list (CORRECTION)
 -- ==============================================================================
 
-CREATE OR REPLACE VIEW v_vehicles_list AS
+-- Supprimer l'ancienne vue si elle existe (nécessaire pour changer l'ordre des colonnes)
+DROP VIEW IF EXISTS v_vehicles_list CASCADE;
+
+-- Recréer la vue avec la structure correcte
+CREATE VIEW v_vehicles_list AS
 SELECT
   v.*,
   -- Calculer le nom du locataire à afficher
