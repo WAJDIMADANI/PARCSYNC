@@ -228,11 +228,17 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
   // Si un profilId initial est fourni, ouvrir automatiquement le profil
   useEffect(() => {
     if (initialProfilId && employees.length > 0 && !hasProcessedInitialProfile.current) {
+      console.log('🔍 Recherche du profil:', initialProfilId);
+      console.log('📊 Nombre d\'employés chargés:', employees.length);
       const employee = employees.find(e => e.id === initialProfilId);
       if (employee) {
+        console.log('✅ Profil trouvé:', employee.nom, employee.prenom);
         setSelectedEmployee(employee);
         setIsModalOpen(true);
         hasProcessedInitialProfile.current = true;
+      } else {
+        console.error('❌ Profil non trouvé dans la liste des employés. ID:', initialProfilId);
+        console.log('📋 IDs disponibles:', employees.map(e => e.id).slice(0, 5));
       }
     }
   }, [initialProfilId, employees]);
@@ -1069,7 +1075,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
         </div>
       )}
 
-      {selectedEmployee && (
+      {selectedEmployee && isModalOpen && (
         <EmployeeDetailModal
           employee={selectedEmployee}
           contracts={contracts}
