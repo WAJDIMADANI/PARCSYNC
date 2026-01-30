@@ -76,6 +76,8 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
+  const [error, setError] = useState<string>('');
+  const [immatWarning, setImmatWarning] = useState<string>('');
 
   const [brands, setBrands] = useState<Brand[]>([]);
   const [models, setModels] = useState<Model[]>([]);
@@ -202,8 +204,40 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     setSelectedModelId('');
   };
 
+  const checkImmatriculationExists = async (immat: string) => {
+    if (!immat || immat.length < 3) {
+      setImmatWarning('');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('vehicule')
+        .select('id, immatriculation')
+        .eq('immatriculation', immat)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setImmatWarning(`Cette immatriculation existe déjà dans le système.`);
+      } else {
+        setImmatWarning('');
+      }
+    } catch (error) {
+      console.error('Erreur vérification immatriculation:', error);
+    }
+  };
+
   const handleInputChange = (field: keyof VehicleFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+
+    if (field === 'immatriculation') {
+      const timeoutId = setTimeout(() => {
+        checkImmatriculationExists(value);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -249,7 +283,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return !!(formData.immatriculation && formData.marque && formData.modele);
+        return !!(formData.immatriculation && formData.marque && formData.modele && !immatWarning);
       case 2:
         return true;
       case 3:
@@ -308,6 +342,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     if (!validateStep(currentStep)) return;
 
     setLoading(true);
+    setError('');
     try {
       let photoPath = null;
 
@@ -371,10 +406,25 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
 
       onSuccess();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur création véhicule:', JSON.stringify(error, null, 2));
       console.error('Erreur détaillée:', error);
-      alert('Erreur lors de la création du véhicule. Voir la console pour plus de détails.');
+
+      if (error?.code === '23505') {
+        if (error.message?.includes('vehicule_immatriculation_key')) {
+          setError(`L'immatriculation "${formData.immatriculation}" existe déjà. Veuillez en choisir une autre.`);
+          setCurrentStep(1);
+        } else {
+          setError('Ce véhicule existe déjà dans la base de données.');
+          setCurrentStep(1);
+        }
+      } else if (error?.code === '23503') {
+        setError('Erreur : une référence liée est invalide.');
+      } else if (error?.message) {
+        setError(error.message);
+      } else {
+        setError('Erreur lors de la création du véhicule. Veuillez réessayer.');
+      }
     } finally {
       setLoading(false);
     }
@@ -426,10 +476,21 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
                 value={formData.immatriculation}
                 onChange={(e) => handleInputChange('immatriculation', e.target.value.toUpperCase())}
                 placeholder="AB-123-CD ou AB123CD"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:border-transparent transition-all ${
+                  immatWarning
+                    ? 'border-red-300 focus:ring-red-500'
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">Avec ou sans tirets</p>
+              {immatWarning ? (
+                <p className="text-xs text-red-600 mt-1 flex items-center">
+                  <X className="w-3 h-3 mr-1" />
+                  {immatWarning}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1">Avec ou sans tirets</p>
+              )}
             </div>
 
             <div>
@@ -1165,6 +1226,23 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
         </div>
 
         <div className="flex-1 overflow-y-auto px-8 py-6">
+          {error && (
+            <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-lg p-4 flex items-start">
+              <div className="flex-shrink-0">
+                <X className="w-5 h-5 text-red-600" />
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-sm font-medium text-red-800">Erreur</h3>
+                <p className="text-sm text-red-700 mt-1">{error}</p>
+              </div>
+              <button
+                onClick={() => setError('')}
+                className="flex-shrink-0 ml-3 text-red-400 hover:text-red-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
           {renderStep()}
         </div>
 
