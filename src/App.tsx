@@ -115,7 +115,11 @@ function AppContent() {
 
   // Routes publiques accessibles sans authentification
   if (path === '/apply' || path.startsWith('/apply/')) {
-    return <Apply />;
+    return <Apply source="apply" />;
+  }
+
+  if (path === '/applysite' || path.startsWith('/applysite/')) {
+    return <Apply source="applysite" />;
   }
 
   if (path === '/onboarding' || path.startsWith('/onboarding/')) {

@@ -61,6 +61,7 @@ interface Candidate {
   statut_candidature?: string;
   code_couleur_rh?: string;
   note_interne?: string | null;
+  source?: string;
 }
 
 const STATUT_CANDIDATURE = [
@@ -639,10 +640,15 @@ export function CandidateList() {
                 const codeCouleur = CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh);
                 const hasDocuments = candidate.cv_url || candidate.lettre_motivation_url || candidate.carte_identite_recto_url;
 
+                const isFromApplySite = candidate.source === 'applysite';
+                const baseClassName = isFromApplySite
+                  ? 'bg-orange-50 hover:bg-orange-100'
+                  : 'hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50';
+
                 return (
                   <tr
                     key={candidate.id}
-                    className="hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50 cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg"
+                    className={`${baseClassName} cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg`}
                     onClick={() => setEditingCandidate(candidate)}
                   >
                     <td className="px-2 py-2 text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors">

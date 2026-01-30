@@ -21,7 +21,11 @@ interface Poste {
   description: string | null;
 }
 
-export function Apply() {
+interface ApplyProps {
+  source?: string;
+}
+
+export function Apply({ source = 'apply' }: ApplyProps) {
   const [sites, setSites] = useState<Site[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [postes, setPostes] = useState<Poste[]>([]);
@@ -227,6 +231,7 @@ export function Apply() {
         statut_candidature: 'candidature_recue',
         deleted_at: null,
         can_reapply: true,
+        source: source,
       };
 
       let candidatId: string;
