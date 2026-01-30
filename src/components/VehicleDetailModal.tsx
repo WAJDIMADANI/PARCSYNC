@@ -72,10 +72,12 @@ interface Vehicle {
   nb_chauffeurs_actifs: number;
   locataire_type: string | null;
   locataire_nom_libre: string | null;
+  locataire_affiche: string; // Calculé par la vue v_vehicles_list
   proprietaire_carte_grise: string | null;
   loueur_type: string | null;
   loueur_chauffeur_id: string | null;
   loueur_nom_externe: string | null;
+  loueur_affiche: string; // Calculé par la vue v_vehicles_list
 }
 
 interface Attribution {
@@ -128,8 +130,9 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
   const fetchVehicleDetails = async () => {
     console.log('[fetchVehicleDetails] Début refetch pour vehicule ID:', vehicle.id);
     try {
+      // Fetch depuis la vue v_vehicles_list pour avoir les chauffeurs_actifs et locataire_affiche calculés
       const { data, error } = await supabase
-        .from('vehicule')
+        .from('v_vehicles_list')
         .select('*')
         .eq('id', vehicle.id)
         .single();
@@ -143,8 +146,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
         console.log('[fetchVehicleDetails] Données reçues:', data);
         const updatedVehicle = {
           ...data,
-          chauffeurs_actifs: vehicle.chauffeurs_actifs || [],
-          nb_chauffeurs_actifs: vehicle.nb_chauffeurs_actifs || 0
+          chauffeurs_actifs: Array.isArray(data.chauffeurs_actifs) ? data.chauffeurs_actifs : [],
+          nb_chauffeurs_actifs: data.nb_chauffeurs_actifs || 0
         } as Vehicle;
         setVehicle(updatedVehicle);
         setEditedVehicle(updatedVehicle);
@@ -1507,7 +1510,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
           onSuccess={() => {
             setShowAttributionModal(false);
             fetchAttributions();
-            onUpdate();
+            fetchVehicleDetails(); // Recharger les données du véhicule pour mettre à jour le locataire
+            onUpdate(); // Recharger la liste parente
           }}
         />
       )}
