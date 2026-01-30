@@ -17,6 +17,14 @@ interface VehicleFormData {
   type: string;
   date_premiere_mise_en_circulation: string;
   date_mise_en_service: string;
+  fournisseur: string;
+  mode_acquisition: string;
+  prix_ht: number | '';
+  prix_ttc: number | '';
+  mensualite: number | '';
+  duree_contrat_mois: number | '';
+  date_debut_contrat: string;
+  date_fin_prevue_contrat: string;
   assurance_type: 'tca' | 'externe';
   assurance_compagnie: string;
   assurance_numero_contrat: string;
@@ -54,10 +62,11 @@ interface Model {
 const STEPS = [
   { id: 1, title: 'Informations générales', icon: Car },
   { id: 2, title: 'Références et dates', icon: FileText },
-  { id: 3, title: 'Assurance et licence', icon: FileText },
-  { id: 4, title: 'Équipements', icon: Car },
-  { id: 5, title: 'Kilométrage et photo', icon: ImageIcon },
-  { id: 6, title: 'Documents', icon: FileText },
+  { id: 3, title: 'Acquisition', icon: FileText },
+  { id: 4, title: 'Assurance et licence', icon: FileText },
+  { id: 5, title: 'Équipements', icon: Car },
+  { id: 6, title: 'Kilométrage et photo', icon: ImageIcon },
+  { id: 7, title: 'Documents', icon: FileText },
 ];
 
 export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalProps) {
@@ -90,6 +99,14 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     type: 'VL',
     date_premiere_mise_en_circulation: '',
     date_mise_en_service: '',
+    fournisseur: '',
+    mode_acquisition: '',
+    prix_ht: '',
+    prix_ttc: '',
+    mensualite: '',
+    duree_contrat_mois: '',
+    date_debut_contrat: '',
+    date_fin_prevue_contrat: '',
     assurance_type: 'tca',
     assurance_compagnie: '',
     assurance_numero_contrat: '',
@@ -236,12 +253,14 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
       case 2:
         return true;
       case 3:
-        return formData.assurance_type === 'tca' || !!(formData.assurance_compagnie && formData.assurance_numero_contrat);
-      case 4:
         return true;
+      case 4:
+        return formData.assurance_type === 'tca' || !!(formData.assurance_compagnie && formData.assurance_numero_contrat);
       case 5:
         return true;
       case 6:
+        return true;
+      case 7:
         return true;
       default:
         return true;
@@ -250,7 +269,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(6, prev + 1));
+      setCurrentStep(prev => Math.min(7, prev + 1));
     }
   };
 
@@ -580,6 +599,152 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
         return (
           <div className="space-y-5">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fournisseur du véhicule</label>
+              <input
+                type="text"
+                value={formData.fournisseur}
+                onChange={(e) => handleInputChange('fournisseur', e.target.value)}
+                placeholder="Ex: Renault Trucks, Peugeot, Mercedes..."
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mode d'acquisition</label>
+              <select
+                value={formData.mode_acquisition}
+                onChange={(e) => handleInputChange('mode_acquisition', e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              >
+                <option value="">-- Sélectionner --</option>
+                <option value="LLD">LLD - Location Longue Durée</option>
+                <option value="LOA">LOA - Location avec Option d'Achat</option>
+                <option value="LCD">LCD - Location Courte Durée</option>
+                <option value="Achat pur">Achat pur</option>
+                <option value="Prêt">Prêt</option>
+                <option value="Location société">Location société</option>
+              </select>
+            </div>
+
+            {formData.mode_acquisition === 'Achat pur' ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Prix d'achat HT</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.prix_ht}
+                    onChange={(e) => {
+                      const prixHT = parseFloat(e.target.value);
+                      handleInputChange('prix_ht', e.target.value);
+                      if (!isNaN(prixHT)) {
+                        handleInputChange('prix_ttc', (prixHT * 1.2).toFixed(2));
+                      }
+                    }}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Prix d'achat TTC (auto)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.prix_ttc}
+                    readOnly
+                    placeholder="0.00"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Prix HT</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.prix_ht}
+                      onChange={(e) => {
+                        const prixHT = parseFloat(e.target.value);
+                        handleInputChange('prix_ht', e.target.value);
+                        if (!isNaN(prixHT)) {
+                          handleInputChange('prix_ttc', (prixHT * 1.2).toFixed(2));
+                        }
+                      }}
+                      placeholder="0.00"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Prix TTC (auto)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.prix_ttc}
+                      readOnly
+                      placeholder="0.00"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.mensualite}
+                    onChange={(e) => handleInputChange('mensualite', e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Durée du contrat (en mois)</label>
+              <input
+                type="number"
+                value={formData.duree_contrat_mois}
+                onChange={(e) => handleInputChange('duree_contrat_mois', e.target.value)}
+                placeholder="Ex: 24, 36, 48..."
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Date début contrat</label>
+                <input
+                  type="date"
+                  value={formData.date_debut_contrat}
+                  onChange={(e) => handleInputChange('date_debut_contrat', e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Date fin prévue</label>
+                <input
+                  type="date"
+                  value={formData.date_fin_prevue_contrat}
+                  onChange={(e) => handleInputChange('date_fin_prevue_contrat', e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-5">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Type d'assurance</label>
               <div className="grid grid-cols-2 gap-3">
                 <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
@@ -656,7 +821,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
           </div>
         );
 
-      case 4:
+      case 5:
         return (
           <div className="space-y-5">
             <div className="flex justify-between items-center">
@@ -763,7 +928,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
           </div>
         );
 
-      case 5:
+      case 6:
         return (
           <div className="space-y-6">
             <div>
@@ -830,7 +995,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
           </div>
         );
 
-      case 6:
+      case 7:
         return (
           <div className="space-y-5">
             <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">

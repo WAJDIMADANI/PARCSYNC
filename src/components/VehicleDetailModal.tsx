@@ -47,6 +47,14 @@ interface Vehicle {
   date_mise_en_service: string | null;
   date_fin_service: string | null;
   date_premiere_mise_en_circulation: string | null;
+  fournisseur: string | null;
+  mode_acquisition: string | null;
+  prix_ht: number | null;
+  prix_ttc: number | null;
+  mensualite: number | null;
+  duree_contrat_mois: number | null;
+  date_debut_contrat: string | null;
+  date_fin_prevue_contrat: string | null;
   photo_path: string | null;
   site_id: string | null;
   assurance_type: 'tca' | 'externe' | null;
@@ -1191,6 +1199,130 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Acquisition du véhicule</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Fournisseur</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.fournisseur || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, fournisseur: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: Renault Trucks, Mercedes..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Mode d'acquisition</label>
+                      <select
+                        value={editedVehicle.mode_acquisition || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, mode_acquisition: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      >
+                        <option value="">-- Non renseigné --</option>
+                        <option value="LLD">LLD - Location Longue Durée</option>
+                        <option value="LOA">LOA - Location avec Option d'Achat</option>
+                        <option value="LCD">LCD - Location Courte Durée</option>
+                        <option value="Achat pur">Achat pur</option>
+                        <option value="Prêt">Prêt</option>
+                        <option value="Location société">Location société</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          {editedVehicle.mode_acquisition === 'Achat pur' ? 'Prix achat HT' : 'Prix HT'}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editedVehicle.prix_ht || ''}
+                          onChange={(e) => {
+                            const prixHT = parseFloat(e.target.value);
+                            setEditedVehicle({
+                              ...editedVehicle,
+                              prix_ht: e.target.value ? parseFloat(e.target.value) : null,
+                              prix_ttc: !isNaN(prixHT) ? parseFloat((prixHT * 1.2).toFixed(2)) : null
+                            });
+                          }}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          {editedVehicle.mode_acquisition === 'Achat pur' ? 'Prix achat TTC' : 'Prix TTC'} (auto)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editedVehicle.prix_ttc || ''}
+                          readOnly
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    {editedVehicle.mode_acquisition !== 'Achat pur' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editedVehicle.mensualite || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, mensualite: e.target.value ? parseFloat(e.target.value) : null })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Durée du contrat (mois)</label>
+                      <input
+                        type="number"
+                        value={editedVehicle.duree_contrat_mois || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, duree_contrat_mois: e.target.value ? parseInt(e.target.value) : null })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: 24, 36, 48..."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Date début contrat</label>
+                        <input
+                          type="date"
+                          value={editedVehicle.date_debut_contrat || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, date_debut_contrat: e.target.value })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Date fin prévue</label>
+                        <input
+                          type="date"
+                          value={editedVehicle.date_fin_prevue_contrat || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, date_fin_prevue_contrat: e.target.value })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
