@@ -829,10 +829,13 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             type_demande,
             description,
             statut,
-            salarie:salarie_id (
+            nom_salarie,
+            prenom_salarie,
+            matricule_salarie,
+            profil:profil_id (
               nom,
               prenom,
-              matricule
+              matricule_tca
             )
           ),
           demandeur:demandeur_id (
