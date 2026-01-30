@@ -13,7 +13,8 @@ import {
   ChevronRight,
   User,
   UserCircle,
-  Building2
+  Building2,
+  Trash2
 } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDetailModal } from './VehicleDetailModal';
@@ -76,6 +77,8 @@ export function VehicleListNew() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>({
     statut: '',
@@ -232,6 +235,28 @@ export function VehicleListNew() {
     });
     setSearch('');
     setCurrentPage(1);
+  };
+
+  const handleDeleteVehicle = async () => {
+    if (!vehicleToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('vehicule')
+        .delete()
+        .eq('id', vehicleToDelete.id);
+
+      if (error) throw error;
+
+      await fetchVehicles();
+      setVehicleToDelete(null);
+    } catch (error) {
+      console.error('Erreur lors de la suppression du véhicule:', error);
+      alert('Erreur lors de la suppression du véhicule');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const getStatusBadge = (statut: string) => {
@@ -705,15 +730,27 @@ export function VehicleListNew() {
                         </div>
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-right text-xs">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedVehicle(vehicle);
-                          }}
-                          className="text-blue-600 hover:text-blue-800 font-semibold transition-colors"
-                        >
-                          Voir
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedVehicle(vehicle);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 font-semibold transition-colors"
+                          >
+                            Voir
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setVehicleToDelete(vehicle);
+                            }}
+                            className="text-red-600 hover:text-red-800 transition-colors p-1"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -818,6 +855,63 @@ export function VehicleListNew() {
           onClose={() => setShowCreateModal(false)}
           onSuccess={fetchVehicles}
         />
+      )}
+
+      {vehicleToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Confirmer la suppression</h3>
+                <p className="text-sm text-gray-600">Cette action est irréversible</p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-gray-700 mb-2">
+                Voulez-vous vraiment supprimer ce véhicule ?
+              </p>
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div className="text-sm">
+                  <span className="font-semibold text-gray-900">{vehicleToDelete.immatriculation}</span>
+                  {vehicleToDelete.marque && (
+                    <span className="text-gray-600"> - {vehicleToDelete.marque} {vehicleToDelete.modele}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setVehicleToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium transition-colors disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDeleteVehicle}
+                disabled={isDeleting}
+                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Suppression...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Supprimer
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
