@@ -598,11 +598,11 @@ export function VehicleListNew() {
                     <th
                       scope="col"
                       className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
-                      onClick={() => handleSort('immatriculation')}
+                      onClick={() => handleSort('reference_tca')}
                     >
                       <div className="flex items-center">
-                        Immatriculation
-                        {sortField === 'immatriculation' && (
+                        Réf. TCA
+                        {sortField === 'reference_tca' && (
                           sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
                         )}
                       </div>
@@ -610,11 +610,11 @@ export function VehicleListNew() {
                     <th
                       scope="col"
                       className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
-                      onClick={() => handleSort('reference_tca')}
+                      onClick={() => handleSort('immatriculation')}
                     >
                       <div className="flex items-center">
-                        Réf. TCA
-                        {sortField === 'reference_tca' && (
+                        Immatriculation
+                        {sortField === 'immatriculation' && (
                           sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
                         )}
                       </div>
@@ -694,9 +694,6 @@ export function VehicleListNew() {
                       onClick={() => setSelectedVehicle(vehicle)}
                     >
                       <td className="px-3 py-2 whitespace-nowrap border-r border-gray-200">
-                        <div className="text-sm font-bold text-gray-900">{vehicle.immatriculation}</div>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap border-r border-gray-200">
                         {vehicle.reference_tca ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-200 text-gray-800">
                             {vehicle.reference_tca}
@@ -704,6 +701,9 @@ export function VehicleListNew() {
                         ) : (
                           <span className="text-xs text-gray-400">-</span>
                         )}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap border-r border-gray-200">
+                        <div className="text-sm font-bold text-gray-900">{vehicle.immatriculation}</div>
                       </td>
                       <td className="px-3 py-2 border-r border-gray-200">
                         <div className="text-xs">
