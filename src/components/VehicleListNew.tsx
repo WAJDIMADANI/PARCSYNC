@@ -245,7 +245,7 @@ export function VehicleListNew() {
     const config = statusConfig[statut.toLowerCase()] || { bg: 'bg-gray-500', text: 'text-white', label: statut };
 
     return (
-      <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold ${config.bg} ${config.text} shadow-sm`}>
+      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${config.bg} ${config.text}`}>
         {config.label}
       </span>
     );
@@ -255,12 +255,12 @@ export function VehicleListNew() {
     const locataire = vehicle.locataire_affiche;
 
     if (!locataire || locataire === 'Non défini') {
-      return <span className="text-xs text-gray-400 font-medium">Non défini</span>;
+      return <span className="text-xs text-gray-400">Non défini</span>;
     }
 
     if (vehicle.locataire_type === null) {
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-blue-500 text-white max-w-[180px] truncate shadow-sm">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-500 text-white max-w-[150px] truncate">
           <User className="w-3 h-3 mr-1 flex-shrink-0" />
           <span className="truncate">{locataire}</span>
         </span>
@@ -269,7 +269,7 @@ export function VehicleListNew() {
 
     if (vehicle.locataire_type === 'sur_parc') {
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-emerald-500 text-white shadow-sm">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500 text-white">
           Sur parc
         </span>
       );
@@ -277,7 +277,7 @@ export function VehicleListNew() {
 
     if (vehicle.locataire_type === 'epave') {
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-red-500 text-white shadow-sm">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-500 text-white">
           EPAVE
         </span>
       );
@@ -285,7 +285,7 @@ export function VehicleListNew() {
 
     if (vehicle.locataire_type === 'vendu') {
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-orange-500 text-white shadow-sm">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-orange-500 text-white">
           Vendu
         </span>
       );
@@ -293,25 +293,25 @@ export function VehicleListNew() {
 
     if (vehicle.locataire_type === 'libre') {
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-slate-500 text-white max-w-[180px] truncate shadow-sm">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-500 text-white max-w-[150px] truncate">
           <span className="truncate">{locataire}</span>
         </span>
       );
     }
 
-    return <span className="text-xs text-gray-700 max-w-[180px] truncate block font-medium">{locataire}</span>;
+    return <span className="text-xs text-gray-700 max-w-[150px] truncate block">{locataire}</span>;
   };
 
   const getLoueurBadge = (vehicle: Vehicle) => {
     const loueur = vehicle.loueur_affiche;
 
     if (!loueur || loueur === '-') {
-      return <span className="text-xs text-gray-400 font-medium">-</span>;
+      return <span className="text-xs text-gray-400">-</span>;
     }
 
     if (vehicle.loueur_type === 'chauffeur_tca') {
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-blue-500 text-white max-w-[180px] truncate shadow-sm">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-500 text-white max-w-[150px] truncate">
           <UserCircle className="w-3 h-3 mr-1 flex-shrink-0" />
           <span className="truncate">{loueur}</span>
         </span>
@@ -320,7 +320,7 @@ export function VehicleListNew() {
 
     if (vehicle.loueur_type === 'entreprise') {
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-emerald-500 text-white max-w-[180px] truncate shadow-sm">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500 text-white max-w-[150px] truncate">
           <Building2 className="w-3 h-3 mr-1 flex-shrink-0" />
           <span className="truncate">{loueur}</span>
         </span>
@@ -329,14 +329,14 @@ export function VehicleListNew() {
 
     if (vehicle.loueur_type === 'personne_externe') {
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-amber-500 text-white max-w-[180px] truncate shadow-sm">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-500 text-white max-w-[150px] truncate">
           <User className="w-3 h-3 mr-1 flex-shrink-0" />
           <span className="truncate">{loueur}</span>
         </span>
       );
     }
 
-    return <span className="text-xs text-gray-700 max-w-[180px] truncate block font-medium">{loueur}</span>;
+    return <span className="text-xs text-gray-700 max-w-[150px] truncate block">{loueur}</span>;
   };
 
   if (loading) {
@@ -565,96 +565,96 @@ export function VehicleListNew() {
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-lg shadow-lg border border-gray-300 overflow-hidden">
+          <div className="bg-white rounded-lg shadow-md border border-gray-300 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full">
-                <thead className="bg-gray-100 border-b-2 border-gray-300">
+                <thead className="bg-gray-100 border-b border-gray-300">
                   <tr>
                     <th
                       scope="col"
-                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
+                      className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('immatriculation')}
                     >
                       <div className="flex items-center">
                         Immatriculation
                         {sortField === 'immatriculation' && (
-                          sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                          sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
                         )}
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
+                      className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('reference_tca')}
                     >
                       <div className="flex items-center">
                         Réf. TCA
                         {sortField === 'reference_tca' && (
-                          sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                          sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
                         )}
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
+                      className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('marque')}
                     >
                       <div className="flex items-center">
                         Marque/Modèle
                         {sortField === 'marque' && (
-                          sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                          sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
                         )}
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
+                      className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('locataire_affiche')}
                     >
                       <div className="flex items-center">
                         Nom du locataire
                         {sortField === 'locataire_affiche' && (
-                          sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                          sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
                         )}
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
+                      className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('statut')}
                     >
                       <div className="flex items-center">
                         Statut
                         {sortField === 'statut' && (
-                          sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                          sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
                         )}
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
+                      className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('proprietaire_carte_grise')}
                     >
                       <div className="flex items-center">
                         Propriétaire
                         {sortField === 'proprietaire_carte_grise' && (
-                          sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                          sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
                         )}
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
+                      className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('loueur_affiche')}
                     >
                       <div className="flex items-center">
                         Loueur
                         {sortField === 'loueur_affiche' && (
-                          sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                          sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
                         )}
                       </div>
                     </th>
-                    <th scope="col" className="px-6 py-3.5 text-right text-xs font-bold text-gray-700 uppercase tracking-wide">
+                    <th scope="col" className="px-3 py-2 text-right text-xs font-bold text-gray-700 uppercase tracking-wide">
                       Actions
                     </th>
                   </tr>
@@ -668,51 +668,51 @@ export function VehicleListNew() {
                       }`}
                       onClick={() => setSelectedVehicle(vehicle)}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                      <td className="px-3 py-2 whitespace-nowrap border-r border-gray-200">
                         <div className="text-sm font-bold text-gray-900">{vehicle.immatriculation}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                      <td className="px-3 py-2 whitespace-nowrap border-r border-gray-200">
                         {vehicle.reference_tca ? (
-                          <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-gray-200 text-gray-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-200 text-gray-800">
                             {vehicle.reference_tca}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-400 font-medium">-</span>
+                          <span className="text-xs text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 border-r border-gray-200">
-                        <div className="text-sm">
+                      <td className="px-3 py-2 border-r border-gray-200">
+                        <div className="text-xs">
                           <div className="font-bold text-gray-900">{vehicle.marque || '-'}</div>
-                          <div className="text-gray-600 font-medium">{vehicle.modele || '-'}</div>
+                          <div className="text-gray-600">{vehicle.modele || '-'}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 border-r border-gray-200">
-                        <div className="text-sm">
+                      <td className="px-3 py-2 border-r border-gray-200">
+                        <div className="text-xs">
                           {getLocataireBadge(vehicle)}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                      <td className="px-3 py-2 whitespace-nowrap border-r border-gray-200">
                         {getStatusBadge(vehicle.statut)}
                       </td>
-                      <td className="px-6 py-4 border-r border-gray-200">
-                        <div className="text-sm text-gray-900 font-medium max-w-[150px] truncate" title={vehicle.proprietaire_carte_grise || ''}>
+                      <td className="px-3 py-2 border-r border-gray-200">
+                        <div className="text-xs text-gray-900 max-w-[120px] truncate" title={vehicle.proprietaire_carte_grise || ''}>
                           {vehicle.proprietaire_carte_grise || <span className="text-gray-400">-</span>}
                         </div>
                       </td>
-                      <td className="px-6 py-4 border-r border-gray-200">
-                        <div className="text-sm">
+                      <td className="px-3 py-2 border-r border-gray-200">
+                        <div className="text-xs">
                           {getLoueurBadge(vehicle)}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      <td className="px-3 py-2 whitespace-nowrap text-right text-xs">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedVehicle(vehicle);
                           }}
-                          className="text-blue-600 hover:text-blue-800 font-bold transition-colors"
+                          className="text-blue-600 hover:text-blue-800 font-semibold transition-colors"
                         >
-                          Voir détails
+                          Voir
                         </button>
                       </td>
                     </tr>
