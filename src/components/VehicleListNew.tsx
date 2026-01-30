@@ -236,16 +236,16 @@ export function VehicleListNew() {
 
   const getStatusBadge = (statut: string) => {
     const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
-      actif: { bg: 'bg-green-100', text: 'text-green-700', label: 'Actif' },
-      maintenance: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Maintenance' },
-      'hors service': { bg: 'bg-red-100', text: 'text-red-700', label: 'Hors service' },
-      'en location': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'En location' },
+      actif: { bg: 'bg-emerald-500', text: 'text-white', label: 'Actif' },
+      maintenance: { bg: 'bg-amber-500', text: 'text-white', label: 'Maintenance' },
+      'hors service': { bg: 'bg-red-500', text: 'text-white', label: 'Hors service' },
+      'en location': { bg: 'bg-sky-500', text: 'text-white', label: 'En location' },
     };
 
-    const config = statusConfig[statut.toLowerCase()] || { bg: 'bg-gray-100', text: 'text-gray-700', label: statut };
+    const config = statusConfig[statut.toLowerCase()] || { bg: 'bg-gray-500', text: 'text-white', label: statut };
 
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
+      <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold ${config.bg} ${config.text} shadow-sm`}>
         {config.label}
       </span>
     );
@@ -255,12 +255,12 @@ export function VehicleListNew() {
     const locataire = vehicle.locataire_affiche;
 
     if (!locataire || locataire === 'Non défini') {
-      return <span className="text-xs text-gray-400">Non défini</span>;
+      return <span className="text-xs text-gray-400 font-medium">Non défini</span>;
     }
 
     if (vehicle.locataire_type === null) {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 max-w-[180px] truncate">
+        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-blue-500 text-white max-w-[180px] truncate shadow-sm">
           <User className="w-3 h-3 mr-1 flex-shrink-0" />
           <span className="truncate">{locataire}</span>
         </span>
@@ -269,7 +269,7 @@ export function VehicleListNew() {
 
     if (vehicle.locataire_type === 'sur_parc') {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-emerald-500 text-white shadow-sm">
           Sur parc
         </span>
       );
@@ -277,7 +277,7 @@ export function VehicleListNew() {
 
     if (vehicle.locataire_type === 'epave') {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-red-500 text-white shadow-sm">
           EPAVE
         </span>
       );
@@ -285,7 +285,7 @@ export function VehicleListNew() {
 
     if (vehicle.locataire_type === 'vendu') {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-orange-500 text-white shadow-sm">
           Vendu
         </span>
       );
@@ -293,25 +293,25 @@ export function VehicleListNew() {
 
     if (vehicle.locataire_type === 'libre') {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 max-w-[180px] truncate">
+        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-slate-500 text-white max-w-[180px] truncate shadow-sm">
           <span className="truncate">{locataire}</span>
         </span>
       );
     }
 
-    return <span className="text-xs text-gray-600 max-w-[180px] truncate block">{locataire}</span>;
+    return <span className="text-xs text-gray-700 max-w-[180px] truncate block font-medium">{locataire}</span>;
   };
 
   const getLoueurBadge = (vehicle: Vehicle) => {
     const loueur = vehicle.loueur_affiche;
 
     if (!loueur || loueur === '-') {
-      return <span className="text-xs text-gray-400">-</span>;
+      return <span className="text-xs text-gray-400 font-medium">-</span>;
     }
 
     if (vehicle.loueur_type === 'chauffeur_tca') {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 max-w-[180px] truncate">
+        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-blue-500 text-white max-w-[180px] truncate shadow-sm">
           <UserCircle className="w-3 h-3 mr-1 flex-shrink-0" />
           <span className="truncate">{loueur}</span>
         </span>
@@ -320,7 +320,7 @@ export function VehicleListNew() {
 
     if (vehicle.loueur_type === 'entreprise') {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 max-w-[180px] truncate">
+        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-emerald-500 text-white max-w-[180px] truncate shadow-sm">
           <Building2 className="w-3 h-3 mr-1 flex-shrink-0" />
           <span className="truncate">{loueur}</span>
         </span>
@@ -329,14 +329,14 @@ export function VehicleListNew() {
 
     if (vehicle.loueur_type === 'personne_externe') {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 max-w-[180px] truncate">
+        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-amber-500 text-white max-w-[180px] truncate shadow-sm">
           <User className="w-3 h-3 mr-1 flex-shrink-0" />
           <span className="truncate">{loueur}</span>
         </span>
       );
     }
 
-    return <span className="text-xs text-gray-600 max-w-[180px] truncate block">{loueur}</span>;
+    return <span className="text-xs text-gray-700 max-w-[180px] truncate block font-medium">{loueur}</span>;
   };
 
   if (loading) {
@@ -565,14 +565,14 @@ export function VehicleListNew() {
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-lg shadow-lg border border-gray-300 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
+              <table className="min-w-full">
+                <thead className="bg-gray-100 border-b-2 border-gray-300">
                   <tr>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('immatriculation')}
                     >
                       <div className="flex items-center">
@@ -584,7 +584,7 @@ export function VehicleListNew() {
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('reference_tca')}
                     >
                       <div className="flex items-center">
@@ -596,7 +596,7 @@ export function VehicleListNew() {
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('marque')}
                     >
                       <div className="flex items-center">
@@ -608,7 +608,7 @@ export function VehicleListNew() {
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('locataire_affiche')}
                     >
                       <div className="flex items-center">
@@ -620,7 +620,7 @@ export function VehicleListNew() {
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('statut')}
                     >
                       <div className="flex items-center">
@@ -632,7 +632,7 @@ export function VehicleListNew() {
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('proprietaire_carte_grise')}
                     >
                       <div className="flex items-center">
@@ -644,7 +644,7 @@ export function VehicleListNew() {
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('loueur_affiche')}
                     >
                       <div className="flex items-center">
@@ -654,63 +654,63 @@ export function VehicleListNew() {
                         )}
                       </div>
                     </th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3.5 text-right text-xs font-bold text-gray-700 uppercase tracking-wide">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white">
                   {paginatedVehicles.map((vehicle, idx) => (
                     <tr
                       key={vehicle.id}
-                      className={`hover:bg-blue-50 transition-colors cursor-pointer ${
+                      className={`hover:bg-blue-50 transition-colors cursor-pointer border-b border-gray-200 ${
                         idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                       }`}
                       onClick={() => setSelectedVehicle(vehicle)}
                     >
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                         <div className="text-sm font-bold text-gray-900">{vehicle.immatriculation}</div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                         {vehicle.reference_tca ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-800">
+                          <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-gray-200 text-gray-800">
                             {vehicle.reference_tca}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-400">-</span>
+                          <span className="text-xs text-gray-400 font-medium">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-6 py-4 border-r border-gray-200">
                         <div className="text-sm">
-                          <div className="font-semibold text-gray-900">{vehicle.marque || '-'}</div>
-                          <div className="text-gray-600">{vehicle.modele || '-'}</div>
+                          <div className="font-bold text-gray-900">{vehicle.marque || '-'}</div>
+                          <div className="text-gray-600 font-medium">{vehicle.modele || '-'}</div>
                         </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-6 py-4 border-r border-gray-200">
                         <div className="text-sm">
                           {getLocataireBadge(vehicle)}
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                         {getStatusBadge(vehicle.statut)}
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="text-sm text-gray-900 max-w-[150px] truncate" title={vehicle.proprietaire_carte_grise || ''}>
+                      <td className="px-6 py-4 border-r border-gray-200">
+                        <div className="text-sm text-gray-900 font-medium max-w-[150px] truncate" title={vehicle.proprietaire_carte_grise || ''}>
                           {vehicle.proprietaire_carte_grise || <span className="text-gray-400">-</span>}
                         </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-6 py-4 border-r border-gray-200">
                         <div className="text-sm">
                           {getLoueurBadge(vehicle)}
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedVehicle(vehicle);
                           }}
-                          className="text-blue-600 hover:text-blue-900 font-medium"
+                          className="text-blue-600 hover:text-blue-800 font-bold transition-colors"
                         >
                           Voir détails
                         </button>
