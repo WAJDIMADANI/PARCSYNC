@@ -1229,6 +1229,11 @@ function EmployeeDetailModal({
   const [mutuellePDFFile, setMutuellePDFFile] = useState<File | null>(null);
   const [uploadingMutuellePDF, setUploadingMutuellePDF] = useState(false);
 
+  // États pour suppression de profil
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteProfilSuccess, setDeleteProfilSuccess] = useState(false);
+
   // Synchroniser currentEmployee avec la prop employee quand elle change
   useEffect(() => {
     setCurrentEmployee(employee);
@@ -1379,6 +1384,34 @@ function EmployeeDetailModal({
       setCurrentContractStatus(contractData?.statut || null);
     } catch (error) {
       console.error('Erreur rafraîchissement employé:', error);
+    }
+  };
+
+  const handleDeleteProfil = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('profil')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', currentEmployee.id);
+
+      if (error) throw error;
+
+      setDeleteProfilSuccess(true);
+      setShowDeleteConfirm(false);
+
+      // Fermer le modal et rafraîchir les données
+      onClose();
+      onUpdate();
+
+      setTimeout(() => {
+        setDeleteProfilSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Erreur lors de l\'archivage du profil:', error);
+      alert('Erreur lors de la suppression du profil');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -5262,17 +5295,17 @@ function EmployeeDetailModal({
 
     <ConfirmDeleteProfilModal
       isOpen={showDeleteConfirm}
-      profilName={selectedEmployee ? `${selectedEmployee.prenom} ${selectedEmployee.nom}` : ''}
+      profilName={`${currentEmployee.prenom} ${currentEmployee.nom}`}
       onConfirm={handleDeleteProfil}
       onCancel={() => setShowDeleteConfirm(false)}
       isDeleting={isDeleting}
     />
 
-    {deleteSuccess && (
+    {deleteProfilSuccess && (
       <Toast
         type="success"
         message="Profil archivé avec succès"
-        onClose={() => setDeleteSuccess(false)}
+        onClose={() => setDeleteProfilSuccess(false)}
       />
     )}
     </>
