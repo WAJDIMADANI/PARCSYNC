@@ -120,7 +120,7 @@ export function VehicleListNew() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('v_vehicles_list')
+        .from('v_vehicles_list_ui')
         .select('*')
         .order('created_at', { ascending: false });
 
