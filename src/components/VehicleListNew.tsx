@@ -19,6 +19,7 @@ import {
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDetailModal } from './VehicleDetailModal';
 import { VehicleCreateModal } from './VehicleCreateModal';
+import { parseProprietaireCarteGrise } from '../utils/proprietaireParser';
 
 interface Chauffeur {
   id: string;
@@ -720,8 +721,12 @@ export function VehicleListNew() {
                         {getStatusBadge(vehicle.statut)}
                       </td>
                       <td className="px-3 py-2 border-r border-gray-200">
-                        <div className="text-xs text-gray-900 max-w-[120px] truncate" title={vehicle.proprietaire_carte_grise || ''}>
-                          {vehicle.proprietaire_carte_grise || <span className="text-gray-400">-</span>}
+                        <div className="text-xs text-gray-900 max-w-[120px] truncate" title={parseProprietaireCarteGrise(vehicle.proprietaire_carte_grise).displayName}>
+                          {parseProprietaireCarteGrise(vehicle.proprietaire_carte_grise).displayName === '-' ? (
+                            <span className="text-gray-400">-</span>
+                          ) : (
+                            parseProprietaireCarteGrise(vehicle.proprietaire_carte_grise).displayName
+                          )}
                         </div>
                       </td>
                       <td className="px-3 py-2 border-r border-gray-200">
