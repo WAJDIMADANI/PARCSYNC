@@ -12,8 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  UserCircle,
-  Building2,
   Trash2
 } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -44,8 +42,27 @@ interface Vehicle {
   statut: string;
   date_mise_en_service: string | null;
   date_fin_service: string | null;
+  date_premiere_mise_en_circulation: string | null;
+  fournisseur: string | null;
+  mode_acquisition: string | null;
+  prix_ht: number | null;
+  prix_ttc: number | null;
+  mensualite: number | null;
+  duree_contrat_mois: number | null;
+  date_debut_contrat: string | null;
+  date_fin_prevue_contrat: string | null;
   photo_path: string | null;
   site_id: string | null;
+  assurance_type: 'tca' | 'externe' | null;
+  assurance_compagnie: string | null;
+  assurance_numero_contrat: string | null;
+  licence_transport_numero: string | null;
+  carte_essence_fournisseur: string | null;
+  carte_essence_numero: string | null;
+  carte_essence_attribuee: boolean;
+  kilometrage_actuel: number | null;
+  derniere_maj_kilometrage: string | null;
+  materiel_embarque: any[] | null;
   created_at: string;
   chauffeurs_actifs: Chauffeur[];
   nb_chauffeurs_actifs: number;
@@ -67,7 +84,7 @@ interface FilterState {
   referenceTCA: string;
 }
 
-type SortField = 'immatriculation' | 'reference_tca' | 'marque' | 'modele' | 'statut' | 'locataire_affiche' | 'proprietaire_carte_grise' | 'loueur_affiche';
+type SortField = 'immatriculation' | 'reference_tca' | 'marque' | 'modele' | 'statut' | 'locataire_affiche' | 'proprietaire_carte_grise' | 'fournisseur';
 type SortOrder = 'asc' | 'desc';
 
 export function VehicleListNew() {
@@ -333,41 +350,14 @@ export function VehicleListNew() {
     return <span className="text-xs text-gray-700 max-w-[150px] truncate block">{locataire}</span>;
   };
 
-  const getLoueurBadge = (vehicle: Vehicle) => {
-    const loueur = vehicle.loueur_affiche;
+  const getFournisseurDisplay = (vehicle: Vehicle) => {
+    const fournisseur = vehicle.fournisseur;
 
-    if (!loueur || loueur === '-') {
+    if (!fournisseur || fournisseur.trim() === '') {
       return <span className="text-xs text-gray-400">-</span>;
     }
 
-    if (vehicle.loueur_type === 'chauffeur_tca') {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-500 text-white max-w-[150px] truncate">
-          <UserCircle className="w-3 h-3 mr-1 flex-shrink-0" />
-          <span className="truncate">{loueur}</span>
-        </span>
-      );
-    }
-
-    if (vehicle.loueur_type === 'entreprise') {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500 text-white max-w-[150px] truncate">
-          <Building2 className="w-3 h-3 mr-1 flex-shrink-0" />
-          <span className="truncate">{loueur}</span>
-        </span>
-      );
-    }
-
-    if (vehicle.loueur_type === 'personne_externe') {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-500 text-white max-w-[150px] truncate">
-          <User className="w-3 h-3 mr-1 flex-shrink-0" />
-          <span className="truncate">{loueur}</span>
-        </span>
-      );
-    }
-
-    return <span className="text-xs text-gray-700 max-w-[150px] truncate block">{loueur}</span>;
+    return <span className="text-xs text-gray-700 max-w-[150px] truncate block">{fournisseur}</span>;
   };
 
   if (loading) {
@@ -402,7 +392,7 @@ export function VehicleListNew() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Rechercher par immatriculation, référence TCA, locataire, propriétaire, loueur..."
+              placeholder="Rechercher par immatriculation, référence TCA, locataire, propriétaire, fournisseur..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -543,7 +533,7 @@ export function VehicleListNew() {
                     <option value="locataire_affiche">Nom du locataire</option>
                     <option value="statut">Statut</option>
                     <option value="proprietaire_carte_grise">Propriétaire</option>
-                    <option value="loueur_affiche">Loueur</option>
+                    <option value="fournisseur">Fournisseur</option>
                   </select>
                 </div>
 
@@ -676,11 +666,11 @@ export function VehicleListNew() {
                     <th
                       scope="col"
                       className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
-                      onClick={() => handleSort('loueur_affiche')}
+                      onClick={() => handleSort('fournisseur')}
                     >
                       <div className="flex items-center">
-                        Loueur
-                        {sortField === 'loueur_affiche' && (
+                        Fournisseur
+                        {sortField === 'fournisseur' && (
                           sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
                         )}
                       </div>
@@ -736,7 +726,7 @@ export function VehicleListNew() {
                       </td>
                       <td className="px-3 py-2 border-r border-gray-200">
                         <div className="text-xs">
-                          {getLoueurBadge(vehicle)}
+                          {getFournisseurDisplay(vehicle)}
                         </div>
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-right text-xs">
