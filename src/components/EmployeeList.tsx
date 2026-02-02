@@ -969,7 +969,10 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                 {paginatedEmployees.map((employee) => (
                   <tr
                     key={employee.id}
-                    onClick={() => setSelectedEmployee(employee)}
+                    onClick={() => {
+                      setSelectedEmployee(employee);
+                      setIsModalOpen(true);
+                    }}
                     className="hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50 cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg relative"
                   >
                     <td className="px-3 py-3 text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors truncate">
@@ -1004,6 +1007,7 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedEmployee(employee);
+                          setIsModalOpen(true);
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-bold rounded-lg transition-all duration-300 shadow-md hover:shadow-xl transform hover:scale-110"
                       >
