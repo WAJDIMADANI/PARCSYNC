@@ -106,13 +106,13 @@ interface Attribution {
 interface Props {
   vehicle: Vehicle;
   onClose: () => void;
-  onUpdate: () => void;
+  onVehicleUpdated: (updatedVehicle: Vehicle) => Promise<void>;
   photoUrl?: string;
 }
 
 type Tab = 'info' | 'current' | 'proprietaire' | 'history' | 'insurance' | 'equipment' | 'kilometrage' | 'documents';
 
-export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate, photoUrl: initialPhotoUrl }: Props) {
+export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicleUpdated, photoUrl: initialPhotoUrl }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('info');
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -134,7 +134,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
   const [proprietaireEntreprisePhone, setProprietaireEntreprisePhone] = useState('');
   const [proprietaireEntrepriseAddress, setProprietaireEntrepriseAddress] = useState('');
 
-  // Fonction pour refetch les données du véhicule
+  // Fonction pour refetch les données du véhicule et notifier le parent
   const fetchVehicleDetails = async () => {
     console.log('[fetchVehicleDetails] Début refetch pour vehicule ID:', vehicle.id);
     try {
@@ -157,9 +157,12 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
           chauffeurs_actifs: Array.isArray(data.chauffeurs_actifs) ? data.chauffeurs_actifs : [],
           nb_chauffeurs_actifs: data.nb_chauffeurs_actifs || 0
         } as Vehicle;
-        setVehicle(updatedVehicle);
-        setEditedVehicle(updatedVehicle);
+        setVehicle(prev => ({...prev, ...updatedVehicle}));
+        setEditedVehicle(prev => ({...prev, ...updatedVehicle}));
         console.log('[fetchVehicleDetails] État mis à jour avec succès');
+
+        // Notifier le parent
+        await onVehicleUpdated(updatedVehicle);
       }
     } catch (error) {
       console.error('[fetchVehicleDetails] Erreur chargement détails véhicule:', JSON.stringify(error, null, 2));
@@ -285,7 +288,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
         .from('vehicule')
         .update(updateData)
         .eq('id', vehicle.id)
-        .select()
+        .select('*')
         .single();
 
       if (error) {
@@ -295,13 +298,33 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
 
       console.log('[handleSave] UPDATE réussi, données retournées:', data);
 
-      // Refetch les données pour avoir les valeurs à jour
-      await fetchVehicleDetails();
+      // Refetch depuis la vue pour avoir les champs calculés
+      const { data: vehicleFromView, error: viewError } = await supabase
+        .from('v_vehicles_list')
+        .select('*')
+        .eq('id', vehicle.id)
+        .single();
+
+      if (viewError) {
+        console.error('[handleSave] Erreur lecture vue:', viewError);
+        throw viewError;
+      }
+
+      const updatedVehicleData = {
+        ...vehicleFromView,
+        chauffeurs_actifs: Array.isArray(vehicleFromView.chauffeurs_actifs) ? vehicleFromView.chauffeurs_actifs : [],
+        nb_chauffeurs_actifs: vehicleFromView.nb_chauffeurs_actifs || 0
+      } as Vehicle;
+
+      // Mise à jour immédiate de l'état local
+      setVehicle(prev => ({...prev, ...updatedVehicleData}));
+      setEditedVehicle(prev => ({...prev, ...updatedVehicleData}));
 
       setIsEditing(false);
       console.log('[handleSave] Mode édition désactivé');
 
-      onUpdate(); // Refetch la liste des véhicules aussi
+      // Notifier le parent de la mise à jour
+      await onVehicleUpdated(updatedVehicleData);
 
       alert('✓ Modifications enregistrées avec succès');
     } catch (error) {
@@ -359,9 +382,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
         setPhotoUrl(signedUrl.signedUrl);
       }
 
-      // Refetch les données du véhicule pour avoir le photo_path à jour
+      // Refetch les données du véhicule pour avoir le photo_path à jour (et notifie le parent)
       await fetchVehicleDetails();
-      onUpdate();
     } catch (error) {
       console.error('Erreur upload photo:', error);
       alert('Erreur lors de l\'upload de la photo');
@@ -388,9 +410,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
 
       setPhotoUrl(undefined);
 
-      // Refetch les données du véhicule
+      // Refetch les données du véhicule (et notifie le parent)
       await fetchVehicleDetails();
-      onUpdate();
     } catch (error) {
       console.error('Erreur suppression photo:', error);
       alert('Erreur lors de la suppression de la photo');
@@ -409,7 +430,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
       if (error) throw error;
 
       fetchAttributions();
-      onUpdate();
+      await fetchVehicleDetails();
     } catch (error) {
       console.error('Erreur fin attribution:', error);
       alert('Erreur lors de la fin de l\'attribution');
@@ -1608,8 +1629,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
           onSuccess={() => {
             setShowAttributionModal(false);
             fetchAttributions();
-            fetchVehicleDetails(); // Recharger les données du véhicule pour mettre à jour le locataire
-            onUpdate(); // Recharger la liste parente
+            fetchVehicleDetails(); // Recharger les données du véhicule et notifier le parent
           }}
         />
       )}
@@ -1620,10 +1640,9 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onUpdate,
           currentKm={vehicle.kilometrage_actuel || null}
           onClose={() => setShowKilometrageModal(false)}
           onSuccess={async () => {
-            // Refetch les données du véhicule pour voir le km à jour instantanément
+            // Refetch les données du véhicule et notifier le parent
             await fetchVehicleDetails();
             setShowKilometrageModal(false);
-            onUpdate(); // Refetch la liste aussi
           }}
         />
       )}

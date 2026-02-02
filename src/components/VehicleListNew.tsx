@@ -238,6 +238,11 @@ export function VehicleListNew() {
     setCurrentPage(1);
   };
 
+  const handleVehicleUpdated = async (updatedVehicle: Vehicle) => {
+    setVehicles(prev => prev.map(v => v.id === updatedVehicle.id ? { ...v, ...updatedVehicle } : v));
+    await fetchVehicles();
+  };
+
   const handleDeleteVehicle = async () => {
     if (!vehicleToDelete) return;
 
@@ -850,7 +855,7 @@ export function VehicleListNew() {
         <VehicleDetailModal
           vehicle={selectedVehicle}
           onClose={() => setSelectedVehicle(null)}
-          onUpdate={fetchVehicles}
+          onVehicleUpdated={handleVehicleUpdated}
           photoUrl={photoUrls[selectedVehicle.id]}
         />
       )}
