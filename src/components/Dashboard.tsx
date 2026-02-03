@@ -40,6 +40,7 @@ import { InboxPage } from './InboxPage';
 import { DemandesExternesManager } from './DemandesExternesManager';
 import AccountingDashboard from './AccountingDashboard';
 import { CRMEmails } from './CRMEmails';
+import { CRMSms } from './CRMSms';
 import LocatairesExternesManager from './LocatairesExternesManager';
 
 export function Dashboard() {
@@ -85,6 +86,8 @@ export function Dashboard() {
         return <ValidationsPage />;
       case 'rh/emails':
         return <CRMEmails />;
+      case 'rh/sms':
+        return <CRMSms />;
       case 'parc/vehicules':
         return <VehicleListNew />;
       case 'parc/locataires-externes':

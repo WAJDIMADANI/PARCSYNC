@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard, MapPin, HeartHandshake, Clock, Banknote
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard, MapPin, HeartHandshake, Clock, Banknote, MessageSquare
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { supabase } from '../lib/supabase';
@@ -24,6 +24,7 @@ export type View =
   | 'rh/demandes'
   | 'rh/validations'
   | 'rh/emails'
+  | 'rh/sms'
   | 'parc/vehicules'
   | 'parc/ct-assurance'
   | 'parc/maintenance'
@@ -160,6 +161,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'rh/courriers', label: 'Courriers', icon: Mail, enabled: true },
         { id: 'rh/courriers-generes', label: 'Courriers Générés', icon: FileCheck, enabled: true },
         { id: 'rh/emails', label: 'Emails', icon: Mail, enabled: true },
+        { id: 'rh/sms', label: 'SMS', icon: MessageSquare, enabled: true },
         { id: 'rh/notifications', label: 'Notifications', icon: Sparkles, enabled: true },
         { id: 'rh/documents-manquants', label: 'Documents Manquants', icon: FileWarning, enabled: true },
         { id: 'rh/incidents', label: 'Incidents', icon: AlertCircle, enabled: true },
