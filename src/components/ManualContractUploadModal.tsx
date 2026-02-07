@@ -165,11 +165,6 @@ export default function ManualContractUploadModal({
       return;
     }
 
-    if (typeContrat !== 'CDI' && !dateFin) {
-      setError('La date de fin est obligatoire pour un ' + typeContrat);
-      return;
-    }
-
     try {
       setUploading(true);
 
@@ -356,20 +351,17 @@ export default function ManualContractUploadModal({
                 />
               </div>
 
-              {typeContrat !== 'CDI' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date de fin {typeContrat !== 'CDI' && <span className="text-red-500">*</span>}
-                  </label>
-                  <input
-                    type="date"
-                    value={dateFin}
-                    onChange={(e) => setDateFin(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required={typeContrat !== 'CDI'}
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date de fin
+                </label>
+                <input
+                  type="date"
+                  value={dateFin}
+                  onChange={(e) => setDateFin(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
               </div>
 
               <div>
