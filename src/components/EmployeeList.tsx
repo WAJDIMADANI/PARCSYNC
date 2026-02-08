@@ -4152,7 +4152,11 @@ function EmployeeDetailModal({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-3 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium text-xs shadow-sm hover:shadow-md flex items-center gap-1.5 transform hover:scale-105"
-                        title="Voir le document"
+                        title={
+                          doc.type_document?.toLowerCase() === 'autre' || doc.type_document?.toLowerCase() === 'autres'
+                            ? doc.file_name || 'Voir le document'
+                            : 'Voir le document'
+                        }
                       >
                         <FileText className="w-4 h-4" />
                         Voir
