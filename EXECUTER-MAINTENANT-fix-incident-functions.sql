@@ -142,11 +142,16 @@ BEGIN
         -- If no contrat_id in metadata, find the most recent active CDD contract
         UPDATE contrat
         SET date_fin = p_nouvelle_date_validite
-        WHERE profil_id = v_incident.profil_id
-          AND type = 'CDD'
-          AND statut = 'actif'
-          AND date_fin = v_incident.date_expiration_originale
-        LIMIT 1;
+        WHERE id = (
+          SELECT id
+          FROM contrat
+          WHERE profil_id = v_incident.profil_id
+            AND type = 'CDD'
+            AND statut = 'actif'
+            AND date_fin = v_incident.date_expiration_originale
+          ORDER BY created_at DESC
+          LIMIT 1
+        );
       END IF;
 
     ELSE
