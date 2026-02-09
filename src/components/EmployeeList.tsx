@@ -2093,6 +2093,46 @@ function EmployeeDetailModal({
         throw new Error(`Erreur de sauvegarde: ${error.message || 'Erreur inconnue'}`);
       }
 
+      // Mise à jour des incidents pour titre de séjour si la date a changé
+      if (editedTitreSejourExpiration && editedTitreSejourExpiration !== currentEmployee.titre_sejour_fin_validite) {
+        try {
+          const { data: rpcResult, error: rpcError } = await supabase.rpc('update_incident_expiration_date_only', {
+            p_profil_id: currentEmployee.id,
+            p_type: 'titre_sejour',
+            p_nouvelle_date: editedTitreSejourExpiration,
+            p_commentaire: 'Date mise à jour depuis le modal salarié'
+          });
+
+          if (rpcError) {
+            console.error('Erreur RPC titre_sejour:', rpcError);
+          } else {
+            console.log('Incident titre_sejour mis à jour:', rpcResult);
+          }
+        } catch (rpcErr) {
+          console.error('Erreur lors de la mise à jour de l\'incident titre_sejour:', rpcErr);
+        }
+      }
+
+      // Mise à jour des incidents pour visite médicale si la date a changé
+      if (editedCertificatExpiration && editedCertificatExpiration !== currentEmployee.date_fin_visite_medicale) {
+        try {
+          const { data: rpcResult, error: rpcError } = await supabase.rpc('update_incident_expiration_date_only', {
+            p_profil_id: currentEmployee.id,
+            p_type: 'visite_medicale',
+            p_nouvelle_date: editedCertificatExpiration,
+            p_commentaire: 'Date mise à jour depuis le modal salarié'
+          });
+
+          if (rpcError) {
+            console.error('Erreur RPC visite_medicale:', rpcError);
+          } else {
+            console.log('Incident visite_medicale mis à jour:', rpcResult);
+          }
+        } catch (rpcErr) {
+          console.error('Erreur lors de la mise à jour de l\'incident visite_medicale:', rpcErr);
+        }
+      }
+
       // Mettre à jour l'employé localement au lieu de recharger tout
       setCurrentEmployee({
         ...currentEmployee,
@@ -2107,8 +2147,10 @@ function EmployeeDetailModal({
 
       setIsEditingDates(false);
 
-      // NE PAS appeler onUpdate() pour éviter le rechargement du modal
-      // La liste principale se mettra à jour automatiquement quand on fermera le modal
+      // Déclencher le rechargement de la liste pour rafraîchir les compteurs d'incidents
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde des dates:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
