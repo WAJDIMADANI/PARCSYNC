@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { Upload, Camera, FileText, CheckCircle, AlertCircle, X, Loader } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { REQUIRED_DOCUMENTS_MAP } from '../constants/requiredDocuments';
@@ -15,6 +15,22 @@ export default function UploadAllMissingDocuments() {
   const params = new URLSearchParams(window.location.search);
   const profilId = params.get('profil');
   const token = params.get('token');
+
+  const supabase = useMemo(() => {
+    if (!token) return null;
+
+    return createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      {
+        global: {
+          headers: {
+            'x-upload-token': token
+          }
+        }
+      }
+    );
+  }, [token]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -82,6 +98,12 @@ export default function UploadAllMissingDocuments() {
     console.log('🚀 === DÉBUT DE loadData() ===');
     console.log('🚀 profilId reçu:', profilId);
     console.log('🚀 token reçu:', token);
+
+    if (!supabase) {
+      setError('Configuration invalide');
+      setLoading(false);
+      return;
+    }
 
     try {
       console.log('📞 Appel 1: Vérification du token...');
@@ -320,7 +342,7 @@ export default function UploadAllMissingDocuments() {
 
   const handleUpload = async (documentType: string) => {
     const file = selectedFiles[documentType];
-    if (!file || !profilData) return;
+    if (!file || !profilData || !supabase) return;
 
     setUploadingDocs(prev => new Set(prev).add(documentType));
     setError('');
@@ -332,10 +354,10 @@ export default function UploadAllMissingDocuments() {
       const fileExt = file.name.split('.').pop();
       const fileName = `${profilData.id}/${documentType}-${Date.now()}.${fileExt}`;
 
-      console.log('📤 Upload du fichier vers le storage...');
+      console.log('📤 Upload du fichier vers le storage (chemin sécurisé):', fileName);
       const { error: uploadError } = await supabase.storage
         .from('documents')
-        .upload(fileName, file);
+        .upload(fileName, file, { upsert: true });
 
       if (uploadError) {
         console.error('❌ Erreur storage:', uploadError);
