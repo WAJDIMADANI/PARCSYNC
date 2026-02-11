@@ -49,6 +49,8 @@ Deno.serve(async (req: Request) => {
           },
         ],
         subject: "Bienvenue chez TRANSPORT CLASSE AFFAIRE - Complétez votre dossier d'embauche",
+        trackClicks: false,
+        trackOpens: false,
         htmlContent: `
           <!DOCTYPE html>
           <html>
