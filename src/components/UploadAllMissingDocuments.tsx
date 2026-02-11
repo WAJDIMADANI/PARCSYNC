@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Upload, Camera, FileText, CheckCircle, AlertCircle, X, Loader } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -12,7 +12,7 @@ interface MissingDocument {
 }
 
 export default function UploadAllMissingDocuments() {
-  const params = new URLSearchParams(window.location.search);
+  const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const profilId = params.get('profil');
   const token = params.get('token');
 
@@ -77,7 +77,7 @@ export default function UploadAllMissingDocuments() {
 
     console.log('✅ Paramètres valides, appel de loadData()...');
     loadData();
-  }, [profilId, token]);
+  }, [profilId, token, loadData]);
 
   useEffect(() => {
     if (videoRef.current && cameraStream) {
@@ -94,7 +94,7 @@ export default function UploadAllMissingDocuments() {
     }
   }, [successMessage]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     console.log('🚀 === DÉBUT DE loadData() ===');
     console.log('🚀 profilId reçu:', profilId);
     console.log('🚀 token reçu:', token);
@@ -237,7 +237,7 @@ export default function UploadAllMissingDocuments() {
       console.log('🏁 === FIN DE loadData() - setLoading(false) ===');
       setLoading(false);
     }
-  };
+  }, [supabase, profilId, token, params]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, documentType: string) => {
     const selectedFile = e.target.files?.[0];
