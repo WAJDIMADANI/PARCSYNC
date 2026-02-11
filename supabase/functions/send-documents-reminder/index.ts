@@ -156,6 +156,8 @@ Deno.serve(async (req: Request) => {
           },
         ],
         subject: `Documents manquants - Action requise`,
+        trackClicks: false,
+        trackOpens: false,
         htmlContent: emailHtml,
       }),
     });

@@ -115,6 +115,8 @@ Deno.serve(async (req: Request) => {
           },
         ],
         subject: "📋 Documents obligatoires manquants - TRANSPORT CLASSE AFFAIRE",
+        trackClicks: false,
+        trackOpens: false,
         htmlContent: `
           <!DOCTYPE html>
           <html>
