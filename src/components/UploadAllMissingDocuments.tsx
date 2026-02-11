@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Upload, Camera, FileText, CheckCircle, AlertCircle, X, Loader } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -12,25 +12,21 @@ interface MissingDocument {
 }
 
 export default function UploadAllMissingDocuments() {
-  const params = useMemo(() => new URLSearchParams(window.location.search), []);
+  const params = new URLSearchParams(window.location.search);
   const profilId = params.get('profil');
   const token = params.get('token');
 
-  const supabase = useMemo(() => {
-    if (!token) return null;
-
-    return createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
-      {
-        global: {
-          headers: {
-            'x-upload-token': token
-          }
+  const supabase = token ? createClient(
+    import.meta.env.VITE_SUPABASE_URL,
+    import.meta.env.VITE_SUPABASE_ANON_KEY,
+    {
+      global: {
+        headers: {
+          'x-upload-token': token
         }
       }
-    );
-  }, [token]);
+    }
+  ) : null;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -77,7 +73,7 @@ export default function UploadAllMissingDocuments() {
 
     console.log('✅ Paramètres valides, appel de loadData()...');
     loadData();
-  }, [profilId, token, loadData]);
+  }, [profilId, token]);
 
   useEffect(() => {
     if (videoRef.current && cameraStream) {
@@ -94,7 +90,7 @@ export default function UploadAllMissingDocuments() {
     }
   }, [successMessage]);
 
-  const loadData = useCallback(async () => {
+  const loadData = async () => {
     console.log('🚀 === DÉBUT DE loadData() ===');
     console.log('🚀 profilId reçu:', profilId);
     console.log('🚀 token reçu:', token);
@@ -237,7 +233,7 @@ export default function UploadAllMissingDocuments() {
       console.log('🏁 === FIN DE loadData() - setLoading(false) ===');
       setLoading(false);
     }
-  }, [supabase, profilId, token]);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, documentType: string) => {
     const selectedFile = e.target.files?.[0];
