@@ -153,7 +153,8 @@ export default function UploadAllMissingDocuments() {
         const { data: existingDocs, error: docsError } = await supabase
           .from('document')
           .select('type_document')
-          .eq('profil_id', profilId)
+          .eq('owner_type', 'profil')
+          .eq('owner_id', profilId)
           .in('type_document', requestedDocsList);
 
         if (docsError) {
