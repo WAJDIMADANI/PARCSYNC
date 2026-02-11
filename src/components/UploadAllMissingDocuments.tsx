@@ -237,7 +237,7 @@ export default function UploadAllMissingDocuments() {
       console.log('🏁 === FIN DE loadData() - setLoading(false) ===');
       setLoading(false);
     }
-  }, [supabase, profilId, token, params]);
+  }, [supabase, profilId, token]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, documentType: string) => {
     const selectedFile = e.target.files?.[0];
