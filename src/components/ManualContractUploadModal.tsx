@@ -205,24 +205,37 @@ export default function ManualContractUploadModal({
         uploaded_by_name: employeeName
       };
 
-      const { error: insertError } = await supabase
+      const insertData = {
+        profil_id: profilId,
+        modele_id: null,
+        fichier_signe_url: filePath,
+        statut: 'signe',
+        date_signature: dateSignature,
+        variables: variables,
+        yousign_signature_request_id: null,
+        source: 'manuel'
+      };
+
+      console.log('Attempting to insert contract with data:', insertData);
+
+      const { data: insertedData, error: insertError } = await supabase
         .from('contrat')
-        .insert({
-          profil_id: profilId,
-          modele_id: null,
-          fichier_signe_url: filePath,
-          statut: 'signe',
-          date_signature: dateSignature,
-          variables: variables,
-          yousign_signature_request_id: null,
-          source: 'manuel'
-        });
+        .insert(insertData)
+        .select();
 
       if (insertError) {
-        console.error('Insert error:', insertError);
+        console.error('Insert error details:', {
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint,
+          code: insertError.code
+        });
+        console.error('Supabase request failed', insertError);
         await supabase.storage.from('documents').remove([filePath]);
-        throw new Error('Erreur lors de l\'enregistrement en base de données');
+        throw new Error(`Erreur lors de l'enregistrement: ${insertError.message || 'Erreur inconnue'}`);
       }
+
+      console.log('Contract inserted successfully:', insertedData);
 
       onSuccess();
       onClose();
