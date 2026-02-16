@@ -213,7 +213,9 @@ export default function ManualContractUploadModal({
         date_signature: dateSignature,
         variables: variables,
         yousign_signature_request_id: null,
-        source: 'manuel'
+        source: 'manuel',
+        type_document: 'contrat',
+        avenant_num: null
       };
 
       console.log('Attempting to insert contract with data:', insertData);
