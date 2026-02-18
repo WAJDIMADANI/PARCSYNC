@@ -257,7 +257,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     }
 
     switch (incident.type) {
-      case 'titre_sejour': return 'Titre de séjour';
+      case 'titre_sejour': return 'Pièce d\'identité';
       case 'visite_medicale': return 'Visite médicale';
       case 'permis_conduire': return 'Permis de conduire';
       case 'contrat_cdd': return 'Contrat CDD';
@@ -432,7 +432,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
           }`}
         >
           <CreditCard className="w-5 h-5" />
-          Titre de séjour
+          Pièce d'identité
           {getTabCount('titre_sejour') > 0 && (
             <span className={`px-2 py-1 rounded-full text-xs font-bold ${
               activeTab === 'titre_sejour' ? 'bg-white text-blue-600' : 'bg-blue-100 text-blue-600'
@@ -551,7 +551,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
           <p className="text-gray-600">
             {searchTerm || filterStatus !== 'all'
               ? 'Aucun incident ne correspond à vos critères de recherche'
-              : `Aucun incident de type "${activeTab === 'titre_sejour' ? 'Titre de séjour' :
+              : `Aucun incident de type "${activeTab === 'titre_sejour' ? 'Pièce d\'identité' :
                   activeTab === 'visite_medicale' ? 'Visite médicale' :
                   activeTab === 'permis_conduire' ? 'Permis de conduire' :
                   activeTab === 'contrat_cdd' ? 'CDD' :

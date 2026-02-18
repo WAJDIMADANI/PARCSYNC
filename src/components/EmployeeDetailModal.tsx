@@ -499,7 +499,7 @@ export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalPr
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <Calendar className="w-3.5 h-3.5 text-gray-500" />
-                      <label className="text-xs font-medium text-gray-500 uppercase">Titre de séjour - Fin de validité</label>
+                      <label className="text-xs font-medium text-gray-500 uppercase">Pièce d'identité - Fin de validité</label>
                     </div>
                     <p className="text-sm text-gray-900">{formatDate(employee.data.titre_sejour_fin_validite)}</p>
                   </div>
