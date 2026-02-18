@@ -106,7 +106,7 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'titre_sejour': return 'Titre de séjour';
+      case 'titre_sejour': return 'Pièce d\'identité';
       case 'visite_medicale': return 'Visite médicale';
       case 'permis_conduire': return 'Permis de conduire';
       case 'contrat_cdd': return 'Contrat CDD';
@@ -219,7 +219,7 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
           }`}
         >
           <CreditCard className="w-5 h-5" />
-          Titres de séjour
+          Pièces d'identité
           {getTabCount('titre_sejour') > 0 && (
             <span className={`px-2 py-1 rounded-full text-xs font-bold ${
               activeTab === 'titre_sejour' ? 'bg-white text-blue-600' : 'bg-blue-100 text-blue-600'
