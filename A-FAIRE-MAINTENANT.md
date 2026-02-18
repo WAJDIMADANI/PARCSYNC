@@ -1,121 +1,55 @@
-# À faire maintenant - 2 corrections
+# POURQUOI LES NOTIFICATIONS N'APPARAISSENT PAS
 
-## ⚠️ ERREUR SQL CORRIGÉE
+## Problème
 
-**Les scripts utilisaient le mauvais nom de colonne !**
-- ❌ `numero_piece_identite` (n'existe pas)
-- ✅ `nir` (le bon nom)
+Vous avez modifié la date de fin de titre de séjour d'un salarié (< 30 jours), mais aucune notification n'apparaît dans l'onglet Notifications.
 
-Tous les fichiers ont été corrigés. Voir : **`CORRECTION-VARIABLES-CDI-APPLIQUEE.md`**
+## Explication
 
----
+Les notifications NE sont PAS créées automatiquement quand vous modifiez une date. 
 
-## 1. Corriger l'onglet Avenant (25 au lieu de 86)
+Le système utilise une fonction `generate_expiration_notifications()` qui scanne les profils et crée les notifications, mais cette fonction doit être **exécutée manuellement** ou **planifiée avec un CRON**.
 
-### Exécuter le SQL
-1. Ouvrez l'éditeur SQL de Supabase
-2. Copiez et exécutez le fichier : **`CORRIGER-ONGLET-AVENANT-MAINTENANT.sql`**
-3. Rafraîchissez votre application
-4. Le badge "Avenant" affiche maintenant 25
+## Solution immédiate (30 secondes)
 
-### Vérification
-- Console du navigateur (F12) doit afficher : `avenantsData length 25`
-- L'onglet Avenant doit afficher uniquement 25 avenants expirés
-- Pas de doublons
-- Les salariés avec CDI sont exclus
+### Ouvrez Supabase SQL Editor et exécutez :
 
-**Fichiers disponibles :**
-- `CORRIGER-ONGLET-AVENANT-MAINTENANT.sql` - SQL à exécuter
-- `CORRECTION-ONGLET-AVENANT-README.md` - Explications détaillées
-- `EXECUTER-CORRECTION-AVENANT.md` - Guide rapide
-
----
-
-## 2. Corriger les variables CDI non remplies
-
-### Redéployer la fonction Edge
-La fonction `create-yousign-signature` a été mise à jour avec de meilleurs logs et mapping.
-
-**Redéploiement via CLI :**
-```bash
-cd /tmp/cc-agent/59041934/project
-supabase functions deploy create-yousign-signature
+```sql
+SELECT generate_expiration_notifications();
 ```
 
-**Ou via Dashboard Supabase :**
-1. Edge Functions > create-yousign-signature
-2. Cliquez sur "Deploy"
-3. Uploadez le fichier `supabase/functions/create-yousign-signature/index.ts`
+Cliquez **RUN**
 
-### Vérifier les données du profil
-Utilisez le script SQL : **`VERIFIER-DONNEES-PROFIL-CDI.sql`**
+Résultat attendu : `Success. No rows returned`
 
-1. Ouvrez l'éditeur SQL de Supabase
-2. Copiez le contenu du fichier
-3. Remplacez `'MATRICULE_ICI'` par le matricule du salarié
-4. Exécutez
-5. Vérifiez que toutes les lignes affichent ✅
-
-### Si des données sont manquantes
-1. Allez dans l'interface RH
-2. Ouvrez la fiche du salarié
-3. Remplissez TOUS les champs obligatoires
-4. Enregistrez
-
-### Tester avec un nouveau contrat
-1. Créez un nouveau contrat CDI via Yousign
-2. Ouvrez les logs Supabase (Edge Functions > Logs)
-3. Vérifiez que les variables sont bien remplies
-4. Vérifiez le PDF généré
-
-**Fichiers disponibles :**
-- `FIX-VARIABLES-CDI-NON-REMPLIES.md` - Guide complet de diagnostic
-- `VERIFIER-DONNEES-PROFIL-CDI.sql` - Script de vérification
-- `SOLUTION-VARIABLES-CDI.md` - Résumé de la solution
+Puis **rafraîchir l'app** → les notifications devraient apparaître !
 
 ---
 
-## Ordre d'exécution recommandé
+## Solution permanente : Activer le CRON
 
-### 1. Onglet Avenant (2 minutes)
-```bash
-# SQL à exécuter
-CORRIGER-ONGLET-AVENANT-MAINTENANT.sql
-```
+Pour que les notifications soient générées automatiquement chaque jour à 6h du matin :
 
-### 2. Variables CDI (5-10 minutes)
-```bash
-# 1. Redéployer la fonction
-supabase functions deploy create-yousign-signature
+```sql
+-- 1. Activer l'extension pg_cron (si pas déjà fait)
+CREATE EXTENSION IF NOT EXISTS pg_cron;
 
-# 2. Vérifier les données (SQL)
-VERIFIER-DONNEES-PROFIL-CDI.sql
-
-# 3. Compléter les données manquantes (Interface RH)
-# 4. Tester avec un nouveau contrat
+-- 2. Planifier l'exécution quotidienne à 6h
+SELECT cron.schedule(
+  'generate-notifications-daily',
+  '0 6 * * *',
+  'SELECT generate_expiration_notifications();'
+);
 ```
 
 ---
 
-## Résumé
+## Diagnostic complet (optionnel)
 
-### Onglet Avenant
-- Exécutez `CORRIGER-ONGLET-AVENANT-MAINTENANT.sql`
-- Rafraîchissez l'application
-- Vérifiez que le badge affiche 25
+Si vous voulez vérifier l'état actuel, exécutez **DIAGNOSTIC-NOTIFICATIONS-CDD.sql**
 
-### Variables CDI
-- Redéployez la fonction Edge
-- Vérifiez que les données du profil sont complètes
-- Testez avec un nouveau contrat CDI
-- Vérifiez les logs Supabase pour le diagnostic
-
----
-
-## Support
-
-Si vous rencontrez des problèmes :
-1. Vérifiez les logs Supabase (Edge Functions > Logs)
-2. Vérifiez la console du navigateur (F12)
-3. Exécutez les scripts SQL de vérification
-4. Envoyez-moi les logs et captures d'écran
+Ce script vous montrera :
+- Si la table notification existe
+- Combien de notifications par type
+- Les dernières notifications créées
+- Si les fonctions et triggers existent

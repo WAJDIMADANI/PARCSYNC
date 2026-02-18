@@ -1,56 +1,61 @@
-/*
-  DIAGNOSTIC: Vérifier pourquoi les incidents titre_sejour ne s'affichent pas
+-- Diagnostic : Pourquoi les notifications titre de séjour n'apparaissent pas
 
-  Ce script vérifie:
-  1. Si les incidents titre_sejour existent
-  2. Leur structure
-  3. Les liens avec les profils
-*/
+-- 1. Voir la structure de la table incident
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'incident'
+ORDER BY ordinal_position;
 
--- 1. Compter les incidents par type
-SELECT
-  type,
-  COUNT(*) as nombre,
-  COUNT(DISTINCT profil_id) as profils_uniques
-FROM incident
-GROUP BY type
-ORDER BY nombre DESC;
+-- 2. Voir tous les types d'incidents possibles
+SELECT DISTINCT type_incident FROM incident;
 
--- 2. Vérifier les 5 premiers incidents titre_sejour
-SELECT
+-- 3. Voir les incidents titre de séjour existants
+SELECT 
   i.id,
-  i.type,
   i.profil_id,
-  i.contrat_id,
-  i.date_expiration_effective,
-  i.statut,
-  i.created_at,
   p.nom,
   p.prenom,
-  p.email
+  i.type_incident,
+  i.statut,
+  i.date_expiration,
+  i.created_at
 FROM incident i
-LEFT JOIN profil p ON p.id = i.profil_id
-WHERE i.type = 'titre_sejour'
-ORDER BY i.date_expiration_effective
-LIMIT 5;
+JOIN profil p ON p.id = i.profil_id
+WHERE i.type_incident ILIKE '%titre%'
+ORDER BY i.created_at DESC
+LIMIT 10;
 
--- 3. Vérifier s'il y a des incidents sans profil_id
-SELECT
-  type,
-  COUNT(*) as incidents_sans_profil
-FROM incident
-WHERE profil_id IS NULL
-GROUP BY type;
+-- 4. Voir la fonction qui génère les incidents quotidiens
+SELECT routine_name, routine_definition
+FROM information_schema.routines
+WHERE routine_name LIKE '%incident%'
+  AND routine_type = 'FUNCTION';
 
--- 4. Vérifier les RLS policies sur la table incident
-SELECT
-  schemaname,
-  tablename,
-  policyname,
-  roles,
-  cmd,
-  qual,
-  with_check
-FROM pg_policies
-WHERE tablename = 'incident'
-ORDER BY policyname;
+-- 5. Vérifier les dates d'expiration des titres de séjour < 30 jours
+SELECT 
+  p.id,
+  p.nom,
+  p.prenom,
+  p.titre_sejour_validite_fin,
+  (p.titre_sejour_validite_fin - CURRENT_DATE) as jours_restants
+FROM profil p
+WHERE p.titre_sejour_validite_fin IS NOT NULL
+  AND p.titre_sejour_validite_fin <= CURRENT_DATE + INTERVAL '30 days'
+  AND p.deleted_at IS NULL
+ORDER BY p.titre_sejour_validite_fin;
+
+-- 6. Voir si des incidents existent pour ces profils
+SELECT 
+  p.nom,
+  p.prenom,
+  p.titre_sejour_validite_fin,
+  i.type_incident,
+  i.statut,
+  i.date_expiration
+FROM profil p
+LEFT JOIN incident i ON i.profil_id = p.id 
+  AND i.type_incident ILIKE '%titre%'
+  AND i.statut != 'resolu'
+WHERE p.titre_sejour_validite_fin IS NOT NULL
+  AND p.titre_sejour_validite_fin <= CURRENT_DATE + INTERVAL '30 days'
+  AND p.deleted_at IS NULL;
