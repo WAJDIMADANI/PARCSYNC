@@ -57,10 +57,10 @@ DECLARE
   result_count int;
   deleted_count int;
 BEGIN
-  -- Supprimer les anciennes notifications futures
+  -- Supprimer les anciennes notifications futures (statut = 'active')
   DELETE FROM notification
-  WHERE lu = false
-    AND date_envoi > NOW();
+  WHERE statut = 'active'
+    AND date_notification > NOW();
 
   GET DIAGNOSTICS deleted_count = ROW_COUNT;
 
@@ -135,8 +135,8 @@ SELECT refresh_all_notifications();
 SELECT
   type,
   COUNT(*) as total,
-  COUNT(*) FILTER (WHERE lu = false) as non_lues,
-  COUNT(*) FILTER (WHERE date_envoi <= NOW()) as a_envoyer
+  COUNT(*) FILTER (WHERE statut = 'active') as actives,
+  COUNT(*) FILTER (WHERE date_notification <= NOW()) as a_envoyer
 FROM notification
 GROUP BY type
 ORDER BY total DESC;
