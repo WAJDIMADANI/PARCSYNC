@@ -413,8 +413,9 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       // Récupérer toutes les notifications depuis la table notification
       const { data: notifications } = await supabase
         .from('notification')
-        .select('type, statut, date_echeance')
-        .in('statut', ['active', 'email_envoye']);
+        .select('type, statut, date_echeance, profil:profil_id(statut)')
+        .in('statut', ['active', 'email_envoye'])
+        .neq('profil.statut', 'sorti');
 
       // Récupérer les CDD expirés depuis la fonction RPC
       const { data: cddData } = await supabase.rpc('get_cdd_expires');
@@ -488,11 +489,13 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           profil:profil_id (
             prenom,
             nom,
-            email
+            email,
+            statut
           )
         `)
         .in('type', DOCUMENT_TYPES)
-        .in('statut', ['actif', 'en_cours']);
+        .in('statut', ['actif', 'en_cours'])
+        .neq('profil.statut', 'sorti');
 
       const docsCount = documentsIncidents?.length || 0;
 
