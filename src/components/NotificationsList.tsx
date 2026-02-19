@@ -64,8 +64,9 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         .from('notification')
         .select(`
           *,
-          profil:profil_id(prenom, nom, email)
+          profil:profil_id(prenom, nom, email, statut)
         `)
+        .neq('profil.statut', 'sorti')
         .order('date_echeance', { ascending: true });
 
       if (error) {
