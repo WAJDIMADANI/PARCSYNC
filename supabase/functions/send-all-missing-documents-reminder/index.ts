@@ -19,7 +19,7 @@ const documentLabels: Record<string, string> = {
   'cni_recto': 'Carte d\'identité (Recto)',
   'cni_verso': 'Carte d\'identité (Verso)',
   'carte_vitale': 'Carte vitale',
-  'certificat_medical': 'Certificat médical',
+  'certificat_medical': 'Visite médicale obligatoire (médecin agréé préfecture)',
   'rib': 'RIB',
 };
 

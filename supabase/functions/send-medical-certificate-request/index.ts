@@ -49,7 +49,7 @@ Deno.serve(async (req: Request) => {
             name: employeeName,
           },
         ],
-        subject: "📋 Certificat médical requis - TRANSPORT CLASSE AFFAIRE",
+        subject: "📋 Visite médicale obligatoire requise - TRANSPORT CLASSE AFFAIRE",
         htmlContent: `
           <!DOCTYPE html>
           <html>
@@ -68,22 +68,22 @@ Deno.serve(async (req: Request) => {
             <body>
               <div class="container">
                 <div class="header">
-                  <h1>📋 Certificat médical requis</h1>
+                  <h1>📋 Visite médicale obligatoire requise</h1>
                 </div>
                 <div class="content">
                   <p>Bonjour ${employeeName},</p>
 
-                  <p>Nous avons besoin de votre <strong>certificat médical</strong> pour finaliser votre dossier d'embauche.</p>
+                  <p>Nous avons besoin de votre <strong>visite médicale obligatoire (médecin agréé préfecture)</strong> pour finaliser votre dossier d'embauche.</p>
 
                   <div class="info-box">
                     <strong>📌 Document requis :</strong><br>
-                    Certificat médical de moins de 3 mois attestant que vous êtes apte à exercer votre fonction.
+                    Visite médicale obligatoire (médecin agréé préfecture) de moins de 3 mois attestant que vous êtes apte à exercer votre fonction.
                   </div>
 
                   <p>Vous pouvez télécharger ce document en cliquant sur le bouton ci-dessous :</p>
 
                   <div style="text-align: center;">
-                    <a href="${uploadLink}" class="button">📤 Télécharger mon certificat médical</a>
+                    <a href="${uploadLink}" class="button">📤 Télécharger ma visite médicale obligatoire</a>
                   </div>
 
                   <p><strong>Formats acceptés :</strong></p>

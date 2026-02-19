@@ -54,7 +54,7 @@ export const REQUIRED_DOCUMENTS: RequiredDocumentConfig[] = [
   },
   {
     value: 'certificat_medical',
-    label: 'Certificat médical',
+    label: 'Visite médicale obligatoire (médecin agréé préfecture)',
     icon: Heart
   }
 ];
