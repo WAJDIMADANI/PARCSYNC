@@ -210,7 +210,7 @@ export default function ImportantDocumentUpload({ profilId, onClose, onSuccess }
               value={documentName}
               onChange={(e) => setDocumentName(e.target.value)}
               disabled={uploading}
-              placeholder="Ex: Certificat médical 2024"
+              placeholder="Ex: Visite médicale obligatoire 2024"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
           </div>

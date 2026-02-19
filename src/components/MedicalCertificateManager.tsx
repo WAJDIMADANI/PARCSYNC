@@ -145,8 +145,8 @@ export default function MedicalCertificateManager({
         <div className="flex items-center gap-3">
           <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
           <div>
-            <h4 className="font-semibold text-green-900">Certificat médical reçu</h4>
-            <p className="text-sm text-green-700 mt-1">Le certificat médical a été uploadé avec succès.</p>
+            <h4 className="font-semibold text-green-900">Visite médicale obligatoire reçue</h4>
+            <p className="text-sm text-green-700 mt-1">La visite médicale obligatoire a été uploadée avec succès.</p>
           </div>
         </div>
       </div>
@@ -156,7 +156,7 @@ export default function MedicalCertificateManager({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-900 text-lg">Certificat médical</h3>
+        <h3 className="font-semibold text-gray-900 text-lg">Visite médicale obligatoire</h3>
         {mode !== 'choice' && (
           <button
             onClick={() => setMode('choice')}

@@ -306,7 +306,7 @@ export default function ContractValidationPanel({
             }`}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-gray-900">Certificat médical</h3>
+                  <h3 className="font-semibold text-gray-900">Visite médicale obligatoire</h3>
                   <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">Optionnel</span>
                 </div>
                 {hasCertificat ? (

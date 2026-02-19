@@ -2063,7 +2063,7 @@ function EmployeeDetailModal({
       'attestation_points': 'Point permis',
       'rib': 'RIB',
       'dpae': 'DPAE',
-      'certificat_medical': 'Certificat médical',
+      'certificat_medical': 'Visite médicale obligatoire (médecin agréé préfecture)',
       'titre_sejour': 'Titre de séjour',
       'cv': 'CV',
       'lettre_motivation': 'Lettre de motivation',
