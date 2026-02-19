@@ -879,7 +879,7 @@ export default function ContractSendModal({
         <div className="p-6 space-y-6">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-900">
-              <strong>Important :</strong> Le salarié recevra un email avec le contrat à signer et devra uploader son certificat médical.
+              <strong>Important :</strong> Le salarié recevra un email avec le contrat à signer et devra fournir sa visite médicale obligatoire (médecin agréé préfecture).
               Vous pourrez ensuite uploader la DPAE pour finaliser l'activation.
             </p>
           </div>
