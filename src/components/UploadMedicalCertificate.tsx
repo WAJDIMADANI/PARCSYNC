@@ -145,10 +145,10 @@ export default function UploadMedicalCertificate() {
               <CheckCircle className="w-12 h-12 text-green-600" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
-              Certificat médical reçu !
+              Visite médicale obligatoire reçue !
             </h1>
             <p className="text-gray-600 mb-6">
-              Merci ! Votre certificat médical a été téléchargé avec succès. Votre dossier est maintenant complet.
+              Merci ! Votre visite médicale obligatoire a été téléchargée avec succès. Votre dossier est maintenant complet.
             </p>
             <p className="text-sm text-gray-500">
               Vous pouvez fermer cette page.
@@ -167,7 +167,7 @@ export default function UploadMedicalCertificate() {
             <FileText className="w-12 h-12 text-purple-600" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Certificat médical requis
+            Visite médicale obligatoire requise
           </h1>
           <p className="text-gray-600">
             {contractData?.candidat ? `Bonjour ${contractData.candidat.prenom} ${contractData.candidat.nom}` : 'Bonjour'}
@@ -184,7 +184,7 @@ export default function UploadMedicalCertificate() {
         <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="font-semibold text-yellow-900 mb-2">📌 Document requis :</p>
           <p className="text-yellow-800 text-sm">
-            Certificat médical de moins de 3 mois attestant que vous êtes apte à exercer votre fonction.
+            Visite médicale obligatoire (médecin agréé préfecture) de moins de 3 mois attestant que vous êtes apte à exercer votre fonction.
           </p>
         </div>
 

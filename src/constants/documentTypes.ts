@@ -65,7 +65,7 @@ export const DOCUMENT_TYPES: DocumentTypeConfig[] = [
   },
   {
     value: 'certificat_medical',
-    label: 'Certificat médical',
+    label: 'Visite médicale obligatoire (médecin agréé préfecture)',
     icon: Heart,
     requiresExpiration: true,
     expirationField: 'date_fin_visite_medicale'

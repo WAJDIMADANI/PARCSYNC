@@ -29,7 +29,7 @@ const DOCUMENT_LABELS: Record<string, string> = {
   attestation_points: 'Point permis',
   rib: 'RIB',
   dpae: 'DPAE',
-  certificat_medical: 'Certificat médical',
+  certificat_medical: 'Visite médicale obligatoire (médecin agréé préfecture)',
   titre_sejour: 'Titre de séjour'
 };
 
