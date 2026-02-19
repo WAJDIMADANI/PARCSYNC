@@ -43,7 +43,7 @@ const TYPES_DEMANDE = [
   'Relevé de salaire',
   'Information congés',
   'Envoi contrat',
-  'Envoi certificat médical',
+  'Envoi visite médicale obligatoire',
   'Autre',
 ];
 

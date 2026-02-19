@@ -405,7 +405,7 @@ export default function ContractValidationPanel({
                     {!hasDpae && <li>• La DPAE doit être uploadée par vos soins</li>}
                   </ul>
                   {(!isSigned || !hasDpae) && !hasCertificat && (
-                    <p className="text-sm text-blue-700 mt-3 italic">Note : Le certificat médical est optionnel et peut être ajouté ultérieurement</p>
+                    <p className="text-sm text-blue-700 mt-3 italic">Note : Le visite médicale obligatoire est optionnel et peut être ajouté ultérieurement</p>
                   )}
                 </div>
               </div>
@@ -423,7 +423,7 @@ export default function ContractValidationPanel({
                   </p>
                   {!hasCertificat && (
                     <p className="text-sm text-blue-700 mt-2 italic">
-                      Note : Le certificat médical pourra être ajouté après l'activation si nécessaire.
+                      Note : Le visite médicale obligatoire pourra être ajouté après l'activation si nécessaire.
                     </p>
                   )}
                 </div>

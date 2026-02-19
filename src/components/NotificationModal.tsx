@@ -98,7 +98,7 @@ Nous vous informons que votre ${docLabel} arrive à échéance le ${dateStr}.
 Pour assurer la continuité de votre dossier administratif, nous vous remercions de nous transmettre le document renouvelé dans les meilleurs délais.
 
 ${notification.type === 'titre_sejour' ? 'Merci de nous faire parvenir une copie de votre nouveau titre de séjour dès que possible.' : ''}
-${notification.type === 'visite_medicale' ? 'Merci de prendre rendez-vous pour votre visite médicale et de nous transmettre le certificat médical d\'aptitude.' : ''}
+${notification.type === 'visite_medicale' ? 'Merci de prendre rendez-vous pour votre visite médicale obligatoire (médecin agréé préfecture) et de nous transmettre le certificat d\'aptitude.' : ''}
 ${notification.type === 'permis_conduire' ? 'Merci de nous transmettre une copie de votre permis de conduire renouvelé.' : ''}
 ${notification.type === 'contrat_cdd' ? 'Votre contrat à durée déterminée arrive à son terme. Nous prendrons contact avec vous prochainement concernant la suite.' : ''}
 ${notification.type === 'avenant_1' ? 'Votre Avenant 1 arrive à son terme. Nous prendrons contact avec vous prochainement pour discuter de la suite.' : ''}

@@ -161,7 +161,7 @@ function getEmailBody(
 
   let specificMessage = "";
   if (documentLabel.includes("médicale")) {
-    specificMessage = "Votre certificat médical doit être renouvelé pour garantir votre aptitude au poste. Merci de prendre rendez-vous avec un médecin du travail dans les plus brefs délais.";
+    specificMessage = "Votre visite médicale obligatoire doit être renouvelée pour garantir votre aptitude au poste. Merci de prendre rendez-vous avec un médecin agréé préfecture dans les plus brefs délais.";
   } else if (documentLabel.includes("séjour")) {
     specificMessage = "Le renouvellement de votre titre de séjour est essentiel pour la conformité de votre dossier administratif. Merci de nous transmettre votre nouveau titre dès son obtention.";
   } else if (documentLabel.includes("permis")) {

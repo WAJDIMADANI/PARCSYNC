@@ -318,7 +318,7 @@ function generateContractHTML(contract: any): string {
   <h2>ARTICLE 7 : DOCUMENTS À FOURNIR</h2>
   <p>Le salarié s'engage à fournir avant son entrée en fonction :</p>
   <ul>
-    <li>Un certificat médical d'aptitude au travail</li>
+    <li>Une visite médicale obligatoire (médecin agréé préfecture)</li>
     <li>Une copie de la carte nationale d'identité ou du passeport</li>
     <li>Un RIB</li>
     <li>Une carte vitale</li>

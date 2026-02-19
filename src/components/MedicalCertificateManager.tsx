@@ -209,7 +209,7 @@ function ChoiceMode({ onSelectMode }: { onSelectMode: (mode: Mode) => void }) {
   return (
     <div className="space-y-4">
       <p className="text-gray-700 mb-6">
-        Comment souhaitez-vous ajouter le certificat médical ?
+        Comment souhaitez-vous ajouter le visite médicale obligatoire ?
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -344,7 +344,7 @@ function EmailMode({
     <div className="space-y-4">
       <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
         <p className="text-purple-900 mb-2">
-          Un email sera envoyé à <strong>{employeeName}</strong> ({employeeEmail}) avec un lien pour uploader son certificat médical.
+          Un email sera envoyé à <strong>{employeeName}</strong> ({employeeEmail}) avec un lien pour uploader son visite médicale obligatoire.
         </p>
         <p className="text-sm text-purple-700">
           Le salarié recevra des instructions claires pour télécharger son document.
@@ -402,7 +402,7 @@ function SuccessModal({ onClose }: { onClose: () => void }) {
           </h2>
 
           <p className="text-gray-600 mb-6 leading-relaxed">
-            Le salarié va recevoir un lien pour uploader son certificat médical.
+            Le salarié va recevoir un lien pour uploader son visite médicale obligatoire.
           </p>
 
           <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4 mb-6">

@@ -115,7 +115,7 @@ Deno.serve(async (req: Request) => {
                     <li><span style="color: #dc2626; font-weight: bold; font-size: 16px;">SIGNER DANS LES 7 JOURS (délai impératif)</span></li>
                     <li>Télécharger et lire attentivement votre contrat en PDF</li>
                     <li>Signer électroniquement le contrat</li>
-                    <li>Uploader votre certificat médical d'aptitude</li>
+                    <li>Effectuer votre visite médicale obligatoire (médecin agréé préfecture)</li>
                   </ol>
 
                   <div style="text-align: center; margin: 30px 0;">
@@ -126,7 +126,7 @@ Deno.serve(async (req: Request) => {
                     <p style="color: #dc2626; font-weight: bold; font-size: 16px; margin-top: 20px;">Lien de signature valable uniquement 7 jours après réception</p>
                   </div>
 
-                  <p><strong>Important :</strong> Une fois votre contrat signé et votre certificat médical fourni, votre employeur finalisera votre dossier en effectuant la DPAE (Déclaration Préalable à l'Embauche).</p>
+                  <p><strong>Important :</strong> Une fois votre contrat signé et votre visite médicale obligatoire effectuée, votre employeur finalisera votre dossier en effectuant la DPAE (Déclaration Préalable à l'Embauche).</p>
 
                   <p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
 
