@@ -1,0 +1,55 @@
+═══════════════════════════════════════════════════════════════
+  ACTION IMMÉDIATE : EXCLURE LES SALARIÉS SORTIS
+═══════════════════════════════════════════════════════════════
+
+PROBLÈME RÉSOLU :
+  Les salariés sortis apparaissaient encore dans :
+  ❌ Incidents
+  ❌ Notifications
+  ❌ Documents manquants
+
+═══════════════════════════════════════════════════════════════
+  ÉTAPE 1 : EXÉCUTER LE SQL
+═══════════════════════════════════════════════════════════════
+
+1. Ouvrir Supabase Dashboard → SQL Editor
+
+2. Copier-coller TOUT le contenu du fichier :
+   📄 FIX-EXCLURE-SALARIES-SORTIS-COMPLET.sql
+
+3. Cliquer sur "Run" (Exécuter)
+
+✅ RÉSULTAT ATTENDU :
+   - 3 vues recréées
+   - 9 fonctions créées/modifiées
+   - Incidents des sortis fermés automatiquement
+   - Notifications des sortis archivées
+
+═══════════════════════════════════════════════════════════════
+  ÉTAPE 2 : VÉRIFIER (optionnel)
+═══════════════════════════════════════════════════════════════
+
+Exécuter dans SQL Editor :
+📄 VERIFIER-EXCLUSION-SORTIS.sql
+
+✅ Doit afficher : "✅ TOUT EST OK"
+
+═══════════════════════════════════════════════════════════════
+  ÉTAPE 3 : TERMINÉ !
+═══════════════════════════════════════════════════════════════
+
+✅ Les salariés sortis n'apparaissent plus NULLE PART
+✅ Leurs incidents sont fermés
+✅ Leurs notifications sont archivées
+✅ Ils ne reçoivent plus d'emails
+✅ Plus d'incidents générés pour eux
+
+═══════════════════════════════════════════════════════════════
+
+FICHIERS IMPORTANTS :
+  📄 FIX-EXCLURE-SALARIES-SORTIS-COMPLET.sql  ← À EXÉCUTER
+  📄 VERIFIER-EXCLUSION-SORTIS.sql             ← Pour vérifier
+  📄 EXECUTER-MAINTENANT-EXCLURE-SORTIS.md    ← Guide détaillé
+  📄 RESUME-EXCLUSION-SORTIS.md               ← Résumé complet
+
+═══════════════════════════════════════════════════════════════
