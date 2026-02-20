@@ -94,15 +94,19 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         `)
         .eq('statut', 'actif')
         .gte('date_fin', today.toISOString().split('T')[0])
-        .lte('date_fin', futureDate.toISOString().split('T')[0])
-        .neq('profil.statut', 'inactif');
+        .lte('date_fin', futureDate.toISOString().split('T')[0]);
+        // NOTE: .neq('profil.statut', 'inactif') ne fonctionne pas correctement avec Supabase
+        // On filtre côté front à la place
 
       if (contratError) {
         console.error('❌ SUPABASE ERROR (contrats):', contratError);
       }
 
       // 3. Transformer les contrats en format notification
-      const contratNotifications: Notification[] = (contratData || []).map(contrat => ({
+      // Filtrer les profils inactifs côté front (le filtre Supabase ne marche pas)
+      const contratNotifications: Notification[] = (contratData || [])
+        .filter(contrat => contrat.profil && contrat.profil.statut !== 'inactif')
+        .map(contrat => ({
         id: `contrat-${contrat.id}`,
         type: 'contrat_cdd' as const,
         profil_id: contrat.profil_id,
@@ -133,14 +137,15 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         .eq('statut', 'actif')
         .not('avenant_1_date_fin', 'is', null)
         .gte('avenant_1_date_fin', today.toISOString().split('T')[0])
-        .lte('avenant_1_date_fin', futureDate.toISOString().split('T')[0])
-        .neq('profil.statut', 'inactif');
+        .lte('avenant_1_date_fin', futureDate.toISOString().split('T')[0]);
 
       if (avenant1Error) {
         console.error('❌ SUPABASE ERROR (avenants 1):', avenant1Error);
       }
 
-      const avenant1Notifications: Notification[] = (avenant1Data || []).map(contrat => ({
+      const avenant1Notifications: Notification[] = (avenant1Data || [])
+        .filter(contrat => contrat.profil && contrat.profil.statut !== 'inactif')
+        .map(contrat => ({
         id: `avenant1-${contrat.id}`,
         type: 'avenant_1' as const,
         profil_id: contrat.profil_id,
@@ -171,14 +176,15 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         .eq('statut', 'actif')
         .not('avenant_2_date_fin', 'is', null)
         .gte('avenant_2_date_fin', today.toISOString().split('T')[0])
-        .lte('avenant_2_date_fin', futureDate.toISOString().split('T')[0])
-        .neq('profil.statut', 'inactif');
+        .lte('avenant_2_date_fin', futureDate.toISOString().split('T')[0]);
 
       if (avenant2Error) {
         console.error('❌ SUPABASE ERROR (avenants 2):', avenant2Error);
       }
 
-      const avenant2Notifications: Notification[] = (avenant2Data || []).map(contrat => ({
+      const avenant2Notifications: Notification[] = (avenant2Data || [])
+        .filter(contrat => contrat.profil && contrat.profil.statut !== 'inactif')
+        .map(contrat => ({
         id: `avenant2-${contrat.id}`,
         type: 'avenant_2' as const,
         profil_id: contrat.profil_id,
