@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { X, User, FileText, MapPin, File, Calendar, AlertTriangle } from 'lucide-react';
 import { ContractBadge } from './ContractBadge';
 
@@ -48,6 +49,18 @@ interface EmployeeDetailModalProps {
 }
 
 export function EmployeeDetailModal({ employee, onClose }: EmployeeDetailModalProps) {
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-';
     const parts = dateStr.split('-');
