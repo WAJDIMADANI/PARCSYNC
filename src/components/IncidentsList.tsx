@@ -628,7 +628,9 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                       )}
                       {incident.statut === 'expire' && (
                         <div className="px-3 py-1 rounded-full bg-red-700 text-white font-bold">
-                          Contrat expiré - Nécessite une action
+                          {['contrat_cdd', 'avenant_expirer', 'contrat_expire'].includes(incident.type)
+                            ? 'Contrat expiré - Nécessite une action'
+                            : 'Document expiré - Nécessite une action'}
                         </div>
                       )}
                       {incident.statut === 'resolu' && incident.nouvelle_date_validite && (
