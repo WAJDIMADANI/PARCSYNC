@@ -493,7 +493,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           )
         `)
         .in('type', DOCUMENT_TYPES)
-        .in('statut', ['actif', 'en_cours'])
+        .in('statut', ['expire', 'actif', 'en_cours'])
         .neq('profil.statut', 'inactif');
 
       const docsCount = documentsIncidents?.length || 0;
