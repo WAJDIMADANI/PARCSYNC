@@ -60,7 +60,8 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
 
   const fetchNotifications = async () => {
     try {
-      const { data, error } = await supabase
+      // 1. Récupérer les notifications existantes (documents)
+      const { data: notifData, error: notifError } = await supabase
         .from('v_notifications_ui')
         .select(`
           *,
@@ -68,13 +69,158 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         `)
         .order('date_echeance', { ascending: true });
 
-      if (error) {
-        console.error('❌ SUPABASE ERROR:', error);
-        throw error;
+      if (notifError) {
+        console.error('❌ SUPABASE ERROR (notifications):', notifError);
+        throw notifError;
       }
 
-      console.log('✅ Notifications reçues:', data?.length, 'données:', data);
-      setNotifications(data || []);
+      // 2. Récupérer les contrats CDD qui expirent dans les 30 prochains jours
+      // RÈGLE MÉTIER : date_fin between today and today + 30 days, statut = actif
+      const today = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(today.getDate() + 30);
+
+      const { data: contratData, error: contratError } = await supabase
+        .from('contrat')
+        .select(`
+          id,
+          profil_id,
+          date_fin,
+          type,
+          statut,
+          avenant_1_date_fin,
+          avenant_2_date_fin,
+          profil:profil_id(prenom, nom, email, statut)
+        `)
+        .eq('statut', 'actif')
+        .gte('date_fin', today.toISOString().split('T')[0])
+        .lte('date_fin', futureDate.toISOString().split('T')[0])
+        .neq('profil.statut', 'inactif');
+
+      if (contratError) {
+        console.error('❌ SUPABASE ERROR (contrats):', contratError);
+      }
+
+      // 3. Transformer les contrats en format notification
+      const contratNotifications: Notification[] = (contratData || []).map(contrat => ({
+        id: `contrat-${contrat.id}`,
+        type: 'contrat_cdd' as const,
+        profil_id: contrat.profil_id,
+        date_echeance: contrat.date_fin,
+        date_notification: new Date().toISOString(),
+        statut: 'active' as const,
+        email_envoye_at: null,
+        metadata: {
+          contrat_id: contrat.id,
+          contrat_type: contrat.type,
+          source: 'contrat_db' // Pour identifier que ça vient de la DB
+        },
+        created_at: new Date().toISOString(),
+        profil: contrat.profil
+      }));
+
+      // 4. Récupérer les avenants 1 qui expirent dans les 30 prochains jours
+      const { data: avenant1Data, error: avenant1Error } = await supabase
+        .from('contrat')
+        .select(`
+          id,
+          profil_id,
+          avenant_1_date_fin,
+          type,
+          statut,
+          profil:profil_id(prenom, nom, email, statut)
+        `)
+        .eq('statut', 'actif')
+        .not('avenant_1_date_fin', 'is', null)
+        .gte('avenant_1_date_fin', today.toISOString().split('T')[0])
+        .lte('avenant_1_date_fin', futureDate.toISOString().split('T')[0])
+        .neq('profil.statut', 'inactif');
+
+      if (avenant1Error) {
+        console.error('❌ SUPABASE ERROR (avenants 1):', avenant1Error);
+      }
+
+      const avenant1Notifications: Notification[] = (avenant1Data || []).map(contrat => ({
+        id: `avenant1-${contrat.id}`,
+        type: 'avenant_1' as const,
+        profil_id: contrat.profil_id,
+        date_echeance: contrat.avenant_1_date_fin!,
+        date_notification: new Date().toISOString(),
+        statut: 'active' as const,
+        email_envoye_at: null,
+        metadata: {
+          contrat_id: contrat.id,
+          contrat_type: contrat.type,
+          source: 'contrat_db'
+        },
+        created_at: new Date().toISOString(),
+        profil: contrat.profil
+      }));
+
+      // 5. Récupérer les avenants 2 qui expirent dans les 30 prochains jours
+      const { data: avenant2Data, error: avenant2Error } = await supabase
+        .from('contrat')
+        .select(`
+          id,
+          profil_id,
+          avenant_2_date_fin,
+          type,
+          statut,
+          profil:profil_id(prenom, nom, email, statut)
+        `)
+        .eq('statut', 'actif')
+        .not('avenant_2_date_fin', 'is', null)
+        .gte('avenant_2_date_fin', today.toISOString().split('T')[0])
+        .lte('avenant_2_date_fin', futureDate.toISOString().split('T')[0])
+        .neq('profil.statut', 'inactif');
+
+      if (avenant2Error) {
+        console.error('❌ SUPABASE ERROR (avenants 2):', avenant2Error);
+      }
+
+      const avenant2Notifications: Notification[] = (avenant2Data || []).map(contrat => ({
+        id: `avenant2-${contrat.id}`,
+        type: 'avenant_2' as const,
+        profil_id: contrat.profil_id,
+        date_echeance: contrat.avenant_2_date_fin!,
+        date_notification: new Date().toISOString(),
+        statut: 'active' as const,
+        email_envoye_at: null,
+        metadata: {
+          contrat_id: contrat.id,
+          contrat_type: contrat.type,
+          source: 'contrat_db'
+        },
+        created_at: new Date().toISOString(),
+        profil: contrat.profil
+      }));
+
+      // 6. Combiner toutes les notifications et éliminer les doublons
+      // Stratégie : si une notification existe déjà pour le même type + profil_id + date_echeance,
+      // on garde celle de la table notification (car elle peut avoir un statut mis à jour)
+      const allNotifications = [...(notifData || [])];
+
+      const existingKeys = new Set(
+        allNotifications.map(n => `${n.type}-${n.profil_id}-${n.date_echeance}`)
+      );
+
+      // Ajouter les contrats qui n'ont pas déjà une notification
+      [...contratNotifications, ...avenant1Notifications, ...avenant2Notifications].forEach(n => {
+        const key = `${n.type}-${n.profil_id}-${n.date_echeance}`;
+        if (!existingKeys.has(key)) {
+          allNotifications.push(n);
+        }
+      });
+
+      console.log('✅ Notifications totales:', {
+        documents: notifData?.length || 0,
+        contrats: contratNotifications.length,
+        avenants1: avenant1Notifications.length,
+        avenants2: avenant2Notifications.length,
+        total: allNotifications.length
+      });
+
+      setNotifications(allNotifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -109,6 +255,7 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
       case 'titre_sejour': return 'Pièce d\'identité';
       case 'visite_medicale': return 'Visite médicale';
       case 'permis_conduire': return 'Permis de conduire';
+      case 'cdd': return 'Contrat CDD';
       case 'contrat_cdd': return 'Contrat CDD';
       case 'avenant_1': return 'Avenant 1';
       case 'avenant_2': return 'Avenant 2';
@@ -121,6 +268,7 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
       case 'titre_sejour': return <CreditCard className="w-5 h-5" />;
       case 'visite_medicale': return <FileText className="w-5 h-5" />;
       case 'permis_conduire': return <CreditCard className="w-5 h-5" />;
+      case 'cdd': return <Calendar className="w-5 h-5" />;
       case 'contrat_cdd': return <Calendar className="w-5 h-5" />;
       case 'avenant_1': return <FileText className="w-5 h-5" />;
       case 'avenant_2': return <FileText className="w-5 h-5" />;
@@ -131,7 +279,8 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
   const filteredNotifications = notifications
     .filter(n => {
       if (activeTab === 'contrat_cdd') {
-        return n.type === 'cdd';
+        // Gérer à la fois 'cdd' (depuis v_notifications_ui) et 'contrat_cdd' (depuis contrat)
+        return n.type === 'cdd' || n.type === 'contrat_cdd';
       }
       return n.type === activeTab;
     })
@@ -156,7 +305,8 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
   const getTabCount = (type: string) => {
     const filtered = notifications.filter(n => {
       if (type === 'contrat_cdd') {
-        if (n.type !== 'cdd') return false;
+        // Compter à la fois 'cdd' (depuis v_notifications_ui) et 'contrat_cdd' (depuis contrat)
+        if (n.type !== 'cdd' && n.type !== 'contrat_cdd') return false;
       } else if (n.type !== type) {
         return false;
       }
