@@ -112,7 +112,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       console.log('avenantsData length', avenantsData?.length);
       console.log('📊 Avenants expirés depuis RPC:', avenantsData?.length || 0);
 
-      // Récupérer les autres types d'incidents (titre_sejour, visite_medicale, permis_conduire)
+      // Récupérer TOUS les incidents de la table incident (y compris contrat_expire)
       const { data: autresData, error: autresError } = await supabase
         .from('incident')
         .select(`
@@ -122,18 +122,40 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
             nom,
             email,
             statut
+          ),
+          contrat:contrat_id (
+            type,
+            date_debut,
+            date_fin,
+            statut
           )
         `)
-        .neq('type', 'contrat_expire')
         .neq('profil.statut', 'inactif')
         .order('date_expiration_originale', { ascending: true });
 
       if (autresError) throw autresError;
 
-      // DEBUG: Vérifier les données titre_sejour
+      // DEBUG: Vérifier les données
       console.log('Données titre_sejour retournées:', autresData?.filter(i => i.type === 'titre_sejour'));
-      console.log('Total autres incidents:', autresData?.length);
+      console.log('Total incidents DB:', autresData?.length);
+      console.log('Incidents contrat_expire DB:', autresData?.filter(i => i.type === 'contrat_expire').length);
       console.log('Erreur autresError:', autresError);
+
+      // Enrichir les incidents contrat_expire avec metadata.contrat_type
+      const enrichedData = (autresData || []).map(incident => {
+        if (incident.type === 'contrat_expire' && incident.contrat) {
+          // Déterminer le type de contrat depuis la table contrat
+          const contratType = incident.contrat.type?.toLowerCase() || 'cdd';
+          return {
+            ...incident,
+            metadata: {
+              ...(incident.metadata || {}),
+              contrat_type: contratType === 'avenant' ? 'avenant' : 'cdd'
+            }
+          };
+        }
+        return incident;
+      });
 
       // Transformer les CDD depuis la RPC (logique Dashboard)
       const cddFormatted = (cddData || []).map(cdd => ({
@@ -204,11 +226,12 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         };
       });
 
-      // Fusionner CDD et avenants
+      // Fusionner CDD et avenants depuis RPC (garder pour compatibilité mais les vrais sont dans enrichedData)
       const contratsFormatted = [...cddFormatted, ...avenantsFormatted];
 
-      // Fusionner les deux listes
-      const allIncidents = [...contratsFormatted, ...(autresData || [])];
+      // Fusionner les incidents DB enrichis avec ceux générés dynamiquement
+      // Note: enrichedData contient TOUS les incidents y compris contrat_expire
+      const allIncidents = [...(enrichedData || [])];
 
       // Trier par date d'expiration
       allIncidents.sort((a, b) =>
@@ -217,11 +240,11 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
       setIncidents(allIncidents);
 
-      console.log('📊 Compteurs incidents (logique Dashboard):', {
-        cdd_expires_depuis_rpc: cddFormatted.length,
-        avenant_expires_depuis_vue: avenantsFormatted.length,
-        total_contrats_expires: contratsFormatted.length,
-        autres_incidents: (autresData || []).length,
+      console.log('📊 Compteurs incidents (depuis DB):', {
+        contrat_expire_db: enrichedData.filter(i => i.type === 'contrat_expire').length,
+        titre_sejour: enrichedData.filter(i => i.type === 'titre_sejour').length,
+        visite_medicale: enrichedData.filter(i => i.type === 'visite_medicale').length,
+        permis_conduire: enrichedData.filter(i => i.type === 'permis_conduire').length,
         total_tous_incidents: allIncidents.length
       });
     } catch (error) {
@@ -236,26 +259,39 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
   const getTabCount = (type: string) => {
     if (type === 'contrat_cdd') {
-      return incidents.filter(i =>
-        i.type === 'contrat_expire' && i.metadata?.contrat_type?.toLowerCase() === 'cdd'
-      ).length;
+      return incidents.filter(i => {
+        if (i.type !== 'contrat_expire') return false;
+        // Vérifier metadata OU type de contrat
+        const contratTypeFromMetadata = i.metadata?.contrat_type?.toLowerCase();
+        const contratTypeFromContrat = i.contrat?.type?.toLowerCase();
+        return contratTypeFromMetadata === 'cdd' || contratTypeFromContrat === 'cdd' ||
+               (!contratTypeFromMetadata && !contratTypeFromContrat); // Par défaut = CDD
+      }).length;
     }
 
     if (type === 'avenant_expirer') {
-      return incidents.filter(i =>
-        i.type === 'contrat_expire' && i.metadata?.contrat_type?.toLowerCase() === 'avenant'
-      ).length;
+      return incidents.filter(i => {
+        if (i.type !== 'contrat_expire') return false;
+        // Vérifier metadata OU type de contrat
+        const contratTypeFromMetadata = i.metadata?.contrat_type?.toLowerCase();
+        const contratTypeFromContrat = i.contrat?.type?.toLowerCase();
+        return contratTypeFromMetadata === 'avenant' || contratTypeFromContrat === 'avenant';
+      }).length;
     }
 
     return incidents.filter(i => i.type === type).length;
   };
 
   const getTypeLabel = (incident: Incident) => {
-    if (incident.type === 'contrat_expire' && incident.metadata?.contrat_type) {
-      const contratType = incident.metadata.contrat_type.toLowerCase();
+    if (incident.type === 'contrat_expire') {
+      // Déterminer le type depuis metadata OU depuis le contrat
+      const contratTypeFromMetadata = incident.metadata?.contrat_type?.toLowerCase();
+      const contratTypeFromContrat = incident.contrat?.type?.toLowerCase();
+      const contratType = contratTypeFromMetadata || contratTypeFromContrat || 'cdd';
+
       if (contratType === 'cdd') return 'Contrat CDD';
       if (contratType === 'avenant') return 'Avenant au contrat';
-      return 'Contrat';
+      return 'Contrat expiré';
     }
 
     switch (incident.type) {
@@ -263,7 +299,6 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       case 'visite_medicale': return 'Visite médicale';
       case 'permis_conduire': return 'Permis de conduire';
       case 'contrat_cdd': return 'Contrat CDD';
-      case 'contrat_expire': return 'Contrat expiré';
       case 'avenant_expirer': return 'Avenant au contrat';
       default: return incident.type;
     }
@@ -372,9 +407,20 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     let matchesTab = false;
 
     if (activeTab === 'contrat_cdd') {
-      matchesTab = incident.type === 'contrat_expire' && incident.metadata?.contrat_type?.toLowerCase() === 'cdd';
+      if (incident.type === 'contrat_expire') {
+        // Vérifier metadata OU type de contrat
+        const contratTypeFromMetadata = incident.metadata?.contrat_type?.toLowerCase();
+        const contratTypeFromContrat = incident.contrat?.type?.toLowerCase();
+        matchesTab = contratTypeFromMetadata === 'cdd' || contratTypeFromContrat === 'cdd' ||
+                     (!contratTypeFromMetadata && !contratTypeFromContrat); // Par défaut = CDD
+      }
     } else if (activeTab === 'avenant_expirer') {
-      matchesTab = incident.type === 'contrat_expire' && incident.metadata?.contrat_type?.toLowerCase() === 'avenant';
+      if (incident.type === 'contrat_expire') {
+        // Vérifier metadata OU type de contrat
+        const contratTypeFromMetadata = incident.metadata?.contrat_type?.toLowerCase();
+        const contratTypeFromContrat = incident.contrat?.type?.toLowerCase();
+        matchesTab = contratTypeFromMetadata === 'avenant' || contratTypeFromContrat === 'avenant';
+      }
     } else {
       matchesTab = incident.type === activeTab;
     }
