@@ -80,6 +80,8 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
       const futureDate = new Date();
       futureDate.setDate(today.getDate() + 30);
 
+      console.log('🔍 Recherche contrats entre', today.toISOString().split('T')[0], 'et', futureDate.toISOString().split('T')[0]);
+
       const { data: contratData, error: contratError } = await supabase
         .from('contrat')
         .select(`
@@ -102,11 +104,33 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         console.error('❌ SUPABASE ERROR (contrats):', contratError);
       }
 
+      console.log('📊 Contrats récupérés:', contratData?.length || 0);
+      console.log('📋 Détail contrats:', contratData?.map(c => ({
+        id: c.id,
+        profil_id: c.profil_id,
+        prenom: c.profil?.prenom,
+        nom: c.profil?.nom,
+        date_fin: c.date_fin,
+        statut: c.statut,
+        profil_statut: c.profil?.statut
+      })))
+
       // 3. Transformer les contrats en format notification
       // Filtrer les profils inactifs côté front (le filtre Supabase ne marche pas)
-      const contratNotifications: Notification[] = (contratData || [])
-        .filter(contrat => contrat.profil && contrat.profil.statut !== 'inactif')
-        .map(contrat => ({
+      const contratsAvantFiltre = (contratData || []);
+      const contratsFiltres = contratsAvantFiltre.filter(contrat => {
+        const hasProfile = contrat.profil;
+        const isActive = contrat.profil?.statut !== 'inactif';
+        console.log(`🔍 Contrat ${contrat.id} (${contrat.profil?.prenom} ${contrat.profil?.nom}):`, {
+          hasProfile,
+          profil_statut: contrat.profil?.statut,
+          isActive,
+          willBeKept: hasProfile && isActive
+        });
+        return hasProfile && isActive;
+      });
+
+      const contratNotifications: Notification[] = contratsFiltres.map(contrat => ({
         id: `contrat-${contrat.id}`,
         type: 'cdd' as const, // Normaliser en 'cdd' pour être cohérent avec v_notifications_ui
         profil_id: contrat.profil_id,
@@ -122,6 +146,8 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         created_at: new Date().toISOString(),
         profil: contrat.profil
       }));
+
+      console.log('✅ Contrats transformés en notifications:', contratNotifications.length);
 
       // 4. Récupérer les avenants 1 qui expirent dans les 30 prochains jours
       const { data: avenant1Data, error: avenant1Error } = await supabase
@@ -230,6 +256,18 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         avenants2: avenant2Notifications.length,
         total: allNotifications.length
       });
+
+      // Log des notifications CDD spécifiquement
+      const notifsCDD = allNotifications.filter(n => n.type === 'cdd' || n.type === 'contrat_cdd');
+      console.log('📋 Notifications CDD dans allNotifications:', notifsCDD.length);
+      console.log('📋 Détail notifications CDD:', notifsCDD.map(n => ({
+        id: n.id,
+        type: n.type,
+        prenom: n.profil?.prenom,
+        nom: n.profil?.nom,
+        date_echeance: n.date_echeance,
+        statut: n.statut
+      })));
 
       setNotifications(allNotifications);
     } catch (error) {
