@@ -90,8 +90,6 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
           date_fin,
           type,
           statut,
-          avenant_1_date_fin,
-          avenant_2_date_fin,
           profil:profil_id(prenom, nom, email, statut)
         `)
         .eq('statut', 'actif')
@@ -149,83 +147,13 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
 
       console.log('✅ Contrats transformés en notifications:', contratNotifications.length);
 
-      // 4. Récupérer les avenants 1 qui expirent dans les 30 prochains jours
-      const { data: avenant1Data, error: avenant1Error } = await supabase
-        .from('contrat')
-        .select(`
-          id,
-          profil_id,
-          avenant_1_date_fin,
-          type,
-          statut,
-          profil:profil_id(prenom, nom, email, statut)
-        `)
-        .eq('statut', 'actif')
-        .not('avenant_1_date_fin', 'is', null)
-        .gte('avenant_1_date_fin', today.toISOString().split('T')[0])
-        .lte('avenant_1_date_fin', futureDate.toISOString().split('T')[0]);
+      // 4. DÉSACTIVÉ : Récupérer les avenants 1 qui expirent dans les 30 prochains jours
+      // Colonnes avenant_1_date_fin et avenant_2_date_fin n'existent pas dans la table contrat
+      // TODO: Vérifier la vraie structure de la table pour les avenants
+      const avenant1Notifications: Notification[] = [];
 
-      if (avenant1Error) {
-        console.error('❌ SUPABASE ERROR (avenants 1):', avenant1Error);
-      }
-
-      const avenant1Notifications: Notification[] = (avenant1Data || [])
-        .filter(contrat => contrat.profil && contrat.profil.statut !== 'inactif')
-        .map(contrat => ({
-        id: `avenant1-${contrat.id}`,
-        type: 'avenant_1' as const,
-        profil_id: contrat.profil_id,
-        date_echeance: contrat.avenant_1_date_fin!,
-        date_notification: new Date().toISOString(),
-        statut: 'active' as const,
-        email_envoye_at: null,
-        metadata: {
-          contrat_id: contrat.id,
-          contrat_type: contrat.type,
-          source: 'contrat_db'
-        },
-        created_at: new Date().toISOString(),
-        profil: contrat.profil
-      }));
-
-      // 5. Récupérer les avenants 2 qui expirent dans les 30 prochains jours
-      const { data: avenant2Data, error: avenant2Error } = await supabase
-        .from('contrat')
-        .select(`
-          id,
-          profil_id,
-          avenant_2_date_fin,
-          type,
-          statut,
-          profil:profil_id(prenom, nom, email, statut)
-        `)
-        .eq('statut', 'actif')
-        .not('avenant_2_date_fin', 'is', null)
-        .gte('avenant_2_date_fin', today.toISOString().split('T')[0])
-        .lte('avenant_2_date_fin', futureDate.toISOString().split('T')[0]);
-
-      if (avenant2Error) {
-        console.error('❌ SUPABASE ERROR (avenants 2):', avenant2Error);
-      }
-
-      const avenant2Notifications: Notification[] = (avenant2Data || [])
-        .filter(contrat => contrat.profil && contrat.profil.statut !== 'inactif')
-        .map(contrat => ({
-        id: `avenant2-${contrat.id}`,
-        type: 'avenant_2' as const,
-        profil_id: contrat.profil_id,
-        date_echeance: contrat.avenant_2_date_fin!,
-        date_notification: new Date().toISOString(),
-        statut: 'active' as const,
-        email_envoye_at: null,
-        metadata: {
-          contrat_id: contrat.id,
-          contrat_type: contrat.type,
-          source: 'contrat_db'
-        },
-        created_at: new Date().toISOString(),
-        profil: contrat.profil
-      }));
+      // 5. DÉSACTIVÉ : Récupérer les avenants 2 qui expirent dans les 30 prochains jours
+      const avenant2Notifications: Notification[] = [];
 
       // 6. Combiner toutes les notifications et éliminer les doublons
       // Stratégie : si une notification existe déjà pour le même type + profil_id + date_echeance,
