@@ -56,6 +56,7 @@ interface Stats {
   incidents: {
     total: number;
     ce_mois: number;
+    salaries_concernes: number;
     par_type: { type: string; count: number }[];
     recents: any[];
     top_employes: { nom: string; prenom: string; count: number }[];
@@ -149,6 +150,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
     incidents: {
       total: 0,
       ce_mois: 0,
+      salaries_concernes: 0,
       par_type: [],
       recents: [],
       top_employes: [],
@@ -469,14 +471,11 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
 
   const fetchIncidentsStats = async () => {
     try {
-      // Types d'incidents legacy à TOUJOURS exclure (doublons)
-      const LEGACY_TYPES = ['contrat_expirer', 'avenant_expirer'];
+      // RÈGLE MÉTIER : On compte UNIQUEMENT les incidents en statut 'expire'
+      // (pour matcher exactement l'onglet "Gestion des incidents")
 
-      // Types d'incidents de documents valides
-      const DOCUMENT_TYPES = ['titre_sejour', 'visite_medicale', 'permis_conduire'];
-
-      // 1. Récupérer les incidents de documents (uniquement les types valides, statuts actifs)
-      const { data: documentsIncidents } = await supabase
+      // 1. Récupérer TOUS les incidents en statut 'expire' depuis la table incident
+      const { data: allIncidents } = await supabase
         .from('incident')
         .select(`
           id,
@@ -485,91 +484,60 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
           date_creation_incident,
           statut,
           profil_id,
+          contrat_id,
+          metadata,
           profil:profil_id (
             prenom,
             nom,
             email,
             statut
+          ),
+          contrat:contrat_id (
+            type,
+            date_debut,
+            date_fin,
+            statut
           )
         `)
-        .in('type', DOCUMENT_TYPES)
-        .in('statut', ['expire', 'actif', 'en_cours'])
+        .eq('statut', 'expire')
         .neq('profil.statut', 'inactif');
 
-      const docsCount = documentsIncidents?.length || 0;
+      // 2. Compter le TOTAL d'incidents expirés (count(*) sur incidents)
+      const totalIncidents = allIncidents?.length || 0;
 
-      // 2. Récupérer CDD expirés via RPC (comme dans la page Incidents)
-      const { data: cddData, error: cddError } = await supabase.rpc('get_cdd_expires_for_incidents');
-
-      if (cddError) {
-        console.error('Erreur get_cdd_expires_for_incidents:', cddError);
-      }
-
-      const cddCount = cddData?.length || 0;
-
-      // 3. Récupérer avenants expirés via RPC (comme dans la page Incidents)
-      const { data: avenantsData, error: avenantsError } = await supabase.rpc('get_avenants_expires');
-
-      if (avenantsError) {
-        console.error('Erreur get_avenants_expires:', avenantsError);
-      }
-
-      const avenantCount = avenantsData?.length || 0;
-
-      // 4. Calculer le total EXACTEMENT comme dans la page Incidents
-      const totalIncidents = docsCount + cddCount + avenantCount;
-
-      // Log pour debug
-      console.log('📊 Dashboard RH - Incidents:', {
-        docsCount,
-        cddCount,
-        avenantCount,
-        totalIncidents
-      });
-
-      // 5. Transformer les données pour les affichages détaillés
-      const cddIncidents = (cddData || []).map(cdd => ({
-        id: `cdd-${cdd.profil_id}-${cdd.contrat_id}`,
-        type: 'contrat_expire',
-        created_at: cdd.date_fin || new Date().toISOString(),
-        statut: 'actif',
-        profil_id: cdd.profil_id,
-        profil: { prenom: cdd.prenom, nom: cdd.nom, email: cdd.email },
-        contrat_type: 'CDD'
-      }));
-
-      const avenantsIncidents = (avenantsData || []).map(av => ({
-        id: `avenant-${av.profil_id}-${av.contrat_id}`,
-        type: 'contrat_expire',
-        created_at: av.avenant_2_date_fin || new Date().toISOString(),
-        statut: 'actif',
-        profil_id: av.profil_id,
-        profil: { prenom: av.prenom, nom: av.nom, email: av.email },
-        contrat_type: 'Avenant'
-      }));
-
-      const allActiveIncidents = [
-        ...(documentsIncidents || []),
-        ...cddIncidents,
-        ...avenantsIncidents
-      ];
-
-      // 6. Compter les incidents de ce mois
+      // 3. Compter les incidents de ce mois (date_creation_incident >= premier jour du mois)
       const now = new Date();
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const ce_mois = allActiveIncidents.filter(i => {
-        const incidentDate = new Date(i.created_at || i.date_creation_incident);
+      const ce_mois = (allIncidents || []).filter(i => {
+        const incidentDate = new Date(i.date_creation_incident || i.created_at);
         return incidentDate >= firstDayOfMonth;
       }).length;
 
-      // 7. Si aucun incident, retourner des stats vides
+      // 4. Compter les salariés distincts concernés (info secondaire)
+      const salariesConcernes = new Set((allIncidents || []).map(i => i.profil_id)).size;
+
+      // Log pour debug
+      console.log('📊 Dashboard RH - Incidents (statut=expire):', {
+        totalIncidents,
+        ce_mois,
+        salariesConcernes,
+        types: {
+          titre_sejour: (allIncidents || []).filter(i => i.type === 'titre_sejour').length,
+          visite_medicale: (allIncidents || []).filter(i => i.type === 'visite_medicale').length,
+          permis_conduire: (allIncidents || []).filter(i => i.type === 'permis_conduire').length,
+          contrat_expire: (allIncidents || []).filter(i => i.type === 'contrat_expire').length,
+        }
+      });
+
+      // 5. Si aucun incident, retourner des stats vides
       if (totalIncidents === 0) {
         setStats((prev) => ({
           ...prev,
           incidents: {
             total: 0,
             ce_mois: 0,
+            salaries_concernes: 0,
             par_type: [],
             recents: [],
             top_employes: [],
@@ -578,10 +546,10 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         return;
       }
 
-      // 8. Préparer les incidents pour les statistiques détaillées
-      const incidents = allActiveIncidents;
+      // 6. Préparer les incidents pour les statistiques détaillées
+      const incidents = allIncidents || [];
 
-      // 9. Compter les incidents par type (affichage lisible)
+      // 7. Compter les incidents par type (affichage lisible)
       const typeCountMap: { [key: string]: number } = {
         'Titre de séjour': 0,
         'Visite médicale': 0,
@@ -598,9 +566,14 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         } else if (i.type === 'permis_conduire') {
           typeCountMap['Permis de conduire']++;
         } else if (i.type === 'contrat_expire') {
-          if (i.contrat_type === 'CDD') {
+          // Déterminer le type depuis metadata OU depuis le contrat
+          const contratTypeFromMetadata = i.metadata?.contrat_type?.toLowerCase();
+          const contratTypeFromContrat = i.contrat?.type?.toLowerCase();
+          const contratType = contratTypeFromMetadata || contratTypeFromContrat || 'cdd';
+
+          if (contratType === 'cdd') {
             typeCountMap['Contrat CDD expiré']++;
-          } else if (i.contrat_type === 'Avenant') {
+          } else if (contratType === 'avenant') {
             typeCountMap['Avenant expiré']++;
           }
         }
@@ -610,7 +583,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .filter(([_, count]) => count > 0)
         .map(([type, count]) => ({ type, count }));
 
-      // 10. Compter les incidents par employé (top 5)
+      // 8. Compter les incidents par employé (top 5)
       const employeMap: { [key: string]: { nom: string; prenom: string; count: number } } = {};
       incidents.forEach((i: any) => {
         if (i.profil_id && i.profil) {
@@ -630,7 +603,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      // 11. Récupérer les 5 incidents les plus récents (tous sont actifs)
+      // 9. Récupérer les 5 incidents les plus récents
       const recents = incidents
         .sort((a, b) => {
           const dateA = new Date(a.created_at || a.date_creation_incident || 0);
@@ -639,12 +612,13 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         })
         .slice(0, 5);
 
-      // 12. Mettre à jour les statistiques
+      // 10. Mettre à jour les statistiques
       setStats((prev) => ({
         ...prev,
         incidents: {
           total: totalIncidents,
           ce_mois: ce_mois,
+          salaries_concernes: salariesConcernes,
           par_type,
           recents,
           top_employes,
@@ -1022,7 +996,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             icon={<AlertTriangle className="w-6 h-6" />}
             title="Incidents"
             value={stats.incidents.total}
-            subtitle={`${stats.incidents.ce_mois} ce mois`}
+            subtitle={`${stats.incidents.ce_mois} ce mois • ${stats.incidents.salaries_concernes} salarié${stats.incidents.salaries_concernes > 1 ? 's' : ''}`}
             trend={stats.incidents.ce_mois > stats.incidents.total / 12 ? 'up' : 'down'}
             trendValue="Voir détails"
             color="red"
