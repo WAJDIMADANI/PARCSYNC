@@ -7,7 +7,7 @@ import { Pagination } from './Pagination';
 
 interface Notification {
   id: string;
-  type: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_1' | 'avenant_2';
+  type: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'cdd' | 'contrat_cdd' | 'avenant_1' | 'avenant_2';
   profil_id: string;
   date_echeance: string;
   date_notification: string;
@@ -108,7 +108,7 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         .filter(contrat => contrat.profil && contrat.profil.statut !== 'inactif')
         .map(contrat => ({
         id: `contrat-${contrat.id}`,
-        type: 'contrat_cdd' as const,
+        type: 'cdd' as const, // Normaliser en 'cdd' pour être cohérent avec v_notifications_ui
         profil_id: contrat.profil_id,
         date_echeance: contrat.date_fin,
         date_notification: new Date().toISOString(),
@@ -207,12 +207,17 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
       const allNotifications = [...(notifData || [])];
 
       const existingKeys = new Set(
-        allNotifications.map(n => `${n.type}-${n.profil_id}-${n.date_echeance}`)
+        allNotifications.map(n => {
+          // Normaliser 'contrat_cdd' et 'cdd' pour la détection de doublons
+          const normalizedType = (n.type === 'contrat_cdd' || n.type === 'cdd') ? 'cdd' : n.type;
+          return `${normalizedType}-${n.profil_id}-${n.date_echeance}`;
+        })
       );
 
       // Ajouter les contrats qui n'ont pas déjà une notification
       [...contratNotifications, ...avenant1Notifications, ...avenant2Notifications].forEach(n => {
-        const key = `${n.type}-${n.profil_id}-${n.date_echeance}`;
+        const normalizedType = (n.type === 'contrat_cdd' || n.type === 'cdd') ? 'cdd' : n.type;
+        const key = `${normalizedType}-${n.profil_id}-${n.date_echeance}`;
         if (!existingKeys.has(key)) {
           allNotifications.push(n);
         }
@@ -284,8 +289,8 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
 
   const filteredNotifications = notifications
     .filter(n => {
+      // activeTab est 'contrat_cdd' mais les notifications sont normalisées en 'cdd'
       if (activeTab === 'contrat_cdd') {
-        // Gérer à la fois 'cdd' (depuis v_notifications_ui) et 'contrat_cdd' (depuis contrat)
         return n.type === 'cdd' || n.type === 'contrat_cdd';
       }
       return n.type === activeTab;
@@ -310,8 +315,8 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
 
   const getTabCount = (type: string) => {
     const filtered = notifications.filter(n => {
+      // type est 'contrat_cdd' mais les notifications sont normalisées en 'cdd'
       if (type === 'contrat_cdd') {
-        // Compter à la fois 'cdd' (depuis v_notifications_ui) et 'contrat_cdd' (depuis contrat)
         if (n.type !== 'cdd' && n.type !== 'contrat_cdd') return false;
       } else if (n.type !== type) {
         return false;
