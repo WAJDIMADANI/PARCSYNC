@@ -61,12 +61,11 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
   const fetchNotifications = async () => {
     try {
       const { data, error } = await supabase
-        .from('notification')
+        .from('v_notifications_ui')
         .select(`
           *,
           profil:profil_id(prenom, nom, email, statut)
         `)
-        .neq('profil.statut', 'inactif')
         .order('date_echeance', { ascending: true });
 
       if (error) {
@@ -138,13 +137,6 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
     })
     .filter(n => filterStatut === 'all' || n.statut === filterStatut)
     .filter(n => {
-      // Exclure les documents déjà expirés (ils doivent apparaître dans Incidents, pas ici)
-      const daysRemaining = Math.ceil(
-        (new Date(n.date_echeance).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return daysRemaining >= 0; // Afficher ceux qui expirent aujourd'hui ou plus tard
-    })
-    .filter(n => {
       if (!searchTerm) return true;
       const searchLower = searchTerm.toLowerCase();
       return (
@@ -169,25 +161,8 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         return false;
       }
       if (n.statut === 'resolue' || n.statut === 'ignoree') return false;
-
-      // Exclure les documents expirés
-      const daysRemaining = Math.ceil(
-        (new Date(n.date_echeance).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return daysRemaining >= 0;
+      return true;
     });
-
-    // DEBUG pour visites médicales
-    if (type === 'visite_medicale') {
-      console.log('🔍 VISITE MEDICALE - Type=', type);
-      console.log('   Total notifications:', notifications.length);
-      console.log('   Avec ce type:', notifications.filter(n => n.type === type).length);
-      console.log('   Données détaillées:', notifications.filter(n => n.type === type).map(n => ({
-        date: n.date_echeance,
-        statut: n.statut,
-        daysRemaining: Math.ceil((new Date(n.date_echeance).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-      })));
-    }
 
     return filtered.length;
   };
