@@ -415,7 +415,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         .from('notification')
         .select('type, statut, date_echeance, profil:profil_id(statut)')
         .in('statut', ['active', 'email_envoye'])
-        .neq('profil.statut', 'sorti');
+        .neq('profil.statut', 'inactif');
 
       // Récupérer les CDD expirés depuis la fonction RPC
       const { data: cddData } = await supabase.rpc('get_cdd_expires');
@@ -495,7 +495,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
         `)
         .in('type', DOCUMENT_TYPES)
         .in('statut', ['actif', 'en_cours'])
-        .neq('profil.statut', 'sorti');
+        .neq('profil.statut', 'inactif');
 
       const docsCount = documentsIncidents?.length || 0;
 

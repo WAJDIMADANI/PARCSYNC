@@ -125,7 +125,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
           )
         `)
         .neq('type', 'contrat_expire')
-        .neq('profil.statut', 'sorti')
+        .neq('profil.statut', 'inactif')
         .order('date_expiration_originale', { ascending: true });
 
       if (autresError) throw autresError;
