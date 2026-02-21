@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Upload, Camera, FileText, CheckCircle, AlertCircle, X, Loader } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { REQUIRED_DOCUMENTS_MAP } from '../constants/requiredDocuments';
@@ -12,21 +12,35 @@ interface MissingDocument {
 }
 
 export default function UploadAllMissingDocuments() {
-  const params = new URLSearchParams(window.location.search);
-  const profilId = params.get('profil');
-  const token = params.get('token');
+  const profilId = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('profil');
+  }, []);
 
-  const supabase = token ? createClient(
-    import.meta.env.VITE_SUPABASE_URL,
-    import.meta.env.VITE_SUPABASE_ANON_KEY,
-    {
-      global: {
-        headers: {
-          'x-upload-token': token
+  const token = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('token');
+  }, []);
+
+  const supabase = useMemo<SupabaseClient | null>(() => {
+    if (!token) return null;
+    return createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      {
+        global: {
+          headers: {
+            'x-upload-token': token
+          }
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          storageKey: `supabase-upload-${token.substring(0, 8)}`
         }
       }
-    }
-  ) : null;
+    );
+  }, [token]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -59,38 +73,7 @@ export default function UploadAllMissingDocuments() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  useEffect(() => {
-    console.log('🔄 useEffect triggered');
-    console.log('🔄 profilId:', profilId);
-    console.log('🔄 token:', token);
-
-    if (!profilId || !token) {
-      console.error('❌ Lien invalide ou token manquant');
-      setError('Lien invalide');
-      setLoading(false);
-      return;
-    }
-
-    console.log('✅ Paramètres valides, appel de loadData()...');
-    loadData();
-  }, [profilId, token]);
-
-  useEffect(() => {
-    if (videoRef.current && cameraStream) {
-      videoRef.current.srcObject = cameraStream;
-    }
-  }, [cameraStream]);
-
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => {
-        setSuccessMessage('');
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     console.log('🚀 === DÉBUT DE loadData() ===');
     console.log('🚀 profilId reçu:', profilId);
     console.log('🚀 token reçu:', token);
@@ -137,6 +120,7 @@ export default function UploadAllMissingDocuments() {
       console.log('✅ Profil trouvé:', profil.prenom, profil.nom);
       setProfilData(profil);
 
+      const params = new URLSearchParams(window.location.search);
       const requestedDocsParam = params.get('docs');
       let docsToDisplay: MissingDocument[] = [];
 
@@ -233,7 +217,39 @@ export default function UploadAllMissingDocuments() {
       console.log('🏁 === FIN DE loadData() - setLoading(false) ===');
       setLoading(false);
     }
-  };
+  }, [supabase, profilId, token]);
+
+  useEffect(() => {
+    console.log('🔄 useEffect triggered');
+    console.log('🔄 profilId:', profilId);
+    console.log('🔄 token:', token);
+
+    if (!profilId || !token) {
+      console.error('❌ Lien invalide ou token manquant');
+      setError('Lien invalide');
+      setLoading(false);
+      return;
+    }
+
+    console.log('✅ Paramètres valides, appel de loadData()...');
+    loadData();
+  }, [profilId, token, loadData]);
+
+  useEffect(() => {
+    if (videoRef.current && cameraStream) {
+      videoRef.current.srcObject = cameraStream;
+    }
+  }, [cameraStream]);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage('');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, documentType: string) => {
     const selectedFile = e.target.files?.[0];
