@@ -138,6 +138,7 @@ type SortDirection = 'asc' | 'desc';
 
 interface EmployeeListProps {
   initialProfilId?: string;
+  onCloseProfile?: () => void;
 }
 
 // Fonction helper pour obtenir le dernier contrat actif/signé
@@ -167,7 +168,7 @@ function getLatestActiveContract(employeeId: string, contracts: Contract[]): str
   return sortedContracts[0]?.type || null;
 }
 
-export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
+export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListProps = {}) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
@@ -1088,6 +1089,10 @@ export function EmployeeList({ initialProfilId }: EmployeeListProps = {}) {
             setSelectedEmployee(null);
             // Rafraîchir les données APRÈS la fermeture du modal
             fetchData();
+            // Retourner à la page d'origine si disponible
+            if (onCloseProfile) {
+              onCloseProfile();
+            }
           }}
           onUpdate={fetchData}
           contractStatus={getEmployeeContractStatus(selectedEmployee.id)}

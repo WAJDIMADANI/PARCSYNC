@@ -17,6 +17,7 @@ interface MissingDocumentData {
 
 interface MissingDocumentsProps {
   onNavigate?: (view: string, params?: any) => void;
+  onViewProfile?: (profilId: string) => void;
 }
 
 const DOCUMENT_LABELS: Record<string, string> = {
@@ -33,7 +34,7 @@ const DOCUMENT_LABELS: Record<string, string> = {
   titre_sejour: 'Titre de séjour'
 };
 
-export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
+export function MissingDocuments({ onNavigate, onViewProfile }: MissingDocumentsProps) {
   const [salaries, setSalaries] = useState<MissingDocumentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -301,7 +302,7 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => onNavigate?.('rh/salaries', { profilId: salarie.id })}
+                          onClick={() => onViewProfile?.(salarie.id)}
                           className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
                         >
                           <User className="w-4 h-4" />

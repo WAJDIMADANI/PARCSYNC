@@ -47,11 +47,28 @@ import LocatairesExternesManager from './LocatairesExternesManager';
 export function Dashboard() {
   const [view, setView] = useState<View>('dashboards/rh');
   const [viewParams, setViewParams] = useState<any>(null);
+  const [previousView, setPreviousView] = useState<View | null>(null);
   const { signOut, user, appUserNom, appUserPrenom } = useAuth();
 
   const handleViewChange = (newView: View, params?: any) => {
     setView(newView);
     setViewParams(params || null);
+  };
+
+  const handleViewProfile = (profilId: string) => {
+    // Sauvegarder la page actuelle avant d'aller vers les salariés
+    setPreviousView(view);
+    setView('rh/salaries');
+    setViewParams({ profilId });
+  };
+
+  const handleCloseProfile = () => {
+    // Retourner à la page d'origine si elle existe
+    if (previousView) {
+      setView(previousView);
+      setPreviousView(null);
+      setViewParams(null);
+    }
   };
 
   const renderView = () => {
@@ -63,7 +80,7 @@ export function Dashboard() {
       case 'rh/candidats':
         return <CandidateList />;
       case 'rh/salaries':
-        return <EmployeeList initialProfilId={viewParams?.profilId} />;
+        return <EmployeeList initialProfilId={viewParams?.profilId} onCloseProfile={handleCloseProfile} />;
       case 'rh/documents':
         return <DocumentsManager />;
       case 'rh/courriers':
@@ -71,14 +88,14 @@ export function Dashboard() {
       case 'rh/notifications':
         return <NotificationsList
           initialTab={viewParams?.tab}
-          onViewProfile={(profilId) => handleViewChange('rh/salaries', { profilId })}
+          onViewProfile={handleViewProfile}
         />;
       case 'rh/documents-manquants':
-        return <MissingDocuments onNavigate={handleViewChange} />;
+        return <MissingDocuments onNavigate={handleViewChange} onViewProfile={handleViewProfile} />;
       case 'rh/incidents':
-        return <IncidentsList onViewProfile={(profilId) => handleViewChange('rh/salaries', { profilId })} />;
+        return <IncidentsList onViewProfile={handleViewProfile} />;
       case 'rh/incidents-historique':
-        return <IncidentHistory onViewProfile={(profilId) => handleViewChange('rh/salaries', { profilId })} />;
+        return <IncidentHistory onViewProfile={handleViewProfile} />;
       case 'rh/vivier':
         return <VivierList />;
       case 'rh/rejetes':
