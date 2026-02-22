@@ -165,7 +165,7 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
   }
 
   return (
-    <div>
+    <div className="pb-8">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
           <AlertTriangle className="w-8 h-8 text-red-600" />
@@ -284,7 +284,7 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
                           </span>
                         </div>
                         {hoveredRow === salarie.id && (
-                          <div className="absolute z-10 left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                          <div className="absolute z-20 left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl p-3">
                             <div className="text-xs font-semibold text-gray-700 mb-2">Documents manquants:</div>
                             <div className="space-y-1">
                               {salarie.documents_manquants.map((doc) => (
@@ -323,13 +323,13 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
           </div>
 
           {totalPages > 1 && (
-            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
+            <div className="bg-white px-6 py-4 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-sm text-gray-600">
                   Page <span className="font-semibold text-gray-900">{currentPage}</span> sur <span className="font-semibold text-gray-900">{totalPages}</span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-center">
                   <button
                     onClick={() => goToPage(1)}
                     disabled={currentPage === 1}

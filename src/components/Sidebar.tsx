@@ -276,7 +276,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   };
 
   return (
-    <div className="w-56 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 h-screen overflow-y-auto flex-shrink-0 shadow-2xl">
+    <div className="w-56 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 h-full overflow-y-auto flex-shrink-0 shadow-2xl">
       <div className="p-3 border-b border-slate-700/50">
         <div className="flex items-center gap-2">
           <div className="relative">
