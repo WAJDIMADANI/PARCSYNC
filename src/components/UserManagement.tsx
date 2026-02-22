@@ -45,6 +45,7 @@ const AVAILABLE_PERMISSIONS = [
     { id: 'rh/incidents', label: 'Incidents' },
     { id: 'rh/incidents-historique', label: 'Historique incidents' },
     { id: 'rh/vivier', label: 'Vivier' },
+    { id: 'rh/rejetes', label: 'Rejetés' },
     { id: 'rh/demandes', label: 'Demandes' },
     { id: 'rh/validations', label: 'Validations' },
   ]},
