@@ -207,7 +207,7 @@ export function CandidateList() {
   const fetchData = async () => {
     try {
       const [candidatesRes, sitesRes, secteursRes, postesRes] = await Promise.all([
-        supabase.from('candidat').select('*').is('deleted_at', null).neq('pipeline', 'converti_salarie').neq('statut_candidature', 'vivier').order('created_at', { ascending: false }),
+        supabase.from('candidat').select('*').is('deleted_at', null).neq('pipeline', 'converti_salarie').neq('statut_candidature', 'vivier').neq('statut_candidature', 'candidature_rejetee').order('created_at', { ascending: false }),
         supabase.from('site').select('*').order('nom'),
         supabase.from('secteur').select('*').order('nom'),
         supabase.from('poste').select('id, nom, description').eq('actif', true).order('nom')
