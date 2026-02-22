@@ -165,7 +165,7 @@ export function MissingDocuments({ onNavigate }: MissingDocumentsProps) {
   }
 
   return (
-    <div className="pb-8">
+    <div>
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
           <AlertTriangle className="w-8 h-8 text-red-600" />
