@@ -155,11 +155,11 @@ export function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <Sidebar currentView={view} onViewChange={(v) => handleViewChange(v)} />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 px-4 py-3 shadow-sm">
+      <div className="flex-1 flex flex-col min-h-screen">
+        <header className="shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-200 px-4 py-3 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
@@ -175,8 +175,11 @@ export function Dashboard() {
                 {view === 'rh/incidents' && 'Incidents'}
                 {view === 'rh/incidents-historique' && 'Historique des Incidents'}
                 {view === 'rh/vivier' && 'Vivier'}
+                {view === 'rh/rejetes' && 'Candidatures Rejetées'}
                 {view === 'rh/demandes' && 'Demandes Standardistes'}
                 {view === 'rh/validations' && 'Validations'}
+                {view === 'rh/emails' && 'CRM - Emails'}
+                {view === 'rh/sms' && 'CRM - SMS'}
                 {view === 'parc/vehicules' && 'Véhicules'}
                 {view === 'parc/locataires-externes' && 'Locataires externes'}
                 {view === 'parc/ct-assurance' && 'CT & Assurance'}
@@ -223,11 +226,17 @@ export function Dashboard() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 pb-8">
+        <main className="flex-1 overflow-y-auto p-6" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}>
           <div className="max-w-7xl mx-auto">
             {renderView()}
           </div>
         </main>
+
+        <footer className="mt-auto shrink-0 border-t border-slate-200 bg-white/80 backdrop-blur-sm py-3 px-6">
+          <p className="text-xs text-center text-slate-500">
+            Propulsé par <span className="font-semibold">MAD IMPACT</span>
+          </p>
+        </footer>
       </div>
     </div>
   );
