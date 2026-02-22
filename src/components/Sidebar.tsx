@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard, MapPin, HeartHandshake, Clock, Banknote, MessageSquare
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard, MapPin, HeartHandshake, Clock, Banknote, MessageSquare, XCircle
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { supabase } from '../lib/supabase';
@@ -20,6 +20,7 @@ export type View =
   | 'rh/incidents'
   | 'rh/incidents-historique'
   | 'rh/vivier'
+  | 'rh/rejetes'
   | 'rh/documents'
   | 'rh/demandes'
   | 'rh/validations'
@@ -166,6 +167,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'rh/documents-manquants', label: 'Documents Manquants', icon: FileWarning, enabled: true },
         { id: 'rh/incidents', label: 'Incidents', icon: AlertCircle, enabled: true },
         { id: 'rh/vivier', label: 'Vivier', icon: Archive, enabled: true },
+        { id: 'rh/rejetes', label: 'Rejetés', icon: XCircle, enabled: true },
         { id: 'rh/demandes', label: 'Demandes', icon: Phone, enabled: true },
         { id: 'rh/validations', label: 'Validations', icon: CheckSquare, enabled: true },
       ]

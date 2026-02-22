@@ -20,6 +20,7 @@ import { RHDashboard } from './RHDashboard';
 import { ContractTemplates } from './ContractTemplates';
 import { PostesList } from './PostesList';
 import { VivierList } from './VivierList';
+import { RejectedList } from './RejectedList';
 import { SitesList } from './SitesList';
 import { SecteursList } from './SecteursList';
 import { ImportSalarieTest } from './ImportSalarieTest';
@@ -80,6 +81,8 @@ export function Dashboard() {
         return <IncidentHistory onViewProfile={(profilId) => handleViewChange('rh/salaries', { profilId })} />;
       case 'rh/vivier':
         return <VivierList />;
+      case 'rh/rejetes':
+        return <RejectedList />;
       case 'rh/demandes':
         return <DemandesPage />;
       case 'rh/validations':
