@@ -12,15 +12,11 @@ interface MissingDocument {
 }
 
 export default function UploadAllMissingDocuments() {
-  const profilId = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('profil');
-  }, []);
+  const params = useMemo(() => new URLSearchParams(window.location.search), []);
 
-  const token = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('token');
-  }, []);
+  const profilId = useMemo(() => params.get('profil'), [params]);
+  const token = useMemo(() => params.get('token'), [params]);
+  const docsParam = useMemo(() => params.get('docs'), [params]);
 
   const supabase = useMemo<SupabaseClient | null>(() => {
     if (!token) return null;
@@ -77,6 +73,7 @@ export default function UploadAllMissingDocuments() {
     console.log('🚀 === DÉBUT DE loadData() ===');
     console.log('🚀 profilId reçu:', profilId);
     console.log('🚀 token reçu:', token);
+    console.log('🚀 docsParam reçu:', docsParam);
 
     if (!supabase) {
       setError('Configuration invalide');
@@ -120,8 +117,7 @@ export default function UploadAllMissingDocuments() {
       console.log('✅ Profil trouvé:', profil.prenom, profil.nom);
       setProfilData(profil);
 
-      const params = new URLSearchParams(window.location.search);
-      const requestedDocsParam = params.get('docs');
+      const requestedDocsParam = docsParam;
       let docsToDisplay: MissingDocument[] = [];
 
       if (requestedDocsParam) {
@@ -217,7 +213,7 @@ export default function UploadAllMissingDocuments() {
       console.log('🏁 === FIN DE loadData() - setLoading(false) ===');
       setLoading(false);
     }
-  }, [supabase, profilId, token]);
+  }, [supabase, profilId, token, docsParam]);
 
   useEffect(() => {
     console.log('🔄 useEffect triggered');
@@ -476,7 +472,7 @@ export default function UploadAllMissingDocuments() {
                            docsNeedingUpload.every(doc => uploadedDocs.has(doc.type));
 
   if (allDocsCompleted && missingDocuments.length > 0) {
-    const hasDocsFilter = params.get('docs');
+    const hasDocsFilter = !!docsParam;
     const allAlreadyUploaded = docsNeedingUpload.length === 0;
 
     const successMessage = allAlreadyUploaded
