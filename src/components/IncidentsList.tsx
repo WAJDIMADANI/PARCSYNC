@@ -113,7 +113,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       console.log('📊 Avenants expirés depuis RPC:', avenantsData?.length || 0);
 
       // Récupérer TOUS les incidents de la table incident (y compris contrat_expire)
-      const { data: autresData, error: autresError } = await supabase
+      const { data: autresDataRaw, error: autresError } = await supabase
         .from('incident')
         .select(`
           *,
@@ -130,10 +130,14 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
             statut
           )
         `)
-        .neq('profil.statut', 'inactif')
         .order('date_expiration_originale', { ascending: true });
 
       if (autresError) throw autresError;
+
+      // Filtrer côté client pour exclure les profils inactifs
+      const autresData = (autresDataRaw || []).filter(incident => {
+        return !incident.profil || incident.profil.statut !== 'inactif';
+      });
 
       // DEBUG: Vérifier les données
       console.log('Données titre_sejour retournées:', autresData?.filter(i => i.type === 'titre_sejour'));
@@ -316,6 +320,20 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     return false;
   };
 
+  const getProfilName = (incident: Incident) => {
+    const prenom = incident.profil?.prenom?.trim();
+    const nom = incident.profil?.nom?.trim();
+
+    if (prenom && nom) return `${prenom} ${nom}`;
+    if (prenom) return prenom;
+    if (nom) return nom;
+    return 'Salarié (données manquantes)';
+  };
+
+  const getProfilEmail = (incident: Incident) => {
+    return incident.profil?.email?.trim() || 'Email non renseigné';
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'titre_sejour': return <CreditCard className="w-5 h-5" />;
@@ -400,8 +418,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       body: JSON.stringify({
         incident_id: reminderIncident.id,
         profil_id: reminderIncident.profil_id,
-        employee_email: reminderIncident.profil?.email,
-        employee_name: `${reminderIncident.profil?.prenom} ${reminderIncident.profil?.nom}`,
+        employee_email: getProfilEmail(reminderIncident),
+        employee_name: getProfilName(reminderIncident),
         document_type: reminderIncident.type,
         expiration_date: reminderIncident.date_expiration_originale,
         user_id: user?.id,
@@ -443,8 +461,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
-      const nom = `${incident.profil?.prenom} ${incident.profil?.nom}`.toLowerCase();
-      const email = incident.profil?.email?.toLowerCase() || '';
+      const nom = getProfilName(incident).toLowerCase();
+      const email = getProfilEmail(incident).toLowerCase();
       if (!nom.includes(search) && !email.includes(search)) return false;
     }
 
@@ -646,7 +664,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h3 className="font-bold text-lg text-gray-900">
-                            {incident.profil?.prenom} {incident.profil?.nom}
+                            {getProfilName(incident)}
                           </h3>
                           {incident.statut === 'expire' && (
                             <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-700 text-white">
@@ -662,7 +680,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                         <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                           <div className="flex items-center gap-1">
                             <User className="w-4 h-4" />
-                            <span>{incident.profil?.email}</span>
+                            <span>{getProfilEmail(incident)}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="flex items-center gap-1">
@@ -862,8 +880,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
       {reminderIncident && (
         <SendReminderModal
-          employeeName={`${reminderIncident.profil?.prenom} ${reminderIncident.profil?.nom}`}
-          employeeEmail={reminderIncident.profil?.email || ''}
+          employeeName={getProfilName(reminderIncident)}
+          employeeEmail={getProfilEmail(reminderIncident)}
           documentType={getTypeLabel(reminderIncident)}
           onConfirm={confirmSendReminder}
           onCancel={() => setReminderIncident(null)}
