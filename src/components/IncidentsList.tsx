@@ -144,13 +144,15 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       // Enrichir les incidents contrat_expire avec metadata.contrat_type
       const enrichedData = (autresData || []).map(incident => {
         if (incident.type === 'contrat_expire' && incident.contrat) {
-          // Déterminer le type de contrat depuis la table contrat
-          const contratType = incident.contrat.type?.toLowerCase() || 'cdd';
+          // Construire un type robuste même si contrat.type est null
+          const rawType = incident.metadata?.contrat_type ?? incident.contrat.type;
+          const contratType = rawType ? String(rawType).toLowerCase() : null;
+
           return {
             ...incident,
             metadata: {
               ...(incident.metadata || {}),
-              contrat_type: contratType === 'avenant' ? 'avenant' : 'cdd'
+              contrat_type: contratType === 'avenant' ? 'avenant' : (contratType === 'cdd' ? 'cdd' : null)
             }
           };
         }
@@ -284,14 +286,16 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
   const getTypeLabel = (incident: Incident) => {
     if (incident.type === 'contrat_expire') {
-      // Déterminer le type depuis metadata OU depuis le contrat
-      const contratTypeFromMetadata = incident.metadata?.contrat_type?.toLowerCase();
-      const contratTypeFromContrat = incident.contrat?.type?.toLowerCase();
-      const contratType = contratTypeFromMetadata || contratTypeFromContrat || 'cdd';
+      // Construire un label robuste même si contrat.type est null
+      const rawType = incident.metadata?.contrat_type ?? incident.contrat?.type ?? 'Contrat';
+      const contratLabel = String(rawType).trim() ? String(rawType).toUpperCase() : 'CONTRAT';
 
-      if (contratType === 'cdd') return 'Contrat CDD';
-      if (contratType === 'avenant') return 'Avenant au contrat';
-      return 'Contrat expiré';
+      if (contratLabel === 'CDD') return 'Contrat CDD';
+      if (contratLabel === 'AVENANT') return 'Avenant au contrat';
+      if (contratLabel === 'CONTRAT') return 'Contrat (type manquant)';
+
+      // Normaliser en uppercase
+      return `Contrat ${contratLabel}`;
     }
 
     switch (incident.type) {
@@ -302,6 +306,14 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       case 'avenant_expirer': return 'Avenant au contrat';
       default: return incident.type;
     }
+  };
+
+  const isTypeMissing = (incident: Incident) => {
+    if (incident.type === 'contrat_expire') {
+      const rawType = incident.metadata?.contrat_type ?? incident.contrat?.type;
+      return !rawType || !String(rawType).trim();
+    }
+    return false;
   };
 
   const getTypeIcon = (type: string) => {
@@ -652,9 +664,16 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
                             <User className="w-4 h-4" />
                             <span>{incident.profil?.email}</span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <FileText className="w-4 h-4" />
-                            <span>{getTypeLabel(incident)}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              <FileText className="w-4 h-4" />
+                              <span>{getTypeLabel(incident)}</span>
+                            </div>
+                            {isTypeMissing(incident) && (
+                              <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-medium rounded">
+                                Type manquant
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
