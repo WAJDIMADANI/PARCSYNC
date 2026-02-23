@@ -54,7 +54,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
   const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_expirer'>('titre_sejour');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('active_only');
   const [changingStatus, setChangingStatus] = useState<string | null>(null);
   const [reminderIncident, setReminderIncident] = useState<Incident | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -267,6 +267,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     if (type === 'contrat_cdd') {
       return incidents.filter(i => {
         if (i.type !== 'contrat_expire') return false;
+        // Exclure résolus et ignorés
+        if (i.statut === 'resolu' || i.statut === 'ignore') return false;
         // Vérifier metadata OU type de contrat
         const contratTypeFromMetadata = i.metadata?.contrat_type?.toLowerCase();
         const contratTypeFromContrat = i.contrat?.type?.toLowerCase();
@@ -278,6 +280,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
     if (type === 'avenant_expirer') {
       return incidents.filter(i => {
         if (i.type !== 'contrat_expire') return false;
+        // Exclure résolus et ignorés
+        if (i.statut === 'resolu' || i.statut === 'ignore') return false;
         // Vérifier metadata OU type de contrat
         const contratTypeFromMetadata = i.metadata?.contrat_type?.toLowerCase();
         const contratTypeFromContrat = i.contrat?.type?.toLowerCase();
@@ -285,7 +289,11 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       }).length;
     }
 
-    return incidents.filter(i => i.type === type).length;
+    return incidents.filter(i => {
+      // Exclure résolus et ignorés
+      if (i.statut === 'resolu' || i.statut === 'ignore') return false;
+      return i.type === type;
+    }).length;
   };
 
   const getTypeLabel = (incident: Incident) => {
@@ -457,7 +465,13 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
     if (!matchesTab) return false;
 
-    if (filterStatus !== 'all' && incident.statut !== filterStatus) return false;
+    // Filtrer par statut
+    if (filterStatus === 'active_only') {
+      // Exclure résolus et ignorés par défaut
+      if (incident.statut === 'resolu' || incident.statut === 'ignore') return false;
+    } else if (filterStatus !== 'all' && incident.statut !== filterStatus) {
+      return false;
+    }
 
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
@@ -613,12 +627,13 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
           onChange={(e) => setFilterStatus(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
+          <option value="active_only">Incidents actifs</option>
           <option value="all">Tous les statuts</option>
-          <option value="actif">Actifs</option>
-          <option value="en_cours">En cours</option>
-          <option value="resolu">Résolus</option>
-          <option value="ignore">Ignorés</option>
-          <option value="expire">Expirés</option>
+          <option value="actif">Actifs seulement</option>
+          <option value="en_cours">En cours seulement</option>
+          <option value="expire">Expirés seulement</option>
+          <option value="resolu">Résolus seulement</option>
+          <option value="ignore">Ignorés seulement</option>
         </select>
       </div>
 
