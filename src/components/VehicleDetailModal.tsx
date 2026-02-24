@@ -52,7 +52,8 @@ interface Vehicle {
   mode_acquisition: string | null;
   prix_ht: number | null;
   prix_ttc: number | null;
-  mensualite: number | null;
+  mensualite_ht: number | null;
+  mensualite_ttc: number | null;
   duree_contrat_mois: number | null;
   date_debut_contrat: string | null;
   date_fin_prevue_contrat: string | null;
@@ -233,10 +234,20 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       }
     });
 
-    const stringFields = ['reference_tca', 'marque', 'modele', 'type', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero', 'locataire_nom_libre', 'proprietaire_carte_grise', 'loueur_nom_externe'];
+    const stringFields = ['reference_tca', 'marque', 'modele', 'type', 'fournisseur', 'mode_acquisition', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero', 'locataire_nom_libre', 'proprietaire_carte_grise', 'loueur_nom_externe'];
     stringFields.forEach(field => {
       if (cleaned[field] === undefined) {
         cleaned[field] = null;
+      }
+    });
+
+    const numericFields = ['prix_ht', 'prix_ttc', 'mensualite_ht', 'mensualite_ttc', 'duree_contrat_mois'];
+    numericFields.forEach(field => {
+      if (cleaned[field] === '' || cleaned[field] === undefined) {
+        cleaned[field] = null;
+      } else if (typeof cleaned[field] === 'string') {
+        const num = Number(cleaned[field]);
+        cleaned[field] = isNaN(num) ? null : num;
       }
     });
 
@@ -266,6 +277,15 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         date_mise_en_service: editedVehicle.date_mise_en_service,
         date_fin_service: editedVehicle.date_fin_service,
         date_premiere_mise_en_circulation: editedVehicle.date_premiere_mise_en_circulation,
+        fournisseur: editedVehicle.fournisseur,
+        mode_acquisition: editedVehicle.mode_acquisition,
+        prix_ht: editedVehicle.prix_ht,
+        prix_ttc: editedVehicle.prix_ttc,
+        mensualite_ht: editedVehicle.mensualite_ht,
+        mensualite_ttc: editedVehicle.mensualite_ttc,
+        duree_contrat_mois: editedVehicle.duree_contrat_mois,
+        date_debut_contrat: editedVehicle.date_debut_contrat,
+        date_fin_prevue_contrat: editedVehicle.date_fin_prevue_contrat,
         assurance_type: editedVehicle.assurance_type,
         assurance_compagnie: editedVehicle.assurance_compagnie,
         assurance_numero_contrat: editedVehicle.assurance_numero_contrat,
@@ -1395,56 +1415,81 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                       </div>
                     </div>
 
-                    {editedVehicle.mode_acquisition !== 'Achat pur' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editedVehicle.mensualite || ''}
-                          onChange={(e) => setEditedVehicle({ ...editedVehicle, mensualite: e.target.value ? parseFloat(e.target.value) : null })}
-                          disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                          placeholder="0.00"
-                        />
+                    {editedVehicle.mode_acquisition !== 'Achat pur' && editedVehicle.mode_acquisition !== '' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité HT</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editedVehicle.mensualite_ht || ''}
+                            onChange={(e) => {
+                              const mensualiteHT = parseFloat(e.target.value);
+                              setEditedVehicle({
+                                ...editedVehicle,
+                                mensualite_ht: e.target.value ? parseFloat(e.target.value) : null,
+                                mensualite_ttc: !isNaN(mensualiteHT) ? parseFloat((mensualiteHT * 1.2).toFixed(2)) : null
+                              });
+                            }}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                            placeholder="0.00"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité TTC (auto)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editedVehicle.mensualite_ttc || ''}
+                            readOnly
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                            placeholder="0.00"
+                          />
+                        </div>
                       </div>
                     )}
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Durée du contrat (mois)</label>
-                      <input
-                        type="number"
-                        value={editedVehicle.duree_contrat_mois || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, duree_contrat_mois: e.target.value ? parseInt(e.target.value) : null })}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                        placeholder="Ex: 24, 36, 48..."
-                      />
-                    </div>
+                    {editedVehicle.mode_acquisition !== 'Achat pur' && editedVehicle.mode_acquisition !== '' && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Durée du contrat (mois)</label>
+                          <input
+                            type="number"
+                            value={editedVehicle.duree_contrat_mois || ''}
+                            onChange={(e) => setEditedVehicle({ ...editedVehicle, duree_contrat_mois: e.target.value ? parseInt(e.target.value) : null })}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                            placeholder="Ex: 24, 36, 48..."
+                          />
+                        </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Date début contrat</label>
-                        <input
-                          type="date"
-                          value={editedVehicle.date_debut_contrat || ''}
-                          onChange={(e) => setEditedVehicle({ ...editedVehicle, date_debut_contrat: e.target.value })}
-                          disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                        />
-                      </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Date début contrat</label>
+                            <input
+                              type="date"
+                              value={editedVehicle.date_debut_contrat || ''}
+                              onChange={(e) => setEditedVehicle({ ...editedVehicle, date_debut_contrat: e.target.value })}
+                              disabled={!isEditing}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                            />
+                          </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Date fin prévue</label>
-                        <input
-                          type="date"
-                          value={editedVehicle.date_fin_prevue_contrat || ''}
-                          onChange={(e) => setEditedVehicle({ ...editedVehicle, date_fin_prevue_contrat: e.target.value })}
-                          disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                        />
-                      </div>
-                    </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Date fin prévue</label>
+                            <input
+                              type="date"
+                              value={editedVehicle.date_fin_prevue_contrat || ''}
+                              onChange={(e) => setEditedVehicle({ ...editedVehicle, date_fin_prevue_contrat: e.target.value })}
+                              disabled={!isEditing}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 

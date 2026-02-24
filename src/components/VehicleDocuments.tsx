@@ -21,7 +21,7 @@ interface VehicleDocumentsProps {
 const DOCUMENT_TYPES: Record<string, { label: string; icon: string; requiresExpiration: boolean }> = {
   carte_grise: { label: 'Carte grise', icon: '📄', requiresExpiration: false },
   assurance: { label: 'Assurance', icon: '🛡️', requiresExpiration: true },
-  carte_ris: { label: 'Carte RIS', icon: '🚗', requiresExpiration: true },
+  carte_ris: { label: 'Carte CMI', icon: '🚗', requiresExpiration: true },
   controle_technique: { label: 'Contrôle technique', icon: '🔧', requiresExpiration: true },
   autre: { label: 'Autre', icon: '📋', requiresExpiration: false },
 };

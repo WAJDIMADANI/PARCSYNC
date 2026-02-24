@@ -21,7 +21,8 @@ interface VehicleFormData {
   mode_acquisition: string;
   prix_ht: number | '';
   prix_ttc: number | '';
-  mensualite: number | '';
+  mensualite_ht: number | '';
+  mensualite_ttc: number | '';
   duree_contrat_mois: number | '';
   date_debut_contrat: string;
   date_fin_prevue_contrat: string;
@@ -33,7 +34,6 @@ interface VehicleFormData {
   carte_essence_numero: string;
   carte_essence_attribuee: boolean;
   kilometrage_actuel: number | '';
-  statut: string;
 }
 
 interface Equipment {
@@ -105,7 +105,8 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     mode_acquisition: '',
     prix_ht: '',
     prix_ttc: '',
-    mensualite: '',
+    mensualite_ht: '',
+    mensualite_ttc: '',
     duree_contrat_mois: '',
     date_debut_contrat: '',
     date_fin_prevue_contrat: '',
@@ -117,7 +118,6 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     carte_essence_numero: '',
     carte_essence_attribuee: false,
     kilometrage_actuel: '',
-    statut: 'actif',
   });
 
   useEffect(() => {
@@ -582,34 +582,18 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type de véhicule</label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => handleInputChange('type', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                >
-                  <option value="VL">VL - Véhicule Léger</option>
-                  <option value="VUL">VUL - Véhicule Utilitaire Léger</option>
-                  <option value="PL">PL - Poids Lourd</option>
-                  <option value="TC">TC - Transport en Commun</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
-                <select
-                  value={formData.statut}
-                  onChange={(e) => handleInputChange('statut', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                >
-                  <option value="actif">✓ Actif</option>
-                  <option value="maintenance">🔧 En maintenance</option>
-                  <option value="hors service">✗ Hors service</option>
-                  <option value="en location">📋 En location</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Type de véhicule</label>
+              <select
+                value={formData.type}
+                onChange={(e) => handleInputChange('type', e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              >
+                <option value="VL">VL - Véhicule Léger</option>
+                <option value="VUL">VUL - Véhicule Utilitaire Léger</option>
+                <option value="PL">PL - Poids Lourd</option>
+                <option value="TC">TC - Transport en Commun</option>
+              </select>
             </div>
           </div>
         );
@@ -687,19 +671,55 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
               </select>
             </div>
 
-            {formData.mode_acquisition === 'Achat pur' ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {formData.mode_acquisition === 'Achat pur' ? 'Prix d\'achat HT' : 'Prix HT'}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.prix_ht}
+                  onChange={(e) => {
+                    const prixHT = parseFloat(e.target.value);
+                    handleInputChange('prix_ht', e.target.value);
+                    if (!isNaN(prixHT)) {
+                      handleInputChange('prix_ttc', (prixHT * 1.2).toFixed(2));
+                    }
+                  }}
+                  placeholder="0.00"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {formData.mode_acquisition === 'Achat pur' ? 'Prix d\'achat TTC (auto)' : 'Prix TTC (auto)'}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.prix_ttc}
+                  readOnly
+                  placeholder="0.00"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                />
+              </div>
+            </div>
+
+            {formData.mode_acquisition !== 'Achat pur' && formData.mode_acquisition !== '' && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Prix d'achat HT</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité HT</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={formData.prix_ht}
+                    value={formData.mensualite_ht}
                     onChange={(e) => {
-                      const prixHT = parseFloat(e.target.value);
-                      handleInputChange('prix_ht', e.target.value);
-                      if (!isNaN(prixHT)) {
-                        handleInputChange('prix_ttc', (prixHT * 1.2).toFixed(2));
+                      const mensualiteHT = parseFloat(e.target.value);
+                      handleInputChange('mensualite_ht', e.target.value);
+                      if (!isNaN(mensualiteHT)) {
+                        handleInputChange('mensualite_ttc', (mensualiteHT * 1.2).toFixed(2));
                       }
                     }}
                     placeholder="0.00"
@@ -708,97 +728,55 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Prix d'achat TTC (auto)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité TTC (auto)</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={formData.prix_ttc}
+                    value={formData.mensualite_ttc}
                     readOnly
                     placeholder="0.00"
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
                   />
                 </div>
               </div>
-            ) : (
+            )}
+
+            {formData.mode_acquisition !== 'Achat pur' && formData.mode_acquisition !== '' && (
               <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Durée du contrat (en mois)</label>
+                  <input
+                    type="number"
+                    value={formData.duree_contrat_mois}
+                    onChange={(e) => handleInputChange('duree_contrat_mois', e.target.value)}
+                    placeholder="Ex: 24, 36, 48..."
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Prix HT</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Date début contrat</label>
                     <input
-                      type="number"
-                      step="0.01"
-                      value={formData.prix_ht}
-                      onChange={(e) => {
-                        const prixHT = parseFloat(e.target.value);
-                        handleInputChange('prix_ht', e.target.value);
-                        if (!isNaN(prixHT)) {
-                          handleInputChange('prix_ttc', (prixHT * 1.2).toFixed(2));
-                        }
-                      }}
-                      placeholder="0.00"
+                      type="date"
+                      value={formData.date_debut_contrat}
+                      onChange={(e) => handleInputChange('date_debut_contrat', e.target.value)}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Prix TTC (auto)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Date fin prévue</label>
                     <input
-                      type="number"
-                      step="0.01"
-                      value={formData.prix_ttc}
-                      readOnly
-                      placeholder="0.00"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                      type="date"
+                      value={formData.date_fin_prevue_contrat}
+                      onChange={(e) => handleInputChange('date_fin_prevue_contrat', e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.mensualite}
-                    onChange={(e) => handleInputChange('mensualite', e.target.value)}
-                    placeholder="0.00"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
-                </div>
               </>
             )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Durée du contrat (en mois)</label>
-              <input
-                type="number"
-                value={formData.duree_contrat_mois}
-                onChange={(e) => handleInputChange('duree_contrat_mois', e.target.value)}
-                placeholder="Ex: 24, 36, 48..."
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Date début contrat</label>
-                <input
-                  type="date"
-                  value={formData.date_debut_contrat}
-                  onChange={(e) => handleInputChange('date_debut_contrat', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Date fin prévue</label>
-                <input
-                  type="date"
-                  value={formData.date_fin_prevue_contrat}
-                  onChange={(e) => handleInputChange('date_fin_prevue_contrat', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
-            </div>
           </div>
         );
 
@@ -1077,7 +1055,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
                 const labels: Record<string, string> = {
                   carte_grise: 'Carte grise',
                   assurance: 'Assurance',
-                  carte_ris: 'Carte RIS',
+                  carte_ris: 'Carte CMI',
                   controle_technique: 'Contrôle technique',
                 };
 
