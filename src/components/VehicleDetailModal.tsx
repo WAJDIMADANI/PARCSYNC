@@ -598,11 +598,11 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
             </div>
           </div>
 
-          <div className="border-b border-gray-200 px-6">
-            <nav className="flex gap-4">
+          <div className="border-b border-gray-200 px-6 overflow-x-auto">
+            <nav className="flex gap-2 min-w-max">
               <button
                 onClick={() => setActiveTab('info')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'info'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -615,7 +615,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </button>
               <button
                 onClick={() => setActiveTab('statut')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'statut'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -628,7 +628,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </button>
               <button
                 onClick={() => setActiveTab('current')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'current'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -636,7 +636,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               >
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4" />
-                  Attributions actuelles
+                  Attributions
                   {currentAttributions.length > 0 && (
                     <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs font-bold">
                       {currentAttributions.length}
@@ -646,7 +646,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </button>
               <button
                 onClick={() => setActiveTab('proprietaire')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'proprietaire'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -659,7 +659,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'history'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -667,12 +667,12 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               >
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  Historique complet
+                  Historique
                 </div>
               </button>
               <button
                 onClick={() => setActiveTab('insurance')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'insurance'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -685,7 +685,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </button>
               <button
                 onClick={() => setActiveTab('equipment')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'equipment'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -698,7 +698,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </button>
               <button
                 onClick={() => setActiveTab('kilometrage')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'kilometrage'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -711,7 +711,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </button>
               <button
                 onClick={() => setActiveTab('documents')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'documents'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
