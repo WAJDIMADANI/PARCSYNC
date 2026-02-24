@@ -1,121 +1,37 @@
-# ✅ Résumé : Correction des incidents de contrats
+# Résumé - Correction incidents contrats expirés obsolètes
 
-## Problèmes résolus
+## Problème identifié
 
-### 1. Boucle infinie de rechargements ✅
-**Cause :** `detect_and_expire_incidents()` appelé dans `fetchIncidents()` qui déclenchait le listener en boucle
+Des profils avec un **CDI signé/actif** apparaissent encore dans **Incidents > Contrats expirés** à cause de leurs anciens CDD/avenants expirés.
 
-**Solution :** Appel RPC uniquement au montage initial du composant
+**Exemple :** Didier RENARD a un CDI signé le 01/01/2025, mais des incidents actifs existent sur ses avenants expirés en décembre 2024.
 
-### 2. Comptage incorrect des CDD ✅
-**Cause :** Vue SQL `v_incidents_contrats_affichables` avec logique différente du Dashboard (9 CDD au lieu de 0)
+## Solution en 1 étape
 
-**Solution :** Fonction RPC `get_cdd_expires()` avec logique identique au Dashboard
+1. Ouvrir **Supabase Dashboard** → **SQL Editor**
+2. Copier-coller **`FIX-INCIDENTS-CONTRAT-OBSOLETES.sql`**
+3. Cliquer sur **Run**
 
-### 3. Comptage incorrect des avenants ✅
-**Cause :** Vue SQL générique sans logique spécifique aux avenants
+## Ce qui est corrigé
 
-**Solution :** Fonction RPC `get_avenants_expires()` avec logique exacte
+- `get_cdd_expires()` - Exclut CDD couverts par CDI
+- `get_avenants_expires()` - Exclut avenants couverts par CDI
+- Résolution automatique des incidents obsolètes existants
+- Trigger auto-résolution lors création CDI (prévention future)
 
-## Nouvelles fonctions SQL
-
-### `get_cdd_expires()`
-- Lit directement depuis la table `profil`
-- Calcule `GREATEST(date_fin, date_fin_avenant1, date_fin_avenant2)`
-- Exclut les profils avec CDI actif
-- Filtre sur les 30 prochains jours
-- Retourne les CDD qui vont expirer
-
-### `get_avenants_expires()`
-- Vérifie `modele_contrat LIKE '%Avenant%'`
-- Calcule `GREATEST(avenant_1_date_fin, avenant_2_date_fin)`
-- Exclut les profils avec CDI actif
-- Filtre sur les contrats déjà expirés (`< CURRENT_DATE`)
-- Retourne les avenants expirés
-
-## Architecture avant/après
+## Résultat
 
 ### Avant
-```
-IncidentsList.tsx
-  ↓
-v_incidents_contrats_affichables (vue SQL unique)
-  ↓
-Table incident
-  ↓
-⚠️ Logique SQL différente du Dashboard
-⚠️ 9 CDD incorrects affichés
-```
+- Didier RENARD avec CDI apparaît dans "Contrats expirés"
+- Compteur : 25 incidents (gonflé artificiellement)
 
 ### Après
-```
-IncidentsList.tsx
-  ├─→ get_cdd_expires() (RPC)
-  │    └─→ Table profil + contrat
-  │         └─→ ✅ Logique identique Dashboard
-  │
-  └─→ get_avenants_expires() (RPC)
-       └─→ Table profil + contrat
-            └─→ ✅ Logique exacte avenants
-```
+- Didier RENARD n'apparaît plus
+- Compteur : 10 incidents (uniquement vrais cas sans CDI)
+- Incidents obsolètes marqués `resolu`
 
-## Fichiers modifiés
+## Fichiers créés
 
-1. **src/components/IncidentsList.tsx**
-   - Correction boucle infinie
-   - Utilise `get_cdd_expires()`
-   - Utilise `get_avenants_expires()`
-   - Ne dépend plus de `v_incidents_contrats_affichables`
-
-2. **src/components/RHDashboard.tsx**
-   - Utilise `get_cdd_expires()` dans `fetchNotificationsStats()`
-   - Utilise `get_cdd_expires()` et `get_avenants_expires()` dans `fetchIncidentsStats()`
-   - Ne dépend plus de `v_incidents_contrats_affichables`
-   - Affiche maintenant 0 CDD au lieu de 7
-
-3. **create-get-cdd-expires-function.sql**
-   - Nouvelle fonction pour les CDD
-
-4. **create-get-avenants-expires-function.sql**
-   - Nouvelle fonction pour les avenants
-
-## Actions requises
-
-### 1. Exécuter les 2 fichiers SQL dans Supabase SQL Editor
-
-**Dans l'ordre :**
-```bash
-1. create-get-cdd-expires-function.sql
-2. create-get-avenants-expires-function.sql
-```
-
-### 2. Rafraîchir l'application
-
-### 3. Vérifier les affichages
-
-**Dans IncidentsList.tsx (console) :**
-```javascript
-📊 CDD expirés depuis RPC: 0  // ✅ Correct
-📊 Avenants expirés depuis RPC: X
-```
-
-**Dans RHDashboard.tsx (affichage) :**
-- Compteur "Contrats CDD" : 0 (au lieu de 7)
-- Compteur "Total Incidents" : X (CDD + Avenants + autres)
-- Cohérent avec la page Incidents
-
-## Avantages de la solution
-
-✅ **Cohérence** : Logique identique Dashboard ↔ Incidents
-✅ **Maintenabilité** : Code SQL dans des fonctions dédiées
-✅ **Performance** : Calcul optimisé avec index
-✅ **Fiabilité** : Plus de boucle infinie
-✅ **Clarté** : Séparation CDD / avenants
-
-## Notes techniques
-
-- Les profils avec CDI actif sont toujours exclus
-- Les CDD vérifient les 30 prochains jours (alerte anticipée)
-- Les avenants vérifient les contrats déjà expirés
-- Les IDs des incidents sont générés dynamiquement
-- Format compatible avec le reste de l'interface
+1. **FIX-INCIDENTS-CONTRAT-OBSOLETES.sql** ⭐ (à exécuter)
+2. **EXECUTER-MAINTENANT-FIX-INCIDENTS-OBSOLETES.md** (guide détaillé)
+3. **DIAGNOSTIC-COMPLET-INCIDENTS-OBSOLETES.sql** (diagnostic)
