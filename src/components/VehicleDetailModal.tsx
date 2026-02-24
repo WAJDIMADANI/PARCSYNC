@@ -46,7 +46,6 @@ interface Vehicle {
   type: string | null;
   statut: string;
   date_mise_en_service: string | null;
-  date_fin_service: string | null;
   date_premiere_mise_en_circulation: string | null;
   fournisseur: string | null;
   mode_acquisition: string | null;
@@ -107,7 +106,7 @@ interface Props {
   photoUrl?: string;
 }
 
-type Tab = 'info' | 'current' | 'proprietaire' | 'history' | 'insurance' | 'equipment' | 'kilometrage' | 'documents';
+type Tab = 'info' | 'statut' | 'current' | 'proprietaire' | 'history' | 'insurance' | 'equipment' | 'kilometrage' | 'documents';
 
 export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicleUpdated, photoUrl: initialPhotoUrl }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('info');
@@ -123,6 +122,10 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
 
   const [attributions, setAttributions] = useState<Attribution[]>([]);
   const [loadingAttributions, setLoadingAttributions] = useState(false);
+
+  // État pour l'historique des statuts
+  const [statusHistory, setStatusHistory] = useState<any[]>([]);
+  const [loadingStatusHistory, setLoadingStatusHistory] = useState(false);
 
   // État pour gérer les champs du propriétaire
   const [proprietaireMode, setProprietaireMode] = useState<'tca' | 'entreprise'>('tca');
@@ -171,6 +174,9 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
     if (activeTab === 'history' || activeTab === 'current') {
       fetchAttributions();
     }
+    if (activeTab === 'statut') {
+      fetchStatusHistory();
+    }
     // Désactiver le mode édition lors du changement d'onglet
     if (isEditing) {
       setIsEditing(false);
@@ -210,10 +216,29 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
     }
   };
 
+  const fetchStatusHistory = async () => {
+    setLoadingStatusHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from('v_historique_statut_vehicule')
+        .select('*')
+        .eq('vehicule_id', vehicle.id)
+        .order('date_modification', { ascending: false });
+
+      if (error) throw error;
+      setStatusHistory(data || []);
+    } catch (error) {
+      console.error('Erreur chargement historique statuts:', error);
+      setStatusHistory([]);
+    } finally {
+      setLoadingStatusHistory(false);
+    }
+  };
+
   const cleanPayloadForUpdate = (data: any) => {
     const cleaned = { ...data };
 
-    const dateFields = ['date_premiere_mise_en_circulation', 'date_mise_en_service', 'date_fin_service'];
+    const dateFields = ['date_premiere_mise_en_circulation', 'date_mise_en_service'];
     dateFields.forEach(field => {
       if (cleaned[field] === '' || cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -271,7 +296,6 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         type: editedVehicle.type,
         statut: editedVehicle.statut,
         date_mise_en_service: editedVehicle.date_mise_en_service,
-        date_fin_service: editedVehicle.date_fin_service,
         date_premiere_mise_en_circulation: editedVehicle.date_premiere_mise_en_circulation,
         fournisseur: editedVehicle.fournisseur,
         mode_acquisition: editedVehicle.mode_acquisition,
@@ -335,6 +359,11 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
 
       setIsEditing(false);
       console.log('[handleSave] Mode édition désactivé');
+
+      // Si on est sur l'onglet statut, recharger l'historique
+      if (activeTab === 'statut') {
+        await fetchStatusHistory();
+      }
 
       // Notifier le parent de la mise à jour
       await onVehicleUpdated(updatedVehicleData);
@@ -527,7 +556,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               {getStatusBadge(vehicle.statut)}
             </div>
             <div className="flex items-center gap-2">
-              {(activeTab === 'info' || activeTab === 'current' || activeTab === 'proprietaire' || activeTab === 'insurance' || activeTab === 'equipment') && (
+              {(activeTab === 'info' || activeTab === 'statut' || activeTab === 'current' || activeTab === 'proprietaire' || activeTab === 'insurance' || activeTab === 'equipment') && (
                 <>
                   {isEditing ? (
                     <>
@@ -582,6 +611,19 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4" />
                   Informations
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('statut')}
+                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'statut'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Statut
                 </div>
               </button>
               <button
@@ -789,46 +831,6 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Statut et dates</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
-                      <select
-                        value={editedVehicle.statut}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, statut: e.target.value })}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                      >
-                        <option value="actif">Actif</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="hors service">Hors service</option>
-                        <option value="en location">En location</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Date de mise en service</label>
-                      <input
-                        type="date"
-                        value={editedVehicle.date_mise_en_service || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, date_mise_en_service: e.target.value })}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Date de fin de service</label>
-                      <input
-                        type="date"
-                        value={editedVehicle.date_fin_service || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, date_fin_service: e.target.value })}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Kilométrage</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -854,6 +856,109 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'statut' && (
+              <div className="space-y-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-blue-800">
+                    Chaque changement de statut est automatiquement enregistré avec la date et l'utilisateur.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Statut actuel</h3>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Sélectionner le statut</label>
+                    <select
+                      value={editedVehicle.statut}
+                      onChange={(e) => setEditedVehicle({ ...editedVehicle, statut: e.target.value })}
+                      disabled={!isEditing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                    >
+                      <option value="sur_parc">🅿️ Sur parc</option>
+                      <option value="chauffeur_tca">👤 Chauffeur TCA</option>
+                      <option value="direction_administratif">🏢 Direction / Administratif</option>
+                      <option value="location_pure">🔄 Location pure</option>
+                      <option value="loa">💰 Location avec option d'achat (LOA / location-vente)</option>
+                      <option value="en_pret">🤝 En prêt</option>
+                      <option value="en_garage">🛠️ En garage</option>
+                      <option value="hors_service">🚫 Hors service</option>
+                      <option value="sorti_flotte">📦 Véhicule sorti / rendu de la flotte</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Historique des statuts</h3>
+                    {statusHistory.length > 0 && (
+                      <span className="text-sm text-gray-500">{statusHistory.length} changement(s)</span>
+                    )}
+                  </div>
+
+                  {loadingStatusHistory ? (
+                    <div className="flex justify-center py-12">
+                      <LoadingSpinner />
+                    </div>
+                  ) : statusHistory.length === 0 ? (
+                    <div className="text-center py-12 bg-gray-50 rounded-lg">
+                      <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">Aucun historique de statut disponible</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {statusHistory.map((history, index) => (
+                        <div key={history.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                {history.ancien_statut && (
+                                  <>
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                                      {history.ancien_statut}
+                                    </span>
+                                    <span className="text-gray-400">→</span>
+                                  </>
+                                )}
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                  {history.nouveau_statut}
+                                </span>
+                                {index === 0 && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    Actuel
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-gray-600">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-4 h-4" />
+                                  {new Date(history.date_modification).toLocaleString('fr-FR', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </div>
+                                {history.modifie_par_nom && (
+                                  <div className="flex items-center gap-1">
+                                    <User className="w-4 h-4" />
+                                    {history.modifie_par_nom}
+                                  </div>
+                                )}
+                              </div>
+                              {history.commentaire && (
+                                <p className="text-sm text-gray-600 mt-2 italic">{history.commentaire}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
