@@ -76,10 +76,6 @@ interface Vehicle {
   locataire_nom_libre: string | null;
   locataire_affiche: string; // Calculé par la vue v_vehicles_list
   proprietaire_carte_grise: string | null;
-  loueur_type: string | null;
-  loueur_chauffeur_id: string | null;
-  loueur_nom_externe: string | null;
-  loueur_affiche: string; // Calculé par la vue v_vehicles_list
 }
 
 interface Attribution {
@@ -234,7 +230,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       }
     });
 
-    const stringFields = ['reference_tca', 'marque', 'modele', 'type', 'fournisseur', 'mode_acquisition', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero', 'locataire_nom_libre', 'proprietaire_carte_grise', 'loueur_nom_externe'];
+    const stringFields = ['reference_tca', 'marque', 'modele', 'type', 'fournisseur', 'mode_acquisition', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero', 'locataire_nom_libre', 'proprietaire_carte_grise'];
     stringFields.forEach(field => {
       if (cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -297,9 +293,6 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         locataire_type: editedVehicle.locataire_type,
         locataire_nom_libre: editedVehicle.locataire_nom_libre,
         proprietaire_carte_grise: formattedProprietaire,
-        loueur_type: editedVehicle.loueur_type,
-        loueur_chauffeur_id: editedVehicle.loueur_chauffeur_id,
-        loueur_nom_externe: editedVehicle.loueur_nom_externe,
       });
 
       console.log('[handleSave] Données à envoyer:', updateData);
@@ -514,8 +507,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+        <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full h-[95vh] sm:h-[92vh] overflow-hidden flex flex-col">
           <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-20 h-16 flex items-center justify-center bg-gray-100 rounded-lg overflow-hidden">
@@ -919,81 +912,6 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                       )}
                     </div>
                   )}
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Gestion du loueur</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">De qui louons-nous ce véhicule ?</label>
-                      <select
-                        value={editedVehicle.loueur_type || ''}
-                        onChange={(e) => {
-                          const newType = e.target.value || null;
-                          setEditedVehicle({
-                            ...editedVehicle,
-                            loueur_type: newType,
-                            loueur_chauffeur_id: newType === 'chauffeur_tca' ? editedVehicle.loueur_chauffeur_id : null,
-                            loueur_nom_externe: newType === 'chauffeur_tca' ? null : editedVehicle.loueur_nom_externe
-                          });
-                        }}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                      >
-                        <option value="">Aucun (propriété TCA)</option>
-                        <option value="chauffeur_tca">Salarié TCA</option>
-                        <option value="entreprise">Entreprise externe</option>
-                        <option value="personne_externe">Personne externe</option>
-                      </select>
-                    </div>
-
-                    {editedVehicle.loueur_type === 'chauffeur_tca' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Sélectionner le chauffeur</label>
-                        <input
-                          type="text"
-                          value={editedVehicle.loueur_chauffeur_id || ''}
-                          onChange={(e) => setEditedVehicle({ ...editedVehicle, loueur_chauffeur_id: e.target.value })}
-                          disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                          placeholder="ID du chauffeur (UUID)"
-                        />
-                        <p className="text-sm text-gray-500 mt-1">
-                          Recherchez un chauffeur dans la liste des employés et copiez son ID
-                        </p>
-                      </div>
-                    )}
-
-                    {editedVehicle.loueur_type === 'entreprise' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Nom de l'entreprise</label>
-                        <input
-                          type="text"
-                          value={editedVehicle.loueur_nom_externe || ''}
-                          onChange={(e) => setEditedVehicle({ ...editedVehicle, loueur_nom_externe: e.target.value })}
-                          disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                          placeholder="Ex: HERTZ, EUROPCAR, SIXT, AVIS, BUDGET..."
-                          maxLength={150}
-                        />
-                      </div>
-                    )}
-
-                    {editedVehicle.loueur_type === 'personne_externe' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la personne</label>
-                        <input
-                          type="text"
-                          value={editedVehicle.loueur_nom_externe || ''}
-                          onChange={(e) => setEditedVehicle({ ...editedVehicle, loueur_nom_externe: e.target.value })}
-                          disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                          placeholder="Ex: M. Jean Dupont"
-                          maxLength={150}
-                        />
-                      </div>
-                    )}
-                  </div>
                 </div>
 
                 <div className="flex items-center justify-between mb-6">
