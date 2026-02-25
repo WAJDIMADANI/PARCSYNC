@@ -112,7 +112,8 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
       console.log('avenantsData length', avenantsData?.length);
       console.log('📊 Avenants expirés depuis RPC:', avenantsData?.length || 0);
 
-      // Récupérer TOUS les incidents de la table incident (y compris contrat_expire)
+      // Récupérer TOUS les incidents NON RÉSOLUS de la table incident
+      // RÈGLE: Ne compter que statut != 'resolu' (comme le Dashboard RH)
       const { data: autresDataRaw, error: autresError } = await supabase
         .from('incident')
         .select(`
@@ -130,6 +131,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
             statut
           )
         `)
+        .neq('statut', 'resolu')
         .order('date_expiration_originale', { ascending: true });
 
       if (autresError) throw autresError;

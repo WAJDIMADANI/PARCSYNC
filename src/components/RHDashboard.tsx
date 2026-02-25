@@ -471,10 +471,10 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
 
   const fetchIncidentsStats = async () => {
     try {
-      // RÈGLE MÉTIER : On compte UNIQUEMENT les incidents en statut 'expire'
+      // RÈGLE MÉTIER : On compte UNIQUEMENT les incidents NON RÉSOLUS
       // (pour matcher exactement l'onglet "Gestion des incidents")
 
-      // 1. Récupérer TOUS les incidents en statut 'expire' depuis la table incident
+      // 1. Récupérer TOUS les incidents NON RÉSOLUS depuis la table incident
       const { data: allIncidents } = await supabase
         .from('incident')
         .select(`
@@ -499,7 +499,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
             statut
           )
         `)
-        .eq('statut', 'expire')
+        .neq('statut', 'resolu')
         .neq('profil.statut', 'inactif');
 
       // 2. Compter le TOTAL d'incidents expirés (count(*) sur incidents)
@@ -518,7 +518,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       const salariesConcernes = new Set((allIncidents || []).map(i => i.profil_id)).size;
 
       // Log pour debug
-      console.log('📊 Dashboard RH - Incidents (statut=expire):', {
+      console.log('📊 Dashboard RH - Incidents (statut != resolu):', {
         totalIncidents,
         ce_mois,
         salariesConcernes,
