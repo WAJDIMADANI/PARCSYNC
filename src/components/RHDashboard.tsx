@@ -471,39 +471,18 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
 
   const fetchIncidentsStats = async () => {
     try {
-      // RÈGLE MÉTIER : On compte UNIQUEMENT les incidents NON RÉSOLUS
+      // RÈGLE MÉTIER : Utiliser la vue v_gestion_incidents_source pour avoir le count exact
       // (pour matcher exactement l'onglet "Gestion des incidents")
 
-      // 1. Récupérer TOUS les incidents NON RÉSOLUS depuis la table incident
-      const { data: allIncidents } = await supabase
-        .from('incident')
-        .select(`
-          id,
-          type,
-          created_at,
-          date_creation_incident,
-          statut,
-          profil_id,
-          contrat_id,
-          metadata,
-          profil:profil_id (
-            prenom,
-            nom,
-            email,
-            statut
-          ),
-          contrat:contrat_id (
-            type,
-            date_debut,
-            date_fin,
-            statut
-          )
-        `)
-        .neq('statut', 'resolu')
-        .neq('profil.statut', 'inactif');
+      // 1. Compter le TOTAL exact depuis la vue v_gestion_incidents_source
+      const { count: totalIncidents } = await supabase
+        .from('v_gestion_incidents_source')
+        .select('id', { count: 'exact', head: true });
 
-      // 2. Compter le TOTAL d'incidents expirés (count(*) sur incidents)
-      const totalIncidents = allIncidents?.length || 0;
+      // 2. Récupérer les données complètes pour les stats détaillées
+      const { data: allIncidents } = await supabase
+        .from('v_gestion_incidents_source')
+        .select('*');
 
       // 3. Compter les incidents de ce mois (date_creation_incident >= premier jour du mois)
       const now = new Date();
@@ -518,7 +497,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       const salariesConcernes = new Set((allIncidents || []).map(i => i.profil_id)).size;
 
       // Log pour debug
-      console.log('📊 Dashboard RH - Incidents (statut != resolu):', {
+      console.log('📊 Dashboard RH - Incidents (depuis v_gestion_incidents_source):', {
         totalIncidents,
         ce_mois,
         salariesConcernes,
@@ -531,7 +510,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       });
 
       // 5. Si aucun incident, retourner des stats vides
-      if (totalIncidents === 0) {
+      if (!totalIncidents || totalIncidents === 0) {
         setStats((prev) => ({
           ...prev,
           incidents: {
@@ -616,7 +595,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       setStats((prev) => ({
         ...prev,
         incidents: {
-          total: totalIncidents,
+          total: totalIncidents || 0,
           ce_mois: ce_mois,
           salaries_concernes: salariesConcernes,
           par_type,
