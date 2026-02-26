@@ -1012,7 +1012,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {currentAttributions.map((attribution) => (
+                    {currentAttributions.filter(a => a.profil).map((attribution) => (
                       <div key={attribution.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -1100,9 +1100,9 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
                                   <p className="font-semibold text-gray-900">
-                                    {attribution.profil.prenom} {attribution.profil.nom}
+                                    {attribution.profil ? `${attribution.profil.prenom} ${attribution.profil.nom}` : 'Profil supprimé'}
                                   </p>
-                                  {attribution.profil.matricule_tca && (
+                                  {attribution.profil?.matricule_tca && (
                                     <span className="text-sm text-gray-500">({attribution.profil.matricule_tca})</span>
                                   )}
                                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
