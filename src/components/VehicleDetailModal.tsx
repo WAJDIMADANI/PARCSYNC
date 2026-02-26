@@ -943,12 +943,6 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                                     minute: '2-digit'
                                   })}
                                 </div>
-                                {history.modifie_par_nom && (
-                                  <div className="flex items-center gap-1">
-                                    <User className="w-4 h-4" />
-                                    {history.modifie_par_nom}
-                                  </div>
-                                )}
                               </div>
                               {history.commentaire && (
                                 <p className="text-sm text-gray-600 mt-2 italic">{history.commentaire}</p>
