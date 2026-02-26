@@ -1,92 +1,77 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, User, Building2, Calendar, Phone, Mail, MapPin, FileText, X, History } from 'lucide-react';
+import { Search, Plus, User, Building2, Phone, Mail, MapPin, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-interface LocataireExterne {
+interface Loueur {
   id: string;
-  type: 'personne' | 'entreprise';
   nom: string;
+  contact: string | null;
   telephone: string | null;
   email: string | null;
   adresse: string | null;
-  notes: string | null;
+  siret: string | null;
   actif: boolean;
   created_at: string;
-  updated_at: string;
-}
-
-interface LocataireExterneHistory {
-  id: string;
-  locataire_externe_id: string;
-  type: string;
-  nom: string;
-  telephone: string | null;
-  email: string | null;
-  adresse: string | null;
-  notes: string | null;
-  changed_at: string;
 }
 
 interface LocataireExterneSelectorProps {
   type: 'personne' | 'entreprise';
-  onSelect: (locataire: LocataireExterne | null) => void;
+  onSelect: (loueur: Loueur | null) => void;
   selectedId?: string | null;
 }
 
 export default function LocataireExterneSelector({ type, onSelect, selectedId }: LocataireExterneSelectorProps) {
   const [mode, setMode] = useState<'search' | 'create'>('search');
   const [searchTerm, setSearchTerm] = useState('');
-  const [locataires, setLocataires] = useState<LocataireExterne[]>([]);
-  const [selectedLocataire, setSelectedLocataire] = useState<LocataireExterne | null>(null);
-  const [history, setHistory] = useState<LocataireExterneHistory[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [loueurs, setLoueurs] = useState<Loueur[]>([]);
+  const [selectedLoueur, setSelectedLoueur] = useState<Loueur | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     nom: '',
+    contact: '',
     telephone: '',
     email: '',
     adresse: '',
-    notes: ''
+    siret: ''
   });
 
   useEffect(() => {
     if (mode === 'search') {
-      searchLocataires();
+      searchLoueurs();
     }
-  }, [searchTerm, type, mode]);
+  }, [searchTerm, mode]);
 
   useEffect(() => {
     if (selectedId) {
-      loadSelectedLocataire(selectedId);
+      loadSelectedLoueur(selectedId);
     }
   }, [selectedId]);
 
-  const loadSelectedLocataire = async (id: string) => {
+  const loadSelectedLoueur = async (id: string) => {
     try {
       const { data, error } = await supabase
-        .from('locataire_externe')
+        .from('loueur')
         .select('*')
         .eq('id', id)
         .single();
 
       if (error) throw error;
       if (data) {
-        setSelectedLocataire(data);
+        setSelectedLoueur(data);
         onSelect(data);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement du locataire:', error);
+      console.error('Erreur lors du chargement du loueur:', error);
     }
   };
 
-  const searchLocataires = async () => {
+  const searchLoueurs = async () => {
     try {
       setLoading(true);
       let query = supabase
-        .from('locataire_externe')
+        .from('loueur')
         .select('*')
-        .eq('type', type)
         .eq('actif', true)
         .order('nom');
 
@@ -97,7 +82,7 @@ export default function LocataireExterneSelector({ type, onSelect, selectedId }:
       const { data, error } = await query.limit(10);
 
       if (error) throw error;
-      setLocataires(data || []);
+      setLoueurs(data || []);
     } catch (error) {
       console.error('Erreur lors de la recherche:', error);
     } finally {
@@ -105,28 +90,12 @@ export default function LocataireExterneSelector({ type, onSelect, selectedId }:
     }
   };
 
-  const loadHistory = async (locataireId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('locataire_externe_history')
-        .select('*')
-        .eq('locataire_externe_id', locataireId)
-        .order('changed_at', { ascending: false });
-
-      if (error) throw error;
-      setHistory(data || []);
-      setShowHistory(true);
-    } catch (error) {
-      console.error('Erreur lors du chargement de l\'historique:', error);
-    }
+  const handleSelectLoueur = (loueur: Loueur) => {
+    setSelectedLoueur(loueur);
+    onSelect(loueur);
   };
 
-  const handleSelectLocataire = (locataire: LocataireExterne) => {
-    setSelectedLocataire(locataire);
-    onSelect(locataire);
-  };
-
-  const handleCreateLocataire = async () => {
+  const handleCreateLoueur = async () => {
     if (!formData.nom.trim()) {
       alert('Le nom est obligatoire');
       return;
@@ -134,41 +103,50 @@ export default function LocataireExterneSelector({ type, onSelect, selectedId }:
 
     try {
       setLoading(true);
+
+      const insertData: any = {
+        nom: formData.nom.trim(),
+        telephone: formData.telephone.trim() || null,
+        email: formData.email.trim() || null,
+        adresse: formData.adresse.trim() || null,
+        actif: true
+      };
+
+      if (type === 'entreprise') {
+        insertData.contact = formData.contact.trim() || null;
+        insertData.siret = formData.siret.trim() || null;
+      } else {
+        insertData.contact = null;
+        insertData.siret = null;
+      }
+
       const { data, error } = await supabase
-        .from('locataire_externe')
-        .insert([{
-          type,
-          nom: formData.nom.trim(),
-          telephone: formData.telephone.trim() || null,
-          email: formData.email.trim() || null,
-          adresse: formData.adresse.trim() || null,
-          notes: formData.notes.trim() || null,
-          actif: true
-        }])
+        .from('loueur')
+        .insert([insertData])
         .select()
         .single();
 
       if (error) throw error;
 
-      setSelectedLocataire(data);
+      setSelectedLoueur(data);
       onSelect(data);
       setMode('search');
-      setFormData({ nom: '', telephone: '', email: '', adresse: '', notes: '' });
+      setFormData({ nom: '', contact: '', telephone: '', email: '', adresse: '', siret: '' });
     } catch (error) {
       console.error('Erreur lors de la création:', error);
-      alert('Erreur lors de la création du locataire');
+      alert('Erreur lors de la création du loueur');
     } finally {
       setLoading(false);
     }
   };
 
   const handleClearSelection = () => {
-    setSelectedLocataire(null);
+    setSelectedLoueur(null);
     onSelect(null);
     setSearchTerm('');
   };
 
-  if (selectedLocataire) {
+  if (selectedLoueur) {
     return (
       <div className="space-y-4">
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -179,7 +157,7 @@ export default function LocataireExterneSelector({ type, onSelect, selectedId }:
               ) : (
                 <Building2 className="h-5 w-5 text-green-600" />
               )}
-              <span className="font-medium text-green-900">{selectedLocataire.nom}</span>
+              <span className="font-medium text-green-900">{selectedLoueur.nom}</span>
             </div>
             <button
               onClick={handleClearSelection}
@@ -190,66 +168,38 @@ export default function LocataireExterneSelector({ type, onSelect, selectedId }:
           </div>
 
           <div className="space-y-2 text-sm text-gray-600">
-            {selectedLocataire.telephone && (
+            {selectedLoueur.contact && (
+              <div className="flex items-center space-x-2">
+                <User className="h-4 w-4" />
+                <span>Contact: {selectedLoueur.contact}</span>
+              </div>
+            )}
+            {selectedLoueur.telephone && (
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4" />
-                <span>{selectedLocataire.telephone}</span>
+                <span>{selectedLoueur.telephone}</span>
               </div>
             )}
-            {selectedLocataire.email && (
+            {selectedLoueur.email && (
               <div className="flex items-center space-x-2">
                 <Mail className="h-4 w-4" />
-                <span>{selectedLocataire.email}</span>
+                <span>{selectedLoueur.email}</span>
               </div>
             )}
-            {selectedLocataire.adresse && (
+            {selectedLoueur.adresse && (
               <div className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4" />
-                <span>{selectedLocataire.adresse}</span>
+                <span>{selectedLoueur.adresse}</span>
+              </div>
+            )}
+            {selectedLoueur.siret && (
+              <div className="flex items-center space-x-2">
+                <Building2 className="h-4 w-4" />
+                <span>SIRET: {selectedLoueur.siret}</span>
               </div>
             )}
           </div>
-
-          <button
-            onClick={() => loadHistory(selectedLocataire.id)}
-            className="mt-3 flex items-center space-x-2 text-sm text-green-600 hover:text-green-700"
-          >
-            <History className="h-4 w-4" />
-            <span>Voir l'historique</span>
-          </button>
         </div>
-
-        {showHistory && history.length > 0 && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-gray-900">Historique des modifications</h4>
-              <button
-                onClick={() => setShowHistory(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="space-y-3 max-h-60 overflow-y-auto">
-              {history.map((entry) => (
-                <div key={entry.id} className="border-l-2 border-gray-300 pl-3 py-2">
-                  <div className="text-xs text-gray-500 mb-1">
-                    {new Date(entry.changed_at).toLocaleString('fr-FR')}
-                  </div>
-                  <div className="text-sm space-y-1">
-                    <div><span className="font-medium">Nom:</span> {entry.nom}</div>
-                    {entry.telephone && (
-                      <div><span className="font-medium">Tél:</span> {entry.telephone}</div>
-                    )}
-                    {entry.email && (
-                      <div><span className="font-medium">Email:</span> {entry.email}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -259,12 +209,12 @@ export default function LocataireExterneSelector({ type, onSelect, selectedId }:
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium text-gray-900">
-            Nouveau {type === 'personne' ? 'locataire' : 'locataire entreprise'}
+            {type === 'personne' ? 'Nouvelle personne externe' : 'Nouvelle entreprise externe'}
           </h3>
           <button
             onClick={() => {
               setMode('search');
-              setFormData({ nom: '', telephone: '', email: '', adresse: '', notes: '' });
+              setFormData({ nom: '', contact: '', telephone: '', email: '', adresse: '', siret: '' });
             }}
             className="text-gray-600 hover:text-gray-700"
           >
@@ -285,6 +235,36 @@ export default function LocataireExterneSelector({ type, onSelect, selectedId }:
               placeholder={type === 'personne' ? 'Jean Dupont' : 'SARL Transport Express'}
             />
           </div>
+
+          {type === 'entreprise' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom du contact
+                </label>
+                <input
+                  type="text"
+                  value={formData.contact}
+                  onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nom du contact principal"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  SIRET
+                </label>
+                <input
+                  type="text"
+                  value={formData.siret}
+                  onChange={(e) => setFormData({ ...formData, siret: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="123 456 789 00000"
+                />
+              </div>
+            </>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -325,21 +305,8 @@ export default function LocataireExterneSelector({ type, onSelect, selectedId }:
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Notes internes..."
-            />
-          </div>
-
           <button
-            onClick={handleCreateLocataire}
+            onClick={handleCreateLoueur}
             disabled={loading || !formData.nom.trim()}
             className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
@@ -368,17 +335,17 @@ export default function LocataireExterneSelector({ type, onSelect, selectedId }:
         className="w-full flex items-center justify-center space-x-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
       >
         <Plus className="h-5 w-5" />
-        <span>Créer nouveau {type === 'personne' ? 'locataire' : 'locataire entreprise'}</span>
+        <span>Créer {type === 'personne' ? 'une nouvelle personne' : 'une nouvelle entreprise'}</span>
       </button>
 
       {loading ? (
         <div className="text-center py-4 text-gray-500">Recherche...</div>
-      ) : locataires.length > 0 ? (
+      ) : loueurs.length > 0 ? (
         <div className="space-y-2 max-h-60 overflow-y-auto">
-          {locataires.map((locataire) => (
+          {loueurs.map((loueur) => (
             <button
-              key={locataire.id}
-              onClick={() => handleSelectLocataire(locataire)}
+              key={loueur.id}
+              onClick={() => handleSelectLoueur(loueur)}
               className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors"
             >
               <div className="flex items-start space-x-3">
@@ -388,18 +355,30 @@ export default function LocataireExterneSelector({ type, onSelect, selectedId }:
                   <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900">{locataire.nom}</div>
+                  <div className="font-medium text-gray-900">{loueur.nom}</div>
                   <div className="text-sm text-gray-500 space-y-0.5">
-                    {locataire.telephone && (
+                    {loueur.contact && (
                       <div className="flex items-center space-x-1">
-                        <Phone className="h-3 w-3" />
-                        <span>{locataire.telephone}</span>
+                        <User className="h-3 w-3" />
+                        <span>{loueur.contact}</span>
                       </div>
                     )}
-                    {locataire.email && (
+                    {loueur.telephone && (
+                      <div className="flex items-center space-x-1">
+                        <Phone className="h-3 w-3" />
+                        <span>{loueur.telephone}</span>
+                      </div>
+                    )}
+                    {loueur.email && (
                       <div className="flex items-center space-x-1">
                         <Mail className="h-3 w-3" />
-                        <span className="truncate">{locataire.email}</span>
+                        <span className="truncate">{loueur.email}</span>
+                      </div>
+                    )}
+                    {loueur.siret && (
+                      <div className="flex items-center space-x-1">
+                        <Building2 className="h-3 w-3" />
+                        <span className="truncate">SIRET: {loueur.siret}</span>
                       </div>
                     )}
                   </div>
