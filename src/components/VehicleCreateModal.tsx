@@ -10,7 +10,7 @@ interface VehicleCreateModalProps {
 
 interface VehicleFormData {
   immatriculation: string;
-  reference_tca: string;
+  ref_tca: string;
   marque: string;
   modele: string;
   annee: number | '';
@@ -94,7 +94,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
 
   const [formData, setFormData] = useState<VehicleFormData>({
     immatriculation: '',
-    reference_tca: '',
+    ref_tca: '',
     marque: '',
     modele: '',
     annee: '',
@@ -605,8 +605,8 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
               <label className="block text-sm font-medium text-gray-700 mb-2">Référence TCA</label>
               <input
                 type="text"
-                value={formData.reference_tca}
-                onChange={(e) => handleInputChange('reference_tca', e.target.value)}
+                value={formData.ref_tca}
+                onChange={(e) => handleInputChange('ref_tca', e.target.value)}
                 placeholder="Ex: TCA-2024-001"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />

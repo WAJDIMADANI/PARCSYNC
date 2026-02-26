@@ -43,7 +43,7 @@ interface Vehicle {
   id: string;
   immatriculation: string;
   immat_norm: string;
-  reference_tca: string | null;
+  ref_tca: string | null;
   marque: string | null;
   modele: string | null;
   annee: number | null;
@@ -263,7 +263,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       }
     });
 
-    const stringFields = ['reference_tca', 'marque', 'modele', 'type', 'fournisseur', 'mode_acquisition', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero', 'locataire_nom_libre', 'proprietaire_carte_grise'];
+    const stringFields = ['ref_tca', 'marque', 'modele', 'type', 'fournisseur', 'mode_acquisition', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero', 'locataire_nom_libre', 'proprietaire_carte_grise'];
     stringFields.forEach(field => {
       if (cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -297,7 +297,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       });
 
       const updateData = cleanPayloadForUpdate({
-        reference_tca: editedVehicle.reference_tca,
+        ref_tca: editedVehicle.ref_tca,
         marque: editedVehicle.marque,
         modele: editedVehicle.modele,
         annee: editedVehicle.annee,
@@ -558,8 +558,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{vehicle.immatriculation}</h2>
-                {vehicle.reference_tca && (
-                  <p className="text-sm text-gray-600">Réf. TCA: {vehicle.reference_tca}</p>
+                {vehicle.ref_tca && (
+                  <p className="text-sm text-gray-600">Réf. TCA: {vehicle.ref_tca}</p>
                 )}
               </div>
               {getStatusBadge(vehicle.statut)}
@@ -753,8 +753,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                       <label className="block text-sm font-medium text-gray-700 mb-2">Référence TCA</label>
                       <input
                         type="text"
-                        value={editedVehicle.reference_tca || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, reference_tca: e.target.value })}
+                        value={editedVehicle.ref_tca || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, ref_tca: e.target.value })}
                         disabled={!isEditing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                       />

@@ -34,7 +34,7 @@ interface Vehicle {
   id: string;
   immatriculation: string;
   immat_norm: string;
-  reference_tca: string | null;
+  ref_tca: string | null;
   marque: string | null;
   modele: string | null;
   annee: number | null;
@@ -84,7 +84,7 @@ interface FilterState {
   referenceTCA: string;
 }
 
-type SortField = 'immatriculation' | 'reference_tca' | 'marque' | 'modele' | 'statut' | 'locataire_affiche' | 'proprietaire_carte_grise' | 'fournisseur';
+type SortField = 'immatriculation' | 'ref_tca' | 'marque' | 'modele' | 'statut' | 'locataire_affiche' | 'proprietaire_carte_grise' | 'fournisseur';
 type SortOrder = 'asc' | 'desc';
 
 export function VehicleListNew() {
@@ -175,7 +175,7 @@ export function VehicleListNew() {
       const searchLower = search.toLowerCase();
       result = result.filter(v => {
         const immatMatch = v.immatriculation?.toLowerCase().includes(searchLower);
-        const refMatch = v.reference_tca?.toLowerCase().includes(searchLower);
+        const refMatch = v.ref_tca?.toLowerCase().includes(searchLower);
         const marqueMatch = v.marque?.toLowerCase().includes(searchLower);
         const modeleMatch = v.modele?.toLowerCase().includes(searchLower);
         const locataireMatch = v.locataire_affiche?.toLowerCase().includes(searchLower);
@@ -204,7 +204,7 @@ export function VehicleListNew() {
 
     if (filters.referenceTCA) {
       result = result.filter(v =>
-        v.reference_tca?.toLowerCase().includes(filters.referenceTCA.toLowerCase())
+        v.ref_tca?.toLowerCase().includes(filters.referenceTCA.toLowerCase())
       );
     }
 
@@ -527,7 +527,7 @@ export function VehicleListNew() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="immatriculation">Immatriculation</option>
-                    <option value="reference_tca">Référence TCA</option>
+                    <option value="ref_tca">Référence TCA</option>
                     <option value="marque">Marque</option>
                     <option value="modele">Modèle</option>
                     <option value="locataire_affiche">Nom du locataire</option>
@@ -594,11 +594,11 @@ export function VehicleListNew() {
                     <th
                       scope="col"
                       className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
-                      onClick={() => handleSort('reference_tca')}
+                      onClick={() => handleSort('ref_tca')}
                     >
                       <div className="flex items-center">
                         Réf. TCA
-                        {sortField === 'reference_tca' && (
+                        {sortField === 'ref_tca' && (
                           sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
                         )}
                       </div>
@@ -690,9 +690,9 @@ export function VehicleListNew() {
                       onClick={() => setSelectedVehicle(vehicle)}
                     >
                       <td className="px-3 py-2 whitespace-nowrap border-r border-gray-200">
-                        {vehicle.reference_tca ? (
+                        {vehicle.ref_tca ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-200 text-gray-800">
-                            {vehicle.reference_tca}
+                            {vehicle.ref_tca}
                           </span>
                         ) : (
                           <span className="text-xs text-gray-400">-</span>
