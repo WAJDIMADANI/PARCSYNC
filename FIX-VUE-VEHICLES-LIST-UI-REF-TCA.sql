@@ -1,15 +1,17 @@
 -- ============================================================
--- CRÉER VUE v_vehicles_list_ui avec ref_tca
+-- FIX: Vue v_vehicles_list_ui avec ref_tca
 -- ============================================================
--- Cette vue est utilisée par VehicleListNew.tsx
--- Elle doit inclure tous les champs nécessaires dont ref_tca
+-- Correction de la vue pour inclure explicitement ref_tca
+-- et supprimer la référence à deleted_at qui n'existe pas
 
-CREATE OR REPLACE VIEW v_vehicles_list_ui AS
+DROP VIEW IF EXISTS v_vehicles_list_ui CASCADE;
+
+CREATE VIEW v_vehicles_list_ui AS
 SELECT
   v.id,
   v.immatriculation,
   v.immat_norm,
-  v.ref_tca,  -- ✅ Ajout explicite
+  v.ref_tca,  -- ✅ EXPLICITEMENT INCLUS
   v.marque,
   v.modele,
   v.annee,
@@ -126,15 +128,24 @@ SELECT
   ) AS nb_chauffeurs_actifs
 
 FROM vehicule v;
+-- PAS DE WHERE deleted_at IS NULL car cette colonne n'existe pas
 
 -- ============================================================
--- Commentaire sur la vue
+-- Vérification
 -- ============================================================
-COMMENT ON VIEW v_vehicles_list_ui IS 'Vue optimisée pour l''interface utilisateur des véhicules, incluant ref_tca et toutes les informations nécessaires';
+-- Tester que la vue fonctionne et inclut ref_tca
+SELECT
+  id,
+  immatriculation,
+  ref_tca,  -- ✅ Doit être accessible
+  locataire_affiche,
+  nb_chauffeurs_actifs
+FROM v_vehicles_list_ui
+LIMIT 5;
 
 -- ============================================================
 -- RÉSULTAT:
--- - Vue créée avec ref_tca inclus explicitement
--- - Utilisable par VehicleListNew.tsx
--- - Calcule automatiquement locataire_affiche et chauffeurs_actifs
+-- ✅ Vue recréée sans erreur deleted_at
+-- ✅ ref_tca inclus explicitement
+-- ✅ Compatible avec VehicleListNew.tsx
 -- ============================================================
