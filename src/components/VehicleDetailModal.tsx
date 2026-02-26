@@ -23,6 +23,7 @@ import { AttributionModal } from './AttributionModal';
 import { UpdateKilometrageModal } from './UpdateKilometrageModal';
 import { VehicleDocuments } from './VehicleDocuments';
 import { VehicleStatusHistoryModal } from './VehicleStatusHistoryModal';
+import { SuccessModal } from './SuccessModal';
 import { parseProprietaireCarteGrise, formatProprietaireCarteGrise } from '../utils/proprietaireParser';
 
 interface Chauffeur {
@@ -118,6 +119,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
   const [showAttributionModal, setShowAttributionModal] = useState(false);
   const [showKilometrageModal, setShowKilometrageModal] = useState(false);
   const [showStatusHistoryModal, setShowStatusHistoryModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const [vehicle, setVehicle] = useState(initialVehicle);
   const [editedVehicle, setEditedVehicle] = useState(initialVehicle);
@@ -370,7 +373,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       // Notifier le parent de la mise à jour
       await onVehicleUpdated(updatedVehicleData);
 
-      alert('✓ Modifications enregistrées avec succès');
+      setSuccessMessage('Modifications enregistrées avec succès');
+      setShowSuccessModal(true);
     } catch (error) {
       console.error('[handleSave] Erreur sauvegarde:', JSON.stringify(error, null, 2));
       console.error('[handleSave] Erreur détaillée:', error);
@@ -1686,6 +1690,12 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         statusHistory={statusHistory}
         vehicleName={`${vehicle.marque || ''} ${vehicle.modele || ''} - ${vehicle.immatriculation}`.trim()}
         loading={loadingStatusHistory}
+      />
+
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        message={successMessage}
       />
     </>
   );
