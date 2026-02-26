@@ -995,13 +995,6 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                   <h3 className="text-lg font-semibold text-gray-900">Attributions en cours</h3>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setShowAttributionHistoryModal(true)}
-                      className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                    >
-                      <History className="w-4 h-4 mr-2" />
-                      Historique
-                    </button>
-                    <button
                       onClick={() => setShowAttributionModal(true)}
                       className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
@@ -1078,6 +1071,79 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Historique des attributions */}
+                {historicalAttributions.length > 0 && (
+                  <div className="mt-8 pt-8 border-t border-gray-200">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900">Historique des attributions</h3>
+                      <button
+                        onClick={exportHistory}
+                        className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export CSV
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {historicalAttributions.map((attribution, idx) => (
+                        <div
+                          key={attribution.id}
+                          className="bg-white border border-gray-200 rounded-lg p-4"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className="relative">
+                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                  <User className="w-5 h-5 text-gray-600" />
+                                </div>
+                                {idx < historicalAttributions.length - 1 && (
+                                  <div className="absolute top-10 left-1/2 transform -translate-x-1/2 w-0.5 h-8 bg-gray-300"></div>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-semibold text-gray-900">
+                                    {attribution.profil.prenom} {attribution.profil.nom}
+                                  </p>
+                                  {attribution.profil.matricule_tca && (
+                                    <span className="text-sm text-gray-500">({attribution.profil.matricule_tca})</span>
+                                  )}
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                    attribution.type_attribution === 'principal'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {attribution.type_attribution === 'principal' ? 'Principal' : 'Secondaire'}
+                                  </span>
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                    Terminée
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-600 mb-1">
+                                  {attribution.loueur?.nom || 'Propriété TCA'}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  Du {new Date(attribution.date_debut).toLocaleDateString('fr-FR')}
+                                  {attribution.date_fin && ` au ${new Date(attribution.date_fin).toLocaleDateString('fr-FR')}`}
+                                  <span className="ml-2 text-gray-400">
+                                    ({calculateDuration(attribution.date_debut, attribution.date_fin)})
+                                  </span>
+                                </p>
+                                {attribution.notes && (
+                                  <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700">
+                                    {attribution.notes}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
