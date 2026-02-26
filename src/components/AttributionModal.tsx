@@ -18,14 +18,14 @@ interface Loueur {
   actif: boolean;
 }
 
-interface LocataireExterne {
+interface LoueurExterne {
   id: string;
-  type: 'personne' | 'entreprise';
   nom: string;
+  contact: string | null;
   telephone: string | null;
   email: string | null;
   adresse: string | null;
-  notes: string | null;
+  siret: string | null;
 }
 
 interface Props {
@@ -52,7 +52,7 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
   const [typeAttribution, setTypeAttribution] = useState<'principal' | 'secondaire'>('principal');
 
   // Pour locataire externe
-  const [selectedLocataireExterne, setSelectedLocataireExterne] = useState<LocataireExterne | null>(null);
+  const [selectedLoueurExterne, setSelectedLoueurExterne] = useState<LoueurExterne | null>(null);
 
   // Commun
   const [dateDebut, setDateDebut] = useState(new Date().toISOString().split('T')[0]);
@@ -135,8 +135,8 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
           }
         }
       } else {
-        if (!selectedLocataireExterne) {
-          alert('Veuillez sélectionner ou créer un locataire externe');
+        if (!selectedLoueurExterne) {
+          alert('Veuillez sélectionner ou créer une personne/entreprise externe');
           return;
         }
       }
@@ -150,7 +150,7 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
       setStep(1);
       setLocataireType(null);
       setSelectedProfilId('');
-      setSelectedLocataireExterne(null);
+      setSelectedLoueurExterne(null);
     } else if (step === 3) {
       setStep(2);
       setWarningMessage('');
@@ -173,8 +173,8 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
       return;
     }
 
-    if ((locataireType === 'personne_externe' || locataireType === 'entreprise_externe') && !selectedLocataireExterne) {
-      alert('Veuillez sélectionner un locataire externe');
+    if ((locataireType === 'personne_externe' || locataireType === 'entreprise_externe') && !selectedLoueurExterne) {
+      alert('Veuillez sélectionner une personne/entreprise externe');
       return;
     }
 
@@ -192,7 +192,8 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
         attributionData.loueur_id = selectedLoueurId || null;
         attributionData.type_attribution = typeAttribution;
       } else {
-        attributionData.locataire_externe_id = selectedLocataireExterne?.id;
+        attributionData.profil_id = null;
+        attributionData.loueur_id = selectedLoueurExterne?.id;
         attributionData.type_attribution = null;
       }
 
@@ -504,8 +505,8 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
 
               <LocataireExterneSelector
                 type={locataireType === 'personne_externe' ? 'personne' : 'entreprise'}
-                onSelect={setSelectedLocataireExterne}
-                selectedId={selectedLocataireExterne?.id}
+                onSelect={setSelectedLoueurExterne}
+                selectedId={selectedLoueurExterne?.id}
               />
             </div>
           )}
@@ -565,14 +566,30 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
                       <div className="flex justify-between">
                         <span className="text-blue-700">Locataire:</span>
                         <span className="text-blue-900 font-medium">
-                          {selectedLocataireExterne?.nom}
+                          {selectedLoueurExterne?.nom}
                         </span>
                       </div>
-                      {selectedLocataireExterne?.telephone && (
+                      {selectedLoueurExterne?.contact && (
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Contact:</span>
+                          <span className="text-blue-900 font-medium">
+                            {selectedLoueurExterne.contact}
+                          </span>
+                        </div>
+                      )}
+                      {selectedLoueurExterne?.telephone && (
                         <div className="flex justify-between">
                           <span className="text-blue-700">Téléphone:</span>
                           <span className="text-blue-900 font-medium">
-                            {selectedLocataireExterne.telephone}
+                            {selectedLoueurExterne.telephone}
+                          </span>
+                        </div>
+                      )}
+                      {selectedLoueurExterne?.siret && (
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">SIRET:</span>
+                          <span className="text-blue-900 font-medium">
+                            {selectedLoueurExterne.siret}
                           </span>
                         </div>
                       )}
@@ -648,7 +665,7 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
               disabled={
                 (step === 1 && !locataireType) ||
                 (step === 2 && locataireType === 'salarie' && !selectedProfilId) ||
-                (step === 2 && locataireType !== 'salarie' && !selectedLocataireExterne)
+                (step === 2 && locataireType !== 'salarie' && !selectedLoueurExterne)
               }
               className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
