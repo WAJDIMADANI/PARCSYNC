@@ -22,6 +22,7 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { AttributionModal } from './AttributionModal';
 import { UpdateKilometrageModal } from './UpdateKilometrageModal';
 import { VehicleDocuments } from './VehicleDocuments';
+import { VehicleStatusHistoryModal } from './VehicleStatusHistoryModal';
 import { parseProprietaireCarteGrise, formatProprietaireCarteGrise } from '../utils/proprietaireParser';
 
 interface Chauffeur {
@@ -116,6 +117,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(initialPhotoUrl);
   const [showAttributionModal, setShowAttributionModal] = useState(false);
   const [showKilometrageModal, setShowKilometrageModal] = useState(false);
+  const [showStatusHistoryModal, setShowStatusHistoryModal] = useState(false);
 
   const [vehicle, setVehicle] = useState(initialVehicle);
   const [editedVehicle, setEditedVehicle] = useState(initialVehicle);
@@ -899,60 +901,29 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                     )}
                   </div>
 
-                  {loadingStatusHistory ? (
-                    <div className="flex justify-center py-12">
-                      <LoadingSpinner />
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-8 text-center">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <Clock className="w-8 h-8 text-white" />
                     </div>
-                  ) : statusHistory.length === 0 ? (
-                    <div className="text-center py-12 bg-gray-50 rounded-lg">
-                      <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">Aucun historique de statut disponible</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {statusHistory.map((history, index) => (
-                        <div key={history.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                {history.ancien_statut && (
-                                  <>
-                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                                      {history.ancien_statut}
-                                    </span>
-                                    <span className="text-gray-400">→</span>
-                                  </>
-                                )}
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                  {history.nouveau_statut}
-                                </span>
-                                {index === 0 && (
-                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                                    Actuel
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-4 text-sm text-gray-600">
-                                <div className="flex items-center gap-1">
-                                  <Clock className="w-4 h-4" />
-                                  {new Date(history.date_modification).toLocaleString('fr-FR', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </div>
-                              </div>
-                              {history.commentaire && (
-                                <p className="text-sm text-gray-600 mt-2 italic">{history.commentaire}</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                      Voir l'historique complet
+                    </h4>
+                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                      Consultez tous les changements de statut de ce véhicule avec une vue détaillée et chronologique.
+                    </p>
+                    <button
+                      onClick={() => setShowStatusHistoryModal(true)}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    >
+                      <Clock className="w-5 h-5" />
+                      Ouvrir l'historique
+                      {statusHistory.length > 0 && (
+                        <span className="ml-1 px-2 py-0.5 bg-white bg-opacity-20 rounded-full text-xs">
+                          {statusHistory.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1708,6 +1679,14 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
           }}
         />
       )}
+
+      <VehicleStatusHistoryModal
+        isOpen={showStatusHistoryModal}
+        onClose={() => setShowStatusHistoryModal(false)}
+        statusHistory={statusHistory}
+        vehicleName={`${vehicle.marque || ''} ${vehicle.modele || ''} - ${vehicle.immatriculation}`.trim()}
+        loading={loadingStatusHistory}
+      />
     </>
   );
 }
