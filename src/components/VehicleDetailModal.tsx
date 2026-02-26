@@ -947,13 +947,14 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                     </p>
                   </div>
 
-                  {vehicle.chauffeurs_actifs?.some(c => c.type_attribution === 'principal') ? (
+                  {vehicle.chauffeurs_actifs?.some(c => c && c.type_attribution === 'principal') ? (
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Locataire actuel</label>
                       <div className="text-sm text-gray-900 font-medium">
-                        {vehicle.chauffeurs_actifs.find(c => c.type_attribution === 'principal')?.prenom}{' '}
-                        {vehicle.chauffeurs_actifs.find(c => c.type_attribution === 'principal')?.nom}{' '}
-                        ({vehicle.chauffeurs_actifs.find(c => c.type_attribution === 'principal')?.matricule_tca})
+                        {(() => {
+                          const principal = vehicle.chauffeurs_actifs.find(c => c && c.type_attribution === 'principal');
+                          return principal ? `${principal.prenom} ${principal.nom} (${principal.matricule_tca})` : 'N/A';
+                        })()}
                       </div>
                       <p className="text-xs text-gray-500 mt-1">Défini automatiquement via l'attribution principale</p>
                     </div>

@@ -405,7 +405,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
     try {
       const { data: alertes } = await supabase
         .from('alerte')
-        .select('is_read, priorite');
+        .select('is_read');
 
       const { data: documents } = await supabase
         .from('document')
@@ -422,7 +422,7 @@ export function RHDashboard({ onNavigate }: RHDashboardProps = {}) {
       const { data: cddData } = await supabase.rpc('get_cdd_expires');
 
       const non_lues = alertes?.filter((a) => !a.is_read).length || 0;
-      const urgentes = alertes?.filter((a) => a.priorite === 'haute').length || 0;
+      const urgentes = 0;
 
       const now = new Date();
       const documents_expires =
