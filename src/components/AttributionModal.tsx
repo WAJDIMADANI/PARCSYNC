@@ -61,7 +61,7 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
   const [warningMessage, setWarningMessage] = useState('');
 
   useEffect(() => {
-    if (locataireType === 'salarie') {
+    if (locataireType) {
       fetchData();
     }
   }, [locataireType]);
@@ -121,7 +121,7 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
     if (step === 2) {
       if (locataireType === 'salarie') {
         if (!selectedProfilId) {
-          alert('Veuillez sélectionner un chauffeur');
+          alert('Veuillez sélectionner un salarié');
           return;
         }
 
@@ -135,6 +135,10 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
           }
         }
       } else {
+        if (!selectedProfilId) {
+          alert('Veuillez sélectionner un salarié');
+          return;
+        }
         if (!selectedLoueurExterne) {
           alert('Veuillez sélectionner ou créer une personne/entreprise externe');
           return;
@@ -168,8 +172,8 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
       return;
     }
 
-    if (locataireType === 'salarie' && !selectedProfilId) {
-      alert('Veuillez sélectionner un chauffeur');
+    if (!selectedProfilId) {
+      alert('Veuillez sélectionner un salarié');
       return;
     }
 
@@ -182,20 +186,27 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
     try {
       const attributionData: any = {
         vehicule_id: vehicleId,
+        profil_id: selectedProfilId,
         date_debut: dateDebut,
         date_fin: dateFin || null,
         notes: notes || null
       };
 
       if (locataireType === 'salarie') {
-        attributionData.profil_id = selectedProfilId;
         attributionData.loueur_id = selectedLoueurId || null;
         attributionData.type_attribution = typeAttribution;
       } else {
-        attributionData.profil_id = null;
         attributionData.loueur_id = selectedLoueurExterne?.id;
         attributionData.type_attribution = null;
       }
+
+      console.log('[DEBUG Attribution]', {
+        vehiculeId: vehicleId,
+        selectedProfilId,
+        loueurId: locataireType === 'salarie' ? selectedLoueurId : selectedLoueurExterne?.id,
+        locataireType,
+        attributionData
+      });
 
       const { error } = await supabase
         .from('attribution_vehicule')
@@ -500,6 +511,59 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
           {step === 2 && (locataireType === 'personne_externe' || locataireType === 'entreprise_externe') && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900">
+                Sélection du salarié responsable
+              </h3>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Salarié responsable du véhicule <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={searchChauffeur}
+                  onChange={(e) => setSearchChauffeur(e.target.value)}
+                  placeholder="Rechercher par nom, prénom ou matricule TCA..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"
+                />
+                <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto">
+                  {filteredProfils.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500">
+                      Aucun salarié actif trouvé
+                    </div>
+                  ) : (
+                    filteredProfils.map((profil) => (
+                      <div
+                        key={profil.id}
+                        onClick={() => setSelectedProfilId(profil.id)}
+                        className={`p-3 border-b border-gray-200 cursor-pointer hover:bg-blue-50 transition-colors ${
+                          selectedProfilId === profil.id ? 'bg-blue-100 border-l-4 border-l-blue-600' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {profil.prenom} {profil.nom}
+                            </p>
+                            {profil.matricule_tca && (
+                              <p className="text-sm text-gray-600">TCA: {profil.matricule_tca}</p>
+                            )}
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            profil.statut === 'actif' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {profil.statut}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  Le salarié responsable du véhicule pendant la location externe
+                </p>
+              </div>
+
+              <h3 className="text-lg font-semibold text-gray-900 pt-4">
                 Sélection du locataire {locataireType === 'personne_externe' ? 'personne' : 'entreprise'}
               </h3>
 
@@ -561,6 +625,13 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
                         <span className="text-blue-700">Type:</span>
                         <span className="text-blue-900 font-medium">
                           {locataireType === 'personne_externe' ? 'Personne externe' : 'Entreprise externe'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Salarié responsable:</span>
+                        <span className="text-blue-900 font-medium">
+                          {selectedProfil?.prenom} {selectedProfil?.nom}
+                          {selectedProfil?.matricule_tca && ` (${selectedProfil.matricule_tca})`}
                         </span>
                       </div>
                       <div className="flex justify-between">
