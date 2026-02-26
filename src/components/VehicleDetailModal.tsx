@@ -1005,17 +1005,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                 </div>
 
                 {currentAttributions.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 text-lg font-medium mb-2">Ce véhicule n'est pas attribué actuellement</p>
-                    <p className="text-gray-500 mb-4">Créez une attribution pour assigner ce véhicule à un chauffeur</p>
-                    <button
-                      onClick={() => setShowAttributionModal(true)}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Créer une attribution
-                    </button>
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 text-sm">Aucune attribution en cours</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
