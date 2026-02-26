@@ -77,7 +77,7 @@ interface Vehicle {
   nb_chauffeurs_actifs: number;
   locataire_type: string | null;
   locataire_nom_libre: string | null;
-  locataire_affiche: string; // Calculé par la vue v_vehicles_list
+  locataire_affiche: string; // Calculé par la vue v_vehicles_list_ui
   proprietaire_carte_grise: string | null;
 }
 
@@ -146,9 +146,9 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
   const fetchVehicleDetails = async () => {
     console.log('[fetchVehicleDetails] Début refetch pour vehicule ID:', vehicle.id);
     try {
-      // Fetch depuis la vue v_vehicles_list pour avoir les chauffeurs_actifs et locataire_affiche calculés
+      // Fetch depuis la vue v_vehicles_list_ui pour avoir les chauffeurs_actifs et locataire_affiche calculés
       const { data, error } = await supabase
-        .from('v_vehicles_list')
+        .from('v_vehicles_list_ui')
         .select('*')
         .eq('id', vehicle.id)
         .single();
@@ -345,7 +345,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
 
       // Refetch depuis la vue pour avoir les champs calculés
       const { data: vehicleFromView, error: viewError } = await supabase
-        .from('v_vehicles_list')
+        .from('v_vehicles_list_ui')
         .select('*')
         .eq('id', vehicle.id)
         .single();
