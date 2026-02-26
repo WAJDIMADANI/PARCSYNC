@@ -85,12 +85,11 @@ interface Vehicle {
 interface Attribution {
   id: string;
   vehicule_id: string;
-  profil_id: string | null;
-  locataire_externe_id: string | null;
+  profil_id: string;
   loueur_id: string | null;
   date_debut: string;
   date_fin: string | null;
-  type_attribution: 'principal' | 'secondaire' | null;
+  type_attribution: 'principal' | 'secondaire';
   notes: string | null;
   created_at: string;
   profil: {
@@ -98,14 +97,7 @@ interface Attribution {
     nom: string;
     prenom: string;
     matricule_tca: string;
-  } | null;
-  locataire_externe: {
-    id: string;
-    nom: string;
-    prenom: string | null;
-    type_entite: 'personne' | 'entreprise';
-    entreprise: string | null;
-  } | null;
+  };
   loueur: {
     id: string;
     nom: string;
@@ -219,8 +211,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         .select(`
           *,
           profil:profil_id(id, nom, prenom, matricule_tca),
-          loueur:loueur_id(id, nom),
-          locataire_externe:locataire_externe_id(id, nom, prenom, type_entite, entreprise)
+          loueur:loueur_id(id, nom)
         `)
         .eq('vehicule_id', vehicle.id)
         .order('date_debut', { ascending: false });
@@ -1020,45 +1011,30 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {currentAttributions.map((attribution) => {
-                      const isExterne = !!attribution.locataire_externe;
-                      const displayName = isExterne
-                        ? attribution.locataire_externe.type_entite === 'personne'
-                          ? `${attribution.locataire_externe.prenom} ${attribution.locataire_externe.nom}`
-                          : attribution.locataire_externe.entreprise
-                        : `${attribution.profil.prenom} ${attribution.profil.nom}`;
-
-                      return (
-                        <div key={attribution.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                isExterne ? 'bg-orange-100' : 'bg-blue-100'
-                              }`}>
-                                <User className={`w-5 h-5 ${isExterne ? 'text-orange-600' : 'text-blue-600'}`} />
-                              </div>
-                              <div>
-                                <p className="font-semibold text-gray-900">
-                                  {displayName}
-                                </p>
-                                {isExterne && (
-                                  <p className="text-sm text-orange-600">Locataire externe</p>
-                                )}
-                                {!isExterne && attribution.profil.matricule_tca && (
-                                  <p className="text-sm text-gray-500">TCA: {attribution.profil.matricule_tca}</p>
-                                )}
-                              </div>
+                    {currentAttributions.map((attribution) => (
+                      <div key={attribution.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-blue-600" />
                             </div>
-                            {!isExterne && (
-                              <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                attribution.type_attribution === 'principal'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                {attribution.type_attribution === 'principal' ? 'Principal' : 'Secondaire'}
-                              </span>
-                            )}
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {attribution.profil.prenom} {attribution.profil.nom}
+                              </p>
+                              {attribution.profil.matricule_tca && (
+                                <p className="text-sm text-gray-500">TCA: {attribution.profil.matricule_tca}</p>
+                              )}
+                            </div>
                           </div>
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                            attribution.type_attribution === 'principal'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {attribution.type_attribution === 'principal' ? 'Principal' : 'Secondaire'}
+                          </span>
+                        </div>
 
                         <div className="space-y-2 text-sm">
                           <div className="flex items-center text-gray-600">
@@ -1086,8 +1062,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                           </button>
                         </div>
                       </div>
-                      );
-                    })}
+                    ))}
                   </div>
                 )}
 
@@ -1106,76 +1081,60 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                     </div>
 
                     <div className="space-y-3">
-                      {historicalAttributions.map((attribution, idx) => {
-                        const isExterne = !!attribution.locataire_externe;
-                        const displayName = isExterne
-                          ? attribution.locataire_externe.type_entite === 'personne'
-                            ? `${attribution.locataire_externe.prenom} ${attribution.locataire_externe.nom}`
-                            : attribution.locataire_externe.entreprise
-                          : `${attribution.profil.prenom} ${attribution.profil.nom}`;
-
-                        return (
-                          <div
-                            key={attribution.id}
-                            className="bg-white border border-gray-200 rounded-lg p-4"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start gap-3 flex-1">
-                                <div className="relative">
-                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                    isExterne ? 'bg-orange-50' : 'bg-gray-100'
+                      {historicalAttributions.map((attribution, idx) => (
+                        <div
+                          key={attribution.id}
+                          className="bg-white border border-gray-200 rounded-lg p-4"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className="relative">
+                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                  <User className="w-5 h-5 text-gray-600" />
+                                </div>
+                                {idx < historicalAttributions.length - 1 && (
+                                  <div className="absolute top-10 left-1/2 transform -translate-x-1/2 w-0.5 h-8 bg-gray-300"></div>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-semibold text-gray-900">
+                                    {attribution.profil.prenom} {attribution.profil.nom}
+                                  </p>
+                                  {attribution.profil.matricule_tca && (
+                                    <span className="text-sm text-gray-500">({attribution.profil.matricule_tca})</span>
+                                  )}
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                    attribution.type_attribution === 'principal'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-gray-100 text-gray-800'
                                   }`}>
-                                    <User className={`w-5 h-5 ${isExterne ? 'text-orange-600' : 'text-gray-600'}`} />
-                                  </div>
-                                  {idx < historicalAttributions.length - 1 && (
-                                    <div className="absolute top-10 left-1/2 transform -translate-x-1/2 w-0.5 h-8 bg-gray-300"></div>
-                                  )}
+                                    {attribution.type_attribution === 'principal' ? 'Principal' : 'Secondaire'}
+                                  </span>
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                    Terminée
+                                  </span>
                                 </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="font-semibold text-gray-900">
-                                      {displayName}
-                                    </p>
-                                    {isExterne && (
-                                      <span className="text-sm text-orange-600">(Externe)</span>
-                                    )}
-                                    {!isExterne && attribution.profil.matricule_tca && (
-                                      <span className="text-sm text-gray-500">({attribution.profil.matricule_tca})</span>
-                                    )}
-                                    {!isExterne && (
-                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                        attribution.type_attribution === 'principal'
-                                          ? 'bg-blue-100 text-blue-800'
-                                          : 'bg-gray-100 text-gray-800'
-                                      }`}>
-                                        {attribution.type_attribution === 'principal' ? 'Principal' : 'Secondaire'}
-                                      </span>
-                                    )}
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                                      Terminée
-                                    </span>
+                                <p className="text-sm text-gray-600 mb-1">
+                                  {attribution.loueur?.nom || 'Propriété TCA'}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  Du {new Date(attribution.date_debut).toLocaleDateString('fr-FR')}
+                                  {attribution.date_fin && ` au ${new Date(attribution.date_fin).toLocaleDateString('fr-FR')}`}
+                                  <span className="ml-2 text-gray-400">
+                                    ({calculateDuration(attribution.date_debut, attribution.date_fin)})
+                                  </span>
+                                </p>
+                                {attribution.notes && (
+                                  <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700">
+                                    {attribution.notes}
                                   </div>
-                                  <p className="text-sm text-gray-600 mb-1">
-                                    {attribution.loueur?.nom || 'Propriété TCA'}
-                                  </p>
-                                  <p className="text-sm text-gray-500">
-                                    Du {new Date(attribution.date_debut).toLocaleDateString('fr-FR')}
-                                    {attribution.date_fin && ` au ${new Date(attribution.date_fin).toLocaleDateString('fr-FR')}`}
-                                    <span className="ml-2 text-gray-400">
-                                      ({calculateDuration(attribution.date_debut, attribution.date_fin)})
-                                    </span>
-                                  </p>
-                                  {attribution.notes && (
-                                    <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700">
-                                      {attribution.notes}
-                                    </div>
-                                  )}
-                                </div>
+                                )}
                               </div>
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
