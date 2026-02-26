@@ -17,7 +17,8 @@ import {
   Package,
   CreditCard,
   Shield,
-  History
+  History,
+  ShoppingCart
 } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { AttributionModal } from './AttributionModal';
@@ -179,7 +180,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
   };
 
   useEffect(() => {
-    if (activeTab === 'history' || activeTab === 'current') {
+    if (activeTab === 'current') {
       fetchAttributions();
     }
     if (activeTab === 'statut') {
@@ -667,16 +668,16 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                 </div>
               </button>
               <button
-                onClick={() => setActiveTab('history')}
+                onClick={() => setActiveTab('acquisition')}
                 className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === 'history'
+                  activeTab === 'acquisition'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Historique
+                  <ShoppingCart className="w-4 h-4" />
+                  Acquisition
                 </div>
               </button>
               <button
@@ -1234,90 +1235,140 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </div>
             )}
 
-            {activeTab === 'history' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900">Historique complet des attributions</h3>
-                  <button
-                    onClick={exportHistory}
-                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export CSV
-                  </button>
-                </div>
+            {activeTab === 'acquisition' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Acquisition du véhicule</h3>
 
-                {loadingAttributions ? (
-                  <div className="flex items-center justify-center py-12">
-                    <LoadingSpinner size="lg" text="Chargement de l'historique..." />
-                  </div>
-                ) : attributions.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 text-lg font-medium">Aucun historique d'attribution</p>
-                  </div>
-                ) : (
                   <div className="space-y-4">
-                    {attributions.map((attribution, idx) => (
-                      <div
-                        key={attribution.id}
-                        className={`bg-white border rounded-lg p-4 ${
-                          attribution.date_fin ? 'border-gray-200' : 'border-blue-300 bg-blue-50'
-                        }`}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Fournisseur</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.fournisseur || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, fournisseur: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: RENAULT, PEUGEOT..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Mode d'acquisition</label>
+                      <select
+                        value={editedVehicle.mode_acquisition || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, mode_acquisition: e.target.value || null })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-3">
-                            <div className="relative">
-                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                <User className="w-5 h-5 text-blue-600" />
-                              </div>
-                              {idx < attributions.length - 1 && (
-                                <div className="absolute top-10 left-1/2 transform -translate-x-1/2 w-0.5 h-8 bg-gray-300"></div>
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="font-semibold text-gray-900">
-                                  {attribution.profil.prenom} {attribution.profil.nom}
-                                </p>
-                                {attribution.profil.matricule_tca && (
-                                  <span className="text-sm text-gray-500">({attribution.profil.matricule_tca})</span>
-                                )}
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                  attribution.type_attribution === 'principal'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {attribution.type_attribution === 'principal' ? 'P' : 'S'}
-                                </span>
-                                {!attribution.date_fin && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                    Active
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600 mb-1">
-                                {attribution.loueur?.nom || 'Propriété TCA'}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                Du {new Date(attribution.date_debut).toLocaleDateString('fr-FR')}
-                                {attribution.date_fin ? ` au ${new Date(attribution.date_fin).toLocaleDateString('fr-FR')}` : ' - En cours'}
-                                <span className="ml-2 text-gray-400">
-                                  ({calculateDuration(attribution.date_debut, attribution.date_fin)})
-                                </span>
-                              </p>
-                              {attribution.notes && (
-                                <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700">
-                                  {attribution.notes}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                        <option value="">-- Non renseigné --</option>
+                        <option value="achat">Achat comptant</option>
+                        <option value="loa">LOA (Location avec Option d'Achat)</option>
+                        <option value="lld">LLD (Location Longue Durée)</option>
+                        <option value="credit">Crédit</option>
+                        <option value="leasing">Leasing</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Prix HT</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editedVehicle.prix_achat_ht || ''}
+                          onChange={(e) => {
+                            const ht = e.target.value ? parseFloat(e.target.value) : null;
+                            const ttc = ht ? ht * 1.20 : null;
+                            setEditedVehicle({ ...editedVehicle, prix_achat_ht: ht, prix_achat_ttc: ttc });
+                          }}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="0.00"
+                        />
                       </div>
-                    ))}
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Prix TTC (auto)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editedVehicle.prix_achat_ttc || ''}
+                          disabled
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité HT</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editedVehicle.mensualite_ht || ''}
+                          onChange={(e) => {
+                            const ht = e.target.value ? parseFloat(e.target.value) : null;
+                            const ttc = ht ? ht * 1.20 : null;
+                            setEditedVehicle({ ...editedVehicle, mensualite_ht: ht, mensualite_ttc: ttc });
+                          }}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité TTC (auto)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editedVehicle.mensualite_ttc || ''}
+                          disabled
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Durée du contrat (mois)</label>
+                      <input
+                        type="number"
+                        value={editedVehicle.duree_contrat_mois || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, duree_contrat_mois: e.target.value ? parseInt(e.target.value) : null })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: 24, 36, 48..."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Date début contrat</label>
+                        <input
+                          type="date"
+                          value={editedVehicle.date_debut_contrat || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, date_debut_contrat: e.target.value || null })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Date fin prévue</label>
+                        <input
+                          type="date"
+                          value={editedVehicle.date_fin_contrat || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, date_fin_contrat: e.target.value || null })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        />
+                      </div>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             )}
 
