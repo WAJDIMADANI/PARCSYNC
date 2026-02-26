@@ -16,13 +16,15 @@ import {
   Gauge,
   Package,
   CreditCard,
-  Shield
+  Shield,
+  History
 } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { AttributionModal } from './AttributionModal';
 import { UpdateKilometrageModal } from './UpdateKilometrageModal';
 import { VehicleDocuments } from './VehicleDocuments';
 import { VehicleStatusHistoryModal } from './VehicleStatusHistoryModal';
+import { AttributionHistoryModal } from './AttributionHistoryModal';
 import { SuccessModal } from './SuccessModal';
 import { parseProprietaireCarteGrise, formatProprietaireCarteGrise } from '../utils/proprietaireParser';
 
@@ -119,6 +121,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
   const [showAttributionModal, setShowAttributionModal] = useState(false);
   const [showKilometrageModal, setShowKilometrageModal] = useState(false);
   const [showStatusHistoryModal, setShowStatusHistoryModal] = useState(false);
+  const [showAttributionHistoryModal, setShowAttributionHistoryModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -990,13 +993,22 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
 
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-semibold text-gray-900">Attributions en cours</h3>
-                  <button
-                    onClick={() => setShowAttributionModal(true)}
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nouvelle attribution
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowAttributionHistoryModal(true)}
+                      className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <History className="w-4 h-4 mr-2" />
+                      Historique
+                    </button>
+                    <button
+                      onClick={() => setShowAttributionModal(true)}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Nouvelle attribution
+                    </button>
+                  </div>
                 </div>
 
                 {currentAttributions.length === 0 ? (
@@ -1691,6 +1703,14 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         vehicleName={`${vehicle.marque || ''} ${vehicle.modele || ''} - ${vehicle.immatriculation}`.trim()}
         loading={loadingStatusHistory}
       />
+
+      {showAttributionHistoryModal && (
+        <AttributionHistoryModal
+          vehicleId={vehicle.id}
+          immatriculation={vehicle.immatriculation}
+          onClose={() => setShowAttributionHistoryModal(false)}
+        />
+      )}
 
       <SuccessModal
         isOpen={showSuccessModal}
