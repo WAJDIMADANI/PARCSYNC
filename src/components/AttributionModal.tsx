@@ -414,25 +414,6 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Loueur</label>
-                <select
-                  value={selectedLoueurId}
-                  onChange={(e) => setSelectedLoueurId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Propriété TCA</option>
-                  {loueurs.map((loueur) => (
-                    <option key={loueur.id} value={loueur.id}>
-                      {loueur.nom}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-sm text-gray-500 mt-1">
-                  Laissez vide si le véhicule appartient à TCA
-                </p>
-              </div>
-
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Type d'attribution <span className="text-red-500">*</span>
                 </label>
@@ -544,12 +525,6 @@ export function AttributionModal({ vehicleId, onClose, onSuccess }: Props) {
                         <span className="text-blue-900 font-medium">
                           {selectedProfil?.prenom} {selectedProfil?.nom}
                           {selectedProfil?.matricule_tca && ` (${selectedProfil.matricule_tca})`}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-blue-700">Loueur:</span>
-                        <span className="text-blue-900 font-medium">
-                          {selectedLoueur?.nom || 'Propriété TCA'}
                         </span>
                       </div>
                       <div className="flex justify-between">
