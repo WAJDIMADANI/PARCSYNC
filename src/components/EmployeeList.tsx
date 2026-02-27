@@ -3192,75 +3192,16 @@ function EmployeeDetailModal({
             const urgencyColors = getContractUrgencyColors(urgencyLevel);
 
             return (
-          <div className={`border rounded-lg p-4 transition-colors ${isEditingContract ? 'bg-green-100 border-green-300' : 'bg-green-50 border-green-200'}`}>
+          <div className="border rounded-lg p-4 bg-green-50 border-green-200">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-green-600" />
                 <h3 className="text-lg font-semibold text-gray-900">Contrat Principal</h3>
+                {activeContract && (
+                  <ContractBadge type="type" value={contractType} />
+                )}
               </div>
-              {getLatestActiveContract(currentEmployee.id, contracts) && (
-                <>
-                  {!isEditingContract ? (
-                    <button
-                      onClick={() => setIsEditingContract(true)}
-                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-50 transition-colors"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      Modifier
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleCancelContractEdit}
-                        disabled={savingContract}
-                        className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                      >
-                        Annuler
-                      </button>
-                      <button
-                        onClick={handleSaveContract}
-                        disabled={savingContract}
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                      >
-                        {savingContract ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Enregistrement...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="w-4 h-4" />
-                            Enregistrer
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
             </div>
-
-            {currentEmployee.modele_contrat && getLatestActiveContract(currentEmployee.id, contracts) && (
-              <div className="mb-4 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-blue-600" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-blue-600 uppercase">Modèle de contrat</span>
-                      <span className="text-xs px-2 py-0.5 bg-blue-200 text-blue-800 rounded-full font-medium">
-                        Prévisualisation
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ContractBadge type="type" value={getLatestActiveContract(currentEmployee.id, contracts) || currentEmployee.modele_contrat || undefined} />
-                      <span className="text-sm font-medium text-gray-900">
-                        {getLatestActiveContract(currentEmployee.id, contracts) || currentEmployee.modele_contrat}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
 
             {/* Alerte CDD - Jours restants */}
