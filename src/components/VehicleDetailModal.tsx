@@ -947,18 +947,34 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                     </p>
                   </div>
 
-                  {vehicle.chauffeurs_actifs?.some(c => c && c.type_attribution === 'principal') ? (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Locataire actuel</label>
-                      <div className="text-sm text-gray-900 font-medium">
-                        {(() => {
-                          const principal = vehicle.chauffeurs_actifs.find(c => c && c.type_attribution === 'principal');
-                          return principal ? `${principal.prenom} ${principal.nom} (${principal.matricule_tca})` : 'N/A';
-                        })()}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Défini automatiquement via l'attribution principale</p>
-                    </div>
-                  ) : (
+                  {(() => {
+                    // Vérifier s'il y a une attribution principale (salarié ou locataire externe)
+                    const principalChauffeur = vehicle.chauffeurs_actifs?.find(c => c && c.type_attribution === 'principal');
+                    const principalAttribution = currentAttributions.find(a => a.type_attribution === 'principal');
+
+                    if (principalChauffeur) {
+                      return (
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Locataire actuel</label>
+                          <div className="text-sm text-gray-900 font-medium">
+                            {`${principalChauffeur.prenom} ${principalChauffeur.nom} (${principalChauffeur.matricule_tca})`}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Défini automatiquement via l'attribution principale</p>
+                        </div>
+                      );
+                    } else if (principalAttribution && principalAttribution.loueur) {
+                      return (
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Locataire actuel</label>
+                          <div className="text-sm text-gray-900 font-medium">
+                            {principalAttribution.loueur.nom}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Locataire externe - Défini via l'attribution principale</p>
+                        </div>
+                      );
+                    }
+
+                    return (
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Type de locataire</label>
@@ -990,7 +1006,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                         </div>
                       )}
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 <div className="flex items-center justify-between mb-6">
@@ -1012,7 +1029,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {currentAttributions.filter(a => a.profil).map((attribution) => (
+                    {currentAttributions.map((attribution) => (
                       <div key={attribution.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -1021,10 +1038,15 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                             </div>
                             <div>
                               <p className="font-semibold text-gray-900">
-                                {attribution.profil.prenom} {attribution.profil.nom}
+                                {attribution.profil
+                                  ? `${attribution.profil.prenom} ${attribution.profil.nom}`
+                                  : attribution.loueur?.nom || 'Non défini'}
                               </p>
-                              {attribution.profil.matricule_tca && (
+                              {attribution.profil?.matricule_tca && (
                                 <p className="text-sm text-gray-500">TCA: {attribution.profil.matricule_tca}</p>
+                              )}
+                              {!attribution.profil && attribution.loueur && (
+                                <p className="text-sm text-gray-500">Locataire externe</p>
                               )}
                             </div>
                           </div>
@@ -1043,10 +1065,12 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                             Depuis le {new Date(attribution.date_debut).toLocaleDateString('fr-FR')}
                             <span className="ml-2 text-gray-400">({calculateDuration(attribution.date_debut, null)})</span>
                           </div>
-                          <div className="flex items-center text-gray-600">
-                            <FileText className="w-4 h-4 mr-2" />
-                            {attribution.loueur?.nom || 'Propriété TCA'}
-                          </div>
+                          {attribution.profil && (
+                            <div className="flex items-center text-gray-600">
+                              <FileText className="w-4 h-4 mr-2" />
+                              {attribution.loueur?.nom || 'Propriété TCA'}
+                            </div>
+                          )}
                           {attribution.notes && (
                             <div className="mt-2 p-2 bg-gray-50 rounded text-gray-700">
                               {attribution.notes}
