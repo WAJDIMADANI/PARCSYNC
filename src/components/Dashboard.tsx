@@ -76,7 +76,7 @@ export function Dashboard() {
       case 'setup':
         return <SetupCheck />;
       case 'inbox':
-        return <InboxPage />;
+        return <InboxPage onViewProfile={handleViewProfile} />;
       case 'rh/candidats':
         return <CandidateList />;
       case 'rh/salaries':

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Send, Reply, FileText, Download, MessageSquare } from 'lucide-react';
@@ -30,6 +30,7 @@ interface DemandeExterne {
   description: string;
   contenu: string;
   reference_id: string;
+  profil_id?: string;
   statut: 'nouveau' | 'consulte' | 'traite';
   lu: boolean;
   created_at: string;
@@ -67,7 +68,11 @@ interface TaskStats {
   non_lus: number;
 }
 
-export function InboxPage() {
+interface InboxPageProps {
+  onViewProfile?: (profilId: string) => void;
+}
+
+export function InboxPage({ onViewProfile }: InboxPageProps = {}) {
   const { user, appUserId } = useAuth();
   const [taches, setTaches] = useState<Tache[]>([]);
   const [demandesExternes, setDemandesExternes] = useState<DemandeExterne[]>([]);
@@ -159,7 +164,7 @@ export function InboxPage() {
 
         supabase
           .from('inbox')
-          .select('*')
+          .select('id, titre, description, contenu, reference_id, reference_type, statut, lu, created_at, updated_at, utilisateur_id, type')
           .eq('utilisateur_id', appUserId)
           .order('created_at', { ascending: false })
       ]);
@@ -207,6 +212,8 @@ export function InboxPage() {
             `)
             .in('id', demandeIds);
 
+          console.log('🔍 Détails demandes avec profil_id:', demandesData?.map(d => ({ id: d.id, profil_id: d.profil_id })));
+
           console.log('Détails demandes chargés:', demandesData?.length || 0, 'demandes', demandesError);
 
           if (!demandesError) {
@@ -222,6 +229,7 @@ export function InboxPage() {
                 description: inbox.description,
                 contenu: inbox.contenu,
                 reference_id: inbox.reference_id,
+                profil_id: demandeDetails?.profil_id,
                 statut: inbox.statut || 'nouveau',
                 lu: inbox.lu ?? false,
                 created_at: inbox.created_at,
@@ -246,6 +254,8 @@ export function InboxPage() {
             description: inbox.description || '',
             contenu: inbox.contenu || '',
             reference_id: inbox.reference_id,
+            // Si c'est un message de type "profil", le reference_id est déjà le profil_id
+            profil_id: inbox.reference_type === 'profil' ? inbox.reference_id : undefined,
             statut: inbox.statut || 'nouveau',
             lu: inbox.lu ?? false,
             created_at: inbox.created_at,
@@ -256,6 +266,7 @@ export function InboxPage() {
 
           formattedDemandes = [...formattedDemandes, ...formattedAutres];
           console.log('Autres messages formatés:', autresMessages.length, '(type profil, etc.)');
+          console.log('🔍 Messages profil avec profil_id:', formattedAutres.filter(m => m.profil_id).map(m => ({ titre: m.titre, profil_id: m.profil_id })));
         }
 
         console.log('Total messages inbox:', formattedDemandes.length);
@@ -674,6 +685,7 @@ export function InboxPage() {
           demande={selectedDemandeExterne}
           onClose={() => setSelectedDemandeExterne(null)}
           onUpdateStatus={updateDemandeExterneStatus}
+          onViewProfile={onViewProfile}
         />
       )}
 
@@ -987,9 +999,10 @@ interface DemandeExterneModalProps {
   demande: DemandeExterne;
   onClose: () => void;
   onUpdateStatus: (id: string, status: 'nouveau' | 'consulte' | 'traite') => void;
+  onViewProfile?: (profilId: string) => void;
 }
 
-function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExterneModalProps) {
+function DemandeExterneModal({ demande, onClose, onUpdateStatus, onViewProfile }: DemandeExterneModalProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
@@ -1042,9 +1055,23 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus }: DemandeExtern
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <div className="bg-gray-50 border rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Informations du chauffeur
+            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Informations du chauffeur
+              </div>
+              {demande.profil_id && onViewProfile && (
+                <button
+                  onClick={() => {
+                    onViewProfile(demande.profil_id!);
+                    onClose();
+                  }}
+                  className="p-2 rounded-full hover:bg-blue-100 transition-colors group"
+                  title="Voir le profil complet"
+                >
+                  <User className="w-5 h-5 text-blue-600 group-hover:text-blue-700" />
+                </button>
+              )}
             </h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
