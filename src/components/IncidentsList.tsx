@@ -116,8 +116,15 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
         profil: {
           prenom: item.prenom,
           nom: item.nom,
-          email: item.email
-        }
+          email: item.email,
+          matricule_tca: item.matricule_tca
+        },
+        contrat: item.contrat_type ? {
+          type: item.contrat_type,
+          date_debut: item.contrat_date_debut,
+          date_fin: item.contrat_date_fin,
+          statut: item.contrat_statut
+        } : undefined
       }));
 
       setIncidents(formattedIncidents);
