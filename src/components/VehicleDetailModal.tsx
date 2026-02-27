@@ -948,21 +948,11 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                   </div>
 
                   {(() => {
-                    // Vérifier s'il y a une attribution principale (salarié ou locataire externe)
-                    const principalChauffeur = vehicle.chauffeurs_actifs?.find(c => c && c.type_attribution === 'principal');
+                    // Vérifier s'il y a une attribution principale (priorité aux locataires externes)
                     const principalAttribution = currentAttributions.find(a => a.type_attribution === 'principal');
 
-                    if (principalChauffeur) {
-                      return (
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Locataire actuel</label>
-                          <div className="text-sm text-gray-900 font-medium">
-                            {`${principalChauffeur.prenom} ${principalChauffeur.nom} (${principalChauffeur.matricule_tca})`}
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">Défini automatiquement via l'attribution principale</p>
-                        </div>
-                      );
-                    } else if (principalAttribution && principalAttribution.loueur) {
+                    // Si l'attribution principale est un locataire externe (pas de profil mais un loueur)
+                    if (principalAttribution && !principalAttribution.profil && principalAttribution.loueur) {
                       return (
                         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                           <label className="block text-sm font-medium text-gray-700 mb-2">Locataire actuel</label>
@@ -970,6 +960,19 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                             {principalAttribution.loueur.nom}
                           </div>
                           <p className="text-xs text-gray-500 mt-1">Locataire externe - Défini via l'attribution principale</p>
+                        </div>
+                      );
+                    }
+
+                    // Si l'attribution principale est un salarié (avec profil)
+                    if (principalAttribution && principalAttribution.profil) {
+                      return (
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Locataire actuel</label>
+                          <div className="text-sm text-gray-900 font-medium">
+                            {`${principalAttribution.profil.prenom} ${principalAttribution.profil.nom} (${principalAttribution.profil.matricule_tca})`}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Défini automatiquement via l'attribution principale</p>
                         </div>
                       );
                     }
