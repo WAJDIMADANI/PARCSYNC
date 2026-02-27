@@ -91,175 +91,47 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
   const fetchIncidents = async () => {
     try {
-      // Ne plus appeler detect_and_expire_incidents ici pour éviter la boucle infinie
-
-      // 1. Récupérer les CDD expirés depuis la fonction RPC (logique Dashboard)
-      const { data: cddData, error: cddError } = await supabase.rpc('get_cdd_expires_for_incidents');
-
-      if (cddError) {
-        console.error('❌ Erreur get_cdd_expires:', cddError);
-      }
-
-      console.log('📊 CDD expirés depuis RPC:', cddData?.length || 0);
-
-      // 2. Récupérer les avenants expirés depuis la fonction RPC
-      const { data: avenantsData, error: avenantsError } = await supabase.rpc('get_avenants_expires');
-
-      if (avenantsError) {
-        console.error('❌ Erreur get_avenants_expires:', avenantsError);
-      }
-
-      console.log('avenantsData length', avenantsData?.length);
-      console.log('📊 Avenants expirés depuis RPC:', avenantsData?.length || 0);
-
-      // Récupérer TOUS les incidents NON RÉSOLUS de la table incident
-      // RÈGLE: Ne compter que statut != 'resolu' (comme le Dashboard RH)
-      const { data: autresDataRaw, error: autresError } = await supabase
-        .from('incident')
-        .select(`
-          *,
-          profil:profil_id (
-            prenom,
-            nom,
-            email,
-            statut
-          ),
-          contrat:contrat_id (
-            type,
-            date_debut,
-            date_fin,
-            statut
-          )
-        `)
-        .neq('statut', 'resolu')
+      const { data: incidentsData, error: incidentsError } = await supabase
+        .from('v_gestion_documents_expires')
+        .select('*')
         .order('date_expiration_originale', { ascending: true });
 
-      if (autresError) throw autresError;
+      if (incidentsError) {
+        console.error('Erreur chargement incidents depuis vue:', incidentsError);
+        throw incidentsError;
+      }
 
-      // Filtrer côté client pour exclure les profils inactifs
-      const autresData = (autresDataRaw || []).filter(incident => {
-        return !incident.profil || incident.profil.statut !== 'inactif';
-      });
-
-      // DEBUG: Vérifier les données
-      console.log('Données titre_sejour retournées:', autresData?.filter(i => i.type === 'titre_sejour'));
-      console.log('Total incidents DB:', autresData?.length);
-      console.log('Incidents contrat_expire DB:', autresData?.filter(i => i.type === 'contrat_expire').length);
-      console.log('Erreur autresError:', autresError);
-
-      // Enrichir les incidents contrat_expire avec metadata.contrat_type
-      const enrichedData = (autresData || []).map(incident => {
-        if (incident.type === 'contrat_expire' && incident.contrat) {
-          // Construire un type robuste même si contrat.type est null
-          const rawType = incident.metadata?.contrat_type ?? incident.contrat.type;
-          const contratType = rawType ? String(rawType).toLowerCase() : null;
-
-          return {
-            ...incident,
-            metadata: {
-              ...(incident.metadata || {}),
-              contrat_type: contratType === 'avenant' ? 'avenant' : (contratType === 'cdd' ? 'cdd' : null)
-            }
-          };
-        }
-        return incident;
-      });
-
-      // Transformer les CDD depuis la RPC (logique Dashboard)
-      const cddFormatted = (cddData || []).map(cdd => ({
-        id: `cdd-${cdd.profil_id}-${cdd.contrat_id}`, // ID généré pour l'affichage
-        type: 'contrat_expire' as const,
-        profil_id: cdd.profil_id,
-        contrat_id: cdd.contrat_id,
-        date_expiration_originale: cdd.date_expiration_reelle,
-        date_creation_incident: new Date().toISOString(),
-        statut: 'actif' as const,
-        date_resolution: null,
-        nouvelle_date_validite: null,
-        notes: null,
-        metadata: {
-          jours_avant_expiration: cdd.jours_avant_expiration,
-          contrat_type: 'cdd'
-        },
+      const formattedIncidents = (incidentsData || []).map((item: any) => ({
+        id: item.id,
+        type: item.type,
+        profil_id: item.profil_id,
+        contrat_id: item.contrat_id,
+        date_expiration_originale: item.date_expiration_originale,
+        date_creation_incident: item.date_creation_incident,
+        statut: item.statut,
+        date_resolution: item.date_resolution,
+        nouvelle_date_validite: item.nouvelle_date_validite,
+        notes: item.notes,
+        metadata: item.metadata,
         profil: {
-          nom: cdd.nom,
-          prenom: cdd.prenom,
-          email: cdd.email,
-          matricule_tca: cdd.matricule_tca
-        },
-        contrat: {
-          type: 'cdd',
-          date_debut: cdd.contrat_date_debut,
-          date_fin: cdd.contrat_date_fin,
-          statut: cdd.contrat_statut
+          prenom: item.prenom,
+          nom: item.nom,
+          email: item.email
         }
       }));
 
-      // Transformer les avenants depuis la RPC
-      const avenantsFormatted = (avenantsData || []).map(av => {
-        // Calculer jours depuis expiration
-        const expDate = new Date(av.date_expiration_reelle);
-        const today = new Date();
-        const diffTime = today.getTime() - expDate.getTime();
-        const joursSinceExpiration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      setIncidents(formattedIncidents);
 
-        return {
-          id: `avenant-${av.profil_id}`, // ID généré pour l'affichage
-          type: 'contrat_expire' as const,
-          profil_id: av.profil_id,
-          contrat_id: undefined,
-          date_expiration_originale: av.date_expiration_reelle,
-          date_creation_incident: new Date().toISOString(),
-          statut: 'actif' as const,
-          date_resolution: null,
-          nouvelle_date_validite: null,
-          notes: null,
-          metadata: {
-            jours_depuis_expiration: joursSinceExpiration,
-            avenant_1_date_fin: av.avenant_1_date_fin,
-            avenant_2_date_fin: av.avenant_2_date_fin,
-            contrat_type: 'avenant'
-          },
-          profil: {
-            nom: av.nom,
-            prenom: av.prenom,
-            email: av.email
-          },
-          contrat: {
-            type: 'avenant',
-            date_debut: '',
-            date_fin: av.date_expiration_reelle,
-            statut: 'expire'
-          }
-        };
-      });
-
-      // Fusionner CDD et avenants depuis RPC (garder pour compatibilité mais les vrais sont dans enrichedData)
-      const contratsFormatted = [...cddFormatted, ...avenantsFormatted];
-
-      // Fusionner les incidents DB enrichis avec ceux générés dynamiquement
-      // Note: enrichedData contient TOUS les incidents y compris contrat_expire
-      const allIncidents = [...(enrichedData || [])];
-
-      // Trier par date d'expiration
-      allIncidents.sort((a, b) =>
-        new Date(a.date_expiration_originale).getTime() - new Date(b.date_expiration_originale).getTime()
-      );
-
-      setIncidents(allIncidents);
-
-      console.log('📊 Compteurs incidents (depuis DB):', {
-        contrat_expire_db: enrichedData.filter(i => i.type === 'contrat_expire').length,
-        titre_sejour: enrichedData.filter(i => i.type === 'titre_sejour').length,
-        visite_medicale: enrichedData.filter(i => i.type === 'visite_medicale').length,
-        permis_conduire: enrichedData.filter(i => i.type === 'permis_conduire').length,
-        total_tous_incidents: allIncidents.length
+      console.log('Incidents expirés depuis v_gestion_documents_expires:', {
+        total: formattedIncidents.length,
+        titre_sejour: formattedIncidents.filter(i => i.type === 'titre_sejour').length,
+        visite_medicale: formattedIncidents.filter(i => i.type === 'visite_medicale').length,
+        permis_conduire: formattedIncidents.filter(i => i.type === 'permis_conduire').length,
+        contrat_cdd: formattedIncidents.filter(i => i.type === 'contrat_expire' && i.metadata?.contrat_type === 'cdd').length,
+        avenant: formattedIncidents.filter(i => i.type === 'contrat_expire' && i.metadata?.contrat_type === 'avenant').length
       });
     } catch (error) {
-      console.error('❌ ERREUR COMPLÈTE:', error);
-      console.error('Message:', error?.message);
-      console.error('Status:', error?.status);
-      console.error('Details:', error?.details);
+      console.error('ERREUR chargement incidents:', error);
     } finally {
       setLoading(false);
     }
