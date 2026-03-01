@@ -74,29 +74,46 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         throw notifError;
       }
 
-      // 2. Récupérer les contrats CDD qui expirent dans les 30 prochains jours
-      // RÈGLE MÉTIER : date_fin between today and today + 30 days, statut = actif
+      // 2. Récupérer les contrats qui expirent dans les 30 prochains jours
+      // RÈGLE MÉTIER : date_fin between today and today + 30 days, statut IN ('actif', 'signe')
       const today = new Date();
       const futureDate = new Date();
       futureDate.setDate(today.getDate() + 30);
 
       console.log('🔍 Recherche contrats entre', today.toISOString().split('T')[0], 'et', futureDate.toISOString().split('T')[0]);
 
+      // Récupérer TOUS les contrats (actifs ET signés) du même profil pour détecter les continuités
+      const { data: allContratsForContinuity, error: allContratError } = await supabase
+        .from('contrat')
+        .select(`
+          id,
+          profil_id,
+          date_debut,
+          date_fin,
+          type,
+          statut
+        `)
+        .in('statut', ['actif', 'signe']);
+
+      if (allContratError) {
+        console.error('❌ SUPABASE ERROR (all contrats for continuity check):', allContratError);
+      }
+
+      // Récupérer les contrats qui expirent dans les 30 jours
       const { data: contratData, error: contratError } = await supabase
         .from('contrat')
         .select(`
           id,
           profil_id,
+          date_debut,
           date_fin,
           type,
           statut,
           profil:profil_id(prenom, nom, email, statut)
         `)
-        .eq('statut', 'actif')
+        .in('statut', ['actif', 'signe'])
         .gte('date_fin', today.toISOString().split('T')[0])
         .lte('date_fin', futureDate.toISOString().split('T')[0]);
-        // NOTE: .neq('profil.statut', 'inactif') ne fonctionne pas correctement avec Supabase
-        // On filtre côté front à la place
 
       if (contratError) {
         console.error('❌ SUPABASE ERROR (contrats):', contratError);
@@ -108,24 +125,42 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
         profil_id: c.profil_id,
         prenom: c.profil?.prenom,
         nom: c.profil?.nom,
+        date_debut: c.date_debut,
         date_fin: c.date_fin,
+        type: c.type,
         statut: c.statut,
         profil_statut: c.profil?.statut
       })))
 
-      // 3. Transformer les contrats en format notification
-      // Filtrer les profils inactifs côté front (le filtre Supabase ne marche pas)
+      // 3. Filtrer les contrats remplacés par un avenant/renouvellement
       const contratsAvantFiltre = (contratData || []);
       const contratsFiltres = contratsAvantFiltre.filter(contrat => {
         const hasProfile = contrat.profil;
         const isActive = contrat.profil?.statut !== 'inactif';
-        console.log(`🔍 Contrat ${contrat.id} (${contrat.profil?.prenom} ${contrat.profil?.nom}):`, {
-          hasProfile,
-          profil_statut: contrat.profil?.statut,
-          isActive,
-          willBeKept: hasProfile && isActive
-        });
-        return hasProfile && isActive;
+
+        if (!hasProfile || !isActive) {
+          console.log(`🔍 Contrat ${contrat.id} (${contrat.profil?.prenom} ${contrat.profil?.nom}): EXCLU (profil inactif ou manquant)`);
+          return false;
+        }
+
+        // Vérifier s'il existe un contrat suivant (avenant ou renouvellement) pour ce profil
+        const contratsSuivants = (allContratsForContinuity || []).filter(c =>
+          c.profil_id === contrat.profil_id &&
+          c.id !== contrat.id &&
+          (c.statut === 'actif' || c.statut === 'signe') &&
+          c.date_debut && contrat.date_fin &&
+          new Date(c.date_debut) <= new Date(new Date(contrat.date_fin).getTime() + 24*60*60*1000) && // date_debut <= date_fin + 1 jour
+          c.date_fin && new Date(c.date_fin) > new Date(contrat.date_fin) // date_fin postérieure
+        );
+
+        if (contratsSuivants.length > 0) {
+          console.log(`🔍 Contrat ${contrat.id} (${contrat.profil?.prenom} ${contrat.profil?.nom}): EXCLU car remplacé par:`,
+            contratsSuivants.map(c => `${c.id} (${c.type}, fin: ${c.date_fin})`));
+          return false;
+        }
+
+        console.log(`🔍 Contrat ${contrat.id} (${contrat.profil?.prenom} ${contrat.profil?.nom}): CONSERVÉ (pas de contrat suivant)`);
+        return true;
       });
 
       const contratNotifications: Notification[] = contratsFiltres.map(contrat => ({
