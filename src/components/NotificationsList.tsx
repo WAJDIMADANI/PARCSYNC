@@ -24,17 +24,18 @@ interface Notification {
 
 interface NotificationsListProps {
   initialTab?: 'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_1' | 'avenant_2';
-  onViewProfile?: (profilId: string) => void;
+  onViewProfile?: (profilId: string, returnParams?: any) => void;
+  viewParams?: any;
 }
 
-export function NotificationsList({ initialTab, onViewProfile }: NotificationsListProps = {}) {
+export function NotificationsList({ initialTab, onViewProfile, viewParams }: NotificationsListProps = {}) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_1' | 'avenant_2'>(initialTab || 'titre_sejour');
+  const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_1' | 'avenant_2'>(initialTab || viewParams?.activeTab || 'titre_sejour');
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatut, setFilterStatut] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(viewParams?.currentPage || 1);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -258,7 +259,7 @@ export function NotificationsList({ initialTab, onViewProfile }: NotificationsLi
   const handleViewProfile = (e: React.MouseEvent, profilId: string) => {
     e.stopPropagation(); // Empêche l'ouverture du NotificationModal
     if (onViewProfile) {
-      onViewProfile(profilId);
+      onViewProfile(profilId, { currentPage, activeTab });
     }
   };
 

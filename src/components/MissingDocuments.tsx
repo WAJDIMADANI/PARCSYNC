@@ -17,7 +17,8 @@ interface MissingDocumentData {
 
 interface MissingDocumentsProps {
   onNavigate?: (view: string, params?: any) => void;
-  onViewProfile?: (profilId: string) => void;
+  onViewProfile?: (profilId: string, returnParams?: any) => void;
+  viewParams?: any;
 }
 
 const DOCUMENT_LABELS: Record<string, string> = {
@@ -34,14 +35,14 @@ const DOCUMENT_LABELS: Record<string, string> = {
   titre_sejour: 'Titre de séjour'
 };
 
-export function MissingDocuments({ onNavigate, onViewProfile }: MissingDocumentsProps) {
+export function MissingDocuments({ onNavigate, onViewProfile, viewParams }: MissingDocumentsProps) {
   const [salaries, setSalaries] = useState<MissingDocumentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedSalarie, setSelectedSalarie] = useState<MissingDocumentData | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(viewParams?.currentPage || 1);
+  const [itemsPerPage, setItemsPerPage] = useState(viewParams?.itemsPerPage || 10);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
   useEffect(() => {
@@ -302,7 +303,7 @@ export function MissingDocuments({ onNavigate, onViewProfile }: MissingDocuments
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => onViewProfile?.(salarie.id)}
+                          onClick={() => onViewProfile?.(salarie.id, { currentPage, itemsPerPage })}
                           className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
                         >
                           <User className="w-4 h-4" />

@@ -55,19 +55,21 @@ export function Dashboard() {
     setViewParams(params || null);
   };
 
-  const handleViewProfile = (profilId: string) => {
+  const handleViewProfile = (profilId: string, returnParams?: any) => {
     // Sauvegarder la page actuelle avant d'aller vers les salariés
     setPreviousView(view);
     setView('rh/salaries');
-    setViewParams({ profilId });
+    setViewParams({ profilId, returnParams });
   };
 
   const handleCloseProfile = () => {
     // Retourner à la page d'origine si elle existe
     if (previousView) {
+      // Restaurer les paramètres de la vue précédente (par ex. la pagination)
+      const returnParams = viewParams?.returnParams || null;
       setView(previousView);
       setPreviousView(null);
-      setViewParams(null);
+      setViewParams(returnParams);
     }
   };
 
@@ -76,7 +78,7 @@ export function Dashboard() {
       case 'setup':
         return <SetupCheck />;
       case 'inbox':
-        return <InboxPage onViewProfile={handleViewProfile} />;
+        return <InboxPage onViewProfile={handleViewProfile} viewParams={viewParams} />;
       case 'rh/candidats':
         return <CandidateList />;
       case 'rh/salaries':
@@ -89,13 +91,14 @@ export function Dashboard() {
         return <NotificationsList
           initialTab={viewParams?.tab}
           onViewProfile={handleViewProfile}
+          viewParams={viewParams}
         />;
       case 'rh/documents-manquants':
-        return <MissingDocuments onNavigate={handleViewChange} onViewProfile={handleViewProfile} />;
+        return <MissingDocuments onNavigate={handleViewChange} onViewProfile={handleViewProfile} viewParams={viewParams} />;
       case 'rh/incidents':
-        return <IncidentsList onViewProfile={handleViewProfile} />;
+        return <IncidentsList onViewProfile={handleViewProfile} viewParams={viewParams} />;
       case 'rh/incidents-historique':
-        return <IncidentHistory onViewProfile={handleViewProfile} />;
+        return <IncidentHistory onViewProfile={handleViewProfile} viewParams={viewParams} />;
       case 'rh/vivier':
         return <VivierList />;
       case 'rh/rejetes':

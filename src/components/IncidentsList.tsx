@@ -45,19 +45,20 @@ interface Incident {
 }
 
 interface IncidentsListProps {
-  onViewProfile?: (profilId: string) => void;
+  onViewProfile?: (profilId: string, returnParams?: any) => void;
+  viewParams?: any;
 }
 
-export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
+export function IncidentsList({ onViewProfile, viewParams }: IncidentsListProps = {}) {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_expirer'>('titre_sejour');
+  const [activeTab, setActiveTab] = useState<'titre_sejour' | 'visite_medicale' | 'permis_conduire' | 'contrat_cdd' | 'avenant_expirer'>(viewParams?.activeTab || 'titre_sejour');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('active_only');
   const [changingStatus, setChangingStatus] = useState<string | null>(null);
   const [reminderIncident, setReminderIncident] = useState<Incident | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(viewParams?.currentPage || 1);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -287,7 +288,7 @@ export function IncidentsList({ onViewProfile }: IncidentsListProps = {}) {
 
   const handleViewProfile = (profilId: string) => {
     if (onViewProfile) {
-      onViewProfile(profilId);
+      onViewProfile(profilId, { currentPage, activeTab });
     }
   };
 

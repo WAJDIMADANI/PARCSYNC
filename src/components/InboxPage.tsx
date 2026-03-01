@@ -69,10 +69,11 @@ interface TaskStats {
 }
 
 interface InboxPageProps {
-  onViewProfile?: (profilId: string) => void;
+  onViewProfile?: (profilId: string, returnParams?: any) => void;
+  viewParams?: any;
 }
 
-export function InboxPage({ onViewProfile }: InboxPageProps = {}) {
+export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
   const { user, appUserId } = useAuth();
   const [taches, setTaches] = useState<Tache[]>([]);
   const [demandesExternes, setDemandesExternes] = useState<DemandeExterne[]>([]);
@@ -83,7 +84,7 @@ export function InboxPage({ onViewProfile }: InboxPageProps = {}) {
   const [selectedDemandeExterne, setSelectedDemandeExterne] = useState<DemandeExterne | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'en_attente' | 'en_cours' | 'completee'>('all');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(viewParams?.currentPage || 1);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -1063,7 +1064,7 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus, onViewProfile }
               {demande.profil_id && onViewProfile && (
                 <button
                   onClick={() => {
-                    onViewProfile(demande.profil_id!);
+                    onViewProfile(demande.profil_id!, { currentPage });
                     onClose();
                   }}
                   className="p-2 rounded-full hover:bg-blue-100 transition-colors group"

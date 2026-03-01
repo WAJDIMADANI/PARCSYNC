@@ -32,10 +32,11 @@ interface Stats {
 }
 
 interface IncidentHistoryProps {
-  onViewProfile?: (profilId: string) => void;
+  onViewProfile?: (profilId: string, returnParams?: any) => void;
+  viewParams?: any;
 }
 
-export function IncidentHistory({ onViewProfile }: IncidentHistoryProps = {}) {
+export function IncidentHistory({ onViewProfile, viewParams }: IncidentHistoryProps = {}) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
