@@ -421,14 +421,46 @@ npm run build  # ✅ Build réussi
 
 **Fichiers modifiés :**
 - `src/components/Dashboard.tsx`
-- `src/components/MissingDocuments.tsx` (+ useEffect)
+- `src/components/MissingDocuments.tsx` (+ useEffect + modal local)
 - `src/components/NotificationsList.tsx` (+ useEffect)
 - `src/components/IncidentsList.tsx` (+ useEffect)
 - `src/components/IncidentHistory.tsx`
 - `src/components/InboxPage.tsx` (+ useEffect)
 
 **Fichiers créés :**
+- `src/components/EmployeeProfileModal.tsx` (nouveau modal réutilisable)
 - `FIX-PAGINATION-RETOUR-MODAL.md` (ce fichier)
+
+---
+
+## Fix final - Modal local au lieu de navigation
+
+### Problème spécifique à "Documents manquants"
+
+Même après le fix de pagination, il restait un problème dans "Documents manquants par salarié" :
+- Dans l'onglet **Salariés**, cliquer sur "Voir profil" ouvre un modal **par-dessus** la liste → pagination conservée ✅
+- Dans **Documents manquants**, cliquer sur "Voir profil" faisait une **navigation complète** vers `rh/salaries` → pagination perdue ❌
+
+### Solution : EmployeeProfileModal
+
+Création d'un nouveau composant `EmployeeProfileModal` qui :
+1. Charge les données d'un employé par son ID
+2. Affiche un modal avec les informations de base
+3. Ne nécessite **aucune navigation** - le modal s'affiche par-dessus la liste
+4. Préserve parfaitement la pagination
+
+**Avantages :**
+- Modal léger et rapide
+- Aucun changement de vue
+- Pagination parfaitement conservée
+- Composant réutilisable pour d'autres pages
+
+**Comportement final :**
+1. Tu es à la page 20 de "Documents manquants"
+2. Tu cliques "Voir le profil"
+3. Le modal s'ouvre par-dessus (pas de changement de page)
+4. Tu fermes le modal
+5. Tu restes sur la page 20 ✅
 
 ---
 
