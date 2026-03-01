@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase';
 import { AlertTriangle, FileText, Search, User, Send, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import MissingDocumentsReminderModal from './MissingDocumentsReminderModal';
-import { EmployeeProfileModal } from './EmployeeProfileModal';
 
 interface MissingDocumentData {
   id: string;
@@ -45,7 +44,6 @@ export function MissingDocuments({ onNavigate, onViewProfile, viewParams }: Miss
   const [currentPage, setCurrentPage] = useState(viewParams?.currentPage || 1);
   const [itemsPerPage, setItemsPerPage] = useState(viewParams?.itemsPerPage || 10);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-  const [selectedProfilId, setSelectedProfilId] = useState<string | null>(null);
 
   // Restaurer la pagination quand viewParams change
   useEffect(() => {
@@ -315,7 +313,7 @@ export function MissingDocuments({ onNavigate, onViewProfile, viewParams }: Miss
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setSelectedProfilId(salarie.id)}
+                          onClick={() => onViewProfile?.(salarie.id, { currentPage, itemsPerPage })}
                           className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
                         >
                           <User className="w-4 h-4" />
@@ -418,14 +416,6 @@ export function MissingDocuments({ onNavigate, onViewProfile, viewParams }: Miss
             setSelectedSalarie(null);
           }}
           onSuccess={handleReminderSuccess}
-        />
-      )}
-
-      {selectedProfilId && (
-        <EmployeeProfileModal
-          employeeId={selectedProfilId}
-          onClose={() => setSelectedProfilId(null)}
-          onUpdate={fetchMissingDocuments}
         />
       )}
     </div>
