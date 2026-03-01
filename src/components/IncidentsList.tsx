@@ -61,6 +61,16 @@ export function IncidentsList({ onViewProfile, viewParams }: IncidentsListProps 
   const [currentPage, setCurrentPage] = useState(viewParams?.currentPage || 1);
   const itemsPerPage = 10;
 
+  // Restaurer la pagination et l'onglet quand viewParams change
+  useEffect(() => {
+    if (viewParams?.currentPage) {
+      setCurrentPage(viewParams.currentPage);
+    }
+    if (viewParams?.activeTab) {
+      setActiveTab(viewParams.activeTab);
+    }
+  }, [viewParams]);
+
   useEffect(() => {
     let isInitialLoad = true;
 

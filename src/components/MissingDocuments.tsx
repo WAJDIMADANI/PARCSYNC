@@ -45,6 +45,16 @@ export function MissingDocuments({ onNavigate, onViewProfile, viewParams }: Miss
   const [itemsPerPage, setItemsPerPage] = useState(viewParams?.itemsPerPage || 10);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
+  // Restaurer la pagination quand viewParams change
+  useEffect(() => {
+    if (viewParams?.currentPage) {
+      setCurrentPage(viewParams.currentPage);
+    }
+    if (viewParams?.itemsPerPage) {
+      setItemsPerPage(viewParams.itemsPerPage);
+    }
+  }, [viewParams]);
+
   useEffect(() => {
     fetchMissingDocuments();
 

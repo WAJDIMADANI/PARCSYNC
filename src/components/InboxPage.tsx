@@ -87,6 +87,13 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
   const [currentPage, setCurrentPage] = useState(viewParams?.currentPage || 1);
   const itemsPerPage = 10;
 
+  // Restaurer la pagination quand viewParams change
+  useEffect(() => {
+    if (viewParams?.currentPage) {
+      setCurrentPage(viewParams.currentPage);
+    }
+  }, [viewParams]);
+
   useEffect(() => {
     fetchTaches();
 

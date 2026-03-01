@@ -378,6 +378,41 @@ case 'ma-route':
 
 ---
 
+## Correction supplémentaire - useEffect pour restauration réactive
+
+### Problème identifié après premier fix
+
+Même avec `viewParams` passé correctement, le problème persistait car `useState` ne s'exécute qu'**une fois au montage** du composant. Quand le composant est démonté puis remonté, il ne récupère pas les nouvelles valeurs de `viewParams`.
+
+### Solution : useEffect réactif
+
+Ajout d'un `useEffect` qui écoute les changements de `viewParams` et met à jour les états en conséquence :
+
+```typescript
+// Restaurer la pagination quand viewParams change
+useEffect(() => {
+  if (viewParams?.currentPage) {
+    setCurrentPage(viewParams.currentPage);
+  }
+  if (viewParams?.itemsPerPage) {
+    setItemsPerPage(viewParams.itemsPerPage);
+  }
+  if (viewParams?.activeTab) {
+    setActiveTab(viewParams.activeTab);
+  }
+}, [viewParams]);
+```
+
+**Pourquoi ça fonctionne maintenant :**
+
+1. **Premier montage** : `useState` initialise avec `viewParams?.currentPage || 1`
+2. **Navigation vers profil** : Composant démonté
+3. **Retour** : Composant remonté avec nouveaux `viewParams`
+4. **useEffect déclenché** : Détecte le changement de `viewParams` et met à jour `currentPage`
+5. **Résultat** : La pagination est restaurée correctement
+
+---
+
 ## Build et déploiement
 
 ```bash
@@ -386,11 +421,11 @@ npm run build  # ✅ Build réussi
 
 **Fichiers modifiés :**
 - `src/components/Dashboard.tsx`
-- `src/components/MissingDocuments.tsx`
-- `src/components/NotificationsList.tsx`
-- `src/components/IncidentsList.tsx`
+- `src/components/MissingDocuments.tsx` (+ useEffect)
+- `src/components/NotificationsList.tsx` (+ useEffect)
+- `src/components/IncidentsList.tsx` (+ useEffect)
 - `src/components/IncidentHistory.tsx`
-- `src/components/InboxPage.tsx`
+- `src/components/InboxPage.tsx` (+ useEffect)
 
 **Fichiers créés :**
 - `FIX-PAGINATION-RETOUR-MODAL.md` (ce fichier)
