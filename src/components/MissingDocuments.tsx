@@ -45,13 +45,16 @@ export function MissingDocuments({ onNavigate, onViewProfile, viewParams }: Miss
   const [itemsPerPage, setItemsPerPage] = useState(viewParams?.itemsPerPage || 10);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
-  // Restaurer la pagination quand viewParams change
+  // Restaurer la pagination et la recherche quand viewParams change
   useEffect(() => {
     if (viewParams?.currentPage) {
       setCurrentPage(viewParams.currentPage);
     }
     if (viewParams?.itemsPerPage) {
       setItemsPerPage(viewParams.itemsPerPage);
+    }
+    if (viewParams?.searchTerm !== undefined) {
+      setSearchTerm(viewParams.searchTerm);
     }
   }, [viewParams]);
 
@@ -108,6 +111,16 @@ export function MissingDocuments({ onNavigate, onViewProfile, viewParams }: Miss
 
   const handleReminderSuccess = () => {
     fetchMissingDocuments();
+  };
+
+  const handleViewProfile = (profilId: string) => {
+    if (onViewProfile) {
+      onViewProfile(profilId, {
+        currentPage,
+        itemsPerPage,
+        searchTerm
+      });
+    }
   };
 
   const filteredSalaries = salaries.filter(s => {
@@ -313,7 +326,7 @@ export function MissingDocuments({ onNavigate, onViewProfile, viewParams }: Miss
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => onViewProfile?.(salarie.id, { currentPage, itemsPerPage })}
+                          onClick={() => handleViewProfile(salarie.id)}
                           className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
                         >
                           <User className="w-4 h-4" />
