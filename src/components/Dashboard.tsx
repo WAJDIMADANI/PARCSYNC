@@ -246,7 +246,7 @@ export function Dashboard() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main id="main-scroll" className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto pb-6">
             {renderView()}
           </div>

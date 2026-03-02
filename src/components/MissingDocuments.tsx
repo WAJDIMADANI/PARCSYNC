@@ -56,6 +56,14 @@ export function MissingDocuments({ onNavigate, onViewProfile, viewParams }: Miss
     if (viewParams?.searchTerm !== undefined) {
       setSearchTerm(viewParams.searchTerm);
     }
+    if (viewParams?.scrollTop !== undefined) {
+      requestAnimationFrame(() => {
+        const el = document.getElementById('main-scroll');
+        if (el) {
+          el.scrollTop = viewParams.scrollTop;
+        }
+      });
+    }
   }, [viewParams]);
 
   useEffect(() => {
@@ -115,10 +123,13 @@ export function MissingDocuments({ onNavigate, onViewProfile, viewParams }: Miss
 
   const handleViewProfile = (profilId: string) => {
     if (onViewProfile) {
+      const mainScroll = document.getElementById('main-scroll');
+      const scrollTop = mainScroll?.scrollTop || 0;
       onViewProfile(profilId, {
         currentPage,
         itemsPerPage,
-        searchTerm
+        searchTerm,
+        scrollTop
       });
     }
   };
