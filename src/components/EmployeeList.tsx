@@ -2087,8 +2087,15 @@ function EmployeeDetailModal({
       const { error } = await supabase
         .from('profil')
         .update({
+          date_fin_visite_medicale: editedCertificatExpiration || null,
+          date_visite_medicale: editedDateVisite || null,
           visite_medicale_rdv_date: editedRdvDate || null,
-          visite_medicale_rdv_heure: editedRdvHeure || null
+          visite_medicale_rdv_heure: editedRdvHeure || null,
+          titre_sejour_fin_validite: editedTitreSejourExpiration || null,
+          avenant_1_date_debut: editedAvenant1DateDebut || null,
+          avenant_1_date_fin: editedAvenant1DateFin || null,
+          avenant_2_date_debut: editedAvenant2DateDebut || null,
+          avenant_2_date_fin: editedAvenant2DateFin || null
         })
         .eq('id', currentEmployee.id);
 
@@ -2099,8 +2106,15 @@ function EmployeeDetailModal({
 
       setCurrentEmployee({
         ...currentEmployee,
+        date_fin_visite_medicale: editedCertificatExpiration || null,
+        date_visite_medicale: editedDateVisite || null,
         visite_medicale_rdv_date: editedRdvDate || null,
-        visite_medicale_rdv_heure: editedRdvHeure || null
+        visite_medicale_rdv_heure: editedRdvHeure || null,
+        titre_sejour_fin_validite: editedTitreSejourExpiration || null,
+        avenant_1_date_debut: editedAvenant1DateDebut || null,
+        avenant_1_date_fin: editedAvenant1DateFin || null,
+        avenant_2_date_debut: editedAvenant2DateDebut || null,
+        avenant_2_date_fin: editedAvenant2DateFin || null
       });
 
       setIsEditingDates(false);
@@ -2111,7 +2125,7 @@ function EmployeeDetailModal({
     } catch (error) {
       console.error('Erreur lors de la sauvegarde des dates:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      alert(`Erreur lors de la sauvegarde des dates RDV:\n${errorMessage}`);
+      alert(`Erreur lors de la sauvegarde des dates d'expiration:\n${errorMessage}`);
     } finally {
       setSavingDates(false);
     }
