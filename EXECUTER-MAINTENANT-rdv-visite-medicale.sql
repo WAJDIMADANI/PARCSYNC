@@ -28,6 +28,8 @@ BEGIN
   ) THEN
     ALTER TABLE profil ADD COLUMN visite_medicale_rdv_date DATE;
     RAISE NOTICE 'Colonne visite_medicale_rdv_date ajoutée';
+  ELSE
+    RAISE NOTICE 'Colonne visite_medicale_rdv_date existe déjà';
   END IF;
 
   -- Ajouter la colonne pour l'heure du RDV
@@ -38,6 +40,8 @@ BEGIN
   ) THEN
     ALTER TABLE profil ADD COLUMN visite_medicale_rdv_heure TIME;
     RAISE NOTICE 'Colonne visite_medicale_rdv_heure ajoutée';
+  ELSE
+    RAISE NOTICE 'Colonne visite_medicale_rdv_heure existe déjà';
   END IF;
 END $$;
 
@@ -55,6 +59,8 @@ BEGIN
   ) THEN
     ALTER TYPE incident_type ADD VALUE 'rdv_visite_medicale';
     RAISE NOTICE 'Type rdv_visite_medicale ajouté à incident_type';
+  ELSE
+    RAISE NOTICE 'Type rdv_visite_medicale existe déjà';
   END IF;
 EXCEPTION
   WHEN undefined_object THEN
@@ -95,7 +101,7 @@ BEGIN
       p.id,
       p.prenom,
       p.nom,
-      p.matricule,
+      p.matricule_tca,
       p.visite_medicale_rdv_date,
       p.visite_medicale_rdv_heure
     FROM profil p
@@ -108,7 +114,7 @@ BEGIN
     RAISE NOTICE 'RDV trouvé pour % % (%) le % à %',
       v_salarie.prenom,
       v_salarie.nom,
-      v_salarie.matricule,
+      v_salarie.matricule_tca,
       v_salarie.visite_medicale_rdv_date,
       v_salarie.visite_medicale_rdv_heure;
 
@@ -151,7 +157,7 @@ BEGIN
             '%s %s (matricule %s) a un RDV le %s à %s',
             v_salarie.prenom,
             v_salarie.nom,
-            v_salarie.matricule,
+            v_salarie.matricule_tca,
             to_char(v_salarie.visite_medicale_rdv_date, 'DD/MM/YYYY'),
             to_char(v_salarie.visite_medicale_rdv_heure, 'HH24:MI')
           ),
@@ -205,7 +211,7 @@ BEGIN
     p.id,
     p.prenom,
     p.nom,
-    p.matricule,
+    p.matricule_tca,
     p.visite_medicale_rdv_date,
     p.visite_medicale_rdv_heure
   INTO v_salarie
@@ -256,7 +262,7 @@ BEGIN
           '%s %s (matricule %s) a un RDV le %s à %s (%s)',
           v_salarie.prenom,
           v_salarie.nom,
-          v_salarie.matricule,
+          v_salarie.matricule_tca,
           to_char(v_salarie.visite_medicale_rdv_date, 'DD/MM/YYYY'),
           to_char(v_salarie.visite_medicale_rdv_heure, 'HH24:MI'),
           CASE
@@ -314,8 +320,16 @@ CREATE TRIGGER trigger_rdv_visite_medicale_notification
 -- 6. CRÉER LE JOB CRON (EXÉCUTION QUOTIDIENNE À 8H00)
 -- ============================================
 
--- Supprimer l'ancien job s'il existe
-SELECT cron.unschedule('generate-rdv-visite-medicale-notifications');
+-- Supprimer l'ancien job s'il existe (de manière sécurisée)
+DO $$
+BEGIN
+  -- Essayer de supprimer le job
+  PERFORM cron.unschedule('generate-rdv-visite-medicale-notifications');
+  RAISE NOTICE 'Job CRON existant supprimé';
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE NOTICE 'Aucun job CRON à supprimer (normal si première installation)';
+END $$;
 
 -- Créer le job CRON quotidien
 SELECT cron.schedule(
@@ -336,13 +350,6 @@ COMMENT ON FUNCTION generate_rdv_visite_medicale_notifications() IS
 
 COMMENT ON FUNCTION create_immediate_rdv_notification(UUID) IS
 'Crée une notification immédiate si le RDV est dans moins de 2 jours ou déjà passé lors de la saisie.';
-
--- ============================================
--- 8. TEST MANUEL (OPTIONNEL)
--- ============================================
-
--- Pour tester manuellement la fonction (ne pas exécuter en production) :
--- SELECT * FROM generate_rdv_visite_medicale_notifications();
 
 -- ============================================
 -- TERMINÉ ✅
