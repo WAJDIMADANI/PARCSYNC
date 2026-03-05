@@ -3706,7 +3706,19 @@ function EmployeeDetailModal({
                     Ajouter un document
                   </button>
                   <button
-                    onClick={() => setIsEditingDates(true)}
+                    onClick={() => {
+                      // Réinitialiser les états avec les valeurs actuelles avant l'édition
+                      setEditedCertificatExpiration(currentEmployee.date_fin_visite_medicale || '');
+                      setEditedTitreSejourExpiration(currentEmployee.titre_sejour_fin_validite || '');
+                      setEditedDateVisite(currentEmployee.date_visite_medicale || '');
+                      setEditedRdvDate(currentEmployee.visite_medicale_rdv_date || '');
+                      setEditedRdvHeure(currentEmployee.visite_medicale_rdv_heure || '');
+                      setEditedAvenant1DateDebut(currentEmployee.avenant_1_date_debut || '');
+                      setEditedAvenant1DateFin(currentEmployee.avenant_1_date_fin || '');
+                      setEditedAvenant2DateDebut(currentEmployee.avenant_2_date_debut || '');
+                      setEditedAvenant2DateFin(currentEmployee.avenant_2_date_fin || '');
+                      setIsEditingDates(true);
+                    }}
                     className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
                   >
                     <Edit2 className="w-4 h-4" />
