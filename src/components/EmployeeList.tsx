@@ -79,6 +79,8 @@ interface Employee {
   candidat_id: string | null;
   date_fin_visite_medicale: string | null;
   date_visite_medicale: string | null;
+  visite_medicale_rdv_date: string | null;
+  visite_medicale_rdv_heure: string | null;
   type_piece_identite: string | null;
   titre_sejour_fin_validite: string | null;
   matricule_tca: string | null;
@@ -1141,6 +1143,8 @@ function EmployeeDetailModal({
   const [editedCertificatExpiration, setEditedCertificatExpiration] = useState(employee.date_fin_visite_medicale || '');
   const [editedTitreSejourExpiration, setEditedTitreSejourExpiration] = useState(employee.titre_sejour_fin_validite || '');
   const [editedDateVisite, setEditedDateVisite] = useState(employee.date_visite_medicale || '');
+  const [editedRdvDate, setEditedRdvDate] = useState(employee.visite_medicale_rdv_date || '');
+  const [editedRdvHeure, setEditedRdvHeure] = useState(employee.visite_medicale_rdv_heure || '');
   const [editedAvenant1DateDebut, setEditedAvenant1DateDebut] = useState(employee.avenant_1_date_debut || '');
   const [editedAvenant1DateFin, setEditedAvenant1DateFin] = useState(employee.avenant_1_date_fin || '');
   const [editedAvenant2DateDebut, setEditedAvenant2DateDebut] = useState(employee.avenant_2_date_debut || '');
@@ -2085,6 +2089,8 @@ function EmployeeDetailModal({
         .update({
           date_fin_visite_medicale: editedCertificatExpiration || null,
           date_visite_medicale: editedDateVisite || null,
+          visite_medicale_rdv_date: editedRdvDate || null,
+          visite_medicale_rdv_heure: editedRdvHeure || null,
           titre_sejour_fin_validite: editedTitreSejourExpiration || null,
           avenant_1_date_debut: editedAvenant1DateDebut || null,
           avenant_1_date_fin: editedAvenant1DateFin || null,
@@ -2143,6 +2149,8 @@ function EmployeeDetailModal({
         ...currentEmployee,
         date_fin_visite_medicale: editedCertificatExpiration || null,
         date_visite_medicale: editedDateVisite || null,
+        visite_medicale_rdv_date: editedRdvDate || null,
+        visite_medicale_rdv_heure: editedRdvHeure || null,
         titre_sejour_fin_validite: editedTitreSejourExpiration || null,
         avenant_1_date_debut: editedAvenant1DateDebut || null,
         avenant_1_date_fin: editedAvenant1DateFin || null,
@@ -2169,6 +2177,8 @@ function EmployeeDetailModal({
     setEditedCertificatExpiration(currentEmployee.date_fin_visite_medicale || '');
     setEditedTitreSejourExpiration(currentEmployee.titre_sejour_fin_validite || '');
     setEditedDateVisite(currentEmployee.date_visite_medicale || '');
+    setEditedRdvDate(currentEmployee.visite_medicale_rdv_date || '');
+    setEditedRdvHeure(currentEmployee.visite_medicale_rdv_heure || '');
     setEditedAvenant1DateDebut(currentEmployee.avenant_1_date_debut || '');
     setEditedAvenant1DateFin(currentEmployee.avenant_1_date_fin || '');
     setEditedAvenant2DateDebut(currentEmployee.avenant_2_date_debut || '');
@@ -4041,6 +4051,44 @@ function EmployeeDetailModal({
                         {currentEmployee.date_fin_visite_medicale
                           ? new Date(currentEmployee.date_fin_visite_medicale).toLocaleDateString('fr-FR')
                           : '-'}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Prochain RDV - Date</label>
+                    </div>
+                    {isEditingDates ? (
+                      <input
+                        type="date"
+                        value={editedRdvDate}
+                        onChange={(e) => setEditedRdvDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-gray-900"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900">
+                        {currentEmployee.visite_medicale_rdv_date
+                          ? new Date(currentEmployee.visite_medicale_rdv_date).toLocaleDateString('fr-FR')
+                          : '-'}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                      <label className="text-xs font-medium text-gray-500 uppercase">Prochain RDV - Heure</label>
+                    </div>
+                    {isEditingDates ? (
+                      <input
+                        type="time"
+                        value={editedRdvHeure}
+                        onChange={(e) => setEditedRdvHeure(e.target.value)}
+                        className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-gray-900"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900">
+                        {currentEmployee.visite_medicale_rdv_heure || '-'}
                       </p>
                     )}
                   </div>
