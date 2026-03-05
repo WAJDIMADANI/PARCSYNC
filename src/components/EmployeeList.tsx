@@ -2087,15 +2087,8 @@ function EmployeeDetailModal({
       const { error } = await supabase
         .from('profil')
         .update({
-          date_fin_visite_medicale: editedCertificatExpiration || null,
-          date_visite_medicale: editedDateVisite || null,
           visite_medicale_rdv_date: editedRdvDate || null,
-          visite_medicale_rdv_heure: editedRdvHeure || null,
-          titre_sejour_fin_validite: editedTitreSejourExpiration || null,
-          avenant_1_date_debut: editedAvenant1DateDebut || null,
-          avenant_1_date_fin: editedAvenant1DateFin || null,
-          avenant_2_date_debut: editedAvenant2DateDebut || null,
-          avenant_2_date_fin: editedAvenant2DateFin || null
+          visite_medicale_rdv_heure: editedRdvHeure || null
         })
         .eq('id', currentEmployee.id);
 
@@ -2104,70 +2097,21 @@ function EmployeeDetailModal({
         throw new Error(`Erreur de sauvegarde: ${error.message || 'Erreur inconnue'}`);
       }
 
-      // Mise à jour des incidents pour titre de séjour si la date a changé
-      if (editedTitreSejourExpiration && editedTitreSejourExpiration !== currentEmployee.titre_sejour_fin_validite) {
-        try {
-          const { data: rpcResult, error: rpcError } = await supabase.rpc('update_incident_expiration_date_only', {
-            p_profil_id: currentEmployee.id,
-            p_type: 'titre_sejour',
-            p_nouvelle_date: editedTitreSejourExpiration,
-            p_commentaire: 'Date mise à jour depuis le modal salarié'
-          });
-
-          if (rpcError) {
-            console.error('Erreur RPC titre_sejour:', rpcError);
-          } else {
-            console.log('Incident titre_sejour mis à jour:', rpcResult);
-          }
-        } catch (rpcErr) {
-          console.error('Erreur lors de la mise à jour de l\'incident titre_sejour:', rpcErr);
-        }
-      }
-
-      // Mise à jour des incidents pour visite médicale si la date a changé
-      if (editedCertificatExpiration && editedCertificatExpiration !== currentEmployee.date_fin_visite_medicale) {
-        try {
-          const { data: rpcResult, error: rpcError } = await supabase.rpc('update_incident_expiration_date_only', {
-            p_profil_id: currentEmployee.id,
-            p_type: 'visite_medicale',
-            p_nouvelle_date: editedCertificatExpiration,
-            p_commentaire: 'Date mise à jour depuis le modal salarié'
-          });
-
-          if (rpcError) {
-            console.error('Erreur RPC visite_medicale:', rpcError);
-          } else {
-            console.log('Incident visite_medicale mis à jour:', rpcResult);
-          }
-        } catch (rpcErr) {
-          console.error('Erreur lors de la mise à jour de l\'incident visite_medicale:', rpcErr);
-        }
-      }
-
-      // Mettre à jour l'employé localement au lieu de recharger tout
       setCurrentEmployee({
         ...currentEmployee,
-        date_fin_visite_medicale: editedCertificatExpiration || null,
-        date_visite_medicale: editedDateVisite || null,
         visite_medicale_rdv_date: editedRdvDate || null,
-        visite_medicale_rdv_heure: editedRdvHeure || null,
-        titre_sejour_fin_validite: editedTitreSejourExpiration || null,
-        avenant_1_date_debut: editedAvenant1DateDebut || null,
-        avenant_1_date_fin: editedAvenant1DateFin || null,
-        avenant_2_date_debut: editedAvenant2DateDebut || null,
-        avenant_2_date_fin: editedAvenant2DateFin || null
+        visite_medicale_rdv_heure: editedRdvHeure || null
       });
 
       setIsEditingDates(false);
 
-      // Déclencher le rechargement de la liste pour rafraîchir les compteurs d'incidents
       if (onUpdate) {
         onUpdate();
       }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde des dates:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      alert(`Erreur lors de la sauvegarde des dates d'expiration:\n${errorMessage}\n\nVeuillez vérifier que la migration SQL a bien été exécutée dans Supabase.`);
+      alert(`Erreur lors de la sauvegarde des dates RDV:\n${errorMessage}`);
     } finally {
       setSavingDates(false);
     }
