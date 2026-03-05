@@ -4012,17 +4012,29 @@ function EmployeeDetailModal({
                       </p>
                     )}
                   </div>
+                </div>
+              </div>
+
+              {/* Section RDV Visite Médicale - SÉPARÉE */}
+              <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/30 rounded-xl p-5 border border-indigo-200 mt-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                    <Calendar className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-lg">Prochain RDV Visite Médicale</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <Calendar className="w-3.5 h-3.5 text-gray-500" />
-                      <label className="text-xs font-medium text-gray-500 uppercase">Prochain RDV - Date</label>
+                      <label className="text-xs font-medium text-gray-500 uppercase">Date du RDV</label>
                     </div>
                     {isEditingDates ? (
                       <input
                         type="date"
                         value={editedRdvDate}
                         onChange={(e) => setEditedRdvDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-gray-900"
+                        className="w-full px-3 py-2 border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
                       />
                     ) : (
                       <p className="text-sm text-gray-900">
@@ -4035,14 +4047,14 @@ function EmployeeDetailModal({
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <Calendar className="w-3.5 h-3.5 text-gray-500" />
-                      <label className="text-xs font-medium text-gray-500 uppercase">Prochain RDV - Heure</label>
+                      <label className="text-xs font-medium text-gray-500 uppercase">Heure du RDV</label>
                     </div>
                     {isEditingDates ? (
                       <input
                         type="time"
                         value={editedRdvHeure}
                         onChange={(e) => setEditedRdvHeure(e.target.value)}
-                        className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-gray-900"
+                        className="w-full px-3 py-2 border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
                       />
                     ) : (
                       <p className="text-sm text-gray-900">
