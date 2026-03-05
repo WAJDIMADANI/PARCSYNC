@@ -122,9 +122,9 @@ BEGIN
     FOR v_user IN
       SELECT DISTINCT au.id
       FROM app_utilisateur au
-      INNER JOIN utilisateur_permission up ON au.id = up.utilisateur_id
-      INNER JOIN permission p ON up.permission_id = p.id
-      WHERE p.code IN ('accueil_recrutement', 'admin_full', 'rh_full')
+      INNER JOIN utilisateur_permissions up ON au.id = up.utilisateur_id
+      WHERE up.section_id IN ('rh/salaries', 'rh/demandes', 'admin/utilisateurs')
+        AND up.actif = true
         AND au.actif = true
     LOOP
       -- Vérifier si une notification existe déjà pour ce salarié et cet utilisateur
@@ -233,9 +233,9 @@ BEGIN
     FOR v_user IN
       SELECT DISTINCT au.id
       FROM app_utilisateur au
-      INNER JOIN utilisateur_permission up ON au.id = up.utilisateur_id
-      INNER JOIN permission p ON up.permission_id = p.id
-      WHERE p.code IN ('accueil_recrutement', 'admin_full', 'rh_full')
+      INNER JOIN utilisateur_permissions up ON au.id = up.utilisateur_id
+      WHERE up.section_id IN ('rh/salaries', 'rh/demandes', 'admin/utilisateurs')
+        AND up.actif = true
         AND au.actif = true
     LOOP
       -- Supprimer les anciennes notifications pour ce salarié et cet utilisateur
