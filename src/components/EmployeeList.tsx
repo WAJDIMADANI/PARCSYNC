@@ -4038,13 +4038,15 @@ function EmployeeDetailModal({
                       <label className="text-xs font-medium text-gray-500 uppercase">Type de permis</label>
                     </div>
                     {isEditingDates ? (
-                      <input
-                        type="text"
+                      <select
                         value={editedPermisCategorie}
                         onChange={(e) => setEditedPermisCategorie(e.target.value)}
-                        placeholder="Ex: B, C, D..."
                         className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-gray-900"
-                      />
+                      >
+                        <option value="">Sélectionner...</option>
+                        <option value="Format PAPIER ROSE (ancienne version)">Format PAPIER ROSE (ancienne version)</option>
+                        <option value="Format CARTE (nouvelle version)">Format CARTE (nouvelle version)</option>
+                      </select>
                     ) : (
                       <p className="text-sm text-gray-900">
                         {currentEmployee.permis_categorie || '-'}
