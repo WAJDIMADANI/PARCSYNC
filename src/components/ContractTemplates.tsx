@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Upload, Trash2, Download, Plus, X } from 'lucide-react';
+import { FileText, Upload, Trash2, Download, Plus, X, RotateCcw, Ban, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
 
@@ -50,6 +50,7 @@ interface ContractTemplate {
   fichier_nom: string;
   variables: ContractVariables;
   created_at: string;
+  is_active: boolean;
 }
 
 const CONTRACT_TYPES = [
@@ -184,27 +185,41 @@ export function ContractTemplates() {
     }
   };
 
-  const handleDelete = async (id: string, fichierUrl: string) => {
-    if (!confirm('Supprimer ce modèle ?')) return;
+  const handleDeactivate = async (id: string) => {
+    if (!confirm('Désactiver ce modèle ? Il ne sera plus disponible pour créer de nouveaux contrats, mais les contrats existants resteront accessibles.')) return;
 
     try {
-      const fileName = fichierUrl.split('/').pop();
-      if (fileName) {
-        await supabase.storage
-          .from('modeles-contrats')
-          .remove([fileName]);
-      }
-
       const { error } = await supabase
         .from('modeles_contrats')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id);
 
       if (error) throw error;
+
+      alert('Modèle désactivé avec succès');
       loadTemplates();
     } catch (error) {
-      console.error('Erreur suppression:', error);
-      alert('Erreur lors de la suppression');
+      console.error('Erreur lors de la désactivation:', error);
+      alert('Erreur : Impossible de désactiver le modèle. Veuillez réessayer.');
+    }
+  };
+
+  const handleReactivate = async (id: string) => {
+    if (!confirm('Réactiver ce modèle ? Il sera à nouveau disponible pour créer de nouveaux contrats.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('modeles_contrats')
+        .update({ is_active: true })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      alert('Modèle réactivé avec succès');
+      loadTemplates();
+    } catch (error) {
+      console.error('Erreur lors de la réactivation:', error);
+      alert('Erreur : Impossible de réactiver le modèle. Veuillez réessayer.');
     }
   };
 
@@ -348,23 +363,40 @@ export function ContractTemplates() {
         {filteredTemplates.map((template) => (
           <div
             key={template.id}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow"
+            className={`bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow ${
+              template.is_active ? 'border-slate-200' : 'border-slate-300 bg-slate-50'
+            }`}
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-primary-100 rounded-lg">
-                  <FileText className="w-6 h-6 text-primary-600" />
+                <div className={`p-3 rounded-lg ${template.is_active ? 'bg-primary-100' : 'bg-slate-200'}`}>
+                  <FileText className={`w-6 h-6 ${template.is_active ? 'text-primary-600' : 'text-slate-500'}`} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-slate-900">{template.nom}</h3>
-                  <span className="inline-block px-2 py-1 bg-accent-100 text-accent-700 text-xs rounded-full mt-1">
-                    {template.type_contrat}
-                  </span>
+                  <h3 className={`font-semibold ${template.is_active ? 'text-slate-900' : 'text-slate-600'}`}>
+                    {template.nom}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-block px-2 py-1 bg-accent-100 text-accent-700 text-xs rounded-full">
+                      {template.type_contrat}
+                    </span>
+                    {template.is_active ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                        <CheckCircle className="w-3 h-3" />
+                        Actif
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded-full font-medium">
+                        <Ban className="w-3 h-3" />
+                        Inactif
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            <p className="text-sm text-slate-600 mb-4">
+            <p className={`text-sm mb-4 ${template.is_active ? 'text-slate-600' : 'text-slate-500'}`}>
               Fichier: {template.fichier_nom}
             </p>
 
@@ -398,12 +430,23 @@ export function ContractTemplates() {
                 <Download className="w-4 h-4" />
                 Télécharger
               </button>
-              <button
-                onClick={() => handleDelete(template.id, template.fichier_url)}
-                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {template.is_active ? (
+                <button
+                  onClick={() => handleDeactivate(template.id)}
+                  className="px-4 py-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors"
+                  title="Désactiver ce modèle"
+                >
+                  <Ban className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleReactivate(template.id)}
+                  className="px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                  title="Réactiver ce modèle"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         ))}

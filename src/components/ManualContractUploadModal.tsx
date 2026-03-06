@@ -61,6 +61,7 @@ export default function ManualContractUploadModal({
         supabase
           .from('modeles_contrats')
           .select('id, nom, type_contrat')
+          .eq('is_active', true)
           .order('type_contrat, nom'),
         supabase
           .from('poste')

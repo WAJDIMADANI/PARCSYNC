@@ -419,7 +419,7 @@ export default function ContractSendModal({
   const fetchData = async () => {
     try {
       const [templatesRes, secteursRes, postesRes] = await Promise.all([
-        supabase.from('modeles_contrats').select('*').order('nom'),
+        supabase.from('modeles_contrats').select('*').eq('is_active', true).order('nom'),
         supabase.from('secteur').select('*').order('nom'),
         supabase.from('poste').select('id, nom, description').eq('actif', true).order('nom')
       ]);
