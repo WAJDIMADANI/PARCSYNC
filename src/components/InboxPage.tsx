@@ -321,7 +321,23 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
       ).length;
       const nonLusDemandes = formattedDemandes.filter(d => !d.lu).length;
 
-      const rdvVisiteMedicaleCount = formattedDemandes.filter(d => d.type === 'rdv_visite_medicale').length;
+      const rdvVisiteMedicale = formattedDemandes.filter(d => d.type === 'rdv_visite_medicale');
+      const rdvVisiteMedicaleCount = rdvVisiteMedicale.length;
+
+      console.log('📅 RDV Visite Médicale détails:', {
+        total: rdvVisiteMedicaleCount,
+        lus: rdvVisiteMedicale.filter(r => r.lu).length,
+        nonLus: rdvVisiteMedicale.filter(r => !r.lu).length,
+        consultes: rdvVisiteMedicale.filter(r => r.statut === 'consulte').length,
+        traites: rdvVisiteMedicale.filter(r => r.statut === 'traite').length,
+        ouverts: rdvVisiteMedicale.filter(r => r.statut === 'ouvert').length,
+        liste: rdvVisiteMedicale.map(r => ({
+          titre: r.titre,
+          statut: r.statut,
+          lu: r.lu,
+          created_at: r.created_at
+        }))
+      });
 
       const newStats = {
         en_attente: formattedTaches.filter((t) => t.statut === 'en_attente').length,
