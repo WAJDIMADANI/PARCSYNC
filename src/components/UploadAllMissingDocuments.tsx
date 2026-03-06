@@ -70,27 +70,19 @@ export default function UploadAllMissingDocuments() {
   }, []);
 
   const loadData = useCallback(async () => {
-    console.log('🚀 === DÉBUT DE loadData() ===');
-    console.log('🚀 profilId reçu:', profilId);
-    console.log('🚀 token reçu:', token);
-    console.log('🚀 docsParam reçu:', docsParam);
-
-    if (!supabase) {
+    if (!supabase || !profilId || !token) {
       setError('Configuration invalide');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('📞 Appel 1: Vérification du token...');
       const { data: tokenData, error: tokenError } = await supabase
         .from('upload_tokens')
         .select('*')
         .eq('token', token)
         .eq('profil_id', profilId)
         .maybeSingle();
-
-      console.log('📞 Réponse token:', { tokenData, tokenError });
 
       if (tokenError) throw tokenError;
       if (!tokenData) throw new Error('Lien invalide ou expiré');
@@ -99,33 +91,25 @@ export default function UploadAllMissingDocuments() {
         throw new Error('Ce lien a expiré');
       }
 
-      console.log('✅ Token valide!');
       setTokenValid(true);
 
-      console.log('📞 Appel 2: Récupération du profil...');
       const { data: profil, error: profilError } = await supabase
         .from('profil')
         .select('id, nom, prenom, email')
         .eq('id', profilId)
         .maybeSingle();
 
-      console.log('📞 Réponse profil:', { profil, profilError });
-
       if (profilError) throw profilError;
       if (!profil) throw new Error('Profil introuvable');
 
-      console.log('✅ Profil trouvé:', profil.prenom, profil.nom);
       setProfilData(profil);
 
       const requestedDocsParam = docsParam;
       let docsToDisplay: MissingDocument[] = [];
 
       if (requestedDocsParam) {
-        console.log('🎯 Paramètre "docs" détecté dans l\'URL:', requestedDocsParam);
         const requestedDocsList = requestedDocsParam.split(',');
-        console.log('🎯 Documents demandés:', requestedDocsList);
 
-        console.log('📞 Appel 3: Vérification du statut des documents demandés...');
         const { data: existingDocs, error: docsError } = await supabase
           .from('document')
           .select('type_document')
@@ -134,11 +118,10 @@ export default function UploadAllMissingDocuments() {
           .in('type_document', requestedDocsList);
 
         if (docsError) {
-          console.error('❌ Erreur lors de la vérification des documents:', docsError);
+          console.error('Erreur lors de la vérification des documents:', docsError);
         }
 
         const existingDocTypes = new Set(existingDocs?.map(d => d.type_document) || []);
-        console.log('📊 Documents déjà uploadés:', Array.from(existingDocTypes));
 
         requestedDocsList.forEach((docType: string) => {
           const config = REQUIRED_DOCUMENTS_MAP[docType];
@@ -150,23 +133,15 @@ export default function UploadAllMissingDocuments() {
               icon: config.icon,
               alreadyUploaded: alreadyExists
             });
-            console.log(`✅ Document ajouté: ${docType} → ${config.label} (${alreadyExists ? 'Déjà uploadé' : 'À uploader'})`);
-          } else {
-            console.warn('⚠️ Config non trouvée pour le type de document:', docType);
           }
         });
-
-        console.log('🎯 Documents à afficher:', docsToDisplay.length);
       } else {
-        console.log('📞 Appel 3: Récupération des documents manquants via RPC...');
         const { data: missingDocsResponse, error: missingError } = await supabase
           .rpc('get_missing_documents_for_profil', { p_profil_id: profilId })
           .single();
 
-        console.log('📞 Réponse RPC brute:', missingDocsResponse);
-
         if (missingError) {
-          console.error('❌ Erreur lors de la récupération des documents manquants:', missingError);
+          console.error('Erreur lors de la récupération des documents manquants:', missingError);
           throw missingError;
         }
 
@@ -178,8 +153,6 @@ export default function UploadAllMissingDocuments() {
         } else {
           missingDocsArray = [];
         }
-
-        console.log('📊 Documents manquants:', missingDocsArray.length);
 
         if (Array.isArray(missingDocsArray) && missingDocsArray.length > 0) {
           missingDocsArray.forEach((docType: string) => {
@@ -196,38 +169,23 @@ export default function UploadAllMissingDocuments() {
         }
       }
 
-      console.log('📊 === RÉSULTAT FINAL ===');
-      console.log('📊 Nombre de documents à afficher:', docsToDisplay.length);
-      console.log('📊 Documents:', docsToDisplay.map(d => `${d.type} (${d.label}) ${d.alreadyUploaded ? '[Déjà uploadé]' : ''}`).join(', '));
-
       setMissingDocuments(docsToDisplay);
-      console.log('✅ setMissingDocuments appelé avec', docsToDisplay.length, 'documents');
 
     } catch (err) {
-      console.error('❌ === ERREUR DANS loadData() ===');
-      console.error('❌ Type:', err);
-      console.error('❌ Message:', err instanceof Error ? err.message : 'Erreur inconnue');
-      console.error('❌ Stack:', err instanceof Error ? err.stack : 'N/A');
+      console.error('Erreur dans loadData:', err);
       setError(err instanceof Error ? err.message : 'Erreur de chargement');
     } finally {
-      console.log('🏁 === FIN DE loadData() - setLoading(false) ===');
       setLoading(false);
     }
   }, [supabase, profilId, token, docsParam]);
 
   useEffect(() => {
-    console.log('🔄 useEffect triggered');
-    console.log('🔄 profilId:', profilId);
-    console.log('🔄 token:', token);
-
     if (!profilId || !token) {
-      console.error('❌ Lien invalide ou token manquant');
       setError('Lien invalide');
       setLoading(false);
       return;
     }
 
-    console.log('✅ Paramètres valides, appel de loadData()...');
     loadData();
   }, [profilId, token, loadData]);
 
@@ -400,39 +358,40 @@ export default function UploadAllMissingDocuments() {
 
       console.log('✅ Document enregistré dans la base de données');
 
+      const docConfig = REQUIRED_DOCUMENTS_MAP[documentType];
+      const docLabel = docConfig?.label || documentType;
+
+      // Mettre à jour l'état local AVANT l'envoi de notification pour éviter des re-renders pendant les updates DOM
       setUploadedDocs(prev => new Set(prev).add(documentType));
 
       const newSelectedFiles = { ...selectedFiles };
       delete newSelectedFiles[documentType];
       setSelectedFiles(newSelectedFiles);
 
-      const docConfig = REQUIRED_DOCUMENTS_MAP[documentType];
-      const docLabel = docConfig?.label || documentType;
+      // Marquer le document comme déjà uploadé dans la liste
+      setMissingDocuments(prev => prev.map(doc =>
+        doc.type === documentType
+          ? { ...doc, alreadyUploaded: true }
+          : doc
+      ));
+
       setSuccessMessage(`${docLabel} a été envoyé avec succès !`);
 
-      try {
-        console.log('📬 Envoi de la notification inbox...');
-        const { error: notifyError } = await supabase.functions.invoke('notify-document-uploaded', {
-          body: {
-            profil_id: profilData.id,
-            document_label: docLabel,
-            token: token
-          }
-        });
-
-        if (notifyError) {
-          console.error('❌ Erreur lors de l\'envoi de la notification:', notifyError);
-          setSuccessMessage(`${docLabel} a été envoyé avec succès ! (notification non envoyée)`);
-        } else {
-          console.log('✅ notify-document-uploaded OK', { profil_id: profilData.id, document_label: docLabel });
-          setSuccessMessage(`${docLabel} a été envoyé avec succès ! Notification envoyée au pôle concerné.`);
+      // Envoi de la notification en arrière-plan sans bloquer
+      supabase.functions.invoke('notify-document-uploaded', {
+        body: {
+          profil_id: profilData.id,
+          document_label: docLabel,
+          token: token
         }
-      } catch (notifyErr) {
-        console.error('❌ Exception lors de l\'envoi de la notification:', notifyErr);
-      }
+      }).then(({ error: notifyError }) => {
+        if (notifyError) {
+          console.error('Erreur notification:', notifyError);
+        }
+      }).catch(err => {
+        console.error('Exception notification:', err);
+      });
 
-      console.log('🔄 Rechargement des données du profil...');
-      await loadData();
       console.log('✅ Upload terminé avec succès');
 
     } catch (err) {
