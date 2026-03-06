@@ -25,13 +25,14 @@ interface Tache {
 
 interface DemandeExterne {
   id: string;
-  type: 'demande_externe';
+  type: 'demande_externe' | 'rdv_visite_medicale';
   titre: string;
   description: string;
-  contenu: string;
+  contenu: string | any;
   reference_id: string;
+  reference_type?: string;
   profil_id?: string;
-  statut: 'nouveau' | 'consulte' | 'traite';
+  statut: 'nouveau' | 'consulte' | 'traite' | 'ouvert';
   lu: boolean;
   created_at: string;
   profil?: {
@@ -252,24 +253,45 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
           }
         }
 
-        // Ajouter les autres messages (profil, etc.) sans charger de détails supplémentaires
+        // Ajouter les autres messages (profil, etc.) et charger les infos du profil si nécessaire
         if (autresMessages.length > 0) {
-          const formattedAutres = autresMessages.map((inbox: any) => ({
-            id: inbox.id,
-            itemType: 'demande_externe' as const,
-            type: 'demande_externe' as const,
-            titre: inbox.titre,
-            description: inbox.description || '',
-            contenu: inbox.contenu || '',
-            reference_id: inbox.reference_id,
-            // Si c'est un message de type "profil", le reference_id est déjà le profil_id
-            profil_id: inbox.reference_type === 'profil' ? inbox.reference_id : undefined,
-            statut: inbox.statut || 'nouveau',
-            lu: inbox.lu ?? false,
-            created_at: inbox.created_at,
-            profil: undefined,
-            pole: undefined,
-            fichiers: []
+          const formattedAutres = await Promise.all(autresMessages.map(async (inbox: any) => {
+            let profilData = undefined;
+
+            // Si c'est un message de type "profil", charger les infos du profil
+            if (inbox.reference_type === 'profil' && inbox.reference_id) {
+              try {
+                const { data: profil } = await supabase
+                  .from('profil')
+                  .select('prenom, nom, email, matricule_tca, poste')
+                  .eq('id', inbox.reference_id)
+                  .single();
+
+                if (profil) {
+                  profilData = profil;
+                }
+              } catch (error) {
+                console.error('Erreur chargement profil:', error);
+              }
+            }
+
+            return {
+              id: inbox.id,
+              itemType: 'demande_externe' as const,
+              type: inbox.type || 'demande_externe' as const,
+              titre: inbox.titre,
+              description: inbox.description || '',
+              contenu: inbox.contenu || '',
+              reference_id: inbox.reference_id,
+              reference_type: inbox.reference_type,
+              profil_id: inbox.reference_type === 'profil' ? inbox.reference_id : undefined,
+              statut: inbox.statut || 'nouveau',
+              lu: inbox.lu ?? false,
+              created_at: inbox.created_at,
+              profil: profilData,
+              pole: undefined,
+              fichiers: []
+            };
           }));
 
           formattedDemandes = [...formattedDemandes, ...formattedAutres];
@@ -1028,6 +1050,21 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus, onViewProfile }
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
+  // Parser le contenu s'il est en JSON
+  const parseContenu = () => {
+    if (typeof demande.contenu === 'object') {
+      return demande.contenu;
+    }
+    try {
+      return JSON.parse(demande.contenu);
+    } catch {
+      return null;
+    }
+  };
+
+  const contenuData = parseContenu();
+  const isRdvVisiteMedicale = demande.type === 'rdv_visite_medicale';
+
   const handleDownloadFile = async (filePath: string, fileName: string) => {
     try {
       const { data, error } = await supabase.storage
@@ -1053,86 +1090,173 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus, onViewProfile }
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
-        <div className="bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white p-5 flex items-center justify-between rounded-t-xl">
+        <div className={`text-white p-5 flex items-center justify-between rounded-t-xl ${
+          isRdvVisiteMedicale
+            ? 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600'
+            : 'bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600'
+        }`}>
           <div className="flex-1">
             <h2 className="text-xl font-extrabold">{demande.titre}</h2>
-            <p className="text-green-50 text-sm mt-1 font-medium">{demande.description}</p>
+            <p className={`text-sm mt-1 font-medium ${isRdvVisiteMedicale ? 'text-orange-50' : 'text-green-50'}`}>
+              {demande.description}
+            </p>
           </div>
-          <button onClick={onClose} className="text-white hover:text-green-50 text-2xl font-light transition-colors">✕</button>
+          <button onClick={onClose} className="text-white hover:opacity-80 text-2xl font-light transition-colors">✕</button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          <div className="bg-gray-50 border rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2 justify-between">
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Informations du chauffeur
-              </div>
-              {demande.profil_id && onViewProfile && (
-                <button
-                  onClick={() => {
-                    onViewProfile(demande.profil_id!, { currentPage });
-                    onClose();
-                  }}
-                  className="p-2 rounded-full hover:bg-blue-100 transition-colors group"
-                  title="Voir le profil complet"
-                >
-                  <User className="w-5 h-5 text-blue-600 group-hover:text-blue-700" />
-                </button>
-              )}
-            </h3>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-gray-600">Nom complet:</span>
-                <p className="font-medium">{demande.profil?.prenom} {demande.profil?.nom}</p>
-              </div>
-              <div>
-                <span className="text-gray-600">Matricule:</span>
-                <p className="font-medium">{demande.profil?.matricule_tca || '-'}</p>
-              </div>
-              <div>
-                <span className="text-gray-600">Email:</span>
-                <p className="font-medium">{demande.profil?.email}</p>
-              </div>
-              <div>
-                <span className="text-gray-600">Poste:</span>
-                <p className="font-medium">{demande.profil?.poste || '-'}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Détails de la demande
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm text-gray-600">Pôle concerné:</span>
-                <p className="font-medium">{demande.pole?.nom || '-'}</p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-600">Date de création:</span>
-                <p className="font-medium">{formatDate(demande.created_at)}</p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-600">Statut actuel:</span>
-                <span className={`inline-block ml-2 px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight shadow-md ${
-                  demande.statut === 'traite' ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white' :
-                  demande.statut === 'consulte' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white' :
-                  'bg-gradient-to-r from-orange-500 to-amber-600 text-white'
-                }`}>
-                  {demande.statut}
-                </span>
-              </div>
-              <div>
-                <span className="text-sm text-gray-600 block mb-2">Contenu de la demande:</span>
-                <div className="bg-gray-50 rounded p-3 whitespace-pre-wrap text-gray-700">
-                  {demande.contenu}
+          {demande.profil && (
+            <div className="bg-gray-50 border rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2 justify-between">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  {isRdvVisiteMedicale ? 'Informations du salarié' : 'Informations du chauffeur'}
+                </div>
+                {demande.profil_id && onViewProfile && (
+                  <button
+                    onClick={() => {
+                      onViewProfile(demande.profil_id!);
+                      onClose();
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105 font-bold text-sm"
+                    title="Voir le profil complet"
+                  >
+                    <User className="w-4 h-4" />
+                    Voir le profil
+                  </button>
+                )}
+              </h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-gray-600">Nom complet:</span>
+                  <p className="font-medium">{demande.profil?.prenom} {demande.profil?.nom}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Matricule:</span>
+                  <p className="font-medium">{demande.profil?.matricule_tca || contenuData?.matricule || '-'}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Email:</span>
+                  <p className="font-medium">{demande.profil?.email || '-'}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Poste:</span>
+                  <p className="font-medium">{demande.profil?.poste || '-'}</p>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {isRdvVisiteMedicale && contenuData && (
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-orange-900 mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Détails du rendez-vous
+              </h3>
+              <div className="space-y-3">
+                {contenuData.rdv_date && (
+                  <div className="bg-white rounded-lg p-3 border border-orange-200">
+                    <span className="text-sm text-gray-600 block mb-1">Date du RDV:</span>
+                    <p className="font-bold text-lg text-orange-700">
+                      {new Date(contenuData.rdv_date).toLocaleDateString('fr-FR', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                )}
+                {contenuData.rdv_heure && (
+                  <div className="bg-white rounded-lg p-3 border border-orange-200">
+                    <span className="text-sm text-gray-600 block mb-1">Heure du RDV:</span>
+                    <p className="font-bold text-lg text-orange-700">
+                      <Clock className="w-4 h-4 inline mr-2" />
+                      {contenuData.rdv_heure}
+                    </p>
+                  </div>
+                )}
+                {contenuData.urgence && (
+                  <div className="bg-gradient-to-r from-red-500 to-orange-600 text-white rounded-lg p-3 shadow-lg">
+                    <span className="font-extrabold text-sm uppercase tracking-wide flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5" />
+                      {contenuData.urgence}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!isRdvVisiteMedicale && (
+            <div className="bg-white border rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Détails de la demande
+              </h3>
+              <div className="space-y-3">
+                {demande.pole?.nom && (
+                  <div>
+                    <span className="text-sm text-gray-600">Pôle concerné:</span>
+                    <p className="font-medium">{demande.pole.nom}</p>
+                  </div>
+                )}
+                <div>
+                  <span className="text-sm text-gray-600">Date de création:</span>
+                  <p className="font-medium">{formatDate(demande.created_at)}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-600">Statut actuel:</span>
+                  <span className={`inline-block ml-2 px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight shadow-md ${
+                    demande.statut === 'traite' ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white' :
+                    demande.statut === 'consulte' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white' :
+                    'bg-gradient-to-r from-orange-500 to-amber-600 text-white'
+                  }`}>
+                    {demande.statut}
+                  </span>
+                </div>
+                {typeof demande.contenu === 'string' && demande.contenu && (
+                  <div>
+                    <span className="text-sm text-gray-600 block mb-2">Contenu de la demande:</span>
+                    <div className="bg-gray-50 rounded p-3 whitespace-pre-wrap text-gray-700">
+                      {demande.contenu}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isRdvVisiteMedicale && (
+            <div className="bg-white border rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Détails de la notification
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <span className="text-sm text-gray-600">Date de création:</span>
+                  <p className="font-medium">{formatDate(demande.created_at)}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-600">Statut actuel:</span>
+                  <span className={`inline-block ml-2 px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight shadow-md ${
+                    demande.statut === 'traite' ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white' :
+                    demande.statut === 'consulte' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white' :
+                    'bg-gradient-to-r from-orange-500 to-amber-600 text-white'
+                  }`}>
+                    {demande.statut}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-600 block mb-2">Message:</span>
+                  <div className="bg-orange-50 rounded p-3 text-gray-700 border border-orange-200">
+                    {demande.description}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {demande.fichiers && demande.fichiers.length > 0 && (
             <div className="bg-white border rounded-lg p-4">
