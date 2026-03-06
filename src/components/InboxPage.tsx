@@ -67,6 +67,7 @@ interface TaskStats {
   completee: number;
   total: number;
   non_lus: number;
+  rdv_visite_medicale: number;
 }
 
 interface InboxPageProps {
@@ -80,11 +81,11 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
   const [demandesExternes, setDemandesExternes] = useState<DemandeExterne[]>([]);
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<TaskStats>({ en_attente: 0, en_cours: 0, completee: 0, total: 0, non_lus: 0 });
+  const [stats, setStats] = useState<TaskStats>({ en_attente: 0, en_cours: 0, completee: 0, total: 0, non_lus: 0, rdv_visite_medicale: 0 });
   const [selectedTask, setSelectedTask] = useState<Tache | null>(null);
   const [selectedDemandeExterne, setSelectedDemandeExterne] = useState<DemandeExterne | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'en_attente' | 'en_cours' | 'completee'>('all');
+  const [filter, setFilter] = useState<'all' | 'en_attente' | 'en_cours' | 'completee' | 'rdv_visite_medicale'>('all');
   const [currentPage, setCurrentPage] = useState(viewParams?.currentPage || 1);
   const itemsPerPage = 10;
 
@@ -320,12 +321,15 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
       ).length;
       const nonLusDemandes = formattedDemandes.filter(d => !d.lu).length;
 
+      const rdvVisiteMedicaleCount = formattedDemandes.filter(d => d.type === 'rdv_visite_medicale').length;
+
       const newStats = {
         en_attente: formattedTaches.filter((t) => t.statut === 'en_attente').length,
         en_cours: formattedTaches.filter((t) => t.statut === 'en_cours').length,
         completee: formattedTaches.filter((t) => t.statut === 'completee').length,
         total: allItems.length,
-        non_lus: nonLusTaches + nonLusDemandes
+        non_lus: nonLusTaches + nonLusDemandes,
+        rdv_visite_medicale: rdvVisiteMedicaleCount
       };
 
       console.log('📊 Page Inbox:', {
@@ -514,6 +518,10 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
 
   const filteredItems = filter === 'all'
     ? inboxItems
+    : filter === 'rdv_visite_medicale'
+    ? inboxItems.filter(item =>
+        item.itemType === 'demande_externe' && item.type === 'rdv_visite_medicale'
+      )
     : inboxItems.filter(item =>
         item.itemType === 'tache' && item.statut === filter
       );
@@ -566,11 +574,17 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <StatCard label="Total" value={stats.total} icon={<Inbox className="w-10 h-10 text-gray-500" />} />
         <StatCard label="En attente" value={stats.en_attente} icon={<Clock className="w-10 h-10 text-orange-500" />} />
         <StatCard label="En cours" value={stats.en_cours} icon={<AlertCircle className="w-10 h-10 text-amber-500" />} />
         <StatCard label="Complétées" value={stats.completee} icon={<CheckCircle className="w-10 h-10 text-emerald-500" />} />
+        <StatCard
+          label="RDV Visite Médicale"
+          value={stats.rdv_visite_medicale}
+          icon={<Calendar className="w-10 h-10 text-orange-500" />}
+          highlight={true}
+        />
       </div>
 
       <div className="bg-white rounded-xl shadow-md border border-gray-100">
@@ -579,6 +593,14 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
           <FilterButton active={filter === 'en_attente'} onClick={() => setFilter('en_attente')}>En attente ({stats.en_attente})</FilterButton>
           <FilterButton active={filter === 'en_cours'} onClick={() => setFilter('en_cours')}>En cours ({stats.en_cours})</FilterButton>
           <FilterButton active={filter === 'completee'} onClick={() => setFilter('completee')}>Complétées ({stats.completee})</FilterButton>
+          <FilterButton
+            active={filter === 'rdv_visite_medicale'}
+            onClick={() => setFilter('rdv_visite_medicale')}
+            rdv={true}
+          >
+            <Calendar className="w-4 h-4 inline mr-1" />
+            RDV Visite Médicale ({stats.rdv_visite_medicale})
+          </FilterButton>
         </div>
 
         <div className="py-2">
@@ -732,15 +754,23 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
   );
 }
 
-function StatCard({ label, value, icon }: any) {
+function StatCard({ label, value, icon, highlight }: any) {
   return (
-    <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-100">
+    <div className={`rounded-xl shadow-md hover:shadow-lg transition-all p-6 border ${
+      highlight
+        ? 'bg-gradient-to-br from-orange-50 to-amber-50 border-orange-300 ring-2 ring-orange-200 hover:ring-orange-300'
+        : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
+    }`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-gray-600 mb-1">{label}</p>
-          <p className="text-4xl font-bold text-gray-900">{value}</p>
+          <p className={`text-sm font-semibold mb-1 ${highlight ? 'text-orange-800' : 'text-gray-600'}`}>{label}</p>
+          <p className={`text-4xl font-bold ${highlight ? 'text-orange-700' : 'text-gray-900'}`}>{value}</p>
         </div>
-        <div className="bg-gradient-to-br from-gray-50 to-white p-3 rounded-xl shadow-sm">
+        <div className={`p-3 rounded-xl shadow-sm ${
+          highlight
+            ? 'bg-gradient-to-br from-orange-100 to-amber-100'
+            : 'bg-gradient-to-br from-gray-50 to-white'
+        }`}>
           {icon}
         </div>
       </div>
@@ -748,13 +778,17 @@ function StatCard({ label, value, icon }: any) {
   );
 }
 
-function FilterButton({ active, onClick, children }: any) {
+function FilterButton({ active, onClick, children, rdv }: any) {
   return (
     <button
       onClick={onClick}
-      className={`px-5 py-2.5 rounded-full font-bold transition-all duration-300 transform ${
+      className={`px-5 py-2.5 rounded-full font-bold transition-all duration-300 transform flex items-center gap-1 ${
         active
-          ? 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-lg scale-105 ring-2 ring-orange-300 ring-offset-2'
+          ? rdv
+            ? 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-lg scale-105 ring-2 ring-orange-300 ring-offset-2'
+            : 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-lg scale-105 ring-2 ring-orange-300 ring-offset-2'
+          : rdv
+          ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 hover:from-orange-200 hover:to-amber-200 hover:shadow-md hover:scale-102 border border-orange-300'
           : 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 hover:from-gray-200 hover:to-slate-200 hover:shadow-md hover:scale-102 border border-gray-300'
       }`}
     >
