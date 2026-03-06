@@ -8,7 +8,7 @@ interface MissingDocument {
   type: string;
   label: string;
   icon: any;
-  alreadyUploaded?: boolean;
+  status: 'pending' | 'already_uploaded' | 'uploaded';
 }
 
 export default function UploadAllMissingDocuments() {
@@ -131,7 +131,7 @@ export default function UploadAllMissingDocuments() {
               type: docType,
               label: config.label,
               icon: config.icon,
-              alreadyUploaded: alreadyExists
+              status: alreadyExists ? 'already_uploaded' : 'pending'
             });
           }
         });
@@ -162,7 +162,7 @@ export default function UploadAllMissingDocuments() {
                 type: docType,
                 label: config.label,
                 icon: config.icon,
-                alreadyUploaded: false
+                status: 'pending'
               });
             }
           });
@@ -357,25 +357,48 @@ export default function UploadAllMissingDocuments() {
       }
 
       console.log('✅ Document enregistré dans la base de données');
+      console.log('📊 État avant mise à jour:', {
+        documentType,
+        missingDocumentsBefore: missingDocuments.map(d => ({ type: d.type, status: d.status })),
+        uploadedDocsBefore: Array.from(uploadedDocs)
+      });
 
       const docConfig = REQUIRED_DOCUMENTS_MAP[documentType];
       const docLabel = docConfig?.label || documentType;
 
-      // Mettre à jour l'état local AVANT l'envoi de notification pour éviter des re-renders pendant les updates DOM
-      setUploadedDocs(prev => new Set(prev).add(documentType));
+      // CORRECTION CRITIQUE : Une seule mise à jour d'état groupée via React batch update
+      // On utilise un setTimeout pour garantir que les updates sont batchées ensemble
+      setTimeout(() => {
+        // 1. Marquer le document comme uploadé dans la liste
+        setMissingDocuments(prev => {
+          const updated = prev.map(doc =>
+            doc.type === documentType
+              ? { ...doc, status: 'uploaded' as const }
+              : doc
+          );
+          console.log('📊 missingDocuments après update:', updated.map(d => ({ type: d.type, status: d.status })));
+          return updated;
+        });
 
-      const newSelectedFiles = { ...selectedFiles };
-      delete newSelectedFiles[documentType];
-      setSelectedFiles(newSelectedFiles);
+        // 2. Nettoyer le fichier sélectionné
+        setSelectedFiles(prev => {
+          const newFiles = { ...prev };
+          delete newFiles[documentType];
+          console.log('📊 selectedFiles après suppression:', Object.keys(newFiles));
+          return newFiles;
+        });
 
-      // Marquer le document comme déjà uploadé dans la liste
-      setMissingDocuments(prev => prev.map(doc =>
-        doc.type === documentType
-          ? { ...doc, alreadyUploaded: true }
-          : doc
-      ));
+        // 3. Ajouter aux docs uploadés
+        setUploadedDocs(prev => {
+          const updated = new Set(prev).add(documentType);
+          console.log('📊 uploadedDocs après ajout:', Array.from(updated));
+          return updated;
+        });
 
-      setSuccessMessage(`${docLabel} a été envoyé avec succès !`);
+        // 4. Afficher le message de succès
+        setSuccessMessage(`${docLabel} a été envoyé avec succès !`);
+        console.log('✅ Toutes les mises à jour d\'état sont terminées');
+      }, 0);
 
       // Envoi de la notification en arrière-plan sans bloquer
       supabase.functions.invoke('notify-document-uploaded', {
@@ -426,13 +449,12 @@ export default function UploadAllMissingDocuments() {
     );
   }
 
-  const docsNeedingUpload = missingDocuments.filter(doc => !doc.alreadyUploaded);
-  const allDocsCompleted = docsNeedingUpload.length === 0 ||
-                           docsNeedingUpload.every(doc => uploadedDocs.has(doc.type));
+  const docsNeedingUpload = missingDocuments.filter(doc => doc.status === 'pending');
+  const allDocsCompleted = docsNeedingUpload.length === 0;
 
   if (allDocsCompleted && missingDocuments.length > 0) {
     const hasDocsFilter = !!docsParam;
-    const allAlreadyUploaded = docsNeedingUpload.length === 0;
+    const allAlreadyUploaded = missingDocuments.every(doc => doc.status === 'already_uploaded');
 
     const successMessage = allAlreadyUploaded
       ? 'Tous les documents demandés ont déjà été envoyés !'
@@ -469,10 +491,10 @@ export default function UploadAllMissingDocuments() {
     );
   }
 
-  const alreadyUploadedCount = missingDocuments.filter(doc => doc.alreadyUploaded).length;
-  const docsToUploadCount = missingDocuments.length - alreadyUploadedCount;
+  const alreadyUploadedCount = missingDocuments.filter(doc => doc.status === 'already_uploaded').length;
+  const uploadedCount = missingDocuments.filter(doc => doc.status === 'uploaded').length;
   const totalDocs = missingDocuments.length;
-  const completedDocs = alreadyUploadedCount + uploadedDocs.size;
+  const completedDocs = alreadyUploadedCount + uploadedCount;
   const documentTitle = totalDocs === 1 ? '📋 Document manquant' : '📋 Documents manquants';
 
   return (
@@ -536,38 +558,60 @@ export default function UploadAllMissingDocuments() {
               {missingDocuments.map((doc) => {
                 const Icon = doc.icon;
                 const isUploading = uploadingDocs.has(doc.type);
-                const isUploaded = uploadedDocs.has(doc.type);
                 const hasFile = selectedFiles[doc.type];
-                const alreadyUploaded = doc.alreadyUploaded;
+
+                // Log pour debug
+                console.log('🎨 Rendu document:', {
+                  type: doc.type,
+                  status: doc.status,
+                  isUploading,
+                  hasFile: !!hasFile
+                });
+
+                const isCompleted = doc.status === 'already_uploaded' || doc.status === 'uploaded';
+                const isPending = doc.status === 'pending';
 
                 return (
-                  <div key={doc.type} className={`bg-white border-2 rounded-xl p-4 sm:p-6 transition-colors shadow-lg ${alreadyUploaded ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-orange-300'}`}>
+                  <div
+                    key={doc.type}
+                    className={`bg-white border-2 rounded-xl p-4 sm:p-6 transition-colors shadow-lg ${
+                      isCompleted ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-orange-300'
+                    }`}
+                  >
                     <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                       <div className="flex items-center gap-3 min-w-0">
-                        <Icon className={`w-6 h-6 sm:w-7 sm:h-7 flex-shrink-0 ${alreadyUploaded ? 'text-green-600' : 'text-orange-600'}`} />
+                        <Icon className={`w-6 h-6 sm:w-7 sm:h-7 flex-shrink-0 ${isCompleted ? 'text-green-600' : 'text-orange-600'}`} />
                         <h3 className="text-base sm:text-lg font-bold text-gray-800 break-words">{doc.label}</h3>
                       </div>
-                      {alreadyUploaded && (
+                      {isCompleted && (
                         <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full">
                           <CheckCircle className="w-5 h-5" />
-                          <span className="font-semibold">Déjà envoyé</span>
+                          <span className="font-semibold">
+                            {doc.status === 'already_uploaded' ? 'Déjà envoyé' : 'Document envoyé'}
+                          </span>
                         </div>
                       )}
                     </div>
 
-                    {alreadyUploaded ? (
-                      <div className="bg-green-100 border border-green-300 rounded-lg p-6 text-center">
-                        <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
-                        <p className="text-green-800 font-semibold text-lg">
-                          Ce document a déjà été téléchargé
-                        </p>
-                        <p className="text-green-700 text-sm mt-2">
-                          Vous n'avez pas besoin de l'envoyer à nouveau
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                    {!hasFile && !isUploaded && (
+                    {/* Structure DOM STABLE : toujours le même conteneur */}
+                    <div className="document-content-wrapper">
+                      {isCompleted ? (
+                        <div className="bg-green-100 border border-green-300 rounded-lg p-6 text-center">
+                          <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                          <p className="text-green-800 font-semibold text-lg">
+                            {doc.status === 'already_uploaded'
+                              ? 'Ce document a déjà été téléchargé'
+                              : 'Document téléchargé avec succès !'}
+                          </p>
+                          <p className="text-green-700 text-sm mt-2">
+                            {doc.status === 'already_uploaded'
+                              ? 'Vous n\'avez pas besoin de l\'envoyer à nouveau'
+                              : 'Merci, votre document a bien été reçu'}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                    {!hasFile && isPending && (
                       <>
                         {/* Boutons d'action en haut - TOUJOURS VISIBLES */}
                         <div className={`grid gap-3 mb-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
@@ -648,7 +692,7 @@ export default function UploadAllMissingDocuments() {
                       </>
                     )}
 
-                    {hasFile && !isUploaded && (
+                    {hasFile && isPending && (
                       <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-5 shadow-lg">
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -689,17 +733,9 @@ export default function UploadAllMissingDocuments() {
                         </button>
                       </div>
                     )}
-
-                    {!alreadyUploaded && isUploaded && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                          <span className="text-green-800 font-medium">Document téléchargé avec succès !</span>
-                        </div>
-                      </div>
-                    )}
-                      </>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })}
