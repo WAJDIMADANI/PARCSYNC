@@ -527,7 +527,7 @@ export default function UploadAllMissingDocuments() {
               <div className="mb-6 bg-orange-50 border-l-4 border-orange-500 p-4 rounded-lg shadow-md">
                 <p className="text-orange-800 text-sm font-medium">
                   <strong className="block mb-1 text-base">📱 Astuce mobile</strong>
-                  Les boutons sont placés en haut de chaque document pour être toujours visibles. Utilisez "Prendre une photo" pour capturer directement !
+                  Les boutons sont placés en haut de chaque document pour être toujours visibles. Utilisez "Prendre une photo\" pour capturer directement !
                 </p>
               </div>
             )}
