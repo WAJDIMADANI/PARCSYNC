@@ -181,8 +181,77 @@ Les notifications RDV créées par le CRON ou le trigger apparaissent immédiate
 4. **Export** - Exporter la liste des RDV au format CSV/PDF
 5. **Rappels personnalisés** - Permettre aux utilisateurs de personnaliser quand ils veulent être notifiés
 
-## Notes
+## ⚠️ Important : Affichage complet de TOUS les RDV
 
-- La carte RDV compte **toutes** les notifications RDV (ouvertes ET traitées)
-- Le filtre affiche **toutes** les notifications RDV peu importe leur statut
-- Pour compter uniquement les RDV ouverts, il faudrait filtrer sur `statut === 'ouvert'`
+### Ce qui est affiché
+
+La carte et le filtre RDV affichent **TOUS** les RDV visite médicale sans exception :
+
+✅ **RDV à venir** (date future)
+✅ **RDV passés** (date passée)
+✅ **RDV lus** (notification déjà consultée)
+✅ **RDV non lus** (notification jamais ouverte)
+✅ **RDV consultés** (`statut = 'consulte'`)
+✅ **RDV traités** (`statut = 'traite'`)
+✅ **RDV ouverts** (`statut = 'ouvert'`)
+
+### Pourquoi ce choix ?
+
+Ce comportement permet de :
+1. **Avoir un historique complet** - Voir tous les RDV passés et futurs
+2. **Retrouver facilement** - Chercher un RDV même s'il a été traité
+3. **Suivre le processus** - Voir l'évolution des RDV (ouvert → consulté → traité)
+4. **Éviter les oublis** - Aucun RDV n'est caché
+
+### Détails techniques
+
+```typescript
+// Comptage SANS filtre
+const rdvVisiteMedicale = formattedDemandes.filter(
+  d => d.type === 'rdv_visite_medicale'
+);
+// Pas de filtre sur statut, lu, ou date !
+```
+
+### Console de debug
+
+Un log détaillé est disponible dans la console du navigateur :
+```javascript
+📅 RDV Visite Médicale détails: {
+  total: 5,              // Nombre total
+  lus: 3,                // Nombre de RDV lus
+  nonLus: 2,             // Nombre de RDV non lus
+  consultes: 2,          // Statut "consulte"
+  traites: 1,            // Statut "traite"
+  ouverts: 2,            // Statut "ouvert"
+  liste: [...]           // Liste complète avec détails
+}
+```
+
+### Si vous voulez filtrer
+
+Pour afficher uniquement certains RDV, vous pouvez modifier le compteur :
+
+**Exemple : Seulement les RDV non traités**
+```typescript
+const rdvVisiteMedicaleCount = formattedDemandes.filter(
+  d => d.type === 'rdv_visite_medicale' && d.statut !== 'traite'
+).length;
+```
+
+**Exemple : Seulement les RDV non lus**
+```typescript
+const rdvVisiteMedicaleCount = formattedDemandes.filter(
+  d => d.type === 'rdv_visite_medicale' && !d.lu
+).length;
+```
+
+**Exemple : Seulement les RDV à venir (si date_rdv existe)**
+```typescript
+const rdvVisiteMedicaleCount = formattedDemandes.filter(
+  d => d.type === 'rdv_visite_medicale' &&
+       new Date(d.date_rdv) > new Date()
+).length;
+```
+
+Mais **actuellement, TOUS les RDV sont affichés** par défaut.
