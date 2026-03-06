@@ -15,27 +15,15 @@ import { supabase } from './lib/supabase';
 
 function AppContent() {
   const { user, loading } = useAuth();
-  const path = window.location.pathname;
   const [needsAdminSetup, setNeedsAdminSetup] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
-
-  // Debug log
-  console.log('AppContent render:', {
-    loading,
-    checkingSetup,
-    hasUser: !!user,
-    path,
-    needsAdminSetup
-  });
 
   useEffect(() => {
     let isMounted = true;
 
     const checkAdminSetup = async () => {
-      console.log('checkAdminSetup running, user:', user?.id);
       try {
         if (!user) {
-          console.log('No user, stopping setup check');
           if (isMounted) {
             setCheckingSetup(false);
           }
@@ -54,7 +42,6 @@ function AppContent() {
         if (!isMounted) return;
 
         if (!allUsers || allUsers.length === 0) {
-          console.log('Aucun utilisateur en base - afficher FirstAdminSetup');
           setNeedsAdminSetup(true);
           setCheckingSetup(false);
           return;
@@ -73,7 +60,6 @@ function AppContent() {
         if (!isMounted) return;
 
         if (!currentUserData) {
-          console.log('Utilisateur connecté non trouvé - création');
           const { error: createError } = await supabase
             .from('app_utilisateur')
             .insert({
@@ -85,10 +71,6 @@ function AppContent() {
             });
 
           if (createError) throw createError;
-
-          console.log('Utilisateur créé avec succès');
-        } else {
-          console.log('Utilisateur connecté trouvé:', currentUserData.email);
         }
 
         if (isMounted) {
@@ -113,7 +95,29 @@ function AppContent() {
     };
   }, [user?.id]);
 
-  // Routes publiques accessibles sans authentification
+  if (loading || checkingSetup) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  if (needsAdminSetup) {
+    return <FirstAdminSetup onComplete={() => setNeedsAdminSetup(false)} />;
+  }
+
+  return <Dashboard />;
+}
+
+function App() {
+  const path = window.location.pathname;
+
+  // Routes publiques - rendu AVANT les providers pour éviter les effets de bord
   if (path === '/apply' || path.startsWith('/apply/')) {
     return <Apply source="apply" />;
   }
@@ -146,26 +150,7 @@ function AppContent() {
     return <SetPassword />;
   }
 
-  if (loading || checkingSetup) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Login />;
-  }
-
-  if (needsAdminSetup) {
-    return <FirstAdminSetup onComplete={() => setNeedsAdminSetup(false)} />;
-  }
-
-  return <Dashboard />;
-}
-
-function App() {
+  // Routes authentifiées - enveloppées par les providers
   return (
     <AuthProvider>
       <PermissionsProvider>
