@@ -194,7 +194,24 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
 
       let formattedDemandes: (DemandeExterne & { itemType: 'demande_externe' })[] = [];
 
-      console.log('🔍 Tous les messages inbox:', inboxResult.data?.map(x => ({ titre: x.titre, reference_type: x.reference_type, type: x.type })));
+      console.log('🔍 Tous les messages inbox bruts:', inboxResult.data?.map(x => ({
+        id: x.id,
+        titre: x.titre,
+        reference_type: x.reference_type,
+        type: x.type,
+        statut: x.statut,
+        lu: x.lu
+      })));
+
+      const rdvDansInbox = inboxResult.data?.filter(x => x.type === 'rdv_visite_medicale') || [];
+      console.log('🔍 RDV dans inbox (brut):', rdvDansInbox.length, 'trouvés', rdvDansInbox.map(r => ({
+        id: r.id,
+        titre: r.titre,
+        statut: r.statut,
+        lu: r.lu,
+        created_at: r.created_at
+      })));
+
       console.log('Chargement messages inbox...');
       console.log('Inbox result:', inboxResult.data?.length || 0, 'entrées', inboxResult.error);
 
@@ -320,6 +337,14 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
         (t.expediteur_id === appUserId && !t.lu_par_expediteur)
       ).length;
       const nonLusDemandes = formattedDemandes.filter(d => !d.lu).length;
+
+      console.log('🔍 formattedDemandes total:', formattedDemandes.length, formattedDemandes.map(d => ({
+        id: d.id,
+        titre: d.titre,
+        type: d.type,
+        statut: d.statut,
+        lu: d.lu
+      })));
 
       const rdvVisiteMedicale = formattedDemandes.filter(d => d.type === 'rdv_visite_medicale');
       const rdvVisiteMedicaleCount = rdvVisiteMedicale.length;
