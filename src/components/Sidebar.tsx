@@ -86,7 +86,8 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (!user) return;
+    // Vérification explicite que user ET user.id existent
+    if (!user || !user.id) return;
 
     const fetchInboxCount = async () => {
       try {
@@ -100,6 +101,8 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         setInboxCount(data?.length || 0);
       } catch (error) {
         console.error('Erreur chargement inbox count:', error);
+        // En cas d'erreur, ne pas mettre le compteur à 0
+        // pour éviter d'afficher une information incorrecte
       }
     };
 
