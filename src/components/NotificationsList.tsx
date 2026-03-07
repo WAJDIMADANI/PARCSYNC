@@ -204,7 +204,8 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
       // 6. Combiner toutes les notifications et éliminer les doublons
       // Stratégie : si une notification existe déjà pour le même type + profil_id + date_echeance,
       // on garde celle de la table notification (car elle peut avoir un statut mis à jour)
-      const allNotifications = [...(notifData || [])];
+      // IMPORTANT : Filtrer les notifications dont le profil est inactif
+      const allNotifications = (notifData || []).filter(n => n.profil?.statut !== 'inactif');
 
       const existingKeys = new Set(
         allNotifications.map(n => {
