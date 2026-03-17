@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, UserPlus, FileText, Bell, Mail, CheckCircle,
   BarChart3, Download, Settings, ChevronDown, ChevronRight,
-  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard, MapPin, HeartHandshake, Clock, Banknote, MessageSquare, XCircle
+  Building, Tag, FileCode, Car, Fuel, AlertTriangle, Shield, Wrench, Sparkles, FolderOpen, Briefcase, Archive, Upload, AlertCircle, History, Phone, FileCheck, FileWarning, CheckSquare, Inbox, ExternalLink, TrendingUp, TrendingDown, CreditCard, MapPin, HeartHandshake, Clock, Banknote, MessageSquare, XCircle, Database
 } from 'lucide-react';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { supabase } from '../lib/supabase';
@@ -55,7 +55,8 @@ export type View =
   | 'admin/import-salarie'
   | 'admin/import-bulk'
   | 'admin/utilisateurs'
-  | 'admin/demandes-externes';
+  | 'admin/demandes-externes'
+  | 'admin/import-vehicle-references';
 
 interface SidebarProps {
   currentView: View;
@@ -231,6 +232,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'admin/import-bulk', label: 'Import en Masse', icon: Upload, enabled: true },
         { id: 'admin/utilisateurs', label: 'Utilisateurs', icon: Users, enabled: true },
         { id: 'admin/demandes-externes', label: 'Demandes Externes', icon: ExternalLink, enabled: true },
+        { id: 'admin/import-vehicle-references', label: 'Import Références Véhicules', icon: Database, enabled: true },
       ]
     },
   ];

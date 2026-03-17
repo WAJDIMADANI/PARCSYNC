@@ -43,6 +43,7 @@ import AccountingDashboard from './AccountingDashboard';
 import { CRMEmails } from './CRMEmails';
 import { CRMSms } from './CRMSms';
 import LocatairesExternesManager from './LocatairesExternesManager';
+import { ImportVehicleReferences } from './ImportVehicleReferences';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('dashboards/rh');
@@ -169,6 +170,8 @@ export function Dashboard() {
         return <UserManagement />;
       case 'admin/demandes-externes':
         return <DemandesExternesManager />;
+      case 'admin/import-vehicle-references':
+        return <ImportVehicleReferences />;
       default:
         return <CandidateList />;
     }
@@ -223,6 +226,7 @@ export function Dashboard() {
                 {view === 'admin/import-bulk' && 'Import en Masse'}
                 {view === 'admin/utilisateurs' && 'Gestion des Utilisateurs'}
                 {view === 'admin/demandes-externes' && 'Demandes Externes'}
+                {view === 'admin/import-vehicle-references' && 'Import Références Véhicules'}
               </h2>
             </div>
 
