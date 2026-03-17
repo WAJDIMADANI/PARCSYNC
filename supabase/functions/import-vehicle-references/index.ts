@@ -50,27 +50,17 @@ Deno.serve(async (req: Request) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      throw new Error('Unauthorized');
-    }
-
-    const { data: permissions } = await supabase
-      .from('user_permissions')
-      .select('permission')
-      .eq('user_id', user.id);
-
-    const hasPermission = permissions?.some(
-      p => p.permission === 'manage_vehicle_references' || p.permission === 'super_admin'
-    );
-
-    if (!hasPermission) {
       return new Response(
-        JSON.stringify({ error: 'Permission denied. Requires manage_vehicle_references or super_admin.' }),
+        JSON.stringify({ error: 'Unauthorized. Please login.' }),
         {
-          status: 403,
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
     }
+
+    console.log(`[Import] User authenticated: ${user.email}`);
+
 
     const { mode } = await req.json();
 
