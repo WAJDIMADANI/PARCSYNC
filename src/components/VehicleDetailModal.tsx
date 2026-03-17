@@ -1,25 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import {
-  X,
-  Car,
-  Edit,
-  Save,
-  Upload,
-  Trash2,
-  Plus,
-  Calendar,
-  User,
-  FileText,
-  Clock,
-  Download,
-  Gauge,
-  Package,
-  CreditCard,
-  Shield,
-  History,
-  ShoppingCart
-} from 'lucide-react';
+import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Plus, Calendar, User, FileText, Clock, Download, Gauge, Package, CreditCard, Shield, History, ShoppingCart } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { AttributionModal } from './AttributionModal';
 import { UpdateKilometrageModal } from './UpdateKilometrageModal';
@@ -47,6 +28,9 @@ interface Vehicle {
   ref_tca: string | null;
   marque: string | null;
   modele: string | null;
+  finition: string | null;
+  energie: string | null;
+  couleur: string | null;
   annee: number | null;
   type: string | null;
   statut: string;
@@ -264,7 +248,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       }
     });
 
-    const stringFields = ['ref_tca', 'marque', 'modele', 'type', 'fournisseur', 'mode_acquisition', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero', 'locataire_nom_libre', 'proprietaire_carte_grise'];
+    const stringFields = ['ref_tca', 'marque', 'modele', 'finition', 'energie', 'couleur', 'type', 'fournisseur', 'mode_acquisition', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero', 'locataire_nom_libre', 'proprietaire_carte_grise'];
     stringFields.forEach(field => {
       if (cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -301,6 +285,9 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         ref_tca: editedVehicle.ref_tca,
         marque: editedVehicle.marque,
         modele: editedVehicle.modele,
+        finition: editedVehicle.finition,
+        energie: editedVehicle.energie,
+        couleur: editedVehicle.couleur,
         annee: editedVehicle.annee,
         type: editedVehicle.type,
         statut: editedVehicle.statut,
@@ -777,6 +764,56 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                         value={editedVehicle.modele || ''}
                         onChange={(e) => setEditedVehicle({ ...editedVehicle, modele: e.target.value })}
                         disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Finition</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.finition || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, finition: e.target.value })}
+                        disabled={!isEditing}
+                        placeholder="Ex: Premium, Business, etc."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Énergie</label>
+                      {isEditing ? (
+                        <select
+                          value={editedVehicle.energie || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, energie: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">-- Sélectionner --</option>
+                          <option value="Diesel">Diesel</option>
+                          <option value="Essence">Essence</option>
+                          <option value="Électrique">Électrique</option>
+                          <option value="Hybride">Hybride</option>
+                          <option value="Hybride rechargeable">Hybride rechargeable</option>
+                          <option value="GPL">GPL</option>
+                          <option value="GNV">GNV</option>
+                          <option value="Hydrogène">Hydrogène</option>
+                          <option value="Autre">Autre</option>
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={editedVehicle.energie || ''}
+                          disabled
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Couleur</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.couleur || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, couleur: e.target.value })}
+                        disabled={!isEditing}
+                        placeholder="Ex: Blanc, Noir, Gris, etc."
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                       />
                     </div>

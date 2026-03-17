@@ -37,6 +37,9 @@ interface Vehicle {
   ref_tca: string | null;
   marque: string | null;
   modele: string | null;
+  finition: string | null;
+  energie: string | null;
+  couleur: string | null;
   annee: number | null;
   type: string | null;
   statut: string;

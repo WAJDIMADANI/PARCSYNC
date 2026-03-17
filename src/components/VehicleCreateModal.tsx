@@ -13,6 +13,9 @@ interface VehicleFormData {
   ref_tca: string;
   marque: string;
   modele: string;
+  finition: string;
+  energie: string;
+  couleur: string;
   annee: number | '';
   type: string;
   date_premiere_mise_en_circulation: string;
@@ -97,6 +100,9 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     ref_tca: '',
     marque: '',
     modele: '',
+    finition: '',
+    energie: '',
+    couleur: '',
     annee: '',
     type: 'VL',
     date_premiere_mise_en_circulation: '',
@@ -360,6 +366,9 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
 
       const vehicleData = cleanPayloadForInsert({
         ...formData,
+        finition: formData.finition || null,
+        energie: formData.energie || null,
+        couleur: formData.couleur || null,
         derniere_maj_kilometrage: formData.kilometrage_actuel ? new Date().toISOString().split('T')[0] : null,
         materiel_embarque: equipments.filter(eq => eq.type && eq.quantite > 0),
         photo_path: photoPath,
@@ -580,6 +589,61 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
                   </div>
                 )}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Finition</label>
+              <input
+                type="text"
+                value={formData.finition}
+                onChange={(e) => handleInputChange('finition', e.target.value)}
+                placeholder="Ex: Premium, Business, etc."
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Énergie</label>
+              <select
+                value={formData.energie}
+                onChange={(e) => handleInputChange('energie', e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              >
+                <option value="">-- Sélectionner --</option>
+                <option value="Diesel">Diesel</option>
+                <option value="Essence">Essence</option>
+                <option value="Électrique">Électrique</option>
+                <option value="Hybride">Hybride</option>
+                <option value="Hybride rechargeable">Hybride rechargeable</option>
+                <option value="GPL">GPL</option>
+                <option value="GNV">GNV</option>
+                <option value="Hydrogène">Hydrogène</option>
+                <option value="Autre">Autre</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Couleur</label>
+              <input
+                type="text"
+                value={formData.couleur}
+                onChange={(e) => handleInputChange('couleur', e.target.value)}
+                placeholder="Ex: Blanc, Noir, Gris, etc."
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Année</label>
+              <input
+                type="number"
+                value={formData.annee}
+                onChange={(e) => handleInputChange('annee', e.target.value ? parseInt(e.target.value) : '')}
+                placeholder="Ex: 2024"
+                min="1900"
+                max="2100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
             </div>
 
             <div>
