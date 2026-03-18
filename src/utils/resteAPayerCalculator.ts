@@ -8,16 +8,25 @@ export function calculateResteAPayer(
   }
 
   const dateDebut = new Date(dateDebutContrat);
-  const aujourd = new Date();
+  const aujourdhui = new Date();
 
-  const moisEcoules = Math.max(0,
-    (aujourd.getFullYear() - dateDebut.getFullYear()) * 12 +
-    (aujourd.getMonth() - dateDebut.getMonth())
-  );
+  let mensualitesEcoulees = 0;
 
-  const moisRestants = Math.max(0, Number(dureeContratMois) - moisEcoules);
+  if (aujourdhui >= dateDebut) {
+    const ecartMois =
+      (aujourdhui.getFullYear() - dateDebut.getFullYear()) * 12 +
+      (aujourdhui.getMonth() - dateDebut.getMonth());
 
-  const resteAPayer = moisRestants * Number(mensualiteTtc);
+    if (aujourdhui.getDate() >= dateDebut.getDate()) {
+      mensualitesEcoulees = ecartMois + 1;
+    } else {
+      mensualitesEcoulees = ecartMois;
+    }
+  }
+
+  const mensualitesRestantes = Math.max(0, Number(dureeContratMois) - mensualitesEcoulees);
+
+  const resteAPayer = mensualitesRestantes * Number(mensualiteTtc);
 
   return Math.round(resteAPayer * 100) / 100;
 }
