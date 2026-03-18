@@ -257,6 +257,19 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     }
   };
 
+  // Recalcul automatique de la date de fin prévue du contrat
+  useEffect(() => {
+    if (formData.date_debut_contrat && formData.duree_contrat_mois) {
+      const dateDebut = new Date(formData.date_debut_contrat);
+      const dateFin = new Date(dateDebut);
+      dateFin.setMonth(dateFin.getMonth() + Number(formData.duree_contrat_mois));
+      const dateFinFormatted = dateFin.toISOString().split('T')[0];
+      setFormData(prev => ({ ...prev, date_fin_prevue_contrat: dateFinFormatted }));
+    } else {
+      setFormData(prev => ({ ...prev, date_fin_prevue_contrat: '' }));
+    }
+  }, [formData.date_debut_contrat, formData.duree_contrat_mois]);
+
   // Recalcul automatique du reste à payer TTC
   useEffect(() => {
     const resteAPayer = calculateResteAPayer(
@@ -352,14 +365,14 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
   const cleanPayloadForInsert = (data: any) => {
     const cleaned = { ...data };
 
-    const dateFields = ['date_premiere_mise_en_circulation', 'date_mise_en_service', 'derniere_maj_kilometrage'];
+    const dateFields = ['date_premiere_mise_en_circulation', 'date_mise_en_service', 'date_debut_contrat', 'date_fin_prevue_contrat', 'derniere_maj_kilometrage'];
     dateFields.forEach(field => {
       if (cleaned[field] === '' || cleaned[field] === undefined) {
         cleaned[field] = null;
       }
     });
 
-    const integerFields = ['annee', 'kilometrage_actuel'];
+    const integerFields = ['annee', 'kilometrage_actuel', 'duree_contrat_mois'];
     integerFields.forEach(field => {
       if (cleaned[field] === '' || cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -369,7 +382,17 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
       }
     });
 
-    const textFields = ['financeur_nom', 'financeur_adresse', 'financeur_code_postal', 'financeur_ville', 'financeur_telephone'];
+    const numericFields = ['prix_ht', 'prix_ttc', 'mensualite_ht', 'mensualite_ttc', 'reste_a_payer_ttc'];
+    numericFields.forEach(field => {
+      if (cleaned[field] === '' || cleaned[field] === undefined) {
+        cleaned[field] = null;
+      } else if (typeof cleaned[field] === 'string') {
+        const num = Number(cleaned[field]);
+        cleaned[field] = isNaN(num) ? null : num;
+      }
+    });
+
+    const textFields = ['fournisseur', 'financeur_nom', 'financeur_adresse', 'financeur_code_postal', 'financeur_ville', 'financeur_telephone', 'mode_acquisition'];
     textFields.forEach(field => {
       if (cleaned[field] === '' || cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -951,13 +974,14 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Date fin prévue</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Date fin prévue (calculée)</label>
                     <input
                       type="date"
                       value={formData.date_fin_prevue_contrat}
-                      onChange={(e) => handleInputChange('date_fin_prevue_contrat', e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      readOnly
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
                     />
+                    <p className="text-sm text-gray-500 mt-1">Calculée automatiquement en fonction de la date de début et durée</p>
                   </div>
                 </div>
 
