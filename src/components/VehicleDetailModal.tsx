@@ -10,6 +10,7 @@ import { AttributionHistoryModal } from './AttributionHistoryModal';
 import { SuccessModal } from './SuccessModal';
 import { ProprietaireSelector } from './ProprietaireSelector';
 import { parseProprietaireCarteGrise, formatProprietaireCarteGrise } from '../utils/proprietaireParser';
+import { calculateResteAPayer } from '../utils/resteAPayerCalculator';
 
 interface Chauffeur {
   id: string;
@@ -52,6 +53,7 @@ interface Vehicle {
   duree_contrat_mois: number | null;
   date_debut_contrat: string | null;
   date_fin_prevue_contrat: string | null;
+  reste_a_payer_ttc: number | null;
   photo_path: string | null;
   site_id: string | null;
   assurance_type: 'tca' | 'externe' | null;
@@ -193,6 +195,16 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
     setProprietaireEntrepriseAddress(parsed.entrepriseAddress);
   }, [vehicle.proprietaire_carte_grise]);
 
+  // Recalcul automatique du reste à payer TTC
+  useEffect(() => {
+    const resteAPayer = calculateResteAPayer(
+      editedVehicle.date_debut_contrat || '',
+      editedVehicle.duree_contrat_mois || '',
+      editedVehicle.mensualite_ttc || ''
+    );
+    setEditedVehicle(prev => ({ ...prev, reste_a_payer_ttc: resteAPayer }));
+  }, [editedVehicle.date_debut_contrat, editedVehicle.duree_contrat_mois, editedVehicle.mensualite_ttc]);
+
   const fetchAttributions = async () => {
     setLoadingAttributions(true);
     try {
@@ -261,7 +273,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       }
     });
 
-    const numericFields = ['prix_ht', 'prix_ttc', 'mensualite_ht', 'mensualite_ttc', 'duree_contrat_mois'];
+    const numericFields = ['prix_ht', 'prix_ttc', 'mensualite_ht', 'mensualite_ttc', 'duree_contrat_mois', 'reste_a_payer_ttc'];
     numericFields.forEach(field => {
       if (cleaned[field] === '' || cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -1724,6 +1736,17 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                             />
                           </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Reste à payer TTC (calculé automatiquement)</label>
+                          <input
+                            type="text"
+                            value={editedVehicle.reste_a_payer_ttc !== null ? `${editedVehicle.reste_a_payer_ttc} €` : '0.00 €'}
+                            readOnly
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-medium"
+                          />
+                          <p className="text-sm text-gray-500 mt-1">Calculé automatiquement en fonction de la date de début, durée et mensualité</p>
                         </div>
                       </>
                     )}

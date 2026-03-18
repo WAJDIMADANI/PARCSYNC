@@ -4,6 +4,7 @@ import { X, ChevronLeft, ChevronRight, Check, Car, FileText, Image as ImageIcon,
 import { LoadingSpinner } from './LoadingSpinner';
 import { ProprietaireSelector } from './ProprietaireSelector';
 import { formatProprietaireCarteGrise } from '../utils/proprietaireParser';
+import { calculateResteAPayer } from '../utils/resteAPayerCalculator';
 
 interface VehicleCreateModalProps {
   onClose: () => void;
@@ -36,6 +37,7 @@ interface VehicleFormData {
   duree_contrat_mois: number | '';
   date_debut_contrat: string;
   date_fin_prevue_contrat: string;
+  reste_a_payer_ttc: number | '';
   assurance_type: 'tca' | 'externe';
   assurance_compagnie: string;
   assurance_numero_contrat: string;
@@ -135,6 +137,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     duree_contrat_mois: '',
     date_debut_contrat: '',
     date_fin_prevue_contrat: '',
+    reste_a_payer_ttc: '',
     assurance_type: 'tca',
     assurance_compagnie: '',
     assurance_numero_contrat: '',
@@ -253,6 +256,16 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
       console.error('Erreur vérification immatriculation:', error);
     }
   };
+
+  // Recalcul automatique du reste à payer TTC
+  useEffect(() => {
+    const resteAPayer = calculateResteAPayer(
+      formData.date_debut_contrat,
+      formData.duree_contrat_mois,
+      formData.mensualite_ttc
+    );
+    setFormData(prev => ({ ...prev, reste_a_payer_ttc: resteAPayer }));
+  }, [formData.date_debut_contrat, formData.duree_contrat_mois, formData.mensualite_ttc]);
 
   const handleInputChange = (field: keyof VehicleFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -946,6 +959,17 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Reste à payer TTC (calculé automatiquement)</label>
+                  <input
+                    type="text"
+                    value={formData.reste_a_payer_ttc !== '' ? `${formData.reste_a_payer_ttc} €` : '0.00 €'}
+                    readOnly
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-medium"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">Calculé automatiquement en fonction de la date de début, durée et mensualité</p>
                 </div>
               </>
             )}
