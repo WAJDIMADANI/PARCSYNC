@@ -21,6 +21,12 @@ interface VehicleFormData {
   date_premiere_mise_en_circulation: string;
   date_mise_en_service: string;
   fournisseur: string;
+  financeur_nom: string;
+  financeur_adresse: string;
+  financeur_code_postal: string;
+  financeur_ville: string;
+  financeur_telephone: string;
+  proprietaire_carte_grise: string;
   mode_acquisition: string;
   prix_ht: number | '';
   prix_ttc: number | '';
@@ -108,6 +114,12 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     date_premiere_mise_en_circulation: '',
     date_mise_en_service: '',
     fournisseur: '',
+    financeur_nom: '',
+    financeur_adresse: '',
+    financeur_code_postal: '',
+    financeur_ville: '',
+    financeur_telephone: '',
+    proprietaire_carte_grise: '',
     mode_acquisition: '',
     prix_ht: '',
     prix_ttc: '',
@@ -334,6 +346,13 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
       } else if (typeof cleaned[field] === 'string') {
         const num = Number(cleaned[field]);
         cleaned[field] = isNaN(num) ? null : num;
+      }
+    });
+
+    const textFields = ['financeur_nom', 'financeur_adresse', 'financeur_code_postal', 'financeur_ville', 'financeur_telephone', 'proprietaire_carte_grise'];
+    textFields.forEach(field => {
+      if (cleaned[field] === '' || cleaned[field] === undefined) {
+        cleaned[field] = null;
       }
     });
 
@@ -714,6 +733,74 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
                 value={formData.fournisseur}
                 onChange={(e) => handleInputChange('fournisseur', e.target.value)}
                 placeholder="Ex: Renault Trucks, Peugeot, Mercedes..."
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Financeur</label>
+              <input
+                type="text"
+                value={formData.financeur_nom}
+                onChange={(e) => handleInputChange('financeur_nom', e.target.value)}
+                placeholder="Ex: BNP Paribas Lease Group, Arval, ALD..."
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Adresse du financeur</label>
+              <input
+                type="text"
+                value={formData.financeur_adresse}
+                onChange={(e) => handleInputChange('financeur_adresse', e.target.value)}
+                placeholder="Ex: 12 rue de la Banque"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Code postal du financeur</label>
+                <input
+                  type="text"
+                  value={formData.financeur_code_postal}
+                  onChange={(e) => handleInputChange('financeur_code_postal', e.target.value)}
+                  placeholder="Ex: 75001"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Ville du financeur</label>
+                <input
+                  type="text"
+                  value={formData.financeur_ville}
+                  onChange={(e) => handleInputChange('financeur_ville', e.target.value)}
+                  placeholder="Ex: Paris"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone du financeur</label>
+              <input
+                type="tel"
+                value={formData.financeur_telephone}
+                onChange={(e) => handleInputChange('financeur_telephone', e.target.value)}
+                placeholder="Ex: 01 23 45 67 89"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Appartenance (propriétaire carte grise)</label>
+              <input
+                type="text"
+                value={formData.proprietaire_carte_grise}
+                onChange={(e) => handleInputChange('proprietaire_carte_grise', e.target.value)}
+                placeholder="Ex: TCA, Entreprise locataire..."
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>

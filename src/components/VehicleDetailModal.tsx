@@ -37,6 +37,12 @@ interface Vehicle {
   date_mise_en_service: string | null;
   date_premiere_mise_en_circulation: string | null;
   fournisseur: string | null;
+  financeur_nom: string | null;
+  financeur_adresse: string | null;
+  financeur_code_postal: string | null;
+  financeur_ville: string | null;
+  financeur_telephone: string | null;
+  proprietaire_carte_grise: string | null;
   mode_acquisition: string | null;
   prix_ht: number | null;
   prix_ttc: number | null;
@@ -63,7 +69,6 @@ interface Vehicle {
   locataire_type: string | null;
   locataire_nom_libre: string | null;
   locataire_affiche: string; // Calculé par la vue v_vehicles_list_ui
-  proprietaire_carte_grise: string | null;
 }
 
 interface Attribution {
@@ -248,7 +253,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       }
     });
 
-    const stringFields = ['ref_tca', 'marque', 'modele', 'finition', 'energie', 'couleur', 'type', 'fournisseur', 'mode_acquisition', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero', 'locataire_nom_libre', 'proprietaire_carte_grise'];
+    const stringFields = ['ref_tca', 'marque', 'modele', 'finition', 'energie', 'couleur', 'type', 'fournisseur', 'financeur_nom', 'financeur_adresse', 'financeur_code_postal', 'financeur_ville', 'financeur_telephone', 'proprietaire_carte_grise', 'mode_acquisition', 'assurance_compagnie', 'assurance_numero_contrat', 'licence_transport_numero', 'carte_essence_fournisseur', 'carte_essence_numero', 'locataire_nom_libre'];
     stringFields.forEach(field => {
       if (cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -294,6 +299,12 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         date_mise_en_service: editedVehicle.date_mise_en_service,
         date_premiere_mise_en_circulation: editedVehicle.date_premiere_mise_en_circulation,
         fournisseur: editedVehicle.fournisseur,
+        financeur_nom: editedVehicle.financeur_nom,
+        financeur_adresse: editedVehicle.financeur_adresse,
+        financeur_code_postal: editedVehicle.financeur_code_postal,
+        financeur_ville: editedVehicle.financeur_ville,
+        financeur_telephone: editedVehicle.financeur_telephone,
+        proprietaire_carte_grise: formattedProprietaire,
         mode_acquisition: editedVehicle.mode_acquisition,
         prix_ht: editedVehicle.prix_ht,
         prix_ttc: editedVehicle.prix_ttc,
@@ -312,7 +323,6 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         kilometrage_actuel: editedVehicle.kilometrage_actuel,
         locataire_type: editedVehicle.locataire_type,
         locataire_nom_libre: editedVehicle.locataire_nom_libre,
-        proprietaire_carte_grise: formattedProprietaire,
       });
 
       console.log('[handleSave] Données à envoyer:', updateData);
@@ -1319,6 +1329,80 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                     </div>
 
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Financeur</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.financeur_nom || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_nom: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: BNP Paribas Lease Group, Arval, ALD..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Adresse du financeur</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.financeur_adresse || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_adresse: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: 12 rue de la Banque"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Code postal du financeur</label>
+                        <input
+                          type="text"
+                          value={editedVehicle.financeur_code_postal || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_code_postal: e.target.value })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="Ex: 75001"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Ville du financeur</label>
+                        <input
+                          type="text"
+                          value={editedVehicle.financeur_ville || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_ville: e.target.value })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="Ex: Paris"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone du financeur</label>
+                      <input
+                        type="tel"
+                        value={editedVehicle.financeur_telephone || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_telephone: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: 01 23 45 67 89"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Appartenance (propriétaire carte grise)</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.proprietaire_carte_grise || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, proprietaire_carte_grise: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: TCA, Entreprise locataire..."
+                      />
+                    </div>
+
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Mode d'acquisition</label>
                       <select
                         value={editedVehicle.mode_acquisition || ''}
@@ -1533,6 +1617,80 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                         disabled={!isEditing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                         placeholder="Ex: Renault Trucks, Mercedes..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Financeur</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.financeur_nom || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_nom: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: BNP Paribas Lease Group, Arval, ALD..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Adresse du financeur</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.financeur_adresse || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_adresse: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: 12 rue de la Banque"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Code postal du financeur</label>
+                        <input
+                          type="text"
+                          value={editedVehicle.financeur_code_postal || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_code_postal: e.target.value })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="Ex: 75001"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Ville du financeur</label>
+                        <input
+                          type="text"
+                          value={editedVehicle.financeur_ville || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_ville: e.target.value })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="Ex: Paris"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone du financeur</label>
+                      <input
+                        type="tel"
+                        value={editedVehicle.financeur_telephone || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_telephone: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: 01 23 45 67 89"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Appartenance (propriétaire carte grise)</label>
+                      <input
+                        type="text"
+                        value={editedVehicle.proprietaire_carte_grise || ''}
+                        onChange={(e) => setEditedVehicle({ ...editedVehicle, proprietaire_carte_grise: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: TCA, Entreprise locataire..."
                       />
                     </div>
 
