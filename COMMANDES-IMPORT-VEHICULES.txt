@@ -1,0 +1,74 @@
+═══════════════════════════════════════════════════════════════
+  IMPORT MASSIF VÉHICULES - COMMANDES À EXÉCUTER
+═══════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────┐
+│ ÉTAPE 1 : ACTIVER LES PERMISSIONS (une seule fois)         │
+└─────────────────────────────────────────────────────────────┘
+
+1. Affichez le contenu du fichier SQL :
+
+   cat allow-vehicle-reference-insert.sql
+
+2. Copiez le contenu affiché
+
+3. Allez sur Supabase Dashboard > SQL Editor
+
+4. Collez et exécutez le SQL
+
+
+┌─────────────────────────────────────────────────────────────┐
+│ ÉTAPE 2 : LANCER L'IMPORT                                  │
+└─────────────────────────────────────────────────────────────┘
+
+   node scripts/import-vehicle-brands-models.mjs
+
+Durée : 25-45 minutes pour 12 000+ marques et leurs modèles
+
+
+┌─────────────────────────────────────────────────────────────┐
+│ ÉTAPE 3 : VÉRIFIER L'IMPORT                                │
+└─────────────────────────────────────────────────────────────┘
+
+Option A - Vérification rapide en SQL :
+
+   SELECT COUNT(*) as total_marques FROM vehicle_reference_brands;
+   SELECT COUNT(*) as total_modeles FROM vehicle_reference_models;
+
+Option B - Vérification complète :
+
+1. Affichez le contenu :
+
+   cat scripts/verify-import.sql
+
+2. Copiez et exécutez dans Supabase SQL Editor
+
+
+┌─────────────────────────────────────────────────────────────┐
+│ EN CAS D'ERREUR "row-level security policy"                │
+└─────────────────────────────────────────────────────────────┘
+
+Vous avez oublié l'ÉTAPE 1.
+Exécutez le fichier allow-vehicle-reference-insert.sql
+
+
+┌─────────────────────────────────────────────────────────────┐
+│ RELANCER L'IMPORT (en cas d'interruption)                  │
+└─────────────────────────────────────────────────────────────┘
+
+   node scripts/import-vehicle-brands-models.mjs
+
+Le script détecte automatiquement les données existantes.
+
+
+═══════════════════════════════════════════════════════════════
+  RÉSULTAT ATTENDU
+═══════════════════════════════════════════════════════════════
+
+✅ ~12 000 marques insérées
+✅ ~45 000+ modèles insérés
+✅ Source : NHTSA (US Department of Transportation)
+✅ Gestion automatique des doublons
+✅ Types de véhicules inclus quand disponibles
+
+═══════════════════════════════════════════════════════════════
