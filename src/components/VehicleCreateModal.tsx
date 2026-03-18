@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, ChevronLeft, ChevronRight, Check, Car, FileText, Image as ImageIcon, Plus, Trash2, Search, ChevronDown } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { ProprietaireSelector } from './ProprietaireSelector';
+import { formatProprietaireCarteGrise } from '../utils/proprietaireParser';
 
 interface VehicleCreateModalProps {
   onClose: () => void;
@@ -26,7 +28,6 @@ interface VehicleFormData {
   financeur_code_postal: string;
   financeur_ville: string;
   financeur_telephone: string;
-  proprietaire_carte_grise: string;
   mode_acquisition: string;
   prix_ht: number | '';
   prix_ttc: number | '';
@@ -101,6 +102,13 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
   const brandDropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
 
+  // États pour le propriétaire (carte grise)
+  const [proprietaireMode, setProprietaireMode] = useState<'tca' | 'entreprise'>('tca');
+  const [proprietaireTcaValue, setProprietaireTcaValue] = useState('TCA TRANSPORT');
+  const [proprietaireEntrepriseName, setProprietaireEntrepriseName] = useState('');
+  const [proprietaireEntreprisePhone, setProprietaireEntreprisePhone] = useState('');
+  const [proprietaireEntrepriseAddress, setProprietaireEntrepriseAddress] = useState('');
+
   const [formData, setFormData] = useState<VehicleFormData>({
     immatriculation: '',
     ref_tca: '',
@@ -119,7 +127,6 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     financeur_code_postal: '',
     financeur_ville: '',
     financeur_telephone: '',
-    proprietaire_carte_grise: '',
     mode_acquisition: '',
     prix_ht: '',
     prix_ttc: '',
@@ -349,7 +356,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
       }
     });
 
-    const textFields = ['financeur_nom', 'financeur_adresse', 'financeur_code_postal', 'financeur_ville', 'financeur_telephone', 'proprietaire_carte_grise'];
+    const textFields = ['financeur_nom', 'financeur_adresse', 'financeur_code_postal', 'financeur_ville', 'financeur_telephone'];
     textFields.forEach(field => {
       if (cleaned[field] === '' || cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -383,11 +390,21 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
         if (uploadError) throw uploadError;
       }
 
+      // Formatter le proprietaire_carte_grise selon le mode sélectionné
+      const formattedProprietaire = formatProprietaireCarteGrise({
+        mode: proprietaireMode,
+        tcaValue: proprietaireTcaValue,
+        entrepriseName: proprietaireEntrepriseName,
+        entreprisePhone: proprietaireEntreprisePhone,
+        entrepriseAddress: proprietaireEntrepriseAddress
+      });
+
       const vehicleData = cleanPayloadForInsert({
         ...formData,
         finition: formData.finition || null,
         energie: formData.energie || null,
         couleur: formData.couleur || null,
+        proprietaire_carte_grise: formattedProprietaire,
         derniere_maj_kilometrage: formData.kilometrage_actuel ? new Date().toISOString().split('T')[0] : null,
         materiel_embarque: equipments.filter(eq => eq.type && eq.quantite > 0),
         photo_path: photoPath,
@@ -794,16 +811,20 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Appartenance (propriétaire carte grise)</label>
-              <input
-                type="text"
-                value={formData.proprietaire_carte_grise}
-                onChange={(e) => handleInputChange('proprietaire_carte_grise', e.target.value)}
-                placeholder="Ex: TCA, Entreprise locataire..."
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-            </div>
+            <ProprietaireSelector
+              proprietaireMode={proprietaireMode}
+              proprietaireTcaValue={proprietaireTcaValue}
+              proprietaireEntrepriseName={proprietaireEntrepriseName}
+              proprietaireEntreprisePhone={proprietaireEntreprisePhone}
+              proprietaireEntrepriseAddress={proprietaireEntrepriseAddress}
+              onModeChange={setProprietaireMode}
+              onTcaValueChange={setProprietaireTcaValue}
+              onEntrepriseNameChange={setProprietaireEntrepriseName}
+              onEntreprisePhoneChange={setProprietaireEntreprisePhone}
+              onEntrepriseAddressChange={setProprietaireEntrepriseAddress}
+              disabled={false}
+              showTitle={false}
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Mode d'acquisition</label>

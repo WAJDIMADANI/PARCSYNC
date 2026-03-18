@@ -8,6 +8,7 @@ import { VehicleDocuments } from './VehicleDocuments';
 import { VehicleStatusHistoryModal } from './VehicleStatusHistoryModal';
 import { AttributionHistoryModal } from './AttributionHistoryModal';
 import { SuccessModal } from './SuccessModal';
+import { ProprietaireSelector } from './ProprietaireSelector';
 import { parseProprietaireCarteGrise, formatProprietaireCarteGrise } from '../utils/proprietaireParser';
 
 interface Chauffeur {
@@ -1218,95 +1219,20 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
 
             {activeTab === 'proprietaire' && (
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Propriétaire (carte grise)</h3>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Type de propriétaire
-                      </label>
-                      <select
-                        value={proprietaireMode}
-                        onChange={(e) => {
-                          const newMode = e.target.value as 'tca' | 'entreprise';
-                          setProprietaireMode(newMode);
-                          if (newMode === 'tca' && !proprietaireTcaValue) {
-                            setProprietaireTcaValue('TCA TRANSPORT');
-                          }
-                        }}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                      >
-                        <option value="tca">TCA / Entreprise interne</option>
-                        <option value="entreprise">Entreprise externe</option>
-                      </select>
-                    </div>
-
-                    {proprietaireMode === 'tca' ? (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Nom du propriétaire TCA
-                        </label>
-                        <input
-                          type="text"
-                          value={proprietaireTcaValue}
-                          onChange={(e) => setProprietaireTcaValue(e.target.value)}
-                          disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                          placeholder="Ex: TCA TRANSPORT, TCA NIORT..."
-                          maxLength={150}
-                        />
-                        <p className="text-sm text-gray-500 mt-1">Le nom tel qu'il apparaît sur la carte grise</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Raison sociale
-                          </label>
-                          <input
-                            type="text"
-                            value={proprietaireEntrepriseName}
-                            onChange={(e) => setProprietaireEntrepriseName(e.target.value)}
-                            disabled={!isEditing}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                            placeholder="Ex: DUPONT SARL"
-                            maxLength={150}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Téléphone
-                          </label>
-                          <input
-                            type="text"
-                            value={proprietaireEntreprisePhone}
-                            onChange={(e) => setProprietaireEntreprisePhone(e.target.value)}
-                            disabled={!isEditing}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                            placeholder="Ex: 01 23 45 67 89"
-                            maxLength={20}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Adresse
-                          </label>
-                          <input
-                            type="text"
-                            value={proprietaireEntrepriseAddress}
-                            onChange={(e) => setProprietaireEntrepriseAddress(e.target.value)}
-                            disabled={!isEditing}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                            placeholder="Ex: 123 rue de la République, 75001 Paris"
-                            maxLength={200}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <ProprietaireSelector
+                  proprietaireMode={proprietaireMode}
+                  proprietaireTcaValue={proprietaireTcaValue}
+                  proprietaireEntrepriseName={proprietaireEntrepriseName}
+                  proprietaireEntreprisePhone={proprietaireEntreprisePhone}
+                  proprietaireEntrepriseAddress={proprietaireEntrepriseAddress}
+                  onModeChange={setProprietaireMode}
+                  onTcaValueChange={setProprietaireTcaValue}
+                  onEntrepriseNameChange={setProprietaireEntrepriseName}
+                  onEntreprisePhoneChange={setProprietaireEntreprisePhone}
+                  onEntrepriseAddressChange={setProprietaireEntrepriseAddress}
+                  disabled={!isEditing}
+                  showTitle={true}
+                />
               </div>
             )}
 
@@ -1387,18 +1313,6 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                         disabled={!isEditing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                         placeholder="Ex: 01 23 45 67 89"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Appartenance (propriétaire carte grise)</label>
-                      <input
-                        type="text"
-                        value={editedVehicle.proprietaire_carte_grise || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, proprietaire_carte_grise: e.target.value })}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                        placeholder="Ex: TCA, Entreprise locataire..."
                       />
                     </div>
 
@@ -1679,18 +1593,6 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                         disabled={!isEditing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                         placeholder="Ex: 01 23 45 67 89"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Appartenance (propriétaire carte grise)</label>
-                      <input
-                        type="text"
-                        value={editedVehicle.proprietaire_carte_grise || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, proprietaire_carte_grise: e.target.value })}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                        placeholder="Ex: TCA, Entreprise locataire..."
                       />
                     </div>
 
