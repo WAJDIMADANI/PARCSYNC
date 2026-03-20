@@ -547,69 +547,71 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
             </nav>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50">
             {activeTab === 'info' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Identification</h3>
+              <div className="space-y-4">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className="text-base font-semibold text-gray-900">Identification</h3>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Immatriculation</label>
-                      <input
-                        type="text"
-                        value={vehicle.immatriculation}
-                        disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-                      />
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Immatriculation</label>
+                      <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 rounded-lg border border-blue-200">
+                        <p className="text-base font-bold text-blue-900">{vehicle.immatriculation}</p>
+                      </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Référence TCA</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Référence TCA</label>
                       <input
                         type="text"
                         value={editedVehicle.ref_tca || ''}
                         onChange={(e) => setEditedVehicle({ ...editedVehicle, ref_tca: e.target.value })}
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Marque</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Marque</label>
                       <input
                         type="text"
                         value={editedVehicle.marque || ''}
                         onChange={(e) => setEditedVehicle({ ...editedVehicle, marque: e.target.value })}
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Modèle</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Modèle</label>
                       <input
                         type="text"
                         value={editedVehicle.modele || ''}
                         onChange={(e) => setEditedVehicle({ ...editedVehicle, modele: e.target.value })}
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Finition</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Finition</label>
                       <input
                         type="text"
                         value={editedVehicle.finition || ''}
                         onChange={(e) => setEditedVehicle({ ...editedVehicle, finition: e.target.value })}
                         disabled={!isEditing}
-                        placeholder="Ex: Premium, Business, etc."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: Premium, Business"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Énergie</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Énergie</label>
                       {isEditing ? (
                         <select
                           value={editedVehicle.energie || ''}
                           onChange={(e) => setEditedVehicle({ ...editedVehicle, energie: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium transition-all"
                         >
                           <option value="">-- Sélectionner --</option>
                           <option value="Diesel">Diesel</option>
@@ -627,38 +629,38 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                           type="text"
                           value={editedVehicle.energie || ''}
                           disabled
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-medium"
                         />
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Couleur</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Couleur</label>
                       <input
                         type="text"
                         value={editedVehicle.couleur || ''}
                         onChange={(e) => setEditedVehicle({ ...editedVehicle, couleur: e.target.value })}
                         disabled={!isEditing}
-                        placeholder="Ex: Blanc, Noir, Gris, etc."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        placeholder="Ex: Blanc, Noir, Gris"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Année</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Année</label>
                       <input
                         type="number"
                         value={editedVehicle.annee || ''}
                         onChange={(e) => setEditedVehicle({ ...editedVehicle, annee: e.target.value ? Number(e.target.value) : null })}
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Type de véhicule</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Type de véhicule</label>
                       {isEditing ? (
                         <select
                           value={editedVehicle.type || ''}
                           onChange={(e) => setEditedVehicle({ ...editedVehicle, type: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium transition-all"
                         >
                           <option value="VL">VL - Véhicule Léger</option>
                           <option value="VUL">VUL - Véhicule Utilitaire Léger</option>
@@ -670,53 +672,32 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                           type="text"
                           value={editedVehicle.type || ''}
                           disabled
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-medium"
                         />
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Dates importantes</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Date de 1ère mise en circulation</label>
-                      <input
-                        type="date"
-                        value={editedVehicle.date_premiere_mise_en_circulation || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, date_premiere_mise_en_circulation: e.target.value || null })}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                      />
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Car className="w-4 h-4 text-green-600" />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Date de mise en service</label>
-                      <input
-                        type="date"
-                        value={editedVehicle.date_mise_en_service || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, date_mise_en_service: e.target.value || null })}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                      />
-                    </div>
+                    <h3 className="text-base font-semibold text-gray-900">Photo du véhicule</h3>
                   </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Photo du véhicule</h3>
-                  <div className="flex items-start gap-4">
-                    <div className="w-48 h-36 flex items-center justify-center bg-gray-100 rounded-lg overflow-hidden">
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <div className="w-full sm:w-56 h-40 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden shadow-inner border-2 border-gray-200">
                       {uploading ? (
                         <LoadingSpinner size="lg" />
                       ) : photoUrl ? (
                         <img src={photoUrl} alt={vehicle.immatriculation} className="w-full h-full object-cover" />
                       ) : (
-                        <Car className="w-20 h-20 text-gray-400" />
+                        <Car className="w-24 h-24 text-gray-400" />
                       )}
                     </div>
-                    <div className="flex-1 space-y-2">
-                      <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+                    <div className="flex-1 space-y-3">
+                      <label className="inline-flex items-center px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 cursor-pointer transition-all shadow-lg shadow-blue-600/30 hover:shadow-xl font-medium">
                         <Upload className="w-4 h-4 mr-2" />
                         {photoUrl ? 'Changer la photo' : 'Ajouter une photo'}
                         <input
@@ -729,42 +710,79 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                       {photoUrl && (
                         <button
                           onClick={handleDeletePhoto}
-                          className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors ml-2"
+                          className="inline-flex items-center px-5 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-lg shadow-red-600/30 hover:shadow-xl font-medium ml-2"
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          Supprimer la photo
+                          Supprimer
                         </button>
                       )}
-                      <p className="text-sm text-gray-500">Format accepté: JPG, PNG, WebP (max 5MB)</p>
+                      <p className="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">Format: JPG, PNG, WebP (max 5MB)</p>
                     </div>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Kilométrage</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Kilométrage actuel (km)</label>
-                      <input
-                        type="number"
-                        value={editedVehicle.kilometrage_actuel || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, kilometrage_actuel: e.target.value ? Number(e.target.value) : null })}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                        placeholder="Ex: 150000"
-                      />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-4 h-4 text-orange-600" />
+                      </div>
+                      <h3 className="text-base font-semibold text-gray-900">Dates importantes</h3>
                     </div>
-                    {editedVehicle.derniere_maj_kilometrage && (
+                    <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Dernière mise à jour</label>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">1ère mise en circulation</label>
                         <input
-                          type="text"
-                          value={new Date(editedVehicle.derniere_maj_kilometrage).toLocaleDateString('fr-FR')}
-                          disabled
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                          type="date"
+                          value={editedVehicle.date_premiere_mise_en_circulation || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, date_premiere_mise_en_circulation: e.target.value || null })}
+                          disabled={!isEditing}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
                         />
                       </div>
-                    )}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Mise en service</label>
+                        <input
+                          type="date"
+                          value={editedVehicle.date_mise_en_service || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, date_mise_en_service: e.target.value || null })}
+                          disabled={!isEditing}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-4 h-4 text-teal-600" />
+                      </div>
+                      <h3 className="text-base font-semibold text-gray-900">Kilométrage</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Kilométrage actuel (km)</label>
+                        <input
+                          type="number"
+                          value={editedVehicle.kilometrage_actuel || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, kilometrage_actuel: e.target.value ? Number(e.target.value) : null })}
+                          disabled={!isEditing}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
+                          placeholder="Ex: 150000"
+                        />
+                      </div>
+                      {editedVehicle.derniere_maj_kilometrage && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Dernière mise à jour</label>
+                          <div className="bg-gray-50 px-4 py-3 rounded-lg border-2 border-gray-200">
+                            <p className="text-sm font-medium text-gray-700">
+                              {new Date(editedVehicle.derniere_maj_kilometrage).toLocaleDateString('fr-FR')}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -772,7 +790,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
 
 
             {activeTab === 'proprietaire' && (
-              <div className="space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                 <ProprietaireSelector
                   proprietaireMode={proprietaireMode}
                   proprietaireTcaValue={proprietaireTcaValue}
@@ -791,81 +809,86 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
             )}
 
             {activeTab === 'acquisition' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Acquisition du véhicule</h3>
+              <div className="space-y-4">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                      <ShoppingCart className="w-4 h-4 text-green-600" />
+                    </div>
+                    <h3 className="text-base font-semibold text-gray-900">Acquisition du véhicule</h3>
+                  </div>
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Fournisseur</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Fournisseur</label>
                       <input
                         type="text"
                         value={editedVehicle.fournisseur || ''}
                         onChange={(e) => setEditedVehicle({ ...editedVehicle, fournisseur: e.target.value })}
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                        placeholder="Ex: RENAULT, PEUGEOT..."
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
+                        placeholder="Ex: RENAULT, PEUGEOT"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Financeur</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Financeur</label>
                       <input
                         type="text"
                         value={editedVehicle.financeur_nom || ''}
                         onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_nom: e.target.value })}
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                        placeholder="Ex: BNP Paribas Lease Group, Arval, ALD..."
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
+                        placeholder="Ex: BNP Paribas Lease Group"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Adresse du financeur</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Adresse du financeur</label>
                       <input
                         type="text"
                         value={editedVehicle.financeur_adresse || ''}
                         onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_adresse: e.target.value })}
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
                         placeholder="Ex: 12 rue de la Banque"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Code postal du financeur</label>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Code postal</label>
                         <input
                           type="text"
                           value={editedVehicle.financeur_code_postal || ''}
                           onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_code_postal: e.target.value })}
                           disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
                           placeholder="Ex: 75001"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Ville du financeur</label>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Ville</label>
                         <input
                           type="text"
                           value={editedVehicle.financeur_ville || ''}
                           onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_ville: e.target.value })}
                           disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
                           placeholder="Ex: Paris"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone du financeur</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Téléphone</label>
                       <input
                         type="tel"
                         value={editedVehicle.financeur_telephone || ''}
                         onChange={(e) => setEditedVehicle({ ...editedVehicle, financeur_telephone: e.target.value })}
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-medium transition-all"
                         placeholder="Ex: 01 23 45 67 89"
                       />
                     </div>
