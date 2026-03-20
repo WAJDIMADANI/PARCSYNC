@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart } from 'lucide-react';
+import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, History, ShoppingCart } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDocuments } from './VehicleDocuments';
 import { SuccessModal } from './SuccessModal';
@@ -299,6 +299,11 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       setIsEditing(false);
       console.log('[handleSave] Mode édition désactivé');
 
+      // Si on est sur l'onglet statut, recharger l'historique
+      if (activeTab === 'statut') {
+        await fetchStatusHistory();
+      }
+
       // Notifier le parent de la mise à jour
       await onVehicleUpdated(updatedVehicleData);
 
@@ -395,22 +400,6 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
     }
   };
 
-  const getStatusBadge = (statut: string) => {
-    const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
-      actif: { bg: 'bg-emerald-500', text: 'text-white', label: 'Actif' },
-      maintenance: { bg: 'bg-amber-500', text: 'text-white', label: 'Maintenance' },
-      'hors service': { bg: 'bg-red-500', text: 'text-white', label: 'Hors service' },
-      'en location': { bg: 'bg-sky-500', text: 'text-white', label: 'En location' },
-    };
-
-    const config = statusConfig[statut.toLowerCase()] || { bg: 'bg-gray-500', text: 'text-white', label: statut };
-
-    return (
-      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${config.bg} ${config.text}`}>
-        {config.label}
-      </span>
-    );
-  };
 
   return (
     <>
@@ -782,6 +771,238 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </div>
             )}
 
+            {activeTab === 'current' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Gestion du locataire actuel</h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-blue-800">
+                      Le locataire est défini automatiquement si un chauffeur est attribué en tant que conducteur principal.
+                      Si aucun chauffeur n'est attribué, vous pouvez définir manuellement le type de locataire.
+                    </p>
+                  </div>
+
+                  {(() => {
+                    // Vérifier s'il y a une attribution principale (priorité aux locataires externes)
+                    const principalAttribution = currentAttributions.find(a => a.type_attribution === 'principal');
+
+                    // Si l'attribution principale est un locataire externe (pas de profil mais un loueur)
+                    if (principalAttribution && !principalAttribution.profil && principalAttribution.loueur) {
+                      return (
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Locataire actuel</label>
+                          <div className="text-sm text-gray-900 font-medium">
+                            {principalAttribution.loueur.nom}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Locataire externe - Défini via l'attribution principale</p>
+                        </div>
+                      );
+                    }
+
+                    // Si l'attribution principale est un salarié (avec profil)
+                    if (principalAttribution && principalAttribution.profil) {
+                      return (
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Locataire actuel</label>
+                          <div className="text-sm text-gray-900 font-medium">
+                            {`${principalAttribution.profil.prenom} ${principalAttribution.profil.nom} (${principalAttribution.profil.matricule_tca})`}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Défini automatiquement via l'attribution principale</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Type de locataire</label>
+                        <select
+                          value={editedVehicle.locataire_type || 'sur_parc'}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, locataire_type: e.target.value || null, locataire_nom_libre: e.target.value === 'libre' ? editedVehicle.locataire_nom_libre : null })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        >
+                          <option value="sur_parc">Sur parc</option>
+                          <option value="epave">EPAVE</option>
+                          <option value="vendu">Vendu</option>
+                          <option value="libre">Saisie libre</option>
+                        </select>
+                      </div>
+
+                      {editedVehicle.locataire_type === 'libre' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Nom du locataire</label>
+                          <input
+                            type="text"
+                            value={editedVehicle.locataire_nom_libre || ''}
+                            onChange={(e) => setEditedVehicle({ ...editedVehicle, locataire_nom_libre: e.target.value })}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                            placeholder="Ex: Entreprise ABC, Jean Dupont..."
+                            maxLength={100}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Attributions en cours</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowAttributionModal(true)}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Nouvelle attribution
+                    </button>
+                  </div>
+                </div>
+
+                {currentAttributions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 text-sm">Aucune attribution en cours</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {currentAttributions.map((attribution) => (
+                      <div key={attribution.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {attribution.profil
+                                  ? `${attribution.profil.prenom} ${attribution.profil.nom}`
+                                  : attribution.loueur?.nom || 'Non défini'}
+                              </p>
+                              {attribution.profil?.matricule_tca && (
+                                <p className="text-sm text-gray-500">TCA: {attribution.profil.matricule_tca}</p>
+                              )}
+                              {!attribution.profil && attribution.loueur && (
+                                <p className="text-sm text-gray-500">Locataire externe</p>
+                              )}
+                            </div>
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                            attribution.type_attribution === 'principal'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {attribution.type_attribution === 'principal' ? 'Principal' : 'Secondaire'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center text-gray-600">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Depuis le {new Date(attribution.date_debut).toLocaleDateString('fr-FR')}
+                            <span className="ml-2 text-gray-400">({calculateDuration(attribution.date_debut, null)})</span>
+                          </div>
+                          {attribution.profil && (
+                            <div className="flex items-center text-gray-600">
+                              <FileText className="w-4 h-4 mr-2" />
+                              {attribution.loueur?.nom || 'Propriété TCA'}
+                            </div>
+                          )}
+                          {attribution.notes && (
+                            <div className="mt-2 p-2 bg-gray-50 rounded text-gray-700">
+                              {attribution.notes}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
+                          <button
+                            onClick={() => handleEndAttribution(attribution)}
+                            className="flex-1 px-3 py-2 bg-red-50 text-red-700 rounded hover:bg-red-100 transition-colors text-sm font-medium"
+                          >
+                            Terminer l'attribution
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Historique des attributions */}
+                {historicalAttributions.length > 0 && (
+                  <div className="mt-8 pt-8 border-t border-gray-200">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900">Historique des attributions</h3>
+                      <button
+                        onClick={exportHistory}
+                        className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export CSV
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {historicalAttributions.map((attribution, idx) => (
+                        <div
+                          key={attribution.id}
+                          className="bg-white border border-gray-200 rounded-lg p-4"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className="relative">
+                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                  <User className="w-5 h-5 text-gray-600" />
+                                </div>
+                                {idx < historicalAttributions.length - 1 && (
+                                  <div className="absolute top-10 left-1/2 transform -translate-x-1/2 w-0.5 h-8 bg-gray-300"></div>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-semibold text-gray-900">
+                                    {attribution.profil ? `${attribution.profil.prenom} ${attribution.profil.nom}` : 'Profil supprimé'}
+                                  </p>
+                                  {attribution.profil?.matricule_tca && (
+                                    <span className="text-sm text-gray-500">({attribution.profil.matricule_tca})</span>
+                                  )}
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                    attribution.type_attribution === 'principal'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {attribution.type_attribution === 'principal' ? 'Principal' : 'Secondaire'}
+                                  </span>
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                    Terminée
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-600 mb-1">
+                                  {attribution.loueur?.nom || 'Propriété TCA'}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  Du {new Date(attribution.date_debut).toLocaleDateString('fr-FR')}
+                                  {attribution.date_fin && ` au ${new Date(attribution.date_fin).toLocaleDateString('fr-FR')}`}
+                                  <span className="ml-2 text-gray-400">
+                                    ({calculateDuration(attribution.date_debut, attribution.date_fin)})
+                                  </span>
+                                </p>
+                                {attribution.notes && (
+                                  <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700">
+                                    {attribution.notes}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {activeTab === 'proprietaire' && (
               <div className="space-y-6">
@@ -1191,6 +1412,44 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </div>
             )}
 
+            {activeTab === 'kilometrage' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Gestion du kilométrage</h3>
+                  <button
+                    onClick={() => setShowKilometrageModal(true)}
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Mettre à jour
+                  </button>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
+                      <Gauge className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-blue-700 font-medium">Kilométrage actuel</p>
+                      <p className="text-3xl font-bold text-blue-900">
+                        {(vehicle as any).kilometrage_actuel ? (vehicle as any).kilometrage_actuel.toLocaleString() : '0'} km
+                      </p>
+                      {(vehicle as any).derniere_maj_kilometrage && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          Mis à jour le {new Date((vehicle as any).derniere_maj_kilometrage).toLocaleDateString('fr-FR')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Historique des relevés</h4>
+                  <p className="text-sm text-gray-500">L'historique détaillé sera affiché ici</p>
+                </div>
+              </div>
+            )}
 
             {activeTab === 'documents' && (
               <VehicleDocuments vehicleId={vehicle.id} />
@@ -1198,6 +1457,47 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
           </div>
         </div>
       </div>
+
+      {showAttributionModal && (
+        <AttributionModal
+          vehicleId={vehicle.id}
+          onClose={() => setShowAttributionModal(false)}
+          onSuccess={() => {
+            setShowAttributionModal(false);
+            fetchAttributions();
+            fetchVehicleDetails(); // Recharger les données du véhicule et notifier le parent
+          }}
+        />
+      )}
+
+      {showKilometrageModal && (
+        <UpdateKilometrageModal
+          vehicleId={vehicle.id}
+          currentKm={vehicle.kilometrage_actuel || null}
+          onClose={() => setShowKilometrageModal(false)}
+          onSuccess={async () => {
+            // Refetch les données du véhicule et notifier le parent
+            await fetchVehicleDetails();
+            setShowKilometrageModal(false);
+          }}
+        />
+      )}
+
+      <VehicleStatusHistoryModal
+        isOpen={showStatusHistoryModal}
+        onClose={() => setShowStatusHistoryModal(false)}
+        statusHistory={statusHistory}
+        vehicleName={`${vehicle.marque || ''} ${vehicle.modele || ''} - ${vehicle.immatriculation}`.trim()}
+        loading={loadingStatusHistory}
+      />
+
+      {showAttributionHistoryModal && (
+        <AttributionHistoryModal
+          vehicleId={vehicle.id}
+          immatriculation={vehicle.immatriculation}
+          onClose={() => setShowAttributionHistoryModal(false)}
+        />
+      )}
 
       <SuccessModal
         isOpen={showSuccessModal}
