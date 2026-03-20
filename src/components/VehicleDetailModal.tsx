@@ -476,85 +476,73 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
             </div>
           </div>
 
-          <div className="border-b border-gray-200 px-6 overflow-x-auto">
+          <div className="bg-gray-50 px-4 sm:px-6 py-3 overflow-x-auto">
             <nav className="flex gap-2 min-w-max">
               <button
                 onClick={() => setActiveTab('info')}
-                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl font-medium text-xs transition-all duration-200 min-w-[80px] ${
                   activeTab === 'info'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-sm'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Informations
-                </div>
+                <FileText className={`w-5 h-5 mb-1 ${activeTab === 'info' ? 'animate-pulse' : ''}`} />
+                <span>Infos</span>
               </button>
               <button
                 onClick={() => setActiveTab('proprietaire')}
-                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl font-medium text-xs transition-all duration-200 min-w-[80px] ${
                   activeTab === 'proprietaire'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-sm'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Propriétaire
-                </div>
+                <CreditCard className={`w-5 h-5 mb-1 ${activeTab === 'proprietaire' ? 'animate-pulse' : ''}`} />
+                <span>Propriétaire</span>
               </button>
               <button
                 onClick={() => setActiveTab('acquisition')}
-                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl font-medium text-xs transition-all duration-200 min-w-[80px] ${
                   activeTab === 'acquisition'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-sm'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4" />
-                  Acquisition
-                </div>
+                <ShoppingCart className={`w-5 h-5 mb-1 ${activeTab === 'acquisition' ? 'animate-pulse' : ''}`} />
+                <span>Acquisition</span>
               </button>
               <button
                 onClick={() => setActiveTab('insurance')}
-                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl font-medium text-xs transition-all duration-200 min-w-[80px] ${
                   activeTab === 'insurance'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-sm'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  Assurance
-                </div>
+                <Shield className={`w-5 h-5 mb-1 ${activeTab === 'insurance' ? 'animate-pulse' : ''}`} />
+                <span>Assurance</span>
               </button>
               <button
                 onClick={() => setActiveTab('equipment')}
-                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl font-medium text-xs transition-all duration-200 min-w-[80px] ${
                   activeTab === 'equipment'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-sm'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4" />
-                  Équipements
-                </div>
+                <Package className={`w-5 h-5 mb-1 ${activeTab === 'equipment' ? 'animate-pulse' : ''}`} />
+                <span>Équipements</span>
               </button>
               <button
                 onClick={() => setActiveTab('documents')}
-                className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl font-medium text-xs transition-all duration-200 min-w-[80px] ${
                   activeTab === 'documents'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-sm'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Documents
-                </div>
+                <FileText className={`w-5 h-5 mb-1 ${activeTab === 'documents' ? 'animate-pulse' : ''}`} />
+                <span>Documents</span>
               </button>
             </nav>
           </div>
