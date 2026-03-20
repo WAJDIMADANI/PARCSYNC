@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart } from 'lucide-react';
+import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart, FileText } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDocuments } from './VehicleDocuments';
 import { SuccessModal } from './SuccessModal';
