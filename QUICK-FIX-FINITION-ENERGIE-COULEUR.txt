@@ -1,0 +1,139 @@
+═══════════════════════════════════════════════════════════════
+  FIX : Finition / Energie / Couleur vides
+═══════════════════════════════════════════════════════════════
+
+PROBLÈME :
+  Modal véhicule → champs finition/energie/couleur vides
+
+CAUSE :
+  Vue SQL v_vehicles_list_ui n'expose pas ces colonnes
+
+═══════════════════════════════════════════════════════════════
+  CORRECTIF 2 NIVEAUX
+═══════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────┐
+│ NIVEAU 1 : Immédiat (SQL)                                   │
+└─────────────────────────────────────────────────────────────┘
+
+Fichier : FIX-NIVEAU-1-VUE-FINITION-ENERGIE-COULEUR.sql
+
+Action :
+  1. Supabase Dashboard → SQL Editor
+  2. Copier-coller le fichier
+  3. Exécuter
+
+Résultat : Fix en 30 secondes
+
+┌─────────────────────────────────────────────────────────────┐
+│ NIVEAU 2 : Robuste (Frontend)                               │
+└─────────────────────────────────────────────────────────────┘
+
+Fichier : src/components/VehicleDetailModal.tsx (modifié)
+
+Changement :
+  AVANT : .from('v_vehicles_list_ui')  ❌ Vue de liste
+  APRÈS : .from('vehicule')             ✅ Table directe
+
+Action :
+  npm run build
+
+Résultat : Architecture propre
+
+═══════════════════════════════════════════════════════════════
+  REQUÊTE ACTUELLE (ligne 95-99)
+═══════════════════════════════════════════════════════════════
+
+const { data, error } = await supabase
+  .from('v_vehicles_list_ui')  // ❌ Vue de liste
+  .select('*')
+  .eq('id', vehicle.id)
+  .single();
+
+═══════════════════════════════════════════════════════════════
+  REQUÊTE CORRIGÉE (ligne 96-119)
+═══════════════════════════════════════════════════════════════
+
+// ✅ Charge depuis la table vehicule (données complètes)
+const { data: vehicleData, error: vehicleError } = await supabase
+  .from('vehicule')
+  .select('*')
+  .eq('id', vehicle.id)
+  .single();
+
+// ✅ Charge les attributions séparément
+const { data: attributionsData, error: attributionsError } = await supabase
+  .from('attribution_vehicule')
+  .select(`
+    type_attribution,
+    date_debut,
+    loueur_id,
+    profil:profil_id(id, nom, prenom, matricule_tca),
+    loueur:loueur_id(nom)
+  `)
+  .eq('vehicule_id', vehicle.id)
+  .lte('date_debut', new Date().toISOString().split('T')[0])
+  .or(`date_fin.is.null,date_fin.gte.${...}`);
+
+// ✅ Calcul en frontend (lignes 126-155)
+
+═══════════════════════════════════════════════════════════════
+  POURQUOI 2 NIVEAUX ?
+═══════════════════════════════════════════════════════════════
+
+NIVEAU 1 (SQL) :
+  → Fix immédiat
+  → Pas de redéploiement frontend
+  ⚠️  Architecture fragile (vue = dépendance)
+
+NIVEAU 2 (Frontend) :
+  → Architecture robuste
+  → Indépendance liste ↔ détail
+  → Garantie toutes colonnes (SELECT *)
+  ✅ Maintenabilité
+
+═══════════════════════════════════════════════════════════════
+  FICHIERS MODIFIÉS
+═══════════════════════════════════════════════════════════════
+
+SQL :
+  ✅ FIX-NIVEAU-1-VUE-FINITION-ENERGIE-COULEUR.sql (nouveau)
+
+Frontend :
+  ✅ VehicleDetailModal.tsx (ligne 91-176)
+
+Doc :
+  ✅ CORRECTIF-2-NIVEAUX-FINITION-ENERGIE-COULEUR.md (complet)
+  ✅ RESUME-CORRECTIF-FINITION-ENERGIE-COULEUR.md (résumé)
+  ✅ EXECUTER-CORRECTIF-MAINTENANT.md (guide step-by-step)
+  ✅ QUICK-FIX-FINITION-ENERGIE-COULEUR.txt (ce fichier)
+
+═══════════════════════════════════════════════════════════════
+  DÉPLOIEMENT
+═══════════════════════════════════════════════════════════════
+
+Option A : Progressif (recommandé)
+  1. SQL (NIVEAU 1) → Fix immédiat
+  2. Test
+  3. Frontend (NIVEAU 2) → Architecture
+
+Option B : Direct
+  1. SQL + Frontend ensemble
+
+═══════════════════════════════════════════════════════════════
+  RÉSULTAT
+═══════════════════════════════════════════════════════════════
+
+AVANT :
+  Finition : (vide)
+  Énergie  : (vide)
+  Couleur  : (vide)
+
+APRÈS :
+  Finition : Premium  ✅
+  Énergie  : Diesel   ✅
+  Couleur  : Blanc    ✅
+
+Build : ✅ OK (20.80s)
+
+═══════════════════════════════════════════════════════════════

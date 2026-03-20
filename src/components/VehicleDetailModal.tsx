@@ -91,24 +91,76 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
   const fetchVehicleDetails = async () => {
     console.log('[fetchVehicleDetails] Début refetch pour vehicule ID:', vehicle.id);
     try {
-      // Fetch depuis la vue v_vehicles_list_ui pour avoir les chauffeurs_actifs et locataire_affiche calculés
-      const { data, error } = await supabase
-        .from('v_vehicles_list_ui')
+      // NIVEAU 2 CORRECTIF: Charger depuis la table vehicule directement (données complètes)
+      // au lieu de la vue v_vehicles_list_ui (qui peut manquer des colonnes)
+      const { data: vehicleData, error: vehicleError } = await supabase
+        .from('vehicule')
         .select('*')
         .eq('id', vehicle.id)
         .single();
 
-      if (error) {
-        console.error('[fetchVehicleDetails] Erreur:', JSON.stringify(error, null, 2));
-        throw error;
+      if (vehicleError) {
+        console.error('[fetchVehicleDetails] Erreur vehicule:', JSON.stringify(vehicleError, null, 2));
+        throw vehicleError;
       }
 
-      if (data) {
-        console.log('[fetchVehicleDetails] Données reçues:', data);
+      // Charger les attributions actives pour calculer chauffeurs_actifs
+      const { data: attributionsData, error: attributionsError } = await supabase
+        .from('attribution_vehicule')
+        .select(`
+          type_attribution,
+          date_debut,
+          loueur_id,
+          profil:profil_id(id, nom, prenom, matricule_tca),
+          loueur:loueur_id(nom)
+        `)
+        .eq('vehicule_id', vehicle.id)
+        .lte('date_debut', new Date().toISOString().split('T')[0])
+        .or(`date_fin.is.null,date_fin.gte.${new Date().toISOString().split('T')[0]}`);
+
+      if (attributionsError) {
+        console.error('[fetchVehicleDetails] Erreur attributions:', attributionsError);
+      }
+
+      // Calculer chauffeurs_actifs et locataire_affiche
+      const chauffeurs = (attributionsData || [])
+        .map(av => ({
+          id: av.profil?.id || null,
+          nom: av.profil?.nom || null,
+          prenom: av.profil?.prenom || null,
+          matricule_tca: av.profil?.matricule_tca || null,
+          type_attribution: av.type_attribution,
+          date_debut: av.date_debut,
+          loueur_id: av.loueur_id,
+          loueur_nom: av.loueur?.nom || null
+        }))
+        .sort((a, b) => {
+          const order = { principal: 1, secondaire: 2 };
+          return (order[a.type_attribution as keyof typeof order] || 3) - (order[b.type_attribution as keyof typeof order] || 3);
+        });
+
+      const principalAttribution = attributionsData?.find(av => av.type_attribution === 'principal');
+      let locataireAffiche = 'Non attribué';
+
+      if (vehicleData.locataire_type === 'salarie') {
+        locataireAffiche = principalAttribution?.profil
+          ? `${principalAttribution.profil.nom} ${principalAttribution.profil.prenom}`
+          : 'Non attribué';
+      } else if (vehicleData.locataire_type === 'personne_externe' || vehicleData.locataire_type === 'entreprise_externe') {
+        locataireAffiche = principalAttribution?.loueur?.nom || vehicleData.locataire_nom_libre || 'Non attribué';
+      } else if (vehicleData.locataire_type === 'libre') {
+        locataireAffiche = vehicleData.locataire_nom_libre || 'TCA';
+      } else {
+        locataireAffiche = 'TCA';
+      }
+
+      if (vehicleData) {
+        console.log('[fetchVehicleDetails] Données reçues:', vehicleData);
         const updatedVehicle = {
-          ...data,
-          chauffeurs_actifs: Array.isArray(data.chauffeurs_actifs) ? data.chauffeurs_actifs : [],
-          nb_chauffeurs_actifs: data.nb_chauffeurs_actifs || 0
+          ...vehicleData,
+          chauffeurs_actifs: chauffeurs,
+          nb_chauffeurs_actifs: chauffeurs.length,
+          locataire_affiche: locataireAffiche
         } as Vehicle;
         setVehicle(prev => ({...prev, ...updatedVehicle}));
         setEditedVehicle(prev => ({...prev, ...updatedVehicle}));
