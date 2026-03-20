@@ -1,0 +1,22 @@
+═══════════════════════════════════════════════════════════════
+  FIX IMMÉDIAT : Finition / Energie / Couleur vides
+═══════════════════════════════════════════════════════════════
+
+PROBLÈME :
+  Modal "Voir" et "Modifier" véhicule → champs vides
+
+CAUSE :
+  Vue SQL v_vehicles_list_ui ne contient pas ces colonnes
+
+FICHIER FAUTIF :
+  FIX-VUE-VEHICLES-FINAL.sql (lignes 17-56)
+  → SELECT ne liste pas finition, energie, couleur
+
+SOLUTION :
+  ✅ Exécuter : FIX-VUE-VEHICLES-FINITION-ENERGIE-COULEUR.sql
+  ✅ Rafraîchir l'app
+  ✅ Tester
+
+AUCUN changement frontend nécessaire !
+
+═══════════════════════════════════════════════════════════════
