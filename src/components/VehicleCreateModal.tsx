@@ -392,7 +392,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
       }
     });
 
-    const textFields = ['fournisseur', 'financeur_nom', 'financeur_adresse', 'financeur_code_postal', 'financeur_ville', 'financeur_telephone', 'mode_acquisition'];
+    const textFields = ['finition', 'energie', 'couleur', 'fournisseur', 'financeur_nom', 'financeur_adresse', 'financeur_code_postal', 'financeur_ville', 'financeur_telephone', 'mode_acquisition'];
     textFields.forEach(field => {
       if (cleaned[field] === '' || cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -435,15 +435,24 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
         entrepriseAddress: proprietaireEntrepriseAddress
       });
 
+      console.log('[CREATION] formData.finition:', formData.finition);
+      console.log('[CREATION] formData.energie:', formData.energie);
+      console.log('[CREATION] formData.couleur:', formData.couleur);
+      console.log('[CREATION] formData.mode_acquisition:', formData.mode_acquisition);
+
       const vehicleData = cleanPayloadForInsert({
         ...formData,
-        finition: formData.finition || null,
-        energie: formData.energie || null,
-        couleur: formData.couleur || null,
         proprietaire_carte_grise: formattedProprietaire,
         derniere_maj_kilometrage: formData.kilometrage_actuel ? new Date().toISOString().split('T')[0] : null,
         materiel_embarque: equipments.filter(eq => eq.type && eq.quantite > 0),
         photo_path: photoPath,
+      });
+
+      console.log('[CREATION] vehicleData après cleanPayloadForInsert:', {
+        finition: vehicleData.finition,
+        energie: vehicleData.energie,
+        couleur: vehicleData.couleur,
+        mode_acquisition: vehicleData.mode_acquisition
       });
 
       const { data: vehicle, error: vehicleError } = await supabase
