@@ -162,6 +162,10 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
 
       if (vehicleData) {
         console.log('[fetchVehicleDetails] Données reçues:', vehicleData);
+        console.log('[AUDIT 4 CHAMPS] finition:', vehicleData.finition);
+        console.log('[AUDIT 4 CHAMPS] energie:', vehicleData.energie);
+        console.log('[AUDIT 4 CHAMPS] couleur:', vehicleData.couleur);
+        console.log('[AUDIT 4 CHAMPS] mode_acquisition:', vehicleData.mode_acquisition);
         const updatedVehicle = {
           ...vehicleData,
           chauffeurs_actifs: chauffeurs,
@@ -170,6 +174,12 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         } as Vehicle;
         setVehicle(prev => ({...prev, ...updatedVehicle}));
         setEditedVehicle(prev => ({...prev, ...updatedVehicle}));
+        console.log('[AUDIT ETAT] editedVehicle après setEditedVehicle:', {
+          finition: updatedVehicle.finition,
+          energie: updatedVehicle.energie,
+          couleur: updatedVehicle.couleur,
+          mode_acquisition: updatedVehicle.mode_acquisition
+        });
         console.log('[fetchVehicleDetails] État mis à jour avec succès');
 
         // Notifier le parent
@@ -960,11 +970,11 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                       >
                         <option value="">-- Non renseigné --</option>
-                        <option value="achat">Achat comptant</option>
-                        <option value="loa">LOA (Location avec Option d'Achat)</option>
-                        <option value="lld">LLD (Location Longue Durée)</option>
-                        <option value="credit">Crédit</option>
-                        <option value="leasing">Leasing</option>
+                        <option value="ACHAT">Achat comptant</option>
+                        <option value="LOA">LOA (Location avec Option d'Achat)</option>
+                        <option value="LLD">LLD (Location Longue Durée)</option>
+                        <option value="CREDIT">Crédit</option>
+                        <option value="LEASING">Leasing</option>
                       </select>
                     </div>
 
