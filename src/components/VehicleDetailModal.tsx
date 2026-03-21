@@ -191,6 +191,11 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
     }
   };
 
+  // Charger les données complètes du véhicule au montage
+  useEffect(() => {
+    fetchVehicleDetails();
+  }, []);
+
   useEffect(() => {
     // Désactiver le mode édition lors du changement d'onglet
     if (isEditing) {
