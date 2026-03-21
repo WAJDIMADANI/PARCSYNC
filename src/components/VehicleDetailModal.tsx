@@ -122,7 +122,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         console.error('[fetchVehicleDetails] Erreur attributions:', attributionsError);
       }
 
-      // Calculer chauffeurs_actifs et locataire_affiche
+      // Calculer chauffeurs_actifs (tri identique à la vue SQL)
       const chauffeurs = (attributionsData || [])
         .map(av => ({
           id: av.profil?.id || null,
@@ -139,7 +139,13 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
           return (order[a.type_attribution as keyof typeof order] || 3) - (order[b.type_attribution as keyof typeof order] || 3);
         });
 
-      const principalAttribution = attributionsData?.find(av => av.type_attribution === 'principal');
+      // Calculer locataire_affiche (logique IDENTIQUE à la vue SQL)
+      // Pour salarie et externe : on prend l'attribution principale la plus récente (ORDER BY date_debut DESC)
+      const attributionsPrincipales = (attributionsData || [])
+        .filter(av => av.type_attribution === 'principal')
+        .sort((a, b) => new Date(b.date_debut).getTime() - new Date(a.date_debut).getTime());
+
+      const principalAttribution = attributionsPrincipales[0];
       let locataireAffiche = 'Non attribué';
 
       if (vehicleData.locataire_type === 'salarie') {
