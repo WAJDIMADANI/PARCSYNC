@@ -76,38 +76,18 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
 
   const fetchNotifications = async () => {
     try {
-      // 0. Récupérer tous les sites pour mapper les noms
-      const { data: sitesData, error: sitesError } = await supabase
-        .from('site')
-        .select('id, nom');
-
-      if (sitesError) {
-        console.error('❌ SUPABASE ERROR (sites):', sitesError);
-      }
-
-      const sitesMap = new Map(sitesData?.map(s => [s.id, s.nom]) || []);
-
       // 1. Récupérer les notifications existantes (documents)
       const { data: notifData, error: notifError } = await supabase
         .from('v_notifications_ui')
         .select(`
           *,
-          profil:profil_id(prenom, nom, email, telephone, statut, site_id)
+          profil:profil_id(prenom, nom, email, statut)
         `)
         .order('date_echeance', { ascending: true });
 
       if (notifError) {
         console.error('❌ SUPABASE ERROR (notifications):', notifError);
         throw notifError;
-      }
-
-      // Ajouter les noms des sites aux profils
-      if (notifData) {
-        notifData.forEach(n => {
-          if (n.profil?.site_id) {
-            n.profil.site = { nom: sitesMap.get(n.profil.site_id) || '' };
-          }
-        });
       }
 
       // 2. Récupérer les contrats qui expirent dans les 30 prochains jours
@@ -145,7 +125,7 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
           date_fin,
           type,
           statut,
-          profil:profil_id(prenom, nom, email, telephone, statut, site_id)
+          profil:profil_id(prenom, nom, email, statut)
         `)
         .in('statut', ['actif', 'signe'])
         .gte('date_fin', today.toISOString().split('T')[0])
@@ -153,15 +133,6 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
 
       if (contratError) {
         console.error('❌ SUPABASE ERROR (contrats):', contratError);
-      }
-
-      // Ajouter les noms des sites aux contrats
-      if (contratData) {
-        contratData.forEach(c => {
-          if (c.profil?.site_id) {
-            c.profil.site = { nom: sitesMap.get(c.profil.site_id) || '' };
-          }
-        });
       }
 
       console.log('📊 Contrats récupérés:', contratData?.length || 0);
@@ -567,19 +538,7 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
                         <h3 className="font-bold text-lg text-gray-900">
                           {notification.profil?.prenom} {notification.profil?.nom}
                         </h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <span>{notification.profil?.email}</span>
-                          {notification.profil?.telephone && (
-                            <span className="font-medium">
-                              {notification.profil.telephone}
-                            </span>
-                          )}
-                          {notification.profil?.site?.nom && (
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                              {notification.profil.site.nom}
-                            </span>
-                          )}
-                        </div>
+                        <p className="text-sm text-gray-600">{notification.profil?.email}</p>
                       </div>
                     </div>
 
