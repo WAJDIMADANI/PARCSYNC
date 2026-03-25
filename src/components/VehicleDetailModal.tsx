@@ -385,6 +385,19 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
 
       console.log('[handleSave] UPDATE réussi, données retournées:', data);
 
+      // Mise à jour immédiate de l'état local avec les données retournées par l'update
+      const updatedVehicleData = {
+        ...vehicle,
+        ...data,
+        chauffeurs_actifs: vehicle.chauffeurs_actifs,
+        nb_chauffeurs_actifs: vehicle.nb_chauffeurs_actifs,
+        locataire_affiche: vehicle.locataire_affiche
+      } as Vehicle;
+
+      setVehicle(updatedVehicleData);
+      setEditedVehicle(updatedVehicleData);
+      setIsEditing(false);
+
       // Si l'assurance a changé, créer une entrée dans l'historique
       if (assuranceChanged) {
         console.log('[handleSave] Assurance modifiée, création de l\'historique');
@@ -408,40 +421,17 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
           console.error('[handleSave] Erreur création historique:', historiqueError);
         } else {
           console.log('[handleSave] Historique créé avec succès');
-          // Recharger l'historique
-          await fetchHistoriqueAssurance();
+          // Recharger l'historique sans attendre
+          fetchHistoriqueAssurance();
           // Afficher le message d'alerte
           setShowInsuranceChangeAlert(true);
         }
       }
 
-      // Refetch depuis la vue pour avoir les champs calculés
-      const { data: vehicleFromView, error: viewError } = await supabase
-        .from('v_vehicles_list_ui')
-        .select('*')
-        .eq('id', vehicle.id)
-        .single();
-
-      if (viewError) {
-        console.error('[handleSave] Erreur lecture vue:', viewError);
-        throw viewError;
-      }
-
-      const updatedVehicleData = {
-        ...vehicleFromView,
-        chauffeurs_actifs: Array.isArray(vehicleFromView.chauffeurs_actifs) ? vehicleFromView.chauffeurs_actifs : [],
-        nb_chauffeurs_actifs: vehicleFromView.nb_chauffeurs_actifs || 0
-      } as Vehicle;
-
-      // Mise à jour immédiate de l'état local
-      setVehicle(prev => ({...prev, ...updatedVehicleData}));
-      setEditedVehicle(prev => ({...prev, ...updatedVehicleData}));
-
-      setIsEditing(false);
-      console.log('[handleSave] Mode édition désactivé');
-
-      // Notifier le parent de la mise à jour
-      await onVehicleUpdated(updatedVehicleData);
+      // Notifier le parent de la mise à jour SANS ATTENDRE (pour éviter le rechargement)
+      onVehicleUpdated(updatedVehicleData).catch(err =>
+        console.error('[handleSave] Erreur notification parent:', err)
+      );
 
       setSuccessMessage('Modifications enregistrées avec succès');
       setShowSuccessModal(true);
