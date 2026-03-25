@@ -87,6 +87,11 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
   const [proprietaireEntreprisePhone, setProprietaireEntreprisePhone] = useState('');
   const [proprietaireEntrepriseAddress, setProprietaireEntrepriseAddress] = useState('');
 
+  // État pour l'historique des assurances
+  const [historiqueAssurance, setHistoriqueAssurance] = useState<any[]>([]);
+  const [loadingHistorique, setLoadingHistorique] = useState(false);
+  const [showInsuranceChangeAlert, setShowInsuranceChangeAlert] = useState(false);
+
   // Fonction pour refetch les données du véhicule et notifier le parent
   const fetchVehicleDetails = async (shouldNotifyParent: boolean = false) => {
     console.log('[fetchVehicleDetails] Début refetch pour vehicule ID:', vehicle.id, 'notifyParent:', shouldNotifyParent);
@@ -193,9 +198,29 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
     }
   };
 
+  // Fonction pour charger l'historique des assurances
+  const fetchHistoriqueAssurance = async () => {
+    setLoadingHistorique(true);
+    try {
+      const { data, error } = await supabase
+        .from('historique_assurance_vehicule')
+        .select('*')
+        .eq('vehicule_id', vehicle.id)
+        .order('changed_at', { ascending: false });
+
+      if (error) throw error;
+      setHistoriqueAssurance(data || []);
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'historique des assurances:', error);
+    } finally {
+      setLoadingHistorique(false);
+    }
+  };
+
   // Charger les données complètes du véhicule au montage (une seule fois)
   useEffect(() => {
     fetchVehicleDetails();
+    fetchHistoriqueAssurance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -284,7 +309,17 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
   const handleSave = async () => {
     console.log('[handleSave] Début sauvegarde pour vehicule ID:', vehicle.id);
     setSaving(true);
+
+    // Réinitialiser l'alerte de changement d'assurance
+    setShowInsuranceChangeAlert(false);
+
     try {
+      // Détecter si l'assurance a changé
+      const assuranceChanged =
+        vehicle.assurance_type !== editedVehicle.assurance_type ||
+        vehicle.assurance_compagnie !== editedVehicle.assurance_compagnie ||
+        vehicle.assurance_numero_contrat !== editedVehicle.assurance_numero_contrat;
+
       // Formatter le proprietaire_carte_grise selon le mode sélectionné
       const formattedProprietaire = formatProprietaireCarteGrise({
         mode: proprietaireMode,
@@ -349,6 +384,36 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       }
 
       console.log('[handleSave] UPDATE réussi, données retournées:', data);
+
+      // Si l'assurance a changé, créer une entrée dans l'historique
+      if (assuranceChanged) {
+        console.log('[handleSave] Assurance modifiée, création de l\'historique');
+
+        const { data: userData } = await supabase.auth.getUser();
+
+        const { error: historiqueError } = await supabase
+          .from('historique_assurance_vehicule')
+          .insert({
+            vehicule_id: vehicle.id,
+            ancienne_assurance_type: vehicle.assurance_type,
+            ancienne_assurance_compagnie: vehicle.assurance_compagnie,
+            ancien_assurance_numero_contrat: vehicle.assurance_numero_contrat,
+            nouvelle_assurance_type: editedVehicle.assurance_type,
+            nouvelle_assurance_compagnie: editedVehicle.assurance_compagnie,
+            nouveau_assurance_numero_contrat: editedVehicle.assurance_numero_contrat,
+            changed_by: userData?.user?.id || null
+          });
+
+        if (historiqueError) {
+          console.error('[handleSave] Erreur création historique:', historiqueError);
+        } else {
+          console.log('[handleSave] Historique créé avec succès');
+          // Recharger l'historique
+          await fetchHistoriqueAssurance();
+          // Afficher le message d'alerte
+          setShowInsuranceChangeAlert(true);
+        }
+      }
 
       // Refetch depuis la vue pour avoir les champs calculés
       const { data: vehicleFromView, error: viewError } = await supabase
@@ -1162,6 +1227,69 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {showInsuranceChangeAlert && (
+                  <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                    <div className="flex items-start">
+                      <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
+                      <p className="text-sm text-red-800 font-medium">
+                        Nouvelle assurance enregistrée. N'oubliez pas de télécharger la nouvelle attestation dans l'onglet Documents.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Historique des changements d'assurance</h3>
+                  {loadingHistorique ? (
+                    <div className="flex justify-center py-8">
+                      <LoadingSpinner />
+                    </div>
+                  ) : historiqueAssurance.length === 0 ? (
+                    <div className="bg-gray-50 rounded-lg p-6 text-center">
+                      <p className="text-gray-600">Aucun changement d'assurance enregistré</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {historiqueAssurance.map((historique, index) => (
+                        <div key={historique.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="text-xs font-semibold text-gray-500">
+                              Changement #{historiqueAssurance.length - index}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(historique.changed_at).toLocaleDateString('fr-FR', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs font-semibold text-red-600 mb-2">Ancienne assurance</p>
+                              <div className="space-y-1 text-sm">
+                                <p><span className="font-medium">Type:</span> {historique.ancienne_assurance_type === 'tca' ? 'Assuré TCA' : historique.ancienne_assurance_type === 'externe' ? 'Assurance externe' : 'Non défini'}</p>
+                                <p><span className="font-medium">Compagnie:</span> {historique.ancienne_assurance_compagnie || 'Non défini'}</p>
+                                <p><span className="font-medium">N° contrat:</span> {historique.ancien_assurance_numero_contrat || 'Non défini'}</p>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-green-600 mb-2">Nouvelle assurance</p>
+                              <div className="space-y-1 text-sm">
+                                <p><span className="font-medium">Type:</span> {historique.nouvelle_assurance_type === 'tca' ? 'Assuré TCA' : historique.nouvelle_assurance_type === 'externe' ? 'Assurance externe' : 'Non défini'}</p>
+                                <p><span className="font-medium">Compagnie:</span> {historique.nouvelle_assurance_compagnie || 'Non défini'}</p>
+                                <p><span className="font-medium">N° contrat:</span> {historique.nouveau_assurance_numero_contrat || 'Non défini'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div>
