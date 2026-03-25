@@ -67,47 +67,50 @@ export function VehicleViewModal({ vehicleId, onClose, onEdit }: Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchVehicleData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!vehicleId) return;
 
-  const fetchVehicleData = async () => {
-    try {
-      const { data: vehicleData, error: vehicleError } = await supabase
-        .from('vehicule')
-        .select('*')
-        .eq('id', vehicleId)
-        .single();
+    const fetchVehicleData = async () => {
+      try {
+        setLoading(true);
 
-      if (vehicleError) throw vehicleError;
+        const { data: vehicleData, error: vehicleError } = await supabase
+          .from('vehicule')
+          .select('*')
+          .eq('id', vehicleId)
+          .single();
 
-      setVehicle(vehicleData);
+        if (vehicleError) throw vehicleError;
 
-      if (vehicleData.photo_path) {
-        const { data: signedUrl } = await supabase.storage
-          .from('vehicle-photos')
-          .createSignedUrl(vehicleData.photo_path, 3600);
+        setVehicle(vehicleData);
 
-        if (signedUrl) {
-          setPhotoUrl(signedUrl.signedUrl);
+        if (vehicleData.photo_path) {
+          const { data: signedUrl } = await supabase.storage
+            .from('vehicle-photos')
+            .createSignedUrl(vehicleData.photo_path, 3600);
+
+          if (signedUrl) {
+            setPhotoUrl(signedUrl.signedUrl);
+          }
         }
+
+        const { data: docsData, error: docsError } = await supabase
+          .from('document_vehicule')
+          .select('id, nom_fichier, type_document, date_upload')
+          .eq('vehicule_id', vehicleId)
+          .order('date_upload', { ascending: false });
+
+        if (docsError) throw docsError;
+
+        setDocuments(docsData || []);
+      } catch (error) {
+        console.error('Erreur chargement véhicule:', error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const { data: docsData, error: docsError } = await supabase
-        .from('document_vehicule')
-        .select('id, nom_fichier, type_document, date_upload')
-        .eq('vehicule_id', vehicleId)
-        .order('date_upload', { ascending: false });
-
-      if (docsError) throw docsError;
-
-      setDocuments(docsData || []);
-    } catch (error) {
-      console.error('Erreur chargement véhicule:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchVehicleData();
+  }, [vehicleId]);
 
   if (loading) {
     return (
