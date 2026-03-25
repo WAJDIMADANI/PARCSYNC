@@ -1224,7 +1224,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                     <div className="flex items-start">
                       <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
                       <p className="text-sm text-red-800 font-medium">
-                        Nouvelle assurance enregistrée. N'oubliez pas de télécharger la nouvelle attestation dans l'onglet Documents.
+                        Nouvelle assurance enregistrée. Ne pas oublier d'insérer l'attestation d'assurance avec les dates dans l'onglet Documents.
                       </p>
                     </div>
                   </div>
