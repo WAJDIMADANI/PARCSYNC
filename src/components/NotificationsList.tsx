@@ -19,6 +19,11 @@ interface Notification {
     prenom: string;
     nom: string;
     email: string;
+    telephone: string;
+    site_id: string;
+    site?: {
+      nom: string;
+    };
   };
 }
 
@@ -76,7 +81,15 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
         .from('v_notifications_ui')
         .select(`
           *,
-          profil:profil_id(prenom, nom, email, statut)
+          profil:profil_id(
+            prenom,
+            nom,
+            email,
+            telephone,
+            statut,
+            site_id,
+            site:site_id(nom)
+          )
         `)
         .order('date_echeance', { ascending: true });
 
@@ -120,7 +133,15 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
           date_fin,
           type,
           statut,
-          profil:profil_id(prenom, nom, email, statut)
+          profil:profil_id(
+            prenom,
+            nom,
+            email,
+            telephone,
+            statut,
+            site_id,
+            site:site_id(nom)
+          )
         `)
         .in('statut', ['actif', 'signe'])
         .gte('date_fin', today.toISOString().split('T')[0])
@@ -533,7 +554,19 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
                         <h3 className="font-bold text-lg text-gray-900">
                           {notification.profil?.prenom} {notification.profil?.nom}
                         </h3>
-                        <p className="text-sm text-gray-600">{notification.profil?.email}</p>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <span>{notification.profil?.email}</span>
+                          {notification.profil?.telephone && (
+                            <span className="font-medium">
+                              {notification.profil.telephone}
+                            </span>
+                          )}
+                          {notification.profil?.site?.nom && (
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                              {notification.profil.site.nom}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
