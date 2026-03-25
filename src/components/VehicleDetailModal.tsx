@@ -88,8 +88,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
   const [proprietaireEntrepriseAddress, setProprietaireEntrepriseAddress] = useState('');
 
   // Fonction pour refetch les données du véhicule et notifier le parent
-  const fetchVehicleDetails = async () => {
-    console.log('[fetchVehicleDetails] Début refetch pour vehicule ID:', vehicle.id);
+  const fetchVehicleDetails = async (shouldNotifyParent: boolean = false) => {
+    console.log('[fetchVehicleDetails] Début refetch pour vehicule ID:', vehicle.id, 'notifyParent:', shouldNotifyParent);
     try {
       // NIVEAU 2 CORRECTIF: Charger depuis la table vehicule directement (données complètes)
       // au lieu de la vue v_vehicles_list_ui (qui peut manquer des colonnes)
@@ -172,8 +172,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
           nb_chauffeurs_actifs: chauffeurs.length,
           locataire_affiche: locataireAffiche
         } as Vehicle;
-        setVehicle(prev => ({...prev, ...updatedVehicle}));
-        setEditedVehicle(prev => ({...prev, ...updatedVehicle}));
+        setVehicle(updatedVehicle);
+        setEditedVehicle(updatedVehicle);
         console.log('[AUDIT ETAT] editedVehicle après setEditedVehicle:', {
           finition: updatedVehicle.finition,
           energie: updatedVehicle.energie,
@@ -182,8 +182,10 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         });
         console.log('[fetchVehicleDetails] État mis à jour avec succès');
 
-        // Notifier le parent
-        await onVehicleUpdated(updatedVehicle);
+        // Notifier le parent uniquement si demandé (après upload/suppression photo)
+        if (shouldNotifyParent) {
+          await onVehicleUpdated(updatedVehicle);
+        }
       }
     } catch (error) {
       console.error('[fetchVehicleDetails] Erreur chargement détails véhicule:', JSON.stringify(error, null, 2));
@@ -191,9 +193,10 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
     }
   };
 
-  // Charger les données complètes du véhicule au montage
+  // Charger les données complètes du véhicule au montage (une seule fois)
   useEffect(() => {
     fetchVehicleDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -433,7 +436,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       }
 
       // Refetch les données du véhicule pour avoir le photo_path à jour (et notifie le parent)
-      await fetchVehicleDetails();
+      await fetchVehicleDetails(true);
     } catch (error) {
       console.error('Erreur upload photo:', error);
       alert('Erreur lors de l\'upload de la photo');
@@ -461,7 +464,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       setPhotoUrl(undefined);
 
       // Refetch les données du véhicule (et notifie le parent)
-      await fetchVehicleDetails();
+      await fetchVehicleDetails(true);
     } catch (error) {
       console.error('Erreur suppression photo:', error);
       alert('Erreur lors de la suppression de la photo');
