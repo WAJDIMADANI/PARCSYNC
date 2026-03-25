@@ -76,26 +76,38 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
 
   const fetchNotifications = async () => {
     try {
+      // 0. Récupérer tous les sites pour mapper les noms
+      const { data: sitesData, error: sitesError } = await supabase
+        .from('site')
+        .select('id, nom');
+
+      if (sitesError) {
+        console.error('❌ SUPABASE ERROR (sites):', sitesError);
+      }
+
+      const sitesMap = new Map(sitesData?.map(s => [s.id, s.nom]) || []);
+
       // 1. Récupérer les notifications existantes (documents)
       const { data: notifData, error: notifError } = await supabase
         .from('v_notifications_ui')
         .select(`
           *,
-          profil:profil_id(
-            prenom,
-            nom,
-            email,
-            telephone,
-            statut,
-            site_id,
-            site:site_id(nom)
-          )
+          profil:profil_id(prenom, nom, email, telephone, statut, site_id)
         `)
         .order('date_echeance', { ascending: true });
 
       if (notifError) {
         console.error('❌ SUPABASE ERROR (notifications):', notifError);
         throw notifError;
+      }
+
+      // Ajouter les noms des sites aux profils
+      if (notifData) {
+        notifData.forEach(n => {
+          if (n.profil?.site_id) {
+            n.profil.site = { nom: sitesMap.get(n.profil.site_id) || '' };
+          }
+        });
       }
 
       // 2. Récupérer les contrats qui expirent dans les 30 prochains jours
@@ -133,15 +145,7 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
           date_fin,
           type,
           statut,
-          profil:profil_id(
-            prenom,
-            nom,
-            email,
-            telephone,
-            statut,
-            site_id,
-            site:site_id(nom)
-          )
+          profil:profil_id(prenom, nom, email, telephone, statut, site_id)
         `)
         .in('statut', ['actif', 'signe'])
         .gte('date_fin', today.toISOString().split('T')[0])
@@ -149,6 +153,15 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
 
       if (contratError) {
         console.error('❌ SUPABASE ERROR (contrats):', contratError);
+      }
+
+      // Ajouter les noms des sites aux contrats
+      if (contratData) {
+        contratData.forEach(c => {
+          if (c.profil?.site_id) {
+            c.profil.site = { nom: sitesMap.get(c.profil.site_id) || '' };
+          }
+        });
       }
 
       console.log('📊 Contrats récupérés:', contratData?.length || 0);
