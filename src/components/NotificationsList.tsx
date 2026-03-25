@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Bell, Calendar, FileText, CreditCard, AlertCircle, Mail, CheckCircle, X, Loader2, User } from 'lucide-react';
+import { Bell, Calendar, FileText, CreditCard, AlertCircle, Mail, CheckCircle, X, Loader2, User, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { LoadingSpinner } from './LoadingSpinner';
 import { NotificationModal } from './NotificationModal';
 import { Pagination } from './Pagination';
@@ -292,6 +293,53 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
     }
   };
 
+  const exportToExcel = () => {
+    // Préparer les données pour l'export
+    const dataToExport = filteredNotifications.map((notification) => {
+      const daysRemaining = Math.ceil(
+        (new Date(notification.date_echeance).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      return {
+        'Nom complet': `${notification.profil?.prenom || ''} ${notification.profil?.nom || ''}`.trim(),
+        'Email': notification.profil?.email || '',
+        'Téléphone': notification.profil?.tel || '',
+        'Secteur': notification.profil?.secteur?.nom || '',
+        'Type de document': getTypeLabel(notification.type),
+        'Date d\'échéance': new Date(notification.date_echeance).toLocaleDateString('fr-FR'),
+        'Jours restants': daysRemaining,
+        'Statut': notification.statut === 'active' ? 'Active' :
+                 notification.statut === 'email_envoye' ? 'Email envoyé' :
+                 notification.statut === 'resolue' ? 'Résolue' : 'Ignorée'
+      };
+    });
+
+    // Créer le workbook et la feuille
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Notifications');
+
+    // Ajuster la largeur des colonnes
+    const colWidths = [
+      { wch: 25 }, // Nom complet
+      { wch: 30 }, // Email
+      { wch: 15 }, // Téléphone
+      { wch: 20 }, // Secteur
+      { wch: 20 }, // Type de document
+      { wch: 15 }, // Date d'échéance
+      { wch: 15 }, // Jours restants
+      { wch: 15 }  // Statut
+    ];
+    ws['!cols'] = colWidths;
+
+    // Générer le nom du fichier avec la date
+    const dateStr = new Date().toLocaleDateString('fr-FR').replace(/\//g, '-');
+    const fileName = `notifications_${getTypeLabel(activeTab).replace(/\s+/g, '_')}_${dateStr}.xlsx`;
+
+    // Télécharger le fichier
+    XLSX.writeFile(wb, fileName);
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'titre_sejour': return <CreditCard className="w-5 h-5" />;
@@ -499,6 +547,14 @@ export function NotificationsList({ initialTab, onViewProfile, viewParams }: Not
           <option value="resolue">Résolues</option>
           <option value="ignoree">Ignorées</option>
         </select>
+        <button
+          onClick={exportToExcel}
+          disabled={filteredNotifications.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+          <Download className="w-5 h-5" />
+          Exporter Excel
+        </button>
       </div>
 
       {filteredNotifications.length === 0 ? (
