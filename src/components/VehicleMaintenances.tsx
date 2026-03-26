@@ -45,6 +45,7 @@ export function VehicleMaintenances({ vehicleId }: Props) {
   const [selectedMaintenance, setSelectedMaintenance] = useState<Maintenance | null>(null);
 
   const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationTitle, setValidationTitle] = useState('Champs obligatoires manquants');
   const [validationMessage, setValidationMessage] = useState('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -146,24 +147,25 @@ export function VehicleMaintenances({ vehicleId }: Props) {
 
   const validateFormData = (): boolean => {
     const errors: Record<string, string> = {};
-    const errorMessages: string[] = [];
+    const missingFields: string[] = [];
 
     // Type obligatoire
     if (!formData.type || formData.type.trim() === '') {
       errors.type = 'Le type de maintenance est obligatoire';
-      errorMessages.push('Le type de maintenance est obligatoire');
+      missingFields.push('Type de maintenance');
     }
 
     // Si statut = faite, date_intervention obligatoire
     if (formData.statut === 'faite' && (!formData.date_intervention || formData.date_intervention.trim() === '')) {
       errors.date_intervention = 'La date d\'intervention est obligatoire pour une maintenance faite';
-      errorMessages.push('La date d\'intervention est obligatoire pour une maintenance marquée comme faite');
+      missingFields.push('Date d\'intervention');
     }
 
-    if (errorMessages.length > 0) {
+    if (missingFields.length > 0) {
       setFieldErrors(errors);
-      setValidationMessage('Merci de remplir les champs obligatoires avant de continuer.');
-      setValidationErrors(errorMessages);
+      setValidationTitle('Champs obligatoires manquants');
+      setValidationMessage('Merci de remplir les champs suivants avant de continuer :');
+      setValidationErrors(missingFields);
       setShowValidationModal(true);
 
       // Focus sur le premier champ en erreur
@@ -184,18 +186,19 @@ export function VehicleMaintenances({ vehicleId }: Props) {
 
   const validateMarkAsDoneData = (): boolean => {
     const errors: Record<string, string> = {};
-    const errorMessages: string[] = [];
+    const missingFields: string[] = [];
 
     // Date intervention obligatoire
     if (!markAsDoneData.date_intervention || markAsDoneData.date_intervention.trim() === '') {
       errors.date_intervention = 'La date d\'intervention est obligatoire';
-      errorMessages.push('La date d\'intervention est obligatoire pour marquer une maintenance comme faite');
+      missingFields.push('Date d\'intervention');
     }
 
-    if (errorMessages.length > 0) {
+    if (missingFields.length > 0) {
       setFieldErrors(errors);
-      setValidationMessage('Merci de remplir les champs obligatoires avant de continuer.');
-      setValidationErrors(errorMessages);
+      setValidationTitle('Champs obligatoires manquants');
+      setValidationMessage('Merci de remplir les champs suivants avant de continuer :');
+      setValidationErrors(missingFields);
       setShowValidationModal(true);
 
       // Focus sur le champ en erreur
@@ -250,8 +253,9 @@ export function VehicleMaintenances({ vehicleId }: Props) {
       fetchMaintenances();
     } catch (error) {
       console.error('Erreur ajout maintenance:', error);
-      setValidationMessage('Erreur lors de l\'enregistrement en base de données.');
-      setValidationErrors(['Une erreur technique est survenue. Veuillez réessayer.']);
+      setValidationTitle('Erreur technique');
+      setValidationMessage('Une erreur technique est survenue lors de l\'enregistrement. Merci de réessayer.');
+      setValidationErrors([]);
       setShowValidationModal(true);
     } finally {
       setSaving(false);
@@ -324,8 +328,9 @@ export function VehicleMaintenances({ vehicleId }: Props) {
       fetchMaintenances();
     } catch (error) {
       console.error('Erreur modification maintenance:', error);
-      setValidationMessage('Erreur lors de l\'enregistrement en base de données.');
-      setValidationErrors(['Une erreur technique est survenue. Veuillez réessayer.']);
+      setValidationTitle('Erreur technique');
+      setValidationMessage('Une erreur technique est survenue lors de l\'enregistrement. Merci de réessayer.');
+      setValidationErrors([]);
       setShowValidationModal(true);
     } finally {
       setSaving(false);
@@ -385,8 +390,9 @@ export function VehicleMaintenances({ vehicleId }: Props) {
       fetchMaintenances();
     } catch (error) {
       console.error('Erreur mise à jour maintenance:', error);
-      setValidationMessage('Erreur lors de l\'enregistrement en base de données.');
-      setValidationErrors(['Une erreur technique est survenue. Veuillez réessayer.']);
+      setValidationTitle('Erreur technique');
+      setValidationMessage('Une erreur technique est survenue lors de l\'enregistrement. Merci de réessayer.');
+      setValidationErrors([]);
       setShowValidationModal(true);
     } finally {
       setSaving(false);
@@ -1224,6 +1230,7 @@ export function VehicleMaintenances({ vehicleId }: Props) {
       <ValidationModal
         isOpen={showValidationModal}
         onClose={() => setShowValidationModal(false)}
+        title={validationTitle}
         message={validationMessage}
         errors={validationErrors}
       />
