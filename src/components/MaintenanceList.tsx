@@ -97,12 +97,22 @@ export function MaintenanceList() {
     return matchesSearch && matchesStatus;
   });
 
-  const totalCost = filteredMaintenances
+  const totalCost = maintenances
     .filter(m => m.statut === 'faite' && m.cout)
     .reduce((sum, m) => sum + (m.cout || 0), 0);
 
   const doneCount = maintenances.filter(m => m.statut === 'faite').length;
   const plannedCount = maintenances.filter(m => m.statut === 'a_faire').length;
+
+  const today = new Date();
+  const thirtyDaysFromNow = new Date();
+  thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+  const approachingCount = maintenances.filter(m => {
+    if (m.statut !== 'a_faire') return false;
+    const interventionDate = new Date(m.date_intervention);
+    return interventionDate >= today && interventionDate <= thirtyDaysFromNow;
+  }).length;
 
   if (loading) {
     return (
@@ -119,7 +129,7 @@ export function MaintenanceList() {
         <p className="text-gray-600 mt-1">Suivi des interventions et entretiens</p>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -143,8 +153,20 @@ export function MaintenanceList() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Coût total (terminées)</p>
+              <p className="text-sm text-gray-600">En approche</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{approachingCount}</p>
+              <p className="text-xs text-gray-500 mt-1">30 prochains jours</p>
+            </div>
+            <Clock className="w-12 h-12 text-blue-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Coût total</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{totalCost.toLocaleString()} €</p>
+              <p className="text-xs text-gray-500 mt-1">Terminées</p>
             </div>
             <DollarSign className="w-12 h-12 text-green-600" />
           </div>
