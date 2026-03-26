@@ -41,6 +41,7 @@ interface VehicleFormData {
   assurance_type: 'tca' | 'externe';
   assurance_compagnie: string;
   assurance_numero_contrat: string;
+  assurance_prime_mensuelle: number | '';
   licence_transport_numero: string;
   carte_essence_fournisseur: string;
   carte_essence_numero: string;
@@ -141,6 +142,7 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
     assurance_type: 'tca',
     assurance_compagnie: '',
     assurance_numero_contrat: '',
+    assurance_prime_mensuelle: '',
     licence_transport_numero: '',
     carte_essence_fournisseur: '',
     carte_essence_numero: '',
@@ -1047,30 +1049,50 @@ export function VehicleCreateModal({ onClose, onSuccess }: VehicleCreateModalPro
             </div>
 
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Compagnie d'assurance
-                </label>
-                <input
-                  type="text"
-                  value={formData.assurance_compagnie}
-                  onChange={(e) => handleInputChange('assurance_compagnie', e.target.value)}
-                  placeholder="Ex: AXA, Allianz, Groupama..."
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Compagnie d'assurance
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.assurance_compagnie}
+                    onChange={(e) => handleInputChange('assurance_compagnie', e.target.value)}
+                    placeholder="Ex: AXA, Allianz, Groupama..."
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Numéro de contrat
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.assurance_numero_contrat}
+                    onChange={(e) => handleInputChange('assurance_numero_contrat', e.target.value)}
+                    placeholder="Ex: 123456789"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Numéro de contrat
+                  Prime mensuelle
                 </label>
-                <input
-                  type="text"
-                  value={formData.assurance_numero_contrat}
-                  onChange={(e) => handleInputChange('assurance_numero_contrat', e.target.value)}
-                  placeholder="Ex: 123456789"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.assurance_prime_mensuelle}
+                    onChange={(e) => handleInputChange('assurance_prime_mensuelle', e.target.value ? parseFloat(e.target.value) : '')}
+                    placeholder="Ex: 89.90"
+                    className="w-full pl-4 pr-8 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">€</span>
+                </div>
               </div>
             </div>
 

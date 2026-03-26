@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart, FileText } from 'lucide-react';
+import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart, FileText, AlertCircle } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDocuments } from './VehicleDocuments';
 import { SuccessModal } from './SuccessModal';
@@ -44,6 +44,7 @@ interface Vehicle {
   assurance_type: 'tca' | 'externe' | null;
   assurance_compagnie: string | null;
   assurance_numero_contrat: string | null;
+  assurance_prime_mensuelle: number | null;
   licence_transport_numero: string | null;
   carte_essence_fournisseur: string | null;
   carte_essence_numero: string | null;
@@ -318,7 +319,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       const assuranceChanged =
         vehicle.assurance_type !== editedVehicle.assurance_type ||
         vehicle.assurance_compagnie !== editedVehicle.assurance_compagnie ||
-        vehicle.assurance_numero_contrat !== editedVehicle.assurance_numero_contrat;
+        vehicle.assurance_numero_contrat !== editedVehicle.assurance_numero_contrat ||
+        vehicle.assurance_prime_mensuelle !== editedVehicle.assurance_prime_mensuelle;
 
       // Formatter le proprietaire_carte_grise selon le mode sélectionné
       const formattedProprietaire = formatProprietaireCarteGrise({
@@ -360,6 +362,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         assurance_type: editedVehicle.assurance_type,
         assurance_compagnie: editedVehicle.assurance_compagnie,
         assurance_numero_contrat: editedVehicle.assurance_numero_contrat,
+        assurance_prime_mensuelle: editedVehicle.assurance_prime_mensuelle,
         licence_transport_numero: editedVehicle.licence_transport_numero,
         carte_essence_fournisseur: editedVehicle.carte_essence_fournisseur,
         carte_essence_numero: editedVehicle.carte_essence_numero,
@@ -411,9 +414,11 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
             ancienne_assurance_type: vehicle.assurance_type,
             ancienne_assurance_compagnie: vehicle.assurance_compagnie,
             ancien_assurance_numero_contrat: vehicle.assurance_numero_contrat,
+            ancienne_prime_mensuelle: vehicle.assurance_prime_mensuelle,
             nouvelle_assurance_type: editedVehicle.assurance_type,
             nouvelle_assurance_compagnie: editedVehicle.assurance_compagnie,
             nouveau_assurance_numero_contrat: editedVehicle.assurance_numero_contrat,
+            nouvelle_prime_mensuelle: editedVehicle.assurance_prime_mensuelle,
             changed_by: userData?.user?.id || null
           });
 
@@ -1192,7 +1197,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Compagnie d'assurance</label>
                         <input
@@ -1214,6 +1219,25 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                           placeholder="Ex: 123456789"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                         />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Prime mensuelle</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={editedVehicle.assurance_prime_mensuelle || ''}
+                            onChange={(e) => setEditedVehicle({
+                              ...editedVehicle,
+                              assurance_prime_mensuelle: e.target.value ? parseFloat(e.target.value) : null
+                            })}
+                            disabled={!isEditing}
+                            placeholder="Ex: 89.90"
+                            className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">€</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1265,6 +1289,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                                 <p><span className="font-medium">Type:</span> {historique.ancienne_assurance_type === 'tca' ? 'Assuré TCA' : historique.ancienne_assurance_type === 'externe' ? 'Assurance externe' : 'Non défini'}</p>
                                 <p><span className="font-medium">Compagnie:</span> {historique.ancienne_assurance_compagnie || 'Non défini'}</p>
                                 <p><span className="font-medium">N° contrat:</span> {historique.ancien_assurance_numero_contrat || 'Non défini'}</p>
+                                <p><span className="font-medium">Prime mensuelle:</span> {historique.ancienne_prime_mensuelle ? `${historique.ancienne_prime_mensuelle.toFixed(2)} €` : 'Non défini'}</p>
                               </div>
                             </div>
                             <div>
@@ -1273,6 +1298,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                                 <p><span className="font-medium">Type:</span> {historique.nouvelle_assurance_type === 'tca' ? 'Assuré TCA' : historique.nouvelle_assurance_type === 'externe' ? 'Assurance externe' : 'Non défini'}</p>
                                 <p><span className="font-medium">Compagnie:</span> {historique.nouvelle_assurance_compagnie || 'Non défini'}</p>
                                 <p><span className="font-medium">N° contrat:</span> {historique.nouveau_assurance_numero_contrat || 'Non défini'}</p>
+                                <p><span className="font-medium">Prime mensuelle:</span> {historique.nouvelle_prime_mensuelle ? `${historique.nouvelle_prime_mensuelle.toFixed(2)} €` : 'Non défini'}</p>
                               </div>
                             </div>
                           </div>
