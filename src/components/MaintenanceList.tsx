@@ -8,6 +8,7 @@ interface Vehicle {
   immatriculation: string;
   marque: string;
   modele: string;
+  kilometrage_actuel: number | null;
 }
 
 interface Maintenance {
@@ -42,7 +43,7 @@ export function MaintenanceList() {
     try {
       const { data, error } = await supabase
         .from('maintenance')
-        .select('*, vehicule:vehicule_id(id, immatriculation, marque, modele)')
+        .select('*, vehicule:vehicule_id(id, immatriculation, marque, modele, kilometrage_actuel)')
         .order('date_intervention', { ascending: false });
 
       if (error) throw error;
@@ -54,36 +55,102 @@ export function MaintenanceList() {
     }
   };
 
-  const getStatusIcon = (statut: string) => {
-    switch (statut) {
-      case 'faite':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'a_faire':
+  type AlertLevel = 'normal' | 'approaching' | 'urgent' | 'overdue';
+
+  const getAlertLevel = (maintenance: Maintenance): AlertLevel => {
+    if (maintenance.statut !== 'a_faire') return 'normal';
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let dateAlert: AlertLevel = 'normal';
+    let kmAlert: AlertLevel = 'normal';
+
+    if (maintenance.prochain_controle_date) {
+      const controlDate = new Date(maintenance.prochain_controle_date);
+      controlDate.setHours(0, 0, 0, 0);
+      const diffTime = controlDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) {
+        dateAlert = 'overdue';
+      } else if (diffDays <= 7) {
+        dateAlert = 'urgent';
+      } else if (diffDays <= 30) {
+        dateAlert = 'approaching';
+      }
+    }
+
+    if (maintenance.prochain_controle_km && maintenance.vehicule?.kilometrage_actuel) {
+      const kmRestants = maintenance.prochain_controle_km - maintenance.vehicule.kilometrage_actuel;
+
+      if (kmRestants < 0) {
+        kmAlert = 'overdue';
+      } else if (kmRestants <= 300) {
+        kmAlert = 'urgent';
+      } else if (kmRestants <= 1000) {
+        kmAlert = 'approaching';
+      }
+    }
+
+    const alerts: AlertLevel[] = [dateAlert, kmAlert];
+    if (alerts.includes('overdue')) return 'overdue';
+    if (alerts.includes('urgent')) return 'urgent';
+    if (alerts.includes('approaching')) return 'approaching';
+    return 'normal';
+  };
+
+  const getStatusIcon = (maintenance: Maintenance) => {
+    if (maintenance.statut === 'faite') {
+      return <CheckCircle className="w-4 h-4 text-green-600" />;
+    }
+
+    const alertLevel = getAlertLevel(maintenance);
+    switch (alertLevel) {
+      case 'overdue':
+        return <AlertCircle className="w-4 h-4 text-red-600" />;
+      case 'urgent':
         return <AlertCircle className="w-4 h-4 text-orange-600" />;
+      case 'approaching':
+        return <Clock className="w-4 h-4 text-blue-600" />;
       default:
-        return null;
+        return <Calendar className="w-4 h-4 text-gray-600" />;
     }
   };
 
-  const getStatusColor = (statut: string) => {
-    switch (statut) {
-      case 'faite':
-        return 'bg-green-100 text-green-700';
-      case 'a_faire':
+  const getStatusColor = (maintenance: Maintenance) => {
+    if (maintenance.statut === 'faite') {
+      return 'bg-green-100 text-green-700';
+    }
+
+    const alertLevel = getAlertLevel(maintenance);
+    switch (alertLevel) {
+      case 'overdue':
+        return 'bg-red-100 text-red-700';
+      case 'urgent':
         return 'bg-orange-100 text-orange-700';
+      case 'approaching':
+        return 'bg-blue-100 text-blue-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
   };
 
-  const getStatusLabel = (statut: string) => {
-    switch (statut) {
-      case 'faite':
-        return 'Terminée';
-      case 'a_faire':
-        return 'Planifiée';
+  const getStatusLabel = (maintenance: Maintenance) => {
+    if (maintenance.statut === 'faite') {
+      return 'Terminée';
+    }
+
+    const alertLevel = getAlertLevel(maintenance);
+    switch (alertLevel) {
+      case 'overdue':
+        return 'En retard';
+      case 'urgent':
+        return 'Urgente';
+      case 'approaching':
+        return 'À l\'approche';
       default:
-        return statut;
+        return 'Planifiée';
     }
   };
 
@@ -104,14 +171,10 @@ export function MaintenanceList() {
   const doneCount = maintenances.filter(m => m.statut === 'faite').length;
   const plannedCount = maintenances.filter(m => m.statut === 'a_faire').length;
 
-  const today = new Date();
-  const thirtyDaysFromNow = new Date();
-  thirtyDaysFromNow.setDate(today.getDate() + 30);
-
   const approachingCount = maintenances.filter(m => {
     if (m.statut !== 'a_faire') return false;
-    const interventionDate = new Date(m.date_intervention);
-    return interventionDate >= today && interventionDate <= thirtyDaysFromNow;
+    const alertLevel = getAlertLevel(m);
+    return alertLevel === 'approaching' || alertLevel === 'urgent' || alertLevel === 'overdue';
   }).length;
 
   if (loading) {
@@ -287,9 +350,9 @@ export function MaintenanceList() {
                     {maintenance.cout ? `${maintenance.cout.toLocaleString()} €` : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(maintenance.statut)}`}>
-                      {getStatusIcon(maintenance.statut)}
-                      <span className="ml-1">{getStatusLabel(maintenance.statut)}</span>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(maintenance)}`}>
+                      {getStatusIcon(maintenance)}
+                      <span className="ml-1">{getStatusLabel(maintenance)}</span>
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
