@@ -258,6 +258,22 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
     }
   }, [editedVehicle.date_debut_contrat, editedVehicle.duree_contrat_mois]);
 
+  // Recalcul automatique des prix totaux HT/TTC en fonction des mensualités et durée
+  useEffect(() => {
+    if (editedVehicle.mensualite_ht && editedVehicle.duree_contrat_mois) {
+      const prixTotalHT = editedVehicle.mensualite_ht * editedVehicle.duree_contrat_mois;
+      const prixTotalTTC = editedVehicle.mensualite_ttc && editedVehicle.duree_contrat_mois
+        ? editedVehicle.mensualite_ttc * editedVehicle.duree_contrat_mois
+        : prixTotalHT * 1.20;
+
+      setEditedVehicle(prev => ({
+        ...prev,
+        prix_ht: prixTotalHT,
+        prix_ttc: prixTotalTTC
+      }));
+    }
+  }, [editedVehicle.mensualite_ht, editedVehicle.mensualite_ttc, editedVehicle.duree_contrat_mois]);
+
   // Recalcul automatique du reste à payer TTC
   useEffect(() => {
     const resteAPayer = calculateResteAPayer(
@@ -1059,78 +1075,93 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                       </select>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Prix HT</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editedVehicle.prix_ht || ''}
-                          onChange={(e) => {
-                            const ht = e.target.value ? parseFloat(e.target.value) : null;
-                            const ttc = ht ? ht * 1.20 : null;
-                            setEditedVehicle({ ...editedVehicle, prix_ht: ht, prix_ttc: ttc });
-                          }}
-                          disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                          placeholder="0.00"
-                        />
+                    {/* Section des mensualités et durée - CHAMPS DE SAISIE EN PREMIER */}
+                    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 space-y-4">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-3">Mensualités et durée du contrat</h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité HT</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editedVehicle.mensualite_ht || ''}
+                            onChange={(e) => {
+                              const ht = e.target.value ? parseFloat(e.target.value) : null;
+                              const ttc = ht ? ht * 1.20 : null;
+                              setEditedVehicle({ ...editedVehicle, mensualite_ht: ht, mensualite_ttc: ttc });
+                            }}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                            placeholder="0.00"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité TTC (auto)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editedVehicle.mensualite_ttc || ''}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                            placeholder="0.00"
+                          />
+                        </div>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Prix TTC (auto)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Durée du contrat (mois)</label>
                         <input
                           type="number"
-                          step="0.01"
-                          value={editedVehicle.prix_ttc || ''}
-                          disabled
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-                          placeholder="0.00"
+                          value={editedVehicle.duree_contrat_mois || ''}
+                          onChange={(e) => setEditedVehicle({ ...editedVehicle, duree_contrat_mois: e.target.value ? parseInt(e.target.value) : null })}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                          placeholder="Ex: 24, 36, 48..."
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité HT</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editedVehicle.mensualite_ht || ''}
-                          onChange={(e) => {
-                            const ht = e.target.value ? parseFloat(e.target.value) : null;
-                            const ttc = ht ? ht * 1.20 : null;
-                            setEditedVehicle({ ...editedVehicle, mensualite_ht: ht, mensualite_ttc: ttc });
-                          }}
-                          disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                          placeholder="0.00"
-                        />
-                      </div>
+                    {/* Section des prix totaux calculés - EN DESSOUS */}
+                    <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 space-y-4">
+                      <h4 className="text-sm font-semibold text-green-900 mb-3">Prix total calculé automatiquement</h4>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Mensualité TTC (auto)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editedVehicle.mensualite_ttc || ''}
-                          disabled
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-                          placeholder="0.00"
-                        />
-                      </div>
-                    </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Prix total HT (calculé)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editedVehicle.prix_ht || ''}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 font-semibold"
+                            placeholder="0.00"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {editedVehicle.mensualite_ht && editedVehicle.duree_contrat_mois
+                              ? `${editedVehicle.mensualite_ht} € × ${editedVehicle.duree_contrat_mois} mois`
+                              : 'Mensualité HT × Durée'}
+                          </p>
+                        </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Durée du contrat (mois)</label>
-                      <input
-                        type="number"
-                        value={editedVehicle.duree_contrat_mois || ''}
-                        onChange={(e) => setEditedVehicle({ ...editedVehicle, duree_contrat_mois: e.target.value ? parseInt(e.target.value) : null })}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                        placeholder="Ex: 24, 36, 48..."
-                      />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Prix total TTC (calculé)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editedVehicle.prix_ttc || ''}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 font-semibold"
+                            placeholder="0.00"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {editedVehicle.mensualite_ttc && editedVehicle.duree_contrat_mois
+                              ? `${editedVehicle.mensualite_ttc} € × ${editedVehicle.duree_contrat_mois} mois`
+                              : 'Mensualité TTC × Durée'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
