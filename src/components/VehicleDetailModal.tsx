@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart, FileText, AlertCircle } from 'lucide-react';
+import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart, FileText, AlertCircle, Wrench } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDocuments } from './VehicleDocuments';
+import { VehicleMaintenances } from './VehicleMaintenances';
 import { SuccessModal } from './SuccessModal';
 import { ProprietaireSelector } from './ProprietaireSelector';
 import { parseProprietaireCarteGrise, formatProprietaireCarteGrise } from '../utils/proprietaireParser';
@@ -67,7 +68,7 @@ interface Props {
   photoUrl?: string;
 }
 
-type Tab = 'info' | 'proprietaire' | 'acquisition' | 'insurance' | 'equipment' | 'documents';
+type Tab = 'info' | 'proprietaire' | 'acquisition' | 'insurance' | 'equipment' | 'maintenances' | 'documents';
 
 export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicleUpdated, photoUrl: initialPhotoUrl }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('info');
@@ -668,6 +669,17 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               >
                 <Package className={`w-5 h-5 mb-1 ${activeTab === 'equipment' ? 'animate-pulse' : ''}`} />
                 <span>Équipements</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('maintenances')}
+                className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl font-medium text-xs transition-all duration-200 min-w-[80px] ${
+                  activeTab === 'maintenances'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-sm'
+                }`}
+              >
+                <Wrench className={`w-5 h-5 mb-1 ${activeTab === 'maintenances' ? 'animate-pulse' : ''}`} />
+                <span>Maintenances</span>
               </button>
               <button
                 onClick={() => setActiveTab('documents')}
@@ -1422,6 +1434,10 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </div>
             )}
 
+
+            {activeTab === 'maintenances' && (
+              <VehicleMaintenances vehicleId={vehicle.id} />
+            )}
 
             {activeTab === 'documents' && (
               <VehicleDocuments vehicleId={vehicle.id} />
