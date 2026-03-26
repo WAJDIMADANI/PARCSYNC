@@ -14,11 +14,16 @@ interface Maintenance {
   id: string;
   vehicule_id: string;
   type: string;
-  date_maintenance: string;
+  description: string | null;
+  date_intervention: string;
   cout: number | null;
-  garage: string | null;
-  notes: string | null;
-  statut: string;
+  kilometrage: number | null;
+  prestataire: string | null;
+  statut: 'a_faire' | 'faite';
+  prochain_controle_date: string | null;
+  prochain_controle_km: number | null;
+  frequence_km: number | null;
+  frequence_mois: number | null;
   created_at: string;
   vehicule?: Vehicle;
 }
@@ -27,7 +32,7 @@ export function MaintenanceList() {
   const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'planifie' | 'en_cours' | 'termine'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'a_faire' | 'faite'>('all');
 
   useEffect(() => {
     fetchMaintenances();
@@ -38,7 +43,7 @@ export function MaintenanceList() {
       const { data, error } = await supabase
         .from('maintenance')
         .select('*, vehicule:vehicule_id(id, immatriculation, marque, modele)')
-        .order('date_maintenance', { ascending: false });
+        .order('date_intervention', { ascending: false });
 
       if (error) throw error;
       setMaintenances(data || []);
@@ -51,11 +56,9 @@ export function MaintenanceList() {
 
   const getStatusIcon = (statut: string) => {
     switch (statut) {
-      case 'termine':
+      case 'faite':
         return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'en_cours':
-        return <Clock className="w-4 h-4 text-blue-600" />;
-      case 'planifie':
+      case 'a_faire':
         return <AlertCircle className="w-4 h-4 text-orange-600" />;
       default:
         return null;
@@ -64,11 +67,9 @@ export function MaintenanceList() {
 
   const getStatusColor = (statut: string) => {
     switch (statut) {
-      case 'termine':
+      case 'faite':
         return 'bg-green-100 text-green-700';
-      case 'en_cours':
-        return 'bg-blue-100 text-blue-700';
-      case 'planifie':
+      case 'a_faire':
         return 'bg-orange-100 text-orange-700';
       default:
         return 'bg-gray-100 text-gray-700';
@@ -77,12 +78,10 @@ export function MaintenanceList() {
 
   const getStatusLabel = (statut: string) => {
     switch (statut) {
-      case 'termine':
-        return 'Terminé';
-      case 'en_cours':
-        return 'En cours';
-      case 'planifie':
-        return 'Planifié';
+      case 'faite':
+        return 'Terminée';
+      case 'a_faire':
+        return 'Planifiée';
       default:
         return statut;
     }
@@ -90,7 +89,7 @@ export function MaintenanceList() {
 
   const filteredMaintenances = maintenances.filter(m => {
     const matchesSearch = m.vehicule
-      ? `${m.vehicule.immatriculation} ${m.vehicule.marque} ${m.vehicule.modele} ${m.type} ${m.garage || ''}`.toLowerCase().includes(search.toLowerCase())
+      ? `${m.vehicule.immatriculation} ${m.vehicule.marque} ${m.vehicule.modele} ${m.type} ${m.prestataire || ''}`.toLowerCase().includes(search.toLowerCase())
       : false;
 
     const matchesStatus = filterStatus === 'all' || m.statut === filterStatus;
@@ -99,11 +98,11 @@ export function MaintenanceList() {
   });
 
   const totalCost = filteredMaintenances
-    .filter(m => m.statut === 'termine' && m.cout)
+    .filter(m => m.statut === 'faite' && m.cout)
     .reduce((sum, m) => sum + (m.cout || 0), 0);
 
-  const inProgressCount = maintenances.filter(m => m.statut === 'en_cours').length;
-  const plannedCount = maintenances.filter(m => m.statut === 'planifie').length;
+  const doneCount = maintenances.filter(m => m.statut === 'faite').length;
+  const plannedCount = maintenances.filter(m => m.statut === 'a_faire').length;
 
   if (loading) {
     return (
@@ -124,16 +123,6 @@ export function MaintenanceList() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">En cours</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{inProgressCount}</p>
-            </div>
-            <Clock className="w-12 h-12 text-blue-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
               <p className="text-sm text-gray-600">Planifiées</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{plannedCount}</p>
             </div>
@@ -144,7 +133,17 @@ export function MaintenanceList() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Coût total (terminé)</p>
+              <p className="text-sm text-gray-600">Terminées</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{doneCount}</p>
+            </div>
+            <CheckCircle className="w-12 h-12 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Coût total (terminées)</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{totalCost.toLocaleString()} €</p>
             </div>
             <DollarSign className="w-12 h-12 text-green-600" />
@@ -173,37 +172,27 @@ export function MaintenanceList() {
                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
             }`}
           >
-            Tout
+            Toutes
           </button>
           <button
-            onClick={() => setFilterStatus('planifie')}
+            onClick={() => setFilterStatus('a_faire')}
             className={`flex-1 px-4 py-3 rounded-lg transition-colors text-sm ${
-              filterStatus === 'planifie'
+              filterStatus === 'a_faire'
                 ? 'bg-blue-600 text-white'
                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
             }`}
           >
-            Planifié
+            Planifiées
           </button>
           <button
-            onClick={() => setFilterStatus('en_cours')}
+            onClick={() => setFilterStatus('faite')}
             className={`flex-1 px-4 py-3 rounded-lg transition-colors text-sm ${
-              filterStatus === 'en_cours'
+              filterStatus === 'faite'
                 ? 'bg-blue-600 text-white'
                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
             }`}
           >
-            En cours
-          </button>
-          <button
-            onClick={() => setFilterStatus('termine')}
-            className={`flex-1 px-4 py-3 rounded-lg transition-colors text-sm ${
-              filterStatus === 'termine'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            Terminé
+            Terminées
           </button>
         </div>
       </div>
@@ -228,7 +217,10 @@ export function MaintenanceList() {
                   Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Garage
+                  Prestataire
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Kilométrage
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Coût
@@ -237,7 +229,7 @@ export function MaintenanceList() {
                   Statut
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Notes
+                  Description
                 </th>
               </tr>
             </thead>
@@ -260,11 +252,14 @@ export function MaintenanceList() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
-                      {new Date(maintenance.date_maintenance).toLocaleDateString('fr-FR')}
+                      {new Date(maintenance.date_intervention).toLocaleDateString('fr-FR')}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {maintenance.garage || '-'}
+                    {maintenance.prestataire || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {maintenance.kilometrage ? `${maintenance.kilometrage.toLocaleString()} km` : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {maintenance.cout ? `${maintenance.cout.toLocaleString()} €` : '-'}
@@ -276,7 +271,7 @@ export function MaintenanceList() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
-                    {maintenance.notes || '-'}
+                    {maintenance.description || '-'}
                   </td>
                 </tr>
               ))}
