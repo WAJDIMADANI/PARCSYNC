@@ -7,7 +7,6 @@ import { VehicleMaintenances } from './VehicleMaintenances';
 import { SuccessModal } from './SuccessModal';
 import { ProprietaireSelector } from './ProprietaireSelector';
 import { parseProprietaireCarteGrise, formatProprietaireCarteGrise } from '../utils/proprietaireParser';
-import { calculateResteAPayer } from '../utils/resteAPayerCalculator';
 
 interface Vehicle {
   id: string;
@@ -39,7 +38,10 @@ interface Vehicle {
   duree_contrat_mois: number | null;
   date_debut_contrat: string | null;
   date_fin_prevue_contrat: string | null;
+  mensualites_deja_comptees: number | null;
+  reste_a_payer_ht: number | null;
   reste_a_payer_ttc: number | null;
+  dernier_recalcul_contrat_at: string | null;
   photo_path: string | null;
   site_id: string | null;
   assurance_type: 'tca' | 'externe' | null;
@@ -259,6 +261,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
   }, [editedVehicle.date_debut_contrat, editedVehicle.duree_contrat_mois]);
 
   // Recalcul automatique des prix totaux HT/TTC en fonction des mensualités et durée
+  // UNIQUEMENT pour affichage informatif dans l'UI, les valeurs en base restent la source de vérité
   useEffect(() => {
     if (editedVehicle.mensualite_ht && editedVehicle.duree_contrat_mois) {
       const prixTotalHT = editedVehicle.mensualite_ht * editedVehicle.duree_contrat_mois;
@@ -273,16 +276,6 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
       }));
     }
   }, [editedVehicle.mensualite_ht, editedVehicle.mensualite_ttc, editedVehicle.duree_contrat_mois]);
-
-  // Recalcul automatique du reste à payer TTC
-  useEffect(() => {
-    const resteAPayer = calculateResteAPayer(
-      editedVehicle.date_debut_contrat || '',
-      editedVehicle.duree_contrat_mois || '',
-      editedVehicle.mensualite_ttc || ''
-    );
-    setEditedVehicle(prev => ({ ...prev, reste_a_payer_ttc: resteAPayer }));
-  }, [editedVehicle.date_debut_contrat, editedVehicle.duree_contrat_mois, editedVehicle.mensualite_ttc]);
 
 
   const cleanPayloadForUpdate = (data: any) => {
@@ -376,7 +369,8 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         duree_contrat_mois: editedVehicle.duree_contrat_mois,
         date_debut_contrat: editedVehicle.date_debut_contrat,
         date_fin_prevue_contrat: editedVehicle.date_fin_prevue_contrat,
-        reste_a_payer_ttc: editedVehicle.reste_a_payer_ttc,
+        // NE PAS envoyer mensualites_deja_comptees, reste_a_payer_ht, reste_a_payer_ttc, dernier_recalcul_contrat_at
+        // Ces valeurs sont calculées automatiquement par la DB via un cron job quotidien
         assurance_type: editedVehicle.assurance_type,
         assurance_compagnie: editedVehicle.assurance_compagnie,
         assurance_numero_contrat: editedVehicle.assurance_numero_contrat,
@@ -1187,15 +1181,64 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Reste à payer TTC (calculé)</label>
-                      <input
-                        type="text"
-                        value={editedVehicle.reste_a_payer_ttc ? `${editedVehicle.reste_a_payer_ttc.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : ''}
-                        disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 font-medium"
-                        placeholder="0.00 €"
-                      />
+                    {/* Section des montants restants stockés en DB */}
+                    <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 space-y-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-amber-900">Montants restants (stockés en base)</h4>
+                        {editedVehicle.dernier_recalcul_contrat_at && (
+                          <span className="text-xs text-amber-700">
+                            Recalculé le {new Date(editedVehicle.dernier_recalcul_contrat_at).toLocaleDateString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Mensualités déjà comptées</label>
+                        <input
+                          type="number"
+                          value={editedVehicle.mensualites_deja_comptees || 0}
+                          disabled
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 font-semibold"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {editedVehicle.mensualites_deja_comptees && editedVehicle.duree_contrat_mois
+                            ? `${editedVehicle.mensualites_deja_comptees} / ${editedVehicle.duree_contrat_mois} mois écoulés`
+                            : 'Calculé automatiquement chaque jour'}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Reste à payer HT</label>
+                          <input
+                            type="text"
+                            value={editedVehicle.reste_a_payer_ht ? `${editedVehicle.reste_a_payer_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '0.00 €'}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Reste à payer TTC</label>
+                          <input
+                            type="text"
+                            value={editedVehicle.reste_a_payer_ttc ? `${editedVehicle.reste_a_payer_ttc.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '0.00 €'}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 font-semibold"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-amber-100 border border-amber-300 rounded-lg p-3">
+                        <p className="text-xs text-amber-800">
+                          <AlertCircle className="w-4 h-4 inline mr-1" />
+                          Ces montants sont recalculés automatiquement chaque jour par un cron job. Ils reflètent l'état réel du contrat en base de données.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
