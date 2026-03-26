@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Wrench, Calendar, DollarSign, Plus, X, CheckCircle, Clock, FileText, ExternalLink, CreditCard as Edit3 } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { ValidationModal } from './ValidationModal';
 
 interface Maintenance {
   id: string;
@@ -29,6 +30,11 @@ interface Props {
   vehicleId: string;
 }
 
+interface ValidationError {
+  field: string;
+  message: string;
+}
+
 export function VehicleMaintenances({ vehicleId }: Props) {
   const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +43,15 @@ export function VehicleMaintenances({ vehicleId }: Props) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedMaintenance, setSelectedMaintenance] = useState<Maintenance | null>(null);
+
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const typeInputRef = useRef<HTMLInputElement>(null);
+  const dateInterventionRef = useRef<HTMLInputElement>(null);
+  const dateInterventionMarkAsDoneRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<Partial<Maintenance>>({
     type: '',
@@ -126,11 +141,80 @@ export function VehicleMaintenances({ vehicleId }: Props) {
       facture_path: '',
       facture_nom_fichier: '',
     });
+    setFieldErrors({});
+  };
+
+  const validateFormData = (): boolean => {
+    const errors: Record<string, string> = {};
+    const errorMessages: string[] = [];
+
+    // Type obligatoire
+    if (!formData.type || formData.type.trim() === '') {
+      errors.type = 'Le type de maintenance est obligatoire';
+      errorMessages.push('Le type de maintenance est obligatoire');
+    }
+
+    // Si statut = faite, date_intervention obligatoire
+    if (formData.statut === 'faite' && (!formData.date_intervention || formData.date_intervention.trim() === '')) {
+      errors.date_intervention = 'La date d\'intervention est obligatoire pour une maintenance faite';
+      errorMessages.push('La date d\'intervention est obligatoire pour une maintenance marquée comme faite');
+    }
+
+    if (errorMessages.length > 0) {
+      setFieldErrors(errors);
+      setValidationMessage('Merci de remplir les champs obligatoires avant de continuer.');
+      setValidationErrors(errorMessages);
+      setShowValidationModal(true);
+
+      // Focus sur le premier champ en erreur
+      setTimeout(() => {
+        if (errors.type && typeInputRef.current) {
+          typeInputRef.current.focus();
+        } else if (errors.date_intervention && dateInterventionRef.current) {
+          dateInterventionRef.current.focus();
+        }
+      }, 100);
+
+      return false;
+    }
+
+    setFieldErrors({});
+    return true;
+  };
+
+  const validateMarkAsDoneData = (): boolean => {
+    const errors: Record<string, string> = {};
+    const errorMessages: string[] = [];
+
+    // Date intervention obligatoire
+    if (!markAsDoneData.date_intervention || markAsDoneData.date_intervention.trim() === '') {
+      errors.date_intervention = 'La date d\'intervention est obligatoire';
+      errorMessages.push('La date d\'intervention est obligatoire pour marquer une maintenance comme faite');
+    }
+
+    if (errorMessages.length > 0) {
+      setFieldErrors(errors);
+      setValidationMessage('Merci de remplir les champs obligatoires avant de continuer.');
+      setValidationErrors(errorMessages);
+      setShowValidationModal(true);
+
+      // Focus sur le champ en erreur
+      setTimeout(() => {
+        if (errors.date_intervention && dateInterventionMarkAsDoneRef.current) {
+          dateInterventionMarkAsDoneRef.current.focus();
+        }
+      }, 100);
+
+      return false;
+    }
+
+    setFieldErrors({});
+    return true;
   };
 
   const handleAddMaintenance = async () => {
-    if (!formData.type) {
-      alert('Le type de maintenance est obligatoire');
+    // Validation frontend
+    if (!validateFormData()) {
       return;
     }
 
@@ -138,7 +222,7 @@ export function VehicleMaintenances({ vehicleId }: Props) {
     try {
       const insertData = {
         vehicule_id: vehicleId,
-        type: formData.type,
+        type: formData.type!,
         description: formData.description || null,
         statut: formData.statut || 'a_faire',
         prestataire: formData.prestataire || null,
@@ -166,7 +250,9 @@ export function VehicleMaintenances({ vehicleId }: Props) {
       fetchMaintenances();
     } catch (error) {
       console.error('Erreur ajout maintenance:', error);
-      alert('Erreur lors de l\'ajout de la maintenance');
+      setValidationMessage('Erreur lors de l\'enregistrement en base de données.');
+      setValidationErrors(['Une erreur technique est survenue. Veuillez réessayer.']);
+      setShowValidationModal(true);
     } finally {
       setSaving(false);
     }
@@ -190,19 +276,22 @@ export function VehicleMaintenances({ vehicleId }: Props) {
       facture_path: maintenance.facture_path || '',
       facture_nom_fichier: maintenance.facture_nom_fichier || '',
     });
+    setFieldErrors({});
     setShowEditModal(true);
   };
 
   const handleUpdateMaintenance = async () => {
-    if (!formData.type || !selectedMaintenance) {
-      alert('Le type de maintenance est obligatoire');
+    if (!selectedMaintenance) return;
+
+    // Validation frontend
+    if (!validateFormData()) {
       return;
     }
 
     setSaving(true);
     try {
       const updateData = {
-        type: formData.type,
+        type: formData.type!,
         description: formData.description || null,
         statut: formData.statut,
         prestataire: formData.prestataire || null,
@@ -235,7 +324,9 @@ export function VehicleMaintenances({ vehicleId }: Props) {
       fetchMaintenances();
     } catch (error) {
       console.error('Erreur modification maintenance:', error);
-      alert('Erreur lors de la modification');
+      setValidationMessage('Erreur lors de l\'enregistrement en base de données.');
+      setValidationErrors(['Une erreur technique est survenue. Veuillez réessayer.']);
+      setShowValidationModal(true);
     } finally {
       setSaving(false);
     }
@@ -252,14 +343,15 @@ export function VehicleMaintenances({ vehicleId }: Props) {
       facture_path: '',
       facture_nom_fichier: '',
     });
+    setFieldErrors({});
     setShowMarkAsDoneModal(true);
   };
 
   const handleConfirmMarkAsDone = async () => {
     if (!selectedMaintenance) return;
 
-    if (!markAsDoneData.date_intervention) {
-      alert('La date d\'intervention est obligatoire');
+    // Validation frontend
+    if (!validateMarkAsDoneData()) {
       return;
     }
 
@@ -289,10 +381,13 @@ export function VehicleMaintenances({ vehicleId }: Props) {
 
       setShowMarkAsDoneModal(false);
       setSelectedMaintenance(null);
+      setFieldErrors({});
       fetchMaintenances();
     } catch (error) {
       console.error('Erreur mise à jour maintenance:', error);
-      alert('Erreur lors de la mise à jour');
+      setValidationMessage('Erreur lors de l\'enregistrement en base de données.');
+      setValidationErrors(['Une erreur technique est survenue. Veuillez réessayer.']);
+      setShowValidationModal(true);
     } finally {
       setSaving(false);
     }
@@ -511,12 +606,25 @@ export function VehicleMaintenances({ vehicleId }: Props) {
                     Type de maintenance *
                   </label>
                   <input
+                    ref={typeInputRef}
                     type="text"
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, type: e.target.value });
+                      if (fieldErrors.type && e.target.value.trim()) {
+                        setFieldErrors({ ...fieldErrors, type: undefined });
+                      }
+                    }}
                     placeholder="Ex: Vidange, Révision, Pneus..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${
+                      fieldErrors.type
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
                   />
+                  {fieldErrors.type && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.type}</p>
+                  )}
                 </div>
 
                 <div>
@@ -747,11 +855,24 @@ export function VehicleMaintenances({ vehicleId }: Props) {
                   Date d'intervention *
                 </label>
                 <input
+                  ref={dateInterventionMarkAsDoneRef}
                   type="date"
                   value={markAsDoneData.date_intervention}
-                  onChange={(e) => setMarkAsDoneData({ ...markAsDoneData, date_intervention: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => {
+                    setMarkAsDoneData({ ...markAsDoneData, date_intervention: e.target.value });
+                    if (fieldErrors.date_intervention && e.target.value.trim()) {
+                      setFieldErrors({ ...fieldErrors, date_intervention: undefined });
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${
+                    fieldErrors.date_intervention
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
+                {fieldErrors.date_intervention && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.date_intervention}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1098,6 +1219,14 @@ export function VehicleMaintenances({ vehicleId }: Props) {
           </div>
         </div>
       )}
+
+      {/* Modal de validation */}
+      <ValidationModal
+        isOpen={showValidationModal}
+        onClose={() => setShowValidationModal(false)}
+        message={validationMessage}
+        errors={validationErrors}
+      />
     </div>
   );
 }
