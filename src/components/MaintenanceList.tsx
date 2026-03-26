@@ -33,7 +33,7 @@ export function MaintenanceList() {
   const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'a_faire' | 'faite'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'planned' | 'approaching' | 'urgent' | 'done'>('all');
 
   useEffect(() => {
     fetchMaintenances();
@@ -159,7 +159,19 @@ export function MaintenanceList() {
       ? `${m.vehicule.immatriculation} ${m.vehicule.marque} ${m.vehicule.modele} ${m.type} ${m.prestataire || ''}`.toLowerCase().includes(search.toLowerCase())
       : false;
 
-    const matchesStatus = filterStatus === 'all' || m.statut === filterStatus;
+    let matchesStatus = true;
+
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'done') {
+        matchesStatus = m.statut === 'faite';
+      } else if (filterStatus === 'planned') {
+        matchesStatus = m.statut === 'a_faire' && getAlertLevel(m) === 'normal';
+      } else if (filterStatus === 'approaching') {
+        matchesStatus = m.statut === 'a_faire' && (getAlertLevel(m) === 'approaching' || getAlertLevel(m) === 'urgent' || getAlertLevel(m) === 'overdue');
+      } else if (filterStatus === 'urgent') {
+        matchesStatus = m.statut === 'a_faire' && (getAlertLevel(m) === 'urgent' || getAlertLevel(m) === 'overdue');
+      }
+    }
 
     return matchesSearch && matchesStatus;
   });
@@ -248,21 +260,21 @@ export function MaintenanceList() {
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setFilterStatus('all')}
-            className={`flex-1 px-4 py-3 rounded-lg transition-colors text-sm ${
+            className={`flex-1 min-w-[100px] px-3 py-2 rounded-lg transition-colors text-sm ${
               filterStatus === 'all'
                 ? 'bg-blue-600 text-white'
                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
             }`}
           >
-            Toutes
+            Tout
           </button>
           <button
-            onClick={() => setFilterStatus('a_faire')}
-            className={`flex-1 px-4 py-3 rounded-lg transition-colors text-sm ${
-              filterStatus === 'a_faire'
+            onClick={() => setFilterStatus('planned')}
+            className={`flex-1 min-w-[100px] px-3 py-2 rounded-lg transition-colors text-sm ${
+              filterStatus === 'planned'
                 ? 'bg-blue-600 text-white'
                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
             }`}
@@ -270,9 +282,29 @@ export function MaintenanceList() {
             Planifiées
           </button>
           <button
-            onClick={() => setFilterStatus('faite')}
-            className={`flex-1 px-4 py-3 rounded-lg transition-colors text-sm ${
-              filterStatus === 'faite'
+            onClick={() => setFilterStatus('approaching')}
+            className={`flex-1 min-w-[100px] px-3 py-2 rounded-lg transition-colors text-sm ${
+              filterStatus === 'approaching'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            En approche
+          </button>
+          <button
+            onClick={() => setFilterStatus('urgent')}
+            className={`flex-1 min-w-[100px] px-3 py-2 rounded-lg transition-colors text-sm ${
+              filterStatus === 'urgent'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            Urgentes
+          </button>
+          <button
+            onClick={() => setFilterStatus('done')}
+            className={`flex-1 min-w-[100px] px-3 py-2 rounded-lg transition-colors text-sm ${
+              filterStatus === 'done'
                 ? 'bg-blue-600 text-white'
                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
             }`}
