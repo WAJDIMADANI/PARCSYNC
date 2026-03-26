@@ -61,17 +61,18 @@ interface Vehicle {
   locataire_affiche: string; // Calculé par la vue v_vehicles_list_ui
 }
 
+export type Tab = 'info' | 'proprietaire' | 'acquisition' | 'insurance' | 'equipment' | 'maintenances' | 'documents';
+
 interface Props {
   vehicle: Vehicle;
   onClose: () => void;
   onVehicleUpdated: (updatedVehicle: Vehicle) => Promise<void>;
   photoUrl?: string;
+  initialTab?: Tab;
 }
 
-type Tab = 'info' | 'proprietaire' | 'acquisition' | 'insurance' | 'equipment' | 'maintenances' | 'documents';
-
-export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicleUpdated, photoUrl: initialPhotoUrl }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('info');
+export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicleUpdated, photoUrl: initialPhotoUrl, initialTab = 'info' }: Props) {
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);

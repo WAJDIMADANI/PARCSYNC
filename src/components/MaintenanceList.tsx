@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Wrench, Calendar, DollarSign, Search, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { VehicleDetailModal } from './VehicleDetailModal';
 
 interface Vehicle {
   id: string;
@@ -34,6 +35,8 @@ export function MaintenanceList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'planned' | 'approaching' | 'urgent' | 'done'>('all');
+  const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchMaintenances();
@@ -53,6 +56,40 @@ export function MaintenanceList() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRowClick = async (maintenance: Maintenance) => {
+    if (!maintenance.vehicule_id) return;
+
+    try {
+      const { data: vehicleData, error: vehicleError } = await supabase
+        .from('vehicule')
+        .select('*')
+        .eq('id', maintenance.vehicule_id)
+        .single();
+
+      if (vehicleError) throw vehicleError;
+
+      if (vehicleData.photo_path) {
+        const { data: photoData } = await supabase
+          .storage
+          .from('vehicle-photos')
+          .createSignedUrl(vehicleData.photo_path, 3600);
+
+        if (photoData?.signedUrl) {
+          setPhotoUrls(prev => ({ ...prev, [vehicleData.id]: photoData.signedUrl }));
+        }
+      }
+
+      setSelectedVehicle(vehicleData);
+    } catch (error) {
+      console.error('Erreur chargement véhicule:', error);
+    }
+  };
+
+  const handleVehicleUpdated = async (updatedVehicle: any) => {
+    setSelectedVehicle(updatedVehicle);
+    await fetchMaintenances();
   };
 
   type AlertLevel = 'normal' | 'approaching' | 'urgent' | 'overdue';
@@ -352,7 +389,11 @@ export function MaintenanceList() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredMaintenances.map((maintenance) => (
-                <tr key={maintenance.id} className="hover:bg-gray-50">
+                <tr
+                  key={maintenance.id}
+                  onClick={() => handleRowClick(maintenance)}
+                  className="hover:bg-gray-50 cursor-pointer"
+                >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {maintenance.vehicule ? (
                       <div>
@@ -395,6 +436,16 @@ export function MaintenanceList() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {selectedVehicle && (
+        <VehicleDetailModal
+          vehicle={selectedVehicle}
+          onClose={() => setSelectedVehicle(null)}
+          onVehicleUpdated={handleVehicleUpdated}
+          photoUrl={photoUrls[selectedVehicle.id]}
+          initialTab="maintenances"
+        />
       )}
     </div>
   );
