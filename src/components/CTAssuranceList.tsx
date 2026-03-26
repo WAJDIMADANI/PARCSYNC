@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Shield, Calendar, AlertTriangle, FileText, Search } from 'lucide-react';
+import { Shield, Calendar, AlertTriangle, FileText, Search, Filter, Building2 } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDetailModal } from './VehicleDetailModal';
+import { Pagination } from './Pagination';
 
 interface Vehicle {
   id: string;
@@ -10,6 +11,7 @@ interface Vehicle {
   marque: string | null;
   modele: string | null;
   statut: string;
+  site_id: string | null;
   [key: string]: any;
 }
 
@@ -22,16 +24,27 @@ interface DocumentVehicule {
   vehicule?: Vehicle;
 }
 
+interface Site {
+  id: string;
+  nom: string;
+}
+
 export function CTAssuranceList() {
   const [documents, setDocuments] = useState<DocumentVehicule[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'ct' | 'assurance' | 'carte_ris'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'expired' | 'soon'>('all');
+  const [filterSite, setFilterSite] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(50);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [vehiclePhotoUrl, setVehiclePhotoUrl] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     fetchDocuments();
+    fetchSites();
   }, []);
 
   const fetchDocuments = async () => {
@@ -49,13 +62,13 @@ export function CTAssuranceList() {
             immatriculation,
             marque,
             modele,
-            statut
+            statut,
+            site_id
           )
         `)
         .eq('actif', true)
         .not('date_expiration', 'is', null)
-        .in('type_document', ['controle_technique', 'assurance', 'carte_ris'])
-        .order('date_expiration', { ascending: true });
+        .in('type_document', ['controle_technique', 'assurance', 'carte_ris']);
 
       if (error) throw error;
 
@@ -69,6 +82,20 @@ export function CTAssuranceList() {
       console.error('Erreur chargement documents:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSites = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('site')
+        .select('id, nom')
+        .order('nom');
+
+      if (error) throw error;
+      setSites(data || []);
+    } catch (error) {
+      console.error('Erreur chargement sites:', error);
     }
   };
 
@@ -144,31 +171,77 @@ export function CTAssuranceList() {
   };
 
   const handleVehicleUpdated = async () => {
-    // Recharger la liste des documents
     await fetchDocuments();
-    // Le modal gère lui-même le refresh
   };
 
-  const filteredDocuments = documents.filter(doc => {
-    const matchesSearch = doc.vehicule
-      ? `${doc.vehicule.immatriculation} ${doc.vehicule.marque || ''} ${doc.vehicule.modele || ''}`.toLowerCase().includes(search.toLowerCase())
-      : false;
+  const getSiteName = (siteId: string | null): string => {
+    if (!siteId) return '-';
+    const site = sites.find(s => s.id === siteId);
+    return site ? site.nom : '-';
+  };
 
-    const matchesType =
-      filterType === 'all' ||
-      (filterType === 'ct' && doc.type_document === 'controle_technique') ||
-      (filterType === 'assurance' && doc.type_document === 'assurance') ||
-      (filterType === 'carte_ris' && doc.type_document === 'carte_ris');
+  // Filtrage et tri intelligent
+  const filteredAndSortedDocuments = (() => {
+    let filtered = documents.filter(doc => {
+      // Filtre recherche
+      const matchesSearch = doc.vehicule
+        ? `${doc.vehicule.immatriculation} ${doc.vehicule.marque || ''} ${doc.vehicule.modele || ''}`.toLowerCase().includes(search.toLowerCase())
+        : false;
 
-    return matchesSearch && matchesType;
-  });
+      // Filtre type
+      const matchesType =
+        filterType === 'all' ||
+        (filterType === 'ct' && doc.type_document === 'controle_technique') ||
+        (filterType === 'assurance' && doc.type_document === 'assurance') ||
+        (filterType === 'carte_ris' && doc.type_document === 'carte_ris');
 
-  // Séparer les documents expirés et ceux à renouveler
-  const expiredDocs = filteredDocuments.filter(d => getDaysRemaining(d.date_expiration) < 0);
-  const soonExpiringDocs = filteredDocuments.filter(d => {
-    const days = getDaysRemaining(d.date_expiration);
-    return days >= 0 && days <= 30;
-  });
+      // Filtre statut
+      const daysRemaining = getDaysRemaining(doc.date_expiration);
+      const matchesStatus =
+        filterStatus === 'all' ||
+        (filterStatus === 'expired' && daysRemaining < 0) ||
+        (filterStatus === 'soon' && daysRemaining >= 0 && daysRemaining <= 30);
+
+      // Filtre site
+      const matchesSite =
+        filterSite === 'all' ||
+        (doc.vehicule && doc.vehicule.site_id === filterSite);
+
+      return matchesSearch && matchesType && matchesStatus && matchesSite;
+    });
+
+    // Tri intelligent : expirés d'abord (les plus urgents), puis à renouveler (les plus proches)
+    filtered.sort((a, b) => {
+      const daysA = getDaysRemaining(a.date_expiration);
+      const daysB = getDaysRemaining(b.date_expiration);
+
+      // Les deux expirés : trier par urgence décroissante (plus expiré = plus urgent)
+      if (daysA < 0 && daysB < 0) {
+        return daysA - daysB;
+      }
+
+      // Un expiré, un à renouveler : expiré d'abord
+      if (daysA < 0) return -1;
+      if (daysB < 0) return 1;
+
+      // Les deux à renouveler : trier par urgence croissante (moins de jours = plus urgent)
+      return daysA - daysB;
+    });
+
+    return filtered;
+  })();
+
+  // Pagination
+  const totalItems = filteredAndSortedDocuments.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedDocuments = filteredAndSortedDocuments.slice(startIndex, endIndex);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterType, filterStatus, filterSite]);
 
   // Statistiques par type
   const ctCount = documents.filter(d => {
@@ -190,44 +263,69 @@ export function CTAssuranceList() {
 
   const renderDocumentRow = (doc: DocumentVehicule) => {
     const daysRemaining = getDaysRemaining(doc.date_expiration);
+    const isExpired = daysRemaining < 0;
 
     return (
       <tr
         key={doc.id}
         onClick={() => handleVehicleClick(doc)}
-        className="hover:bg-gray-50 cursor-pointer transition-colors"
+        className={`hover:bg-gray-50 cursor-pointer transition-colors ${
+          isExpired ? 'bg-red-50/30' : ''
+        }`}
       >
-        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+        <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">
+          {doc.vehicule?.immatriculation || '-'}
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-600">
           {doc.vehicule ? (
             <div>
-              <div className="font-semibold">{doc.vehicule.immatriculation}</div>
-              <div className="text-xs text-gray-500">
-                {doc.vehicule.marque} {doc.vehicule.modele}
-              </div>
+              <div className="font-medium">{doc.vehicule.marque || '-'}</div>
+              <div className="text-xs text-gray-500">{doc.vehicule.modele || '-'}</div>
             </div>
           ) : '-'}
         </td>
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+          {getSiteName(doc.vehicule?.site_id || null)}
+        </td>
+        <td className="px-4 py-3 whitespace-nowrap text-sm">
           <span className={`px-2 py-1 text-xs font-medium rounded-full ${getDocTypeColor(doc.type_document)}`}>
             {getDocTypeLabel(doc.type_document)}
           </span>
         </td>
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-          <div className="flex items-center gap-2">
+        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+          <div className="flex items-center gap-1">
             <Calendar className="w-4 h-4" />
             {new Date(doc.date_expiration).toLocaleDateString('fr-FR')}
           </div>
         </td>
-        <td className="px-6 py-4 whitespace-nowrap">
-          {daysRemaining < 0 ? (
+        <td className="px-4 py-3 whitespace-nowrap">
+          {isExpired ? (
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
               <AlertTriangle className="w-3 h-3 mr-1" />
-              Expiré depuis {Math.abs(daysRemaining)}j
+              Expiré
             </span>
-          ) : (
+          ) : daysRemaining <= 7 ? (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              Urgent
+            </span>
+          ) : daysRemaining <= 30 ? (
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
               <Calendar className="w-3 h-3 mr-1" />
-              {daysRemaining === 0 ? "Aujourd'hui" : `${daysRemaining}j restants`}
+              À renouveler
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+              Valide
+            </span>
+          )}
+        </td>
+        <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold">
+          {isExpired ? (
+            <span className="text-red-700">-{Math.abs(daysRemaining)}j</span>
+          ) : (
+            <span className={daysRemaining <= 7 ? 'text-red-700' : 'text-orange-700'}>
+              {daysRemaining}j
             </span>
           )}
         </td>
@@ -294,143 +392,117 @@ export function CTAssuranceList() {
           </div>
         </div>
 
-        {/* Search and Filters */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Rechercher un véhicule..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+        {/* Filtres avancés */}
+        <div className="mb-6 bg-white rounded-lg shadow p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="w-5 h-5 text-gray-600" />
+            <h3 className="text-sm font-semibold text-gray-700">Filtres</h3>
           </div>
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilterType('all')}
-              className={`flex-1 px-4 py-3 rounded-lg transition-colors ${
-                filterType === 'all'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Recherche */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Filtre Statut */}
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as any)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              Tout
-            </button>
-            <button
-              onClick={() => setFilterType('ct')}
-              className={`flex-1 px-4 py-3 rounded-lg transition-colors ${
-                filterType === 'ct'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
+              <option value="all">Tous les statuts</option>
+              <option value="expired">Expirés</option>
+              <option value="soon">À renouveler (30j)</option>
+            </select>
+
+            {/* Filtre Type */}
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as any)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              CT
-            </button>
-            <button
-              onClick={() => setFilterType('assurance')}
-              className={`flex-1 px-4 py-3 rounded-lg transition-colors ${
-                filterType === 'assurance'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              Assurance
-            </button>
-            <button
-              onClick={() => setFilterType('carte_ris')}
-              className={`flex-1 px-4 py-3 rounded-lg transition-colors ${
-                filterType === 'carte_ris'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              CMI / RIS
-            </button>
+              <option value="all">Tous les types</option>
+              <option value="ct">CT</option>
+              <option value="assurance">Assurance</option>
+              <option value="carte_ris">CMI / RIS</option>
+            </select>
+
+            {/* Filtre Site */}
+            <div className="relative">
+              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <select
+                value={filterSite}
+                onChange={(e) => setFilterSite(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">Tous les sites</option>
+                {sites.map(site => (
+                  <option key={site.id} value={site.id}>{site.nom}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Section Documents Expirés */}
-        {expiredDocs.length > 0 && (
-          <div className="mb-6">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-                <h2 className="text-lg font-semibold text-red-900">
-                  Documents expirés ({expiredDocs.length})
-                </h2>
+        {/* Table paginée */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {paginatedDocuments.length === 0 ? (
+            <div className="p-12 text-center">
+              <p className="text-gray-600">Aucun document trouvé</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Immatriculation
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Véhicule
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Site
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date expiration
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Statut
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Jours
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {paginatedDocuments.map(renderDocumentRow)}
+                  </tbody>
+                </table>
               </div>
-            </div>
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Véhicule
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date expiration
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Statut
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {expiredDocs.map(renderDocumentRow)}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
-        {/* Section Documents Bientôt Expirés */}
-        {soonExpiringDocs.length > 0 && (
-          <div className="mb-6">
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-orange-600" />
-                <h2 className="text-lg font-semibold text-orange-900">
-                  Documents à renouveler dans les 30 jours ({soonExpiringDocs.length})
-                </h2>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Véhicule
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date expiration
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Statut
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {soonExpiringDocs.map(renderDocumentRow)}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {expiredDocs.length === 0 && soonExpiringDocs.length === 0 && (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <p className="text-gray-600">Aucun document à renouveler</p>
-          </div>
-        )}
+              {/* Pagination */}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            </>
+          )}
+        </div>
       </div>
 
       {/* Modal Véhicule */}
