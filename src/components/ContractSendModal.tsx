@@ -779,16 +779,31 @@ export default function ContractSendModal({
 
       if (!yousignResponse.ok) {
         const errorText = await yousignResponse.text();
-        console.error('⚠️ Yousign error (status ' + yousignResponse.status + '):', errorText);
+        console.error('❌ Yousign error (status ' + yousignResponse.status + '):', errorText);
 
-        if (yousignResponse.status === 0 || errorText.includes('CORS')) {
-          console.warn('⚠️ Erreur CORS, on continue quand même');
-        } else {
-          throw new Error(`Yousign error: ${errorText}`);
-        }
+        // Marquer le contrat comme erreur au lieu de l'ignorer silencieusement
+        await supabase
+          .from('contrat')
+          .update({
+            statut: 'erreur',
+            variables: {
+              ...contractData.variables,
+              error_yousign: errorText.substring(0, 500),
+              error_timestamp: new Date().toISOString()
+            }
+          })
+          .eq('id', contrat.id);
+
+        throw new Error(
+          `Impossible de créer la signature Yousign (${yousignResponse.status}): ${errorText.substring(0, 200)}`
+        );
       } else {
         const yousignData = await yousignResponse.json();
-        console.log('✅ Yousign signature créée:', yousignData);
+        console.log('✅ Yousign signature créée:', {
+          signatureRequestId: yousignData.signatureRequestId,
+          signerId: yousignData.signerId,
+          contrat_id: contrat.id
+        });
       }
 
       const { error: updateError } = await supabase
