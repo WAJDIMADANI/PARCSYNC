@@ -341,6 +341,70 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // --- (AJOUT) Télécharger et stocker le PDF signé final depuis Yousign ---
+    if (signatureRequestId) {
+      const YOUSIGN_API_KEY = Deno.env.get("YOUSIGN_API_KEY");
+      const YOUSIGN_BASE_URL = Deno.env.get("YOUSIGN_BASE_URL") ?? "https://api.yousign.app";
+
+      if (YOUSIGN_API_KEY) {
+        try {
+          console.log("Téléchargement du PDF signé depuis Yousign...");
+
+          const dlRes = await fetch(
+            `${YOUSIGN_BASE_URL}/v3/signature_requests/${signatureRequestId}/documents/download`,
+            { headers: { Authorization: `Bearer ${YOUSIGN_API_KEY}` } }
+          );
+
+          if (dlRes.ok) {
+            const contentType = dlRes.headers.get("content-type") ?? "application/pdf";
+            const bytes = await dlRes.arrayBuffer();
+
+            const fileName = `contrats/${c.id}_signed_${Date.now()}.pdf`;
+
+            const uploadRes = await fetch(
+              `${SUPABASE_URL}/storage/v1/object/documents/${fileName}`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${SERVICE_KEY}`,
+                  apikey: SERVICE_KEY,
+                  "Content-Type": contentType,
+                },
+                body: bytes,
+              }
+            );
+
+            if (uploadRes.ok) {
+              console.log("PDF signé uploadé dans Storage:", fileName);
+
+              await restPatch(
+                SUPABASE_URL,
+                `contrat?id=eq.${encodeURIComponent(String(c.id))}`,
+                SERVICE_KEY,
+                {
+                  fichier_signe_url: fileName,
+                  signed_storage_path: fileName,
+                },
+                "return=minimal"
+              );
+
+              console.log("Contrat mis à jour avec fichier_signe_url");
+            } else {
+              const uploadText = await uploadRes.text();
+              console.error("Échec upload Storage:", uploadRes.status, uploadText);
+            }
+          } else {
+            const dlText = await dlRes.text();
+            console.error("Échec téléchargement Yousign:", dlRes.status, dlText);
+          }
+        } catch (err) {
+          console.error("Erreur téléchargement/upload PDF signé:", err);
+        }
+      } else {
+        console.warn("YOUSIGN_API_KEY manquant, PDF signé non téléchargé");
+      }
+    }
+
     // --- (AJOUT) Update profil: statut + date_entree + matricule_tca si manquants ---
     if (profilId) {
       // lire le profil actuel

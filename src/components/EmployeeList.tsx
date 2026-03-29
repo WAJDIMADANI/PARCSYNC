@@ -4589,25 +4589,25 @@ function EmployeeDetailModal({
                           <button
                             onClick={async () => {
                               try {
-                                // Si le contrat a été signé via Yousign, télécharger depuis Yousign
-                                if (contract.yousign_signature_request_id && contract.statut === 'signé') {
-                                  await handleDownloadContract(contract.id);
-                                }
-                                // Si le contrat a un PDF (signé ou non)
-                                else if (contract.fichier_signe_url || contract.signed_storage_path) {
-                                  // Utiliser le système spécifique pour les contrats manuels
+                                // PRIORITÉ 1: Fichier signé stocké (PDF final Yousign ou manuel)
+                                if (contract.fichier_signe_url || contract.signed_storage_path) {
                                   if (isManualContract(contract)) {
                                     const url = await resolveContractUrl(contract);
                                     window.open(url, '_blank');
                                   } else {
-                                    // Système existant pour les contrats générés
                                     const url = await resolveDocUrl({
                                       fichier_url: contract.fichier_signe_url,
                                       storage_path: contract.signed_storage_path
                                     });
                                     window.open(url, '_blank');
                                   }
-                                } else if (contract.modele_id) {
+                                }
+                                // PRIORITÉ 2: Téléchargement à la volée depuis Yousign (si pas encore stocké)
+                                else if (contract.yousign_signature_request_id && contract.statut === 'signé') {
+                                  await handleDownloadContract(contract.id);
+                                }
+                                // PRIORITÉ 3: Génération PDF local (uniquement si aucun PDF signé disponible)
+                                else if (contract.modele_id) {
                                   // Si le contrat a un modèle mais pas encore de PDF, générer le PDF
                                   setToast({ type: 'success', message: 'Génération du PDF en cours...' });
 
