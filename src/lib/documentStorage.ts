@@ -19,9 +19,9 @@ export async function resolveDocUrl(doc: Document): Promise<string> {
   const path = doc.storage_path || doc.fichier_url; // fallback (V1)
   if (!path) throw new Error('Chemin manquant');
 
-  // Bucket : soit colonne 'bucket', soit premier segment du path
-  const bucket = doc.bucket || path.split('/')[0];
-  const relative = doc.bucket ? path : path.split('/').slice(1).join('/');
+  // Bucket : TOUJOURS 'documents' (tous les fichiers sont dans ce bucket)
+  const bucket = 'documents';
+  const relative = path;
 
   // ⚠️ Si bucket privé (recommandé RH) -> URL signée
   const { data, error } = await supabase
