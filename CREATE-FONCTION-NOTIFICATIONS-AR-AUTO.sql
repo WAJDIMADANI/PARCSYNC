@@ -48,7 +48,7 @@ BEGIN
     JOIN profil p ON ar.profil_id = p.id
     WHERE ar.ar_type = 'ABSENCE'
       AND ar.end_date = CURRENT_DATE
-      AND p.statut = 'actif'
+      AND p.statut IN ('actif', 'contrat_signe')
   LOOP
     -- Pour chaque utilisateur du pôle Comptabilité ou avec permission compta/ar
     FOR v_user IN
