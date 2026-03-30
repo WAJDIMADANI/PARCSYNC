@@ -467,14 +467,7 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
   };
 
   const handleOpenDemandeExterne = async (demande: DemandeExterne) => {
-    // Si c'est une notification A&R, naviguer vers le module A&R
-    if (demande.type === 'ar_fin_absence' && demande.reference_id && onNavigateToAR) {
-      onNavigateToAR(demande.reference_id);
-      return;
-    }
-
-    setSelectedDemandeExterne(demande);
-
+    // Marquer comme lu si ce n'est pas déjà fait
     if (!demande.lu) {
       try {
         const { error } = await supabase
@@ -497,6 +490,14 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
         console.error('Erreur marquage lu:', error);
       }
     }
+
+    // Si c'est une notification A&R, naviguer vers le module A&R
+    if (demande.type === 'ar_fin_absence' && demande.reference_id && onNavigateToAR) {
+      onNavigateToAR(demande.reference_id);
+      return;
+    }
+
+    setSelectedDemandeExterne(demande);
   };
 
   const updateDemandeExterneStatus = async (demandeId: string, newStatus: 'nouveau' | 'consulte' | 'traite') => {
