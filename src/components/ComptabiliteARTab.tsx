@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Plus, X, Calendar, Clock, FileText, Download, Upload, Trash2 } from 'lucide-react';
+import { Search, Plus, X, Calendar, Clock, FileText, Download, Upload, Trash2, CheckCircle, PauseCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Pagination } from './Pagination';
 
@@ -62,6 +62,12 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   });
   const [justificatifFile, setJustificatifFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const [showClotureModal, setShowClotureModal] = useState(false);
+  const [showProlongerModal, setShowProlongerModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<AREvent | null>(null);
+  const [clotureData, setClotureData] = useState({ date_reprise: '', note: '' });
+  const [prolongerData, setProlongerData] = useState({ nouvelle_date_fin: '', note: '' });
 
   useEffect(() => {
     loadEvents();
@@ -357,6 +363,76 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     return new Date(dateStr).toLocaleDateString('fr-FR');
   };
 
+  const handleCloturer = (event: AREvent) => {
+    setSelectedEvent(event);
+    setClotureData({ date_reprise: new Date().toISOString().split('T')[0], note: '' });
+    setShowClotureModal(true);
+  };
+
+  const handleProlonger = (event: AREvent) => {
+    setSelectedEvent(event);
+    setProlongerData({ nouvelle_date_fin: event.date_fin || '', note: '' });
+    setShowProlongerModal(true);
+  };
+
+  const submitCloturer = async () => {
+    if (!selectedEvent || !clotureData.date_reprise) {
+      alert('Veuillez renseigner la date de reprise');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('compta_ar_events')
+        .update({
+          end_date: clotureData.date_reprise,
+          justification_note: clotureData.note || null
+        })
+        .eq('id', selectedEvent.id);
+
+      if (error) throw error;
+
+      setShowClotureModal(false);
+      setSelectedEvent(null);
+      loadEvents();
+    } catch (error: any) {
+      console.error('Error closing absence:', error);
+      alert('Erreur lors de la clôture: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const submitProlonger = async () => {
+    if (!selectedEvent || !prolongerData.nouvelle_date_fin) {
+      alert('Veuillez renseigner la nouvelle date de fin');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('compta_ar_events')
+        .update({
+          end_date: prolongerData.nouvelle_date_fin,
+          justification_note: prolongerData.note || null
+        })
+        .eq('id', selectedEvent.id);
+
+      if (error) throw error;
+
+      setShowProlongerModal(false);
+      setSelectedEvent(null);
+      loadEvents();
+    } catch (error: any) {
+      console.error('Error extending absence:', error);
+      alert('Erreur lors de la prolongation: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -563,6 +639,24 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center gap-2">
+                        {event.kind === 'absence' && (
+                          <>
+                            <button
+                              onClick={() => handleCloturer(event)}
+                              className="text-green-600 hover:text-green-900"
+                              title="Clôturer l'absence"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleProlonger(event)}
+                              className="text-orange-600 hover:text-orange-900"
+                              title="Prolonger l'absence"
+                            >
+                              <PauseCircle className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                         {event.justificatif_file_path && (
                           <button
                             onClick={() => downloadJustificatif(event.justificatif_file_path!)}
@@ -599,6 +693,160 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
               onPageChange={setCurrentPage}
             />
           )}
+        </div>
+      )}
+
+      {showClotureModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+                Clôturer l'absence
+              </h3>
+              <button
+                onClick={() => {
+                  setShowClotureModal(false);
+                  setSelectedEvent(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Salarié</p>
+                <p className="font-semibold text-gray-900">
+                  {selectedEvent.matricule} - {selectedEvent.nom} {selectedEvent.prenom}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date de reprise effective *
+                </label>
+                <input
+                  type="date"
+                  value={clotureData.date_reprise}
+                  onChange={(e) => setClotureData({ ...clotureData, date_reprise: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Note (optionnelle)
+                </label>
+                <textarea
+                  value={clotureData.note}
+                  onChange={(e) => setClotureData({ ...clotureData, note: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="Commentaire sur la reprise..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowClotureModal(false);
+                    setSelectedEvent(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={submitCloturer}
+                  disabled={saving}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Enregistrement...' : 'Clôturer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showProlongerModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <PauseCircle className="w-6 h-6 text-orange-600" />
+                Prolonger l'absence
+              </h3>
+              <button
+                onClick={() => {
+                  setShowProlongerModal(false);
+                  setSelectedEvent(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Salarié</p>
+                <p className="font-semibold text-gray-900">
+                  {selectedEvent.matricule} - {selectedEvent.nom} {selectedEvent.prenom}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nouvelle date de fin *
+                </label>
+                <input
+                  type="date"
+                  value={prolongerData.nouvelle_date_fin}
+                  onChange={(e) => setProlongerData({ ...prolongerData, nouvelle_date_fin: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Note (optionnelle)
+                </label>
+                <textarea
+                  value={prolongerData.note}
+                  onChange={(e) => setProlongerData({ ...prolongerData, note: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  placeholder="Raison de la prolongation..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProlongerModal(false);
+                    setSelectedEvent(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={submitProlonger}
+                  disabled={saving}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Enregistrement...' : 'Prolonger'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
