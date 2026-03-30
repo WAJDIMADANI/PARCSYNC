@@ -67,7 +67,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   const [showProlongerModal, setShowProlongerModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<AREvent | null>(null);
   const [clotureData, setClotureData] = useState({ date_reprise: '', note: '' });
-  const [prolongerData, setProlongerData] = useState({ nouvelle_date_fin: '', note: '' });
+  const [prolongerData, setProlongerData] = useState({ nouvelle_date_fin: '', note: '', justificatif_file: null as File | null });
 
   useEffect(() => {
     loadEvents();
@@ -371,7 +371,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
 
   const handleProlonger = (event: AREvent) => {
     setSelectedEvent(event);
-    setProlongerData({ nouvelle_date_fin: event.date_fin || '', note: '' });
+    setProlongerData({ nouvelle_date_fin: event.date_fin || '', note: '', justificatif_file: null });
     setShowProlongerModal(true);
   };
 
@@ -412,11 +412,28 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
 
     try {
       setSaving(true);
+
+      let justificatif_path = selectedEvent.justificatif_file_path;
+
+      if (prolongerData.justificatif_file) {
+        const fileExt = prolongerData.justificatif_file.name.split('.').pop();
+        const fileName = `${selectedEvent.profil_id}_${Date.now()}.${fileExt}`;
+        const filePath = `ar-justificatifs/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(filePath, prolongerData.justificatif_file);
+
+        if (uploadError) throw uploadError;
+        justificatif_path = filePath;
+      }
+
       const { error } = await supabase
         .from('compta_ar_events')
         .update({
           end_date: prolongerData.nouvelle_date_fin,
-          justification_note: prolongerData.note || null
+          justification_note: prolongerData.note || null,
+          justificatif_file_path: justificatif_path
         })
         .eq('id', selectedEvent.id);
 
@@ -824,6 +841,48 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   placeholder="Raison de la prolongation..."
                 />
+              </div>
+
+              {selectedEvent.justificatif_file_path ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-gray-600 mb-1">Justificatif actuel</p>
+                  <button
+                    type="button"
+                    onClick={() => downloadJustificatif(selectedEvent.justificatif_file_path!)}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                  >
+                    <Download className="w-4 h-4" />
+                    Voir le justificatif
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <p className="text-sm text-gray-600">
+                    Aucun justificatif actuel. Vous pouvez en ajouter un ci-dessous.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {selectedEvent.justificatif_file_path ? 'Nouveau justificatif (optionnel)' : 'Justificatif (optionnel)'}
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  onChange={(e) => setProlongerData({ ...prolongerData, justificatif_file: e.target.files?.[0] || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+                {prolongerData.justificatif_file && (
+                  <p className="mt-1 text-sm text-gray-600">
+                    Fichier sélectionné : {prolongerData.justificatif_file.name}
+                  </p>
+                )}
+                {selectedEvent.justificatif_file_path && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Si vous ajoutez un nouveau justificatif, il remplacera l'actuel
+                  </p>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
