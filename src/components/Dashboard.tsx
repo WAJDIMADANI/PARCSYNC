@@ -63,6 +63,13 @@ export function Dashboard() {
     setViewParams({ profilId, returnParams });
   };
 
+  const handleNavigateToAR = (arEventId: string) => {
+    // Navigation vers Comptabilité > A&R avec focus sur un événement
+    setPreviousView(view);
+    setView('compta/ar');
+    setViewParams({ focus_ar_event: arEventId });
+  };
+
   const handleCloseProfile = () => {
     // Retourner à la page d'origine si elle existe
     if (previousView) {
@@ -79,7 +86,7 @@ export function Dashboard() {
       case 'setup':
         return <SetupCheck />;
       case 'inbox':
-        return <InboxPage onViewProfile={handleViewProfile} viewParams={viewParams} />;
+        return <InboxPage onViewProfile={handleViewProfile} onNavigateToAR={handleNavigateToAR} viewParams={viewParams} />;
       case 'rh/candidats':
         return <CandidateList />;
       case 'rh/salaries':
@@ -132,7 +139,7 @@ export function Dashboard() {
       case 'compta/mutuelle':
       case 'compta/ar':
       case 'compta/avance-frais':
-        return <AccountingDashboard currentView={view} onViewChange={handleViewChange} />;
+        return <AccountingDashboard currentView={view} onViewChange={handleViewChange} viewParams={viewParams} />;
       case 'dashboards/rh':
         return <RHDashboard onNavigate={handleViewChange} />;
       case 'dashboards/parc':

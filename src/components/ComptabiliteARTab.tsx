@@ -28,7 +28,11 @@ interface Employee {
   prenom: string;
 }
 
-export default function ComptabiliteARTab() {
+interface ComptabiliteARTabProps {
+  focusArEventId?: string;
+}
+
+export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabProps) {
   const [events, setEvents] = useState<AREvent[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<AREvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +43,7 @@ export default function ComptabiliteARTab() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+  const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -72,6 +77,33 @@ export default function ComptabiliteARTab() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, startDateFilter, endDateFilter]);
+
+  // Gérer le focus sur un événement spécifique depuis l'Inbox
+  useEffect(() => {
+    if (focusArEventId && filteredEvents.length > 0 && !loading) {
+      const eventIndex = filteredEvents.findIndex(e => e.id === focusArEventId);
+
+      if (eventIndex !== -1) {
+        // Calculer la page contenant l'événement
+        const targetPage = Math.floor(eventIndex / itemsPerPage) + 1;
+        setCurrentPage(targetPage);
+
+        // Attendre que le DOM soit mis à jour, puis scroller et surligner
+        setTimeout(() => {
+          const element = document.querySelector(`[data-ar-event-id="${focusArEventId}"]`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setHighlightedEventId(focusArEventId);
+
+            // Retirer le surlignage après 4 secondes
+            setTimeout(() => {
+              setHighlightedEventId(null);
+            }, 4000);
+          }
+        }, 100);
+      }
+    }
+  }, [focusArEventId, filteredEvents, loading]);
 
   useEffect(() => {
     if (employeeSearchTimeoutRef.current) {
@@ -475,7 +507,15 @@ export default function ComptabiliteARTab() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedEvents.map((event) => (
-                  <tr key={event.id} className="hover:bg-gray-50">
+                  <tr
+                    key={event.id}
+                    data-ar-event-id={event.id}
+                    className={`hover:bg-gray-50 transition-colors duration-300 ${
+                      highlightedEventId === event.id
+                        ? 'bg-gradient-to-r from-orange-100 via-amber-100 to-orange-100 shadow-lg scale-105'
+                        : ''
+                    }`}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {event.matricule}
                     </td>

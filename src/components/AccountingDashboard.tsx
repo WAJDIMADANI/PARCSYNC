@@ -14,9 +14,10 @@ import { usePermissions } from '../contexts/PermissionsContext';
 interface AccountingDashboardProps {
   currentView: View;
   onViewChange: (view: View) => void;
+  viewParams?: any;
 }
 
-export default function AccountingDashboard({ currentView, onViewChange }: AccountingDashboardProps) {
+export default function AccountingDashboard({ currentView, onViewChange, viewParams }: AccountingDashboardProps) {
   const { hasPermission, permissions } = usePermissions();
 
   // Vérifier la permission globale "comptabilite" OU n'importe quelle permission compta/*
@@ -190,7 +191,7 @@ export default function AccountingDashboard({ currentView, onViewChange }: Accou
         {activeTab === 'adresse' && <ComptabiliteAdresseTab />}
         {activeTab === 'avenants' && <ComptabiliteAvenantTab />}
         {activeTab === 'mutuelle' && <ComptabiliteMutuelleTab />}
-        {activeTab === 'ar' && <ComptabiliteARTab />}
+        {activeTab === 'ar' && <ComptabiliteARTab focusArEventId={viewParams?.focus_ar_event} />}
         {activeTab === 'avance-frais' && <ComptabiliteAvanceFraisTab />}
       </div>
     </div>

@@ -25,7 +25,7 @@ interface Tache {
 
 interface DemandeExterne {
   id: string;
-  type: 'demande_externe' | 'rdv_visite_medicale';
+  type: 'demande_externe' | 'rdv_visite_medicale' | 'ar_fin_absence';
   titre: string;
   description: string;
   contenu: string | any;
@@ -68,24 +68,26 @@ interface TaskStats {
   total: number;
   non_lus: number;
   rdv_visite_medicale: number;
+  ar_fin_absence: number;
 }
 
 interface InboxPageProps {
   onViewProfile?: (profilId: string, returnParams?: any) => void;
+  onNavigateToAR?: (arEventId: string) => void;
   viewParams?: any;
 }
 
-export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
+export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPageProps = {}) {
   const { user, appUserId } = useAuth();
   const [taches, setTaches] = useState<Tache[]>([]);
   const [demandesExternes, setDemandesExternes] = useState<DemandeExterne[]>([]);
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<TaskStats>({ en_attente: 0, en_cours: 0, completee: 0, total: 0, non_lus: 0, rdv_visite_medicale: 0 });
+  const [stats, setStats] = useState<TaskStats>({ en_attente: 0, en_cours: 0, completee: 0, total: 0, non_lus: 0, rdv_visite_medicale: 0, ar_fin_absence: 0 });
   const [selectedTask, setSelectedTask] = useState<Tache | null>(null);
   const [selectedDemandeExterne, setSelectedDemandeExterne] = useState<DemandeExterne | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'en_attente' | 'en_cours' | 'completee' | 'rdv_visite_medicale'>('all');
+  const [filter, setFilter] = useState<'all' | 'en_attente' | 'en_cours' | 'completee' | 'rdv_visite_medicale' | 'ar_fin_absence'>('all');
   const [currentPage, setCurrentPage] = useState(viewParams?.currentPage || 1);
   const itemsPerPage = 10;
 
@@ -349,6 +351,9 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
       const rdvVisiteMedicale = formattedDemandes.filter(d => d.type === 'rdv_visite_medicale');
       const rdvVisiteMedicaleCount = rdvVisiteMedicale.length;
 
+      const arFinAbsence = formattedDemandes.filter(d => d.type === 'ar_fin_absence');
+      const arFinAbsenceCount = arFinAbsence.length;
+
       console.log('📅 RDV Visite Médicale détails:', {
         total: rdvVisiteMedicaleCount,
         lus: rdvVisiteMedicale.filter(r => r.lu).length,
@@ -370,7 +375,8 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
         completee: formattedTaches.filter((t) => t.statut === 'completee').length,
         total: allItems.length,
         non_lus: nonLusTaches + nonLusDemandes,
-        rdv_visite_medicale: rdvVisiteMedicaleCount
+        rdv_visite_medicale: rdvVisiteMedicaleCount,
+        ar_fin_absence: arFinAbsenceCount
       };
 
       console.log('📊 Page Inbox:', {
@@ -461,6 +467,12 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
   };
 
   const handleOpenDemandeExterne = async (demande: DemandeExterne) => {
+    // Si c'est une notification A&R, naviguer vers le module A&R
+    if (demande.type === 'ar_fin_absence' && demande.reference_id && onNavigateToAR) {
+      onNavigateToAR(demande.reference_id);
+      return;
+    }
+
     setSelectedDemandeExterne(demande);
 
     if (!demande.lu) {
@@ -563,6 +575,10 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
     ? inboxItems.filter(item =>
         item.itemType === 'demande_externe' && item.type === 'rdv_visite_medicale'
       )
+    : filter === 'ar_fin_absence'
+    ? inboxItems.filter(item =>
+        item.itemType === 'demande_externe' && item.type === 'ar_fin_absence'
+      )
     : inboxItems.filter(item =>
         item.itemType === 'tache' && item.statut === filter
       );
@@ -615,7 +631,7 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard label="Total" value={stats.total} icon={<Inbox className="w-10 h-10 text-gray-500" />} />
         <StatCard label="En attente" value={stats.en_attente} icon={<Clock className="w-10 h-10 text-orange-500" />} />
         <StatCard label="En cours" value={stats.en_cours} icon={<AlertCircle className="w-10 h-10 text-amber-500" />} />
@@ -624,6 +640,12 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
           label="RDV Visite Médicale"
           value={stats.rdv_visite_medicale}
           icon={<Calendar className="w-10 h-10 text-orange-500" />}
+          highlight={true}
+        />
+        <StatCard
+          label="A&R"
+          value={stats.ar_fin_absence}
+          icon={<FileText className="w-10 h-10 text-orange-500" />}
           highlight={true}
         />
       </div>
@@ -641,6 +663,14 @@ export function InboxPage({ onViewProfile, viewParams }: InboxPageProps = {}) {
           >
             <Calendar className="w-4 h-4 inline mr-1" />
             RDV Visite Médicale ({stats.rdv_visite_medicale})
+          </FilterButton>
+          <FilterButton
+            active={filter === 'ar_fin_absence'}
+            onClick={() => setFilter('ar_fin_absence')}
+            rdv={true}
+          >
+            <FileText className="w-4 h-4 inline mr-1" />
+            A&R ({stats.ar_fin_absence})
           </FilterButton>
         </div>
 
