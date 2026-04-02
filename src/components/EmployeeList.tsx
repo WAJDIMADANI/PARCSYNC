@@ -167,8 +167,8 @@ function getLatestActiveContract(employeeId: string, contracts: Contract[]): str
     return dateB - dateA;
   });
 
-  const best = sortedContracts[0];
-  return (best as any)?.modeles_contrats?.nom || best?.type || null;
+  const best = sortedContracts[0] as any;
+  return best?.variables?.type_contrat || best?.modeles_contrats?.nom || best?.type || null;
 }
 
 export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListProps = {}) {
@@ -305,7 +305,7 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
         employeesQuery,
         supabase
           .from('contrat')
-          .select('id, profil_id, statut, date_signature, yousign_signed_at, created_at, modele_id, date_debut, date_fin, type, modeles_contrats:modele_id(nom)')
+          .select('id, profil_id, statut, date_signature, yousign_signed_at, created_at, modele_id, date_debut, date_fin, type, variables, modeles_contrats:modele_id(nom)')
           .order('date_fin', { ascending: false, nullsFirst: true }),
         supabase.from('site').select('*').order('nom'),
         supabase.from('secteur').select('*').order('nom')
