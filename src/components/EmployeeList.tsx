@@ -3178,7 +3178,14 @@ function EmployeeDetailModal({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-green-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Contrat Principal</h3>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Contrat Principal</h3>
+                  {activeContract?.modeles_contrats?.nom && (
+                    <p className="text-xs text-green-700 font-medium mt-0.5">
+                      {activeContract.modeles_contrats.nom}
+                    </p>
+                  )}
+                </div>
                 {activeContract && (
                   <ContractBadge type="type" value={contractType} />
                 )}
