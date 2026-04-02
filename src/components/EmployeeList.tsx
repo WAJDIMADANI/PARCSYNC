@@ -992,7 +992,18 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                       {employee.email}
                     </td>
                     <td className="px-3 py-3 text-sm text-gray-900">
-                      <ContractBadge type="type" value={getLatestActiveContract(employee.id, contracts) || employee.modele_contrat || undefined} />
+                      <ContractBadge type="type" value={(() => {
+  const emContracts = contracts.filter((c: any) =>
+    c.profil_id === employee.id &&
+    (c.statut === 'actif' || c.statut === 'signe')
+  ).sort((a: any, b: any) => {
+    const dateA = a.date_fin ? new Date(a.date_fin).getTime() : Infinity;
+    const dateB = b.date_fin ? new Date(b.date_fin).getTime() : Infinity;
+    return dateB - dateA;
+  });
+  const best = emContracts[0] as any;
+  return best?.variables?.type_contrat || best?.modeles_contrats?.nom || best?.type || employee.modele_contrat || undefined;
+})()} />
                     </td>
                     <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors truncate">
                       {formatDate(employee.date_entree)}
