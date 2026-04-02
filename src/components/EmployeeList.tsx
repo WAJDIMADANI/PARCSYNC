@@ -3164,8 +3164,8 @@ function EmployeeDetailModal({
 
             // Détecter le type de contrat correctement (pour tous les types de contrats)
             const isManualContract = activeContract?.source === 'manuel' || !activeContract?.modele_id;
-            const contractType = activeContract?.type
-              || (isManualContract && activeContract?.variables?.type_contrat)
+            const contractType = activeContract?.variables?.type_contrat
+              || activeContract?.modeles_contrats?.nom
               || activeContract?.modele?.type_contrat
               || (contractDateFin ? 'CDD' : 'CDI');
             const isCDD = contractType === 'CDD';
