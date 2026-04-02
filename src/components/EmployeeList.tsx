@@ -3708,7 +3708,27 @@ function EmployeeDetailModal({
                 <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
                   <Calendar className="w-4 h-4 text-white" />
                 </div>
-                <h3 className="font-bold text-gray-900 text-lg">Documents et dates importantes</h3>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg">Documents et dates importantes</h3>
+                  {(() => {
+                    const eligibleContracts = employeeContracts.filter((c: any) =>
+                      c.statut === 'actif' || c.statut === 'signe' || c.source === 'import'
+                    );
+                    const activeContract = eligibleContracts.sort((a: any, b: any) => {
+                      const dateA = a.date_fin ? new Date(a.date_fin).getTime() : Infinity;
+                      const dateB = b.date_fin ? new Date(b.date_fin).getTime() : Infinity;
+                      return dateB - dateA;
+                    })[0] || employeeContracts[0];
+
+                    const contractName = activeContract?.modeles_contrats?.nom;
+
+                    return contractName ? (
+                      <p className="text-xs text-purple-700 font-medium mt-0.5">
+                        {contractName}
+                      </p>
+                    ) : null;
+                  })()}
+                </div>
               </div>
               {!isEditingDates ? (
                 <div className="flex items-center gap-2">
