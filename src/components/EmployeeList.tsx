@@ -4366,7 +4366,7 @@ function EmployeeDetailModal({
                 </button>
               )}
 
-              {(currentEmployee.statut === 'contrat_envoye' || currentContractStatus === 'signe' || currentContractStatus === 'en_attente_signature') && (
+              {currentEmployee.statut !== 'actif' && (currentEmployee.statut === 'contrat_envoye' || currentContractStatus === 'signe' || currentContractStatus === 'en_attente_signature') && (
                 <>
                   <button
                     onClick={() => setShowContractValidation(true)}
