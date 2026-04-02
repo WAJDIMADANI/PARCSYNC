@@ -3186,9 +3186,6 @@ function EmployeeDetailModal({
                     </p>
                   )}
                 </div>
-                {activeContract && (
-                  <ContractBadge type="type" value={activeContract?.variables?.type_contrat || 'VIDE'} />
-                )}
               </div>
             </div>
 
