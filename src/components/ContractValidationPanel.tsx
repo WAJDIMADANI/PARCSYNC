@@ -149,7 +149,20 @@ export default function ContractValidationPanel({
       if (updateError) throw updateError;
 
       setDpaeUrl(urlData.publicUrl);
-      await fetchContractData();
+
+      // Activer automatiquement sans recharger le modal
+      await supabase
+        .from('contrat')
+        .update({ statut: 'actif', date_validation: new Date().toISOString() })
+        .eq('id', contract!.id);
+
+      await supabase
+        .from('profil')
+        .update({ statut: 'actif' })
+        .eq('id', profilId);
+
+      onActivate();
+      onClose();
     } catch (error) {
       console.error('Erreur upload DPAE:', error);
       alert('Erreur lors de l\'upload de la DPAE');
