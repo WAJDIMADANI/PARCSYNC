@@ -4261,8 +4261,8 @@ function EmployeeDetailModal({
                         rel="noopener noreferrer"
                         className="px-3 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium text-xs shadow-sm hover:shadow-md flex items-center gap-1.5 transform hover:scale-105"
                         title={
-                          doc.type_document?.toLowerCase() === 'autre' || doc.type_document?.toLowerCase() === 'autres'
-                            ? doc.file_name || 'Voir le document'
+                          (doc.type_document?.toLowerCase() === 'autre' || doc.type_document?.toLowerCase() === 'autres') && doc.file_name
+                            ? doc.file_name
                             : 'Voir le document'
                         }
                       >
