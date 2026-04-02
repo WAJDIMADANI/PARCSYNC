@@ -1002,7 +1002,7 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
     const dateB = b.date_fin ? new Date(b.date_fin).getTime() : Infinity;
     return dateB - dateA;
   })[0] || employeeContracts[0];
-  return activeContract?.modeles_contrats?.nom || employee.modele_contrat || undefined;
+  return activeContract?.variables?.type_contrat || activeContract?.modeles_contrats?.nom || employee.modele_contrat || undefined;
 })()} />
                     </td>
                     <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors truncate">
