@@ -167,7 +167,8 @@ function getLatestActiveContract(employeeId: string, contracts: Contract[]): str
     return dateB - dateA;
   });
 
-  return sortedContracts[0]?.type || null;
+  const best = sortedContracts[0];
+  return (best as any)?.modeles_contrats?.nom || best?.type || null;
 }
 
 export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListProps = {}) {
