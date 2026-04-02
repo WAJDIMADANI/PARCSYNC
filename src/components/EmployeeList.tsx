@@ -2765,29 +2765,33 @@ function EmployeeDetailModal({
   const modalEmployeeContracts = contracts.filter(c => c.profil_id === currentEmployee.id);
   let actualStatus = currentEmployee.statut || 'actif';
 
-  if (modalEmployeeContracts.length > 0) {
-    const activeContract = modalEmployeeContracts[0];
+  if (currentEmployee.statut === 'actif') {
+    actualStatus = 'actif';
+  } else {
+    if (modalEmployeeContracts.length > 0) {
+      const activeContract = modalEmployeeContracts[0];
 
-    // Si c'est un CDI, jamais expiré
-    const contractType = activeContract.type || activeContract.variables?.type_contrat;
-    if (contractType?.toUpperCase() === 'CDI') {
-      actualStatus = activeContract.statut || currentEmployee.statut || 'actif';
-    } else {
-      // Vérifier AUSSI variables.date_fin pour CDD/Avenant
-      const dateFin = activeContract.date_fin || activeContract.variables?.date_fin;
+      // Si c'est un CDI, jamais expiré
+      const contractType = activeContract.type || activeContract.variables?.type_contrat;
+      if (contractType?.toUpperCase() === 'CDI') {
+        actualStatus = activeContract.statut || currentEmployee.statut || 'actif';
+      } else {
+        // Vérifier AUSSI variables.date_fin pour CDD/Avenant
+        const dateFin = activeContract.date_fin || activeContract.variables?.date_fin;
 
-      if (dateFin) {
-        const dateFinDate = new Date(dateFin);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        if (dateFin) {
+          const dateFinDate = new Date(dateFin);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
 
-        if (dateFinDate < today) {
-          actualStatus = 'expiré';
+          if (dateFinDate < today) {
+            actualStatus = 'expiré';
+          } else {
+            actualStatus = activeContract.statut || currentEmployee.statut || 'actif';
+          }
         } else {
           actualStatus = activeContract.statut || currentEmployee.statut || 'actif';
         }
-      } else {
-        actualStatus = activeContract.statut || currentEmployee.statut || 'actif';
       }
     }
   }
