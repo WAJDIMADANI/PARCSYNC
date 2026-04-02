@@ -1880,6 +1880,14 @@ function EmployeeDetailModal({
         }
       }
 
+      // Si c'est un DPAE, nullifier dpae_id dans contrat d'abord
+      if (documentToDelete.type_document === 'dpae') {
+        await supabase
+          .from('contrat')
+          .update({ dpae_id: null })
+          .eq('dpae_id', documentToDelete.id);
+      }
+
       // Delete from database
       const { error: dbError } = await supabase
         .from('document')
