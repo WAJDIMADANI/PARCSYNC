@@ -3144,9 +3144,14 @@ function EmployeeDetailModal({
           {/* Section Contrat Principal */}
           {(() => {
             // Récupérer le contrat actif
-            const activeContract = employeeContracts.find((c: any) =>
+            const eligibleContracts = employeeContracts.filter((c: any) =>
               c.statut === 'actif' || c.statut === 'signe' || c.source === 'import'
-            ) || employeeContracts[0];
+            );
+            const activeContract = eligibleContracts.sort((a: any, b: any) => {
+              const dateA = a.date_fin ? new Date(a.date_fin).getTime() : Infinity;
+              const dateB = b.date_fin ? new Date(b.date_fin).getTime() : Infinity;
+              return dateB - dateA;
+            })[0] || employeeContracts[0];
 
             // Calculer les informations du contrat
             // Lire depuis les colonnes directes OU depuis l'objet variables (pour les contrats Yousign)
