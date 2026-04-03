@@ -363,6 +363,38 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     return new Date(dateStr).toLocaleDateString('fr-FR');
   };
 
+  const calculerDuree = (dateDebut: string, dateFin: string): string => {
+    if (!dateDebut || !dateFin) return '-';
+
+    // Gère les formats DD/MM/YYYY et YYYY-MM-DD
+    const parseDate = (d: string) => {
+      if (d.includes('/')) {
+        const [day, month, year] = d.split('/');
+        return new Date(Number(year), Number(month) - 1, Number(day));
+      }
+      return new Date(d);
+    };
+
+    const debut = parseDate(dateDebut);
+    const fin = parseDate(dateFin);
+
+    if (isNaN(debut.getTime()) || isNaN(fin.getTime())) return '-';
+
+    const diffMs = fin.getTime() - debut.getTime();
+    if (diffMs < 0) return '-';
+
+    const diffJours = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffJours === 0) return '1 jour';
+    if (diffJours < 30) return `${diffJours + 1} jours`;
+
+    const mois = Math.floor(diffJours / 30);
+    const joursRestants = diffJours % 30;
+
+    if (joursRestants === 0) return `${mois} mois`;
+    return `${mois} mois ${joursRestants} j`;
+  };
+
   const handleCloturer = (event: AREvent) => {
     setSelectedEvent(event);
     setClotureData({ date_reprise: new Date().toISOString().split('T')[0], note: '' });
@@ -638,7 +670,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {event.kind === 'retard'
                         ? `${event.retard_minutes} min (${(event.retard_minutes! / 60).toFixed(2)}h)`
-                        : '-'}
+                        : calculerDuree(event.date_debut, event.date_fin)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
