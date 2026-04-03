@@ -19,6 +19,7 @@ interface AREvent {
   note: string | null;
   justificatif_file_path: string | null;
   created_at: string;
+  statut?: string | null;
 }
 
 interface Employee {
@@ -68,6 +69,11 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   const [selectedEvent, setSelectedEvent] = useState<AREvent | null>(null);
   const [clotureData, setClotureData] = useState({ date_reprise: '', note: '' });
   const [prolongerData, setProlongerData] = useState({ nouvelle_date_fin: '', note: '', justificatif_file: null as File | null });
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [noteModalContent, setNoteModalContent] = useState<{ nom: string; prenom: string; note: string }>({ nom: '', prenom: '', note: '' });
+  const [showAutreModal, setShowAutreModal] = useState(false);
+  const [autreNote, setAutreNote] = useState('');
 
   useEffect(() => {
     loadEvents();
@@ -130,6 +136,12 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
       }
     };
   }, [employeeSearch]);
+
+  useEffect(() => {
+    const handleClickOutside = () => setOpenDropdownId(null);
+    if (openDropdownId) document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openDropdownId]);
 
   const loadEvents = async () => {
     try {
@@ -407,6 +419,32 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     setShowProlongerModal(true);
   };
 
+  const handleAutre = (event: AREvent) => {
+    setSelectedEvent(event);
+    setAutreNote('');
+    setShowAutreModal(true);
+    setOpenDropdownId(null);
+  };
+
+  const submitAutre = async () => {
+    if (!selectedEvent) return;
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('compta_ar_events')
+        .update({ statut: 'autre', justification_note: autreNote || null })
+        .eq('id', selectedEvent.id);
+      if (error) throw error;
+      setShowAutreModal(false);
+      setSelectedEvent(null);
+      loadEvents();
+    } catch (error: any) {
+      alert('Erreur: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const submitCloturer = async () => {
     if (!selectedEvent || !clotureData.date_reprise) {
       alert('Veuillez renseigner la date de reprise');
@@ -419,7 +457,8 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
         .from('compta_ar_events')
         .update({
           end_date: clotureData.date_reprise,
-          justification_note: clotureData.note || null
+          justification_note: clotureData.note || null,
+          statut: 'cloture'
         })
         .eq('id', selectedEvent.id);
 
@@ -465,7 +504,8 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
         .update({
           end_date: prolongerData.nouvelle_date_fin,
           justification_note: prolongerData.note || null,
-          justificatif_file_path: justificatif_path
+          justificatif_file_path: justificatif_path,
+          statut: 'prolonge'
         })
         .eq('id', selectedEvent.id);
 
@@ -611,6 +651,9 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                     Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date début
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -661,6 +704,19 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                         {event.kind.toUpperCase()}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {(() => {
+                        const s = event.statut || 'en_cours';
+                        const map: Record<string, { label: string; className: string }> = {
+                          en_cours: { label: 'En cours', className: 'bg-gray-100 text-gray-700' },
+                          cloture:  { label: 'Clôturé',  className: 'bg-red-100 text-red-700' },
+                          prolonge: { label: 'Prolongé', className: 'bg-blue-100 text-blue-700' },
+                          autre:    { label: 'Autre',    className: 'bg-orange-100 text-orange-700' },
+                        };
+                        const info = map[s] || map['en_cours'];
+                        return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${info.className}`}>{info.label}</span>;
+                      })()}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(event.date_debut)}
                     </td>
@@ -683,46 +739,58 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                         {event.is_justified ? 'OUI' : 'NON'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={event.note || ''}>
-                      {event.note || '-'}
+                    <td
+                      className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate cursor-pointer hover:text-blue-600"
+                      title="Cliquer pour voir la note complète"
+                      onClick={() => {
+                        setNoteModalContent({ nom: event.nom, prenom: event.prenom, note: event.note || 'Aucune note' });
+                        setShowNoteModal(true);
+                      }}
+                    >
+                      {event.note ? <span className="underline decoration-dotted">{event.note}</span> : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center gap-2">
-                        {event.kind === 'absence' && (
-                          <>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(openDropdownId === event.id ? null : event.id);
+                        }}
+                        className="p-2 rounded-full hover:bg-gray-100 text-gray-600 font-bold text-lg"
+                        title="Actions"
+                      >
+                        ⋮
+                      </button>
+                      {openDropdownId === event.id && (
+                        <div className="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                          {event.kind === 'absence' && (
+                            <>
+                              <button
+                                onClick={() => { handleCloturer(event); setOpenDropdownId(null); }}
+                                className="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center gap-2"
+                              >✅ Clôturer</button>
+                              <button
+                                onClick={() => { handleProlonger(event); setOpenDropdownId(null); }}
+                                className="w-full text-left px-4 py-2 text-sm text-orange-700 hover:bg-orange-50 flex items-center gap-2"
+                              >🔄 Prolonger</button>
+                              <button
+                                onClick={() => handleAutre(event)}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                              >📝 Autre</button>
+                              <hr className="my-1" />
+                            </>
+                          )}
+                          {event.justificatif_file_path && (
                             <button
-                              onClick={() => handleCloturer(event)}
-                              className="text-green-600 hover:text-green-900"
-                              title="Clôturer l'absence"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleProlonger(event)}
-                              className="text-orange-600 hover:text-orange-900"
-                              title="Prolonger l'absence"
-                            >
-                              <PauseCircle className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                        {event.justificatif_file_path && (
+                              onClick={() => { downloadJustificatif(event.justificatif_file_path!); setOpenDropdownId(null); }}
+                              className="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 flex items-center gap-2"
+                            >⬇️ Télécharger justificatif</button>
+                          )}
                           <button
-                            onClick={() => downloadJustificatif(event.justificatif_file_path!)}
-                            className="text-blue-600 hover:text-blue-900"
-                            title="Télécharger le justificatif"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(event.id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                            onClick={() => { handleDelete(event.id); setOpenDropdownId(null); }}
+                            className="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center gap-2"
+                          >🗑️ Supprimer</button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -936,6 +1004,49 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                   {saving ? 'Enregistrement...' : 'Prolonger'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showNoteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Note — {noteModalContent.prenom} {noteModalContent.nom}</h3>
+              <button onClick={() => setShowNoteModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-gray-700 whitespace-pre-wrap">{noteModalContent.note}</p>
+            <div className="flex justify-end mt-4">
+              <button onClick={() => setShowNoteModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAutreModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">📝 Autre — {selectedEvent.prenom} {selectedEvent.nom}</h3>
+              <button onClick={() => { setShowAutreModal(false); setSelectedEvent(null); }} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <textarea
+              value={autreNote}
+              onChange={(e) => setAutreNote(e.target.value)}
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              placeholder="Note optionnelle..."
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button onClick={() => { setShowAutreModal(false); setSelectedEvent(null); }} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Annuler</button>
+              <button onClick={submitAutre} disabled={saving} className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50">
+                {saving ? 'Enregistrement...' : 'Confirmer'}
+              </button>
             </div>
           </div>
         </div>
