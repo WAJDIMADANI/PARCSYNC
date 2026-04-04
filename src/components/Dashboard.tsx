@@ -211,7 +211,7 @@ export function Dashboard() {
                 {view === 'rh/emails' && 'CRM - Emails'}
                 {view === 'rh/sms' && 'CRM - SMS'}
                 {view === 'parc/vehicules' && 'Véhicules'}
-                {view === 'parc/locataires-externes' && 'Locataires externes'}
+                {view === 'parc/locataires-externes' && 'Loueurs'}
                 {view === 'parc/ct-assurance' && 'CT & Assurance'}
                 {view === 'parc/maintenance' && 'Maintenance & Garage'}
                 {view === 'parc/carburant' && 'Carburant'}
