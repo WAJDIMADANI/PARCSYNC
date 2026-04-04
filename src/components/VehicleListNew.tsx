@@ -1072,18 +1072,12 @@ export function VehicleListNew() {
                 </div>
               )}
               {(attributionType === 'location_pure' || attributionType === 'loa') && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Loueur</label>
-                  <select
-                    value={attributionLoueurId}
-                    onChange={(e) => setAttributionLoueurId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">-- Sélectionner un loueur --</option>
-                    {loueurs.map(l => (
-                      <option key={l.id} value={l.id}>{l.nom} ({l.type})</option>
-                    ))}
-                  </select>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800 font-medium">📋 Contrat de location</p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Après validation, créez le contrat complet depuis la page "Locations"
+                    pour définir le loueur, les termes financiers et l'état des lieux.
+                  </p>
                 </div>
               )}
               <div>
