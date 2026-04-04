@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { FunctionsHttpError, FunctionsFetchError, FunctionsRelayError } from "@supabase/supabase-js";
 import { PermissionGuard } from './PermissionGuard';
-import { Users, UserPlus, X, Save, Trash2, CheckCircle, XCircle, Edit2, Shield, Upload, FolderOpen, ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { Users, UserPlus, X, Save, Trash2, CheckCircle, XCircle, CreditCard as Edit2, Shield, Upload, FolderOpen, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { AuthUsersImport } from './AuthUsersImport';
 import { ExternalDemandLink } from './ExternalDemandLink';
@@ -51,6 +51,7 @@ const AVAILABLE_PERMISSIONS = [
   ]},
   { section: 'Parc', permissions: [
     { id: 'parc/vehicules', label: 'Véhicules' },
+    { id: 'parc/locataires-externes', label: 'Loueurs' },
     { id: 'parc/ct-assurance', label: 'CT & Assurance' },
     { id: 'parc/maintenance', label: 'Maintenance' },
   ]},
