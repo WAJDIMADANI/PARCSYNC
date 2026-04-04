@@ -90,6 +90,64 @@ interface FilterState {
 type SortField = 'immatriculation' | 'ref_tca' | 'marque' | 'modele' | 'statut';
 type SortOrder = 'asc' | 'desc';
 
+function SalarieSearch({ salaries, selectedId, onSelect }: {
+  salaries: {id: string; nom: string; prenom: string; matricule_tca?: string}[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const filtered = salaries.filter(s => {
+    const q = search.toLowerCase();
+    return (
+      s.nom?.toLowerCase().includes(q) ||
+      s.prenom?.toLowerCase().includes(q) ||
+      (s as any).matricule_tca?.toLowerCase().includes(q)
+    );
+  }).slice(0, 10);
+
+  const selected = salaries.find(s => s.id === selectedId);
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        placeholder="Rechercher par nom ou matricule..."
+        value={search || (selected ? `${selected.prenom} ${selected.nom}` : '')}
+        onChange={(e) => { setSearch(e.target.value); setOpen(true); onSelect(''); }}
+        onFocus={() => setOpen(true)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+      />
+      {open && search.length > 0 && (
+        <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-gray-500">Aucun résultat</div>
+          ) : (
+            filtered.map(s => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => {
+                  onSelect(s.id);
+                  setSearch('');
+                  setOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center justify-between"
+              >
+                <span>{s.prenom} {s.nom}</span>
+                {(s as any).matricule_tca && (
+                  <span className="text-xs text-gray-400 ml-2">{(s as any).matricule_tca}</span>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function VehicleListNew() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1006,16 +1064,11 @@ export function VehicleListNew() {
               {(attributionType === 'chauffeur_tca' || attributionType === 'direction_administratif') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Salarié</label>
-                  <select
-                    value={attributionSalarieId}
-                    onChange={(e) => setAttributionSalarieId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">-- Sélectionner un salarié --</option>
-                    {salaries.map(s => (
-                      <option key={s.id} value={s.id}>{s.prenom} {s.nom}{(s as any).matricule_tca ? ` — ${(s as any).matricule_tca}` : ''}</option>
-                    ))}
-                  </select>
+                  <SalarieSearch
+                    salaries={salaries}
+                    selectedId={attributionSalarieId}
+                    onSelect={setAttributionSalarieId}
+                  />
                 </div>
               )}
               {(attributionType === 'location_pure' || attributionType === 'loa') && (
