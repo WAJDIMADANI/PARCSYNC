@@ -123,6 +123,10 @@ export function Dashboard() {
         return <VehicleListNew />;
       case 'parc/locataires-externes':
         return <LocatairesExternesManager />;
+      case 'parc/locations':
+        return <div className="bg-white rounded-lg shadow p-8 text-center"><h2 className="text-2xl font-semibold text-gray-900 mb-2">Locations</h2><p className="text-gray-600">Module en cours de construction</p></div>;
+      case 'parc/etats-des-lieux':
+        return <div className="bg-white rounded-lg shadow p-8 text-center"><h2 className="text-2xl font-semibold text-gray-900 mb-2">États des lieux</h2><p className="text-gray-600">Module en cours de construction</p></div>;
       case 'parc/ct-assurance':
         return <CTAssuranceList />;
       case 'parc/maintenance':
@@ -212,6 +216,8 @@ export function Dashboard() {
                 {view === 'rh/sms' && 'CRM - SMS'}
                 {view === 'parc/vehicules' && 'Véhicules'}
                 {view === 'parc/locataires-externes' && 'Loueurs'}
+                {view === 'parc/locations' && 'Locations'}
+                {view === 'parc/etats-des-lieux' && 'États des lieux'}
                 {view === 'parc/ct-assurance' && 'CT & Assurance'}
                 {view === 'parc/maintenance' && 'Maintenance & Garage'}
                 {view === 'parc/carburant' && 'Carburant'}
