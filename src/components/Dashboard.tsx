@@ -203,7 +203,6 @@ export function Dashboard() {
                 {view === 'rh/salaries' && 'Salariés'}
                 {view === 'rh/documents' && 'Documents'}
                 {view === 'rh/courriers' && 'Courriers Générés'}
-                {view === 'rh/courriers-generes' && 'Courriers Générés'}
                 {view === 'rh/notifications' && 'Notifications'}
                 {view === 'rh/documents-manquants' && 'Documents Manquants'}
                 {view === 'rh/incidents' && 'Incidents'}
