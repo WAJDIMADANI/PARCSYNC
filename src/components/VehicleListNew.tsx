@@ -148,7 +148,7 @@ function SalarieSearch({ salaries, selectedId, onSelect }: {
   );
 }
 
-export function VehicleListNew() {
+export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, params?: any) => void } = {}) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -488,6 +488,10 @@ export function VehicleListNew() {
         .update({ statut: attributionType })
         .eq('id', attributionVehicle.id);
 
+      const wasLocation = attributionType === 'location_pure' || attributionType === 'loa';
+      const vehiculeId = attributionVehicle.id;
+      const vehiculeImmat = attributionVehicle.immatriculation;
+
       await fetchVehicles();
       setShowAttributionModal(false);
       setAttributionVehicle(null);
@@ -495,6 +499,10 @@ export function VehicleListNew() {
       setAttributionSalarieId('');
       setAttributionLoueurId('');
       setAttributionNotes('');
+
+      if (wasLocation && onNavigate) {
+        onNavigate('parc/locations', { vehiculeId, vehiculeImmat });
+      }
     } catch (error) {
       console.error('Erreur attribution:', error);
       alert('Erreur lors de l\'attribution. Veuillez réessayer.');

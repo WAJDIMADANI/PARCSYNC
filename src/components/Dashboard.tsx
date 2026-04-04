@@ -120,7 +120,7 @@ export function Dashboard() {
       case 'rh/sms':
         return <CRMSms />;
       case 'parc/vehicules':
-        return <VehicleListNew />;
+        return <VehicleListNew onNavigate={handleViewChange} />;
       case 'parc/locataires-externes':
         return <LocatairesExternesManager />;
       case 'parc/locations':
