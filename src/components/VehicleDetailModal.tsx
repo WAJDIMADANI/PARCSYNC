@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart, FileText, AlertCircle, Wrench } from 'lucide-react';
+import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart, FileText, AlertCircle, Wrench, Users, History } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDocuments } from './VehicleDocuments';
 import { VehicleMaintenances } from './VehicleMaintenances';
@@ -63,7 +63,7 @@ interface Vehicle {
   locataire_affiche: string; // Calculé par la vue v_vehicles_list_ui
 }
 
-export type Tab = 'info' | 'proprietaire' | 'acquisition' | 'insurance' | 'equipment' | 'maintenances' | 'documents';
+export type Tab = 'info' | 'proprietaire' | 'acquisition' | 'insurance' | 'equipment' | 'maintenances' | 'documents' | 'attribution';
 
 interface Props {
   vehicle: Vehicle;
@@ -691,6 +691,17 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               >
                 <Wrench className={`w-5 h-5 mb-1 ${activeTab === 'maintenances' ? 'animate-pulse' : ''}`} />
                 <span>Maintenances</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('attribution')}
+                className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl font-medium text-xs transition-all duration-200 min-w-[80px] ${
+                  activeTab === 'attribution'
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 scale-105'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-sm'
+                }`}
+              >
+                <History className={`w-5 h-5 mb-1 ${activeTab === 'attribution' ? 'animate-pulse' : ''}`} />
+                <span>Attribution</span>
               </button>
               <button
                 onClick={() => setActiveTab('documents')}
@@ -1509,6 +1520,53 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </div>
             )}
 
+            {activeTab === 'attribution' && (
+              <div className="space-y-4">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                      <History className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <h3 className="text-base font-semibold text-gray-900">Historique des attributions</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                      <div className="w-3 h-3 rounded-full bg-emerald-500 mt-1 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-900">👤 Chauffeur TCA — Mohamed Diallo</span>
+                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">En cours</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Depuis le 15/01/2025</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <div className="w-3 h-3 rounded-full bg-gray-400 mt-1 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-700">🅿 Sur parc</span>
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">Clôturé</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">01/12/2024 → 14/01/2025</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <div className="w-3 h-3 rounded-full bg-gray-400 mt-1 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-700">👤 Chauffeur TCA — Sekou Coulibaly</span>
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">Clôturé</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">03/06/2024 → 30/11/2024</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-xs text-gray-400 text-center">Les données réelles seront connectées à Supabase dans la prochaine étape</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {activeTab === 'maintenances' && (
               <VehicleMaintenances vehicleId={vehicle.id} />
