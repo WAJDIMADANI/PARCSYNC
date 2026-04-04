@@ -170,8 +170,9 @@ export function VehicleListNew() {
   const fetchSalariesEtLoueurs = async () => {
     try {
       const { data: salariesData } = await supabase
-        .from('app_utilisateur')
-        .select('id, nom, prenom')
+        .from('profil')
+        .select('id, nom, prenom, matricule_tca')
+        .eq('statut', 'actif')
         .order('nom');
       setSalaries(salariesData || []);
       const { data: loueursData } = await supabase
@@ -1012,7 +1013,7 @@ export function VehicleListNew() {
                   >
                     <option value="">-- Sélectionner un salarié --</option>
                     {salaries.map(s => (
-                      <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>
+                      <option key={s.id} value={s.id}>{s.prenom} {s.nom}{(s as any).matricule_tca ? ` — ${(s as any).matricule_tca}` : ''}</option>
                     ))}
                   </select>
                 </div>
