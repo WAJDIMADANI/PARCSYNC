@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart, FileText, AlertCircle, Wrench, Users, History } from 'lucide-react';
+import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart, FileText, AlertCircle, Wrench, Users, History, MapPin, Receipt, ClipboardList } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDocuments } from './VehicleDocuments';
 import { VehicleMaintenances } from './VehicleMaintenances';
@@ -63,7 +63,7 @@ interface Vehicle {
   locataire_affiche: string; // Calculé par la vue v_vehicles_list_ui
 }
 
-export type Tab = 'info' | 'proprietaire' | 'acquisition' | 'insurance' | 'equipment' | 'maintenances' | 'documents' | 'attribution';
+export type Tab = 'info' | 'proprietaire' | 'acquisition' | 'insurance' | 'equipment' | 'maintenances' | 'documents' | 'attribution' | 'locations' | 'etats-des-lieux' | 'facturation';
 
 interface Props {
   vehicle: Vehicle;
@@ -702,6 +702,41 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               >
                 <History className={`w-5 h-5 mb-1 ${activeTab === 'attribution' ? 'animate-pulse' : ''}`} />
                 <span>Attribution</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('locations')}
+                className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl font-medium text-xs transition-all duration-200 min-w-[80px] ${
+                  activeTab === 'locations'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-sm'
+                }`}
+              >
+                <MapPin className={`w-5 h-5 mb-1 ${activeTab === 'locations' ? 'animate-pulse' : ''}`} />
+                <span>Locations</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('etats-des-lieux')}
+                className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl font-medium text-xs transition-all duration-200 min-w-[80px] ${
+                  activeTab === 'etats-des-lieux'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-sm'
+                }`}
+              >
+                <ClipboardList className={`w-5 h-5 mb-1 ${activeTab === 'etats-des-lieux' ? 'animate-pulse' : ''}`} />
+                <span>États des lieux</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('facturation')}
+                className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl font-medium text-xs transition-all duration-200 min-w-[80px] ${
+                  activeTab === 'facturation'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-sm'
+                }`}
+              >
+                <Receipt className={`w-5 h-5 mb-1 ${activeTab === 'facturation' ? 'animate-pulse' : ''}`} />
+                <span>Facturation</span>
               </button>
               <button
                 onClick={() => setActiveTab('documents')}
@@ -1539,6 +1574,60 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <p className="text-xs text-gray-400 text-center">Les données réelles seront connectées à Supabase dans la prochaine étape</p>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'locations' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <MapPin className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900">Locations</h3>
+                </div>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <MapPin className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 font-medium">Aucune location enregistrée</p>
+                  <p className="text-gray-400 text-sm mt-1">Les locations seront disponibles dans la prochaine étape</p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'etats-des-lieux' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <ClipboardList className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900">États des lieux</h3>
+                </div>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <ClipboardList className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 font-medium">Aucun état des lieux enregistré</p>
+                  <p className="text-gray-400 text-sm mt-1">Les états des lieux terrain seront disponibles dans la prochaine étape</p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'facturation' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Receipt className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900">Facturation</h3>
+                </div>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <Receipt className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 font-medium">Aucune facture enregistrée</p>
+                  <p className="text-gray-400 text-sm mt-1">La facturation sera disponible dans la prochaine étape</p>
                 </div>
               </div>
             )}
