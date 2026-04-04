@@ -1529,37 +1529,12 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                     </div>
                     <h3 className="text-base font-semibold text-gray-900">Historique des attributions</h3>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                      <div className="w-3 h-3 rounded-full bg-emerald-500 mt-1 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-gray-900">👤 Chauffeur TCA — Mohamed Diallo</span>
-                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">En cours</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Depuis le 15/01/2025</p>
-                      </div>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <History className="w-8 h-8 text-gray-400" />
                     </div>
-                    <div className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                      <div className="w-3 h-3 rounded-full bg-gray-400 mt-1 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-gray-700">🅿 Sur parc</span>
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">Clôturé</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">01/12/2024 → 14/01/2025</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                      <div className="w-3 h-3 rounded-full bg-gray-400 mt-1 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-gray-700">👤 Chauffeur TCA — Sekou Coulibaly</span>
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">Clôturé</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">03/06/2024 → 30/11/2024</p>
-                      </div>
-                    </div>
+                    <p className="text-gray-500 font-medium">Aucune attribution enregistrée</p>
+                    <p className="text-gray-400 text-sm mt-1">Utilisez le bouton "Attribution" dans la liste pour attribuer ce véhicule</p>
                   </div>
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <p className="text-xs text-gray-400 text-center">Les données réelles seront connectées à Supabase dans la prochaine étape</p>
