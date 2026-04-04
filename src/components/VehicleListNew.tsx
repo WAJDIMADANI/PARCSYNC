@@ -87,7 +87,7 @@ interface FilterState {
   referenceTCA: string;
 }
 
-type SortField = 'immatriculation' | 'ref_tca' | 'marque' | 'modele' | 'statut' | 'locataire_affiche' | 'proprietaire_carte_grise' | 'fournisseur';
+type SortField = 'immatriculation' | 'ref_tca' | 'marque' | 'modele' | 'statut';
 type SortOrder = 'asc' | 'desc';
 
 export function VehicleListNew() {
@@ -548,10 +548,7 @@ export function VehicleListNew() {
                     <option value="ref_tca">Référence TCA</option>
                     <option value="marque">Marque</option>
                     <option value="modele">Modèle</option>
-                    <option value="locataire_affiche">Nom du locataire</option>
                     <option value="statut">Statut</option>
-                    <option value="proprietaire_carte_grise">Propriétaire</option>
-                    <option value="fournisseur">Fournisseur</option>
                   </select>
                 </div>
 
@@ -648,18 +645,6 @@ export function VehicleListNew() {
                     <th
                       scope="col"
                       className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
-                      onClick={() => handleSort('locataire_affiche')}
-                    >
-                      <div className="flex items-center">
-                        Nom du locataire
-                        {sortField === 'locataire_affiche' && (
-                          sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
-                        )}
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
                       onClick={() => handleSort('statut')}
                     >
                       <div className="flex items-center">
@@ -669,29 +654,8 @@ export function VehicleListNew() {
                         )}
                       </div>
                     </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
-                      onClick={() => handleSort('proprietaire_carte_grise')}
-                    >
-                      <div className="flex items-center">
-                        Propriétaire
-                        {sortField === 'proprietaire_carte_grise' && (
-                          sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
-                        )}
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300"
-                      onClick={() => handleSort('fournisseur')}
-                    >
-                      <div className="flex items-center">
-                        Fournisseur
-                        {sortField === 'fournisseur' && (
-                          sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />
-                        )}
-                      </div>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wide border-r border-gray-300">
+                      Attribué à
                     </th>
                     <th scope="col" className="px-3 py-2 text-right text-xs font-bold text-gray-700 uppercase tracking-wide">
                       Actions
@@ -725,27 +689,18 @@ export function VehicleListNew() {
                           <div className="text-gray-600">{vehicle.modele || '-'}</div>
                         </div>
                       </td>
-                      <td className="px-3 py-2 border-r border-gray-200">
-                        <div className="text-xs">
-                          {getLocataireBadge(vehicle)}
-                        </div>
-                      </td>
                       <td className="px-3 py-2 whitespace-nowrap border-r border-gray-200">
                         {getStatusBadge(vehicle.statut)}
                       </td>
                       <td className="px-3 py-2 border-r border-gray-200">
-                        <div className="text-xs text-gray-900 max-w-[120px] truncate" title={parseProprietaireCarteGrise(vehicle.proprietaire_carte_grise).displayName}>
-                          {parseProprietaireCarteGrise(vehicle.proprietaire_carte_grise).displayName === '-' ? (
-                            <span className="text-gray-400">-</span>
-                          ) : (
-                            parseProprietaireCarteGrise(vehicle.proprietaire_carte_grise).displayName
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 border-r border-gray-200">
-                        <div className="text-xs">
-                          {getFournisseurDisplay(vehicle)}
-                        </div>
+                        <span className="text-xs text-gray-700">
+                          {vehicle.chauffeurs_actifs && vehicle.chauffeurs_actifs.length > 0
+                            ? `${vehicle.chauffeurs_actifs[0].prenom || ''} ${vehicle.chauffeurs_actifs[0].nom || ''}`.trim()
+                            : vehicle.locataire_nom_libre
+                            ? vehicle.locataire_nom_libre
+                            : <span className="text-gray-400">—</span>
+                          }
+                        </span>
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-right text-xs">
                         <div className="flex items-center justify-end gap-2">
