@@ -103,6 +103,13 @@ export function VehicleListNew() {
   const [showAttributionModal, setShowAttributionModal] = useState(false);
   const [attributionVehicle, setAttributionVehicle] = useState<Vehicle | null>(null);
   const [attributionType, setAttributionType] = useState('');
+  const [salaries, setSalaries] = useState<{id: string; nom: string; prenom: string}[]>([]);
+  const [loueurs, setLoueurs] = useState<{id: string; nom: string; type: string}[]>([]);
+  const [attributionDate, setAttributionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [attributionNotes, setAttributionNotes] = useState('');
+  const [attributionSalarieId, setAttributionSalarieId] = useState('');
+  const [attributionLoueurId, setAttributionLoueurId] = useState('');
+  const [savingAttribution, setSavingAttribution] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>({
     statut: '',
@@ -120,6 +127,7 @@ export function VehicleListNew() {
 
   useEffect(() => {
     fetchVehicles();
+    fetchSalariesEtLoueurs();
   }, []);
 
   const fetchVehicles = async () => {
@@ -156,6 +164,24 @@ export function VehicleListNew() {
       console.error('Erreur chargement véhicules:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSalariesEtLoueurs = async () => {
+    try {
+      const { data: salariesData } = await supabase
+        .from('app_utilisateur')
+        .select('id, nom, prenom')
+        .order('nom');
+      setSalaries(salariesData || []);
+      const { data: loueursData } = await supabase
+        .from('locataire_externe')
+        .select('id, nom, type')
+        .eq('actif', true)
+        .order('nom');
+      setLoueurs(loueursData || []);
+    } catch (error) {
+      console.error('Erreur chargement salariés/loueurs:', error);
     }
   };
 
@@ -372,6 +398,50 @@ export function VehicleListNew() {
     }
 
     return <span className="text-xs text-gray-700 max-w-[150px] truncate block">{fournisseur}</span>;
+  };
+
+  const handleValiderAttribution = async () => {
+    if (!attributionVehicle || !attributionType) return;
+    setSavingAttribution(true);
+    try {
+      await supabase
+        .from('attribution_vehicule')
+        .update({ date_fin: attributionDate })
+        .eq('vehicule_id', attributionVehicle.id)
+        .is('date_fin', null);
+
+      if (attributionSalarieId || attributionLoueurId) {
+        await supabase
+          .from('attribution_vehicule')
+          .insert({
+            vehicule_id: attributionVehicle.id,
+            profil_id: attributionSalarieId || null,
+            loueur_id: attributionLoueurId || null,
+            type_attribution: 'principal',
+            date_debut: attributionDate,
+            date_fin: null,
+            notes: attributionNotes || null,
+          });
+      }
+
+      await supabase
+        .from('vehicule')
+        .update({ statut: attributionType })
+        .eq('id', attributionVehicle.id);
+
+      await fetchVehicles();
+      setShowAttributionModal(false);
+      setAttributionVehicle(null);
+      setAttributionType('');
+      setAttributionSalarieId('');
+      setAttributionLoueurId('');
+      setAttributionNotes('');
+    } catch (error) {
+      console.error('Erreur attribution:', error);
+      alert('Erreur lors de l\'attribution. Veuillez réessayer.');
+    } finally {
+      setSavingAttribution(false);
+    }
   };
 
   if (loading) {
@@ -935,19 +1005,30 @@ export function VehicleListNew() {
               {(attributionType === 'chauffeur_tca' || attributionType === 'direction_administratif') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Salarié</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option>Mohamed Diallo</option>
-                    <option>Sekou Coulibaly</option>
-                    <option>Nima Doucoure</option>
+                  <select
+                    value={attributionSalarieId}
+                    onChange={(e) => setAttributionSalarieId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- Sélectionner un salarié --</option>
+                    {salaries.map(s => (
+                      <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>
+                    ))}
                   </select>
                 </div>
               )}
               {(attributionType === 'location_pure' || attributionType === 'loa') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Loueur</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option>Jean-Pierre Martin</option>
-                    <option>Fatou Diallo</option>
+                  <select
+                    value={attributionLoueurId}
+                    onChange={(e) => setAttributionLoueurId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- Sélectionner un loueur --</option>
+                    {loueurs.map(l => (
+                      <option key={l.id} value={l.id}>{l.nom} ({l.type})</option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -955,7 +1036,8 @@ export function VehicleListNew() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date de début</label>
                 <input
                   type="date"
-                  defaultValue={new Date().toISOString().split('T')[0]}
+                  value={attributionDate}
+                  onChange={(e) => setAttributionDate(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -963,6 +1045,8 @@ export function VehicleListNew() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optionnel)</label>
                 <input
                   type="text"
+                  value={attributionNotes}
+                  onChange={(e) => setAttributionNotes(e.target.value)}
                   placeholder="Ex: véhicule de remplacement..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
@@ -976,10 +1060,11 @@ export function VehicleListNew() {
                 Annuler
               </button>
               <button
-                onClick={() => { setShowAttributionModal(false); setAttributionVehicle(null); }}
-                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-medium"
+                onClick={handleValiderAttribution}
+                disabled={savingAttribution || !attributionType}
+                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Valider l'attribution
+                {savingAttribution ? 'Enregistrement...' : 'Valider l\'attribution'}
               </button>
             </div>
           </div>
