@@ -100,6 +100,9 @@ export function VehicleListNew() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAttributionModal, setShowAttributionModal] = useState(false);
+  const [attributionVehicle, setAttributionVehicle] = useState<Vehicle | null>(null);
+  const [attributionType, setAttributionType] = useState('');
 
   const [filters, setFilters] = useState<FilterState>({
     statut: '',
@@ -286,15 +289,23 @@ export function VehicleListNew() {
   };
 
   const getStatusBadge = (statut: string) => {
+    const s = statut.toLowerCase();
     const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
-      actif: { bg: 'bg-emerald-500', text: 'text-white', label: 'Actif' },
-      maintenance: { bg: 'bg-amber-500', text: 'text-white', label: 'Maintenance' },
-      'hors service': { bg: 'bg-red-500', text: 'text-white', label: 'Hors service' },
-      'en location': { bg: 'bg-sky-500', text: 'text-white', label: 'En location' },
+      'sur_parc':                { bg: 'bg-gray-200',    text: 'text-gray-800', label: '🅿 Sur parc' },
+      'chauffeur_tca':           { bg: 'bg-blue-500',    text: 'text-white',    label: '👤 Chauffeur TCA' },
+      'direction_administratif': { bg: 'bg-blue-800',    text: 'text-white',    label: '🏢 Direction' },
+      'location_pure':           { bg: 'bg-emerald-500', text: 'text-white',    label: '🔄 Location pure' },
+      'loa':                     { bg: 'bg-purple-500',  text: 'text-white',    label: '💰 LOA' },
+      'en_pret':                 { bg: 'bg-cyan-500',    text: 'text-white',    label: '🤝 En prêt' },
+      'en_garage':               { bg: 'bg-amber-500',   text: 'text-white',    label: '🛠 En garage' },
+      'hors_service':            { bg: 'bg-red-500',     text: 'text-white',    label: '🚫 Hors service' },
+      'sorti_flotte':            { bg: 'bg-gray-700',    text: 'text-white',    label: '📦 Sorti de flotte' },
+      'actif':                   { bg: 'bg-emerald-500', text: 'text-white',    label: 'Actif' },
+      'maintenance':             { bg: 'bg-amber-500',   text: 'text-white',    label: 'Maintenance' },
+      'hors service':            { bg: 'bg-red-500',     text: 'text-white',    label: 'Hors service' },
+      'en location':             { bg: 'bg-sky-500',     text: 'text-white',    label: 'En location' },
     };
-
-    const config = statusConfig[statut.toLowerCase()] || { bg: 'bg-gray-500', text: 'text-white', label: statut };
-
+    const config = statusConfig[s] || { bg: 'bg-gray-400', text: 'text-white', label: statut };
     return (
       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${config.bg} ${config.text}`}>
         {config.label}
@@ -438,17 +449,21 @@ export function VehicleListNew() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
                   <select
                     value={filters.statut}
-                    onChange={(e) => {
-                      setFilters({ ...filters, statut: e.target.value });
-                      setCurrentPage(1);
-                    }}
+                    onChange={(e) => { setFilters({ ...filters, statut: e.target.value }); setCurrentPage(1); }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Tous</option>
-                    <option value="actif">Actif</option>
-                    <option value="maintenance">Maintenance</option>
-                    <option value="hors service">Hors service</option>
-                    <option value="en location">En location</option>
+                    <option value="sur_parc">🅿 Sur parc</option>
+                    <option value="chauffeur_tca">👤 Chauffeur TCA</option>
+                    <option value="direction_administratif">🏢 Direction</option>
+                    <option value="location_pure">🔄 Location pure</option>
+                    <option value="loa">💰 LOA</option>
+                    <option value="en_pret">🤝 En prêt</option>
+                    <option value="en_garage">🛠 En garage</option>
+                    <option value="hors_service">🚫 Hors service</option>
+                    <option value="sorti_flotte">📦 Sorti de flotte</option>
+                    <option value="actif">Actif (ancien)</option>
+                    <option value="maintenance">Maintenance (ancien)</option>
                   </select>
                 </div>
 
@@ -746,6 +761,17 @@ export function VehicleListNew() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              setAttributionVehicle(vehicle);
+                              setAttributionType('');
+                              setShowAttributionModal(true);
+                            }}
+                            className="text-emerald-600 hover:text-emerald-800 font-semibold transition-colors border border-emerald-300 rounded px-2 py-0.5 text-xs hover:bg-emerald-50"
+                          >
+                            Attribution
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setVehicleToDelete(vehicle);
                             }}
                             className="text-red-600 hover:text-red-800 transition-colors p-1"
@@ -911,6 +937,94 @@ export function VehicleListNew() {
                     Supprimer
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAttributionModal && attributionVehicle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <Car className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Attribution véhicule</h3>
+                <p className="text-sm text-gray-500">
+                  {attributionVehicle.immatriculation} · {attributionVehicle.marque} {attributionVehicle.modele}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Type d'attribution</label>
+                <select
+                  value={attributionType}
+                  onChange={(e) => setAttributionType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Sélectionner --</option>
+                  <option value="sur_parc">🅿 Sur parc</option>
+                  <option value="chauffeur_tca">👤 Chauffeur TCA</option>
+                  <option value="direction_administratif">🏢 Direction / Administratif</option>
+                  <option value="location_pure">🔄 Location pure</option>
+                  <option value="loa">💰 LOA</option>
+                  <option value="en_pret">🤝 En prêt</option>
+                  <option value="en_garage">🛠 En garage</option>
+                  <option value="hors_service">🚫 Hors service</option>
+                  <option value="sorti_flotte">📦 Sorti de flotte</option>
+                </select>
+              </div>
+              {(attributionType === 'chauffeur_tca' || attributionType === 'direction_administratif') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Salarié</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option>Mohamed Diallo</option>
+                    <option>Sekou Coulibaly</option>
+                    <option>Nima Doucoure</option>
+                  </select>
+                </div>
+              )}
+              {(attributionType === 'location_pure' || attributionType === 'loa') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Loueur</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option>Jean-Pierre Martin</option>
+                    <option>Fatou Diallo</option>
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date de début</label>
+                <input
+                  type="date"
+                  defaultValue={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optionnel)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: véhicule de remplacement..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => { setShowAttributionModal(false); setAttributionVehicle(null); }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => { setShowAttributionModal(false); setAttributionVehicle(null); }}
+                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Valider l'attribution
               </button>
             </div>
           </div>
