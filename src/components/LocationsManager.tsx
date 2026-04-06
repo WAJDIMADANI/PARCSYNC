@@ -45,6 +45,7 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
 
   // Form data
   const [vehiculeId, setVehiculeId] = useState('');
@@ -398,7 +399,10 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
                         {getStatutBadge(location.statut)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button className="text-blue-600 hover:text-blue-800 mr-3">
+                        <button
+                          onClick={() => setSelectedLocation(location)}
+                          className="text-blue-600 hover:text-blue-800 mr-3"
+                        >
                           Voir
                         </button>
                       </td>
@@ -409,6 +413,35 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
             </table>
           </div>
         </div>
+
+        {selectedLocation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Détails location</h3>
+                <button onClick={() => setSelectedLocation(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div><p className="text-xs text-gray-500">Véhicule</p><p className="font-medium">{selectedLocation.vehicule?.immatriculation}</p></div>
+                  <div><p className="text-xs text-gray-500">Locataire</p><p className="font-medium">{selectedLocation.locataire?.nom} {selectedLocation.locataire?.prenom || ''}</p></div>
+                  <div><p className="text-xs text-gray-500">Type</p><p className="font-medium">{selectedLocation.type_location === 'location_pure' ? 'Location pure' : 'LOA'}</p></div>
+                  <div><p className="text-xs text-gray-500">Statut</p><p className="font-medium">{selectedLocation.statut}</p></div>
+                  <div><p className="text-xs text-gray-500">Date début</p><p className="font-medium">{new Date(selectedLocation.date_debut).toLocaleDateString('fr-FR')}</p></div>
+                  <div><p className="text-xs text-gray-500">Date fin</p><p className="font-medium">{selectedLocation.date_fin ? new Date(selectedLocation.date_fin).toLocaleDateString('fr-FR') : '—'}</p></div>
+                  <div><p className="text-xs text-gray-500">Montant mensuel</p><p className="font-medium">{selectedLocation.montant_mensuel ? `${selectedLocation.montant_mensuel} €` : '—'}</p></div>
+                  <div><p className="text-xs text-gray-500">Dépôt de garantie</p><p className="font-medium">{selectedLocation.depot_garantie ? `${selectedLocation.depot_garantie} €` : '—'}</p></div>
+                </div>
+                {selectedLocation.notes && (
+                  <div><p className="text-xs text-gray-500">Notes</p><p className="text-sm">{selectedLocation.notes}</p></div>
+                )}
+              </div>
+              <div className="flex justify-end mt-6">
+                <button onClick={() => setSelectedLocation(null)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Fermer</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
