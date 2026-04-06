@@ -98,7 +98,7 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
         .select(`
           *,
           vehicule:vehicule_id(immatriculation, marque, modele),
-          locataire:locataire_id(nom, prenom, type)
+          locataire:locataire_id!loueur(nom, prenom, type)
         `)
         .order('created_at', { ascending: false });
 
@@ -119,7 +119,7 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
 
     try {
       const { data, error } = await supabase
-        .from('locataire_externe')
+        .from('loueur')
         .select('*')
         .or(`nom.ilike.%${query}%,prenom.ilike.%${query}%,email.ilike.%${query}%`)
         .eq('type', typeLocataire)
@@ -202,7 +202,7 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
 
       if (!locataireId && newLocataire.nom) {
         const { data: newLoc, error: locError } = await supabase
-          .from('locataire_externe')
+          .from('loueur')
           .insert({
             type: typeLocataire,
             nom: newLocataire.nom,
@@ -212,11 +212,11 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
             adresse: newLocataire.adresse || null,
             date_naissance: typeLocataire === 'particulier' ? newLocataire.date_naissance || null : null,
             permis_numero: typeLocataire === 'particulier' ? newLocataire.permis_numero || null : null,
-            permis_validite: typeLocataire === 'particulier' ? newLocataire.permis_validite || null : null
+            permis_validite: typeLocataire === 'particulier' ? newLocataire.permis_validite || null : null,
+            actif: true
           })
           .select()
           .single();
-
         if (locError) throw locError;
         locataireId = newLoc.id;
       }
@@ -236,6 +236,33 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
         });
 
       if (locationError) throw locationError;
+
+      // Mettre à jour locataire_type dans vehicule
+      await supabase
+        .from('vehicule')
+        .update({
+          locataire_type: typeLocataire === 'particulier' ? 'personne_externe' : 'entreprise_externe'
+        })
+        .eq('id', vehiculeId);
+
+      // Créer l'attribution avec loueur_id
+      if (locataireId) {
+        await supabase
+          .from('attribution_vehicule')
+          .update({ date_fin: dateDebut })
+          .eq('vehicule_id', vehiculeId)
+          .is('date_fin', null);
+
+        await supabase
+          .from('attribution_vehicule')
+          .insert({
+            vehicule_id: vehiculeId,
+            loueur_id: locataireId,
+            type_attribution: 'principal',
+            date_debut: dateDebut,
+            date_fin: null
+          });
+      }
 
       setSuccessMessage('Location créée avec succès');
       await fetchLocations();
