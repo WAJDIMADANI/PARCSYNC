@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, User, Building2, Phone, Mail, MapPin, Edit2, History, Car, Plus, Filter, X } from 'lucide-react';
+import { Search, User, Building2, Phone, Mail, MapPin, CreditCard as Edit2, History, Car, Plus, Filter, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Pagination } from './Pagination';
 
@@ -83,7 +83,7 @@ export default function LocatairesExternesManager() {
       setLoading(true);
 
       let query = supabase
-        .from('locataire_externe')
+        .from('loueur')
         .select('*', { count: 'exact' })
         .order('nom');
 
@@ -133,7 +133,7 @@ export default function LocatairesExternesManager() {
             notes,
             vehicule:vehicule_id(immatriculation, marque, modele)
           `)
-          .eq('locataire_externe_id', locataireId)
+          .eq('loueur_id', locataireId)
           .order('date_debut', { ascending: false })
       ]);
 
@@ -165,7 +165,7 @@ export default function LocatairesExternesManager() {
 
     try {
       const { error } = await supabase
-        .from('locataire_externe')
+        .from('loueur')
         .update({
           nom: editFormData.nom,
           telephone: editFormData.telephone || null,
@@ -193,7 +193,7 @@ export default function LocatairesExternesManager() {
   const handleToggleActif = async (locataire: LocataireExterne) => {
     try {
       const { error } = await supabase
-        .from('locataire_externe')
+        .from('loueur')
         .update({ actif: !locataire.actif })
         .eq('id', locataire.id);
 
@@ -217,7 +217,7 @@ export default function LocatairesExternesManager() {
 
     try {
       const { data, error } = await supabase
-        .from('locataire_externe')
+        .from('loueur')
         .insert([{
           type: createType,
           nom: createFormData.nom.trim(),
