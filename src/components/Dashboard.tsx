@@ -44,6 +44,7 @@ import { CRMEmails } from './CRMEmails';
 import { CRMSms } from './CRMSms';
 import LocatairesExternesManager from './LocatairesExternesManager';
 import { ImportVehicleReferences } from './ImportVehicleReferences';
+import { LocationsManager } from './LocationsManager';
 
 export function Dashboard() {
   const [view, setView] = useState<View>('dashboards/rh');
@@ -124,7 +125,7 @@ export function Dashboard() {
       case 'parc/locataires-externes':
         return <LocatairesExternesManager />;
       case 'parc/locations':
-        return <div className="bg-white rounded-lg shadow p-8 text-center"><h2 className="text-2xl font-semibold text-gray-900 mb-2">Locations</h2><p className="text-gray-600">Module en cours de construction</p></div>;
+        return <LocationsManager viewParams={viewParams} onNavigate={handleViewChange} />;
       case 'parc/etats-des-lieux':
         return <div className="bg-white rounded-lg shadow p-8 text-center"><h2 className="text-2xl font-semibold text-gray-900 mb-2">États des lieux</h2><p className="text-gray-600">Module en cours de construction</p></div>;
       case 'parc/ct-assurance':
