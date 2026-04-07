@@ -463,12 +463,18 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
     if (!attributionVehicle || !attributionType) return;
     setSavingAttribution(true);
     try {
+      // 1. TOUJOURS clôturer les attributions actives
+      const hier = new Date(attributionDate);
+      hier.setDate(hier.getDate() - 1);
+      const hierStr = hier.toISOString().split('T')[0];
+
       await supabase
         .from('attribution_vehicule')
-        .update({ date_fin: attributionDate })
+        .update({ date_fin: hierStr })
         .eq('vehicule_id', attributionVehicle.id)
         .is('date_fin', null);
 
+      // 2. Créer nouvelle attribution SEULEMENT si personne concernée
       const necessitePersonne = ['chauffeur_tca', 'direction_administratif', 'location_pure', 'loa', 'en_pret'].includes(attributionType);
       if (necessitePersonne && (attributionSalarieId || attributionLoueurId)) {
         await supabase
@@ -485,6 +491,7 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
           });
       }
 
+      // 3. Toujours mettre à jour le statut du véhicule
       await supabase
         .from('vehicule')
         .update({ statut: attributionType })
