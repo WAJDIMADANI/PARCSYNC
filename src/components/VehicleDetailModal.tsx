@@ -6,6 +6,7 @@ import { VehicleDocuments } from './VehicleDocuments';
 import { VehicleMaintenances } from './VehicleMaintenances';
 import { SuccessModal } from './SuccessModal';
 import { ProprietaireSelector } from './ProprietaireSelector';
+import { VehicleLocations } from './VehicleLocations';
 import { parseProprietaireCarteGrise, formatProprietaireCarteGrise } from '../utils/proprietaireParser';
 
 interface Vehicle {
@@ -1684,19 +1685,15 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
 
             {activeTab === 'locations' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <MapPin className="w-4 h-4 text-blue-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <MapPin className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className="text-base font-semibold text-gray-900">Locations</h3>
                   </div>
-                  <h3 className="text-base font-semibold text-gray-900">Locations</h3>
                 </div>
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <MapPin className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500 font-medium">Aucune location enregistrée</p>
-                  <p className="text-gray-400 text-sm mt-1">Les locations seront disponibles dans la prochaine étape</p>
-                </div>
+                <VehicleLocations vehicleId={vehicle.id} />
               </div>
             )}
 
