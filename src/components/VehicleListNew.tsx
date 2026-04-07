@@ -474,6 +474,15 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
         .eq('vehicule_id', attributionVehicle.id)
         .is('date_fin', null);
 
+      // Si le nouveau statut n'est pas location, terminer les locations en cours
+      if (attributionType !== 'location_pure' && attributionType !== 'loa') {
+        await supabase
+          .from('locations')
+          .update({ statut: 'terminee' })
+          .eq('vehicule_id', attributionVehicle.id)
+          .eq('statut', 'en_cours');
+      }
+
       // 2. Créer nouvelle attribution SEULEMENT si personne concernée
       const necessitePersonne = ['chauffeur_tca', 'direction_administratif', 'location_pure', 'loa', 'en_pret'].includes(attributionType);
       if (necessitePersonne && (attributionSalarieId || attributionLoueurId)) {
