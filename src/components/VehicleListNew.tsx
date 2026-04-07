@@ -840,16 +840,20 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
                       </td>
                       <td className="px-3 py-2 border-r border-gray-200">
                         <span className="text-xs text-gray-700">
-                          {(vehicle.statut === 'location_pure' || vehicle.statut === 'loa')
-                            ? vehicle.locataire_affiche && vehicle.locataire_affiche !== 'Non attribué'
-                              ? vehicle.locataire_affiche
-                              : <span className="text-gray-400">—</span>
-                            : vehicle.chauffeurs_actifs && vehicle.chauffeurs_actifs.length > 0
-                            ? `${vehicle.chauffeurs_actifs[0].prenom || ''} ${vehicle.chauffeurs_actifs[0].nom || ''}`.trim()
-                            : vehicle.locataire_nom_libre
-                            ? vehicle.locataire_nom_libre
-                            : <span className="text-gray-400">—</span>
-                          }
+                          {(() => {
+                            const s = vehicle.statut;
+                            if (s === 'location_pure' || s === 'loa') {
+                              return vehicle.locataire_affiche && vehicle.locataire_affiche !== 'Non attribué' && vehicle.locataire_affiche !== 'TCA'
+                                ? vehicle.locataire_affiche
+                                : <span className="text-gray-400">—</span>;
+                            }
+                            if (s === 'chauffeur_tca' || s === 'direction_administratif' || s === 'en_pret') {
+                              return vehicle.chauffeurs_actifs && vehicle.chauffeurs_actifs.length > 0
+                                ? `${vehicle.chauffeurs_actifs[0].prenom || ''} ${vehicle.chauffeurs_actifs[0].nom || ''}`.trim()
+                                : <span className="text-gray-400">—</span>;
+                            }
+                            return <span className="text-gray-400">—</span>;
+                          })()}
                         </span>
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-right text-xs">
