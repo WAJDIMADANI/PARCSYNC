@@ -1595,6 +1595,38 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                     </div>
                     <h3 className="text-base font-semibold text-gray-900">Historique des attributions</h3>
                   </div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Statut actuel du véhicule</p>
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+                            'sur_parc':                { bg: 'bg-gray-200',    text: 'text-gray-800', label: '🅿 Sur parc' },
+                            'chauffeur_tca':           { bg: 'bg-blue-500',    text: 'text-white',    label: '👤 Chauffeur TCA' },
+                            'direction_administratif': { bg: 'bg-blue-800',    text: 'text-white',    label: '🏢 Direction' },
+                            'location_pure':           { bg: 'bg-emerald-500', text: 'text-white',    label: '🔄 Location pure' },
+                            'loa':                     { bg: 'bg-purple-500',  text: 'text-white',    label: '💰 LOA' },
+                            'en_pret':                 { bg: 'bg-cyan-500',    text: 'text-white',    label: '🤝 En prêt' },
+                            'en_garage':               { bg: 'bg-amber-500',   text: 'text-white',    label: '🛠 En garage' },
+                            'hors_service':            { bg: 'bg-red-500',     text: 'text-white',    label: '🚫 Hors service' },
+                            'sorti_flotte':            { bg: 'bg-gray-700',    text: 'text-white',    label: '📦 Sorti de flotte' },
+                          };
+                          const config = statusConfig[vehicle.statut] || { bg: 'bg-gray-400', text: 'text-white', label: vehicle.statut };
+                          return (
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${config.bg} ${config.text}`}>
+                              {config.label}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500 mb-1">Depuis</p>
+                      <p className="text-sm font-medium text-gray-700">
+                        {attributions.find(a => !a.date_fin)?.date_debut || '—'}
+                      </p>
+                    </div>
+                  </div>
                   {loadingAttributions ? (
                     <div className="flex justify-center py-8"><LoadingSpinner /></div>
                   ) : attributions.length === 0 ? (
