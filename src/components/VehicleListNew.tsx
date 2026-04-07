@@ -469,7 +469,8 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
         .eq('vehicule_id', attributionVehicle.id)
         .is('date_fin', null);
 
-      if (attributionSalarieId || attributionLoueurId) {
+      const necessitePersonne = ['chauffeur_tca', 'direction_administratif', 'location_pure', 'loa', 'en_pret'].includes(attributionType);
+      if (necessitePersonne && (attributionSalarieId || attributionLoueurId)) {
         await supabase
           .from('attribution_vehicule')
           .insert({
