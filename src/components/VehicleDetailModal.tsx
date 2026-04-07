@@ -1623,7 +1623,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                     <div className="text-right">
                       <p className="text-xs text-gray-500 mb-1">Depuis</p>
                       <p className="text-sm font-medium text-gray-700">
-                        {attributions.find(a => !a.date_fin)?.date_debut || '—'}
+                        {attributions.length > 0 ? attributions[0].date_debut : '—'}
                       </p>
                     </div>
                   </div>
