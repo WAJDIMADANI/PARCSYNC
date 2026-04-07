@@ -481,6 +481,7 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
             date_debut: attributionDate,
             date_fin: null,
             notes: attributionNotes || null,
+            statut_vehicule: attributionType,
           });
       }
 

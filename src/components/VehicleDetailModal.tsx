@@ -1613,18 +1613,18 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                           : attr.loueur
                           ? attr.loueur.nom
                           : '—';
-                        const statut = vehicle.statut;
+                        const statutVehicule = attr.statut_vehicule || 'inconnu';
                         const statutLabel = {
-                          'chauffeur_tca': '👤 Chauffeur TCA',
+                          'chauffeur_tca':           '👤 Chauffeur TCA',
                           'direction_administratif': '🏢 Direction',
-                          'location_pure': '🔄 Location pure',
-                          'loa': '💰 LOA',
-                          'en_pret': '🤝 En prêt',
-                          'en_garage': '🛠 En garage',
-                          'hors_service': '🚫 Hors service',
-                          'sur_parc': '🅿 Sur parc',
-                          'sorti_flotte': '📦 Sorti de flotte',
-                        }[statut] || statut;
+                          'location_pure':           '🔄 Location pure',
+                          'loa':                     '💰 LOA',
+                          'en_pret':                 '🤝 En prêt',
+                          'en_garage':               '🛠 En garage',
+                          'hors_service':            '🚫 Hors service',
+                          'sur_parc':                '🅿 Sur parc',
+                          'sorti_flotte':            '📦 Sorti de flotte',
+                        }[statutVehicule] || statutVehicule;
                         return (
                           <div key={attr.id} className={`flex items-start gap-3 p-3 rounded-lg border ${isActive ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
                             <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${isActive ? 'bg-emerald-500' : 'bg-gray-400'}`}></div>
