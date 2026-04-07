@@ -234,6 +234,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         .select(`
           id,
           type_attribution,
+          statut_vehicule,
           date_debut,
           date_fin,
           notes,
