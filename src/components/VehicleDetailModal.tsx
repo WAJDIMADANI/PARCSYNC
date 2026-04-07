@@ -97,6 +97,10 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
   const [loadingHistorique, setLoadingHistorique] = useState(false);
   const [showInsuranceChangeAlert, setShowInsuranceChangeAlert] = useState(false);
 
+  // État pour les attributions
+  const [attributions, setAttributions] = useState<any[]>([]);
+  const [loadingAttributions, setLoadingAttributions] = useState(false);
+
   // Fonction pour refetch les données du véhicule et notifier le parent
   const fetchVehicleDetails = async (shouldNotifyParent: boolean = false) => {
     console.log('[fetchVehicleDetails] Début refetch pour vehicule ID:', vehicle.id, 'notifyParent:', shouldNotifyParent);
@@ -222,10 +226,36 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
     }
   };
 
+  const fetchAttributions = async () => {
+    setLoadingAttributions(true);
+    try {
+      const { data, error } = await supabase
+        .from('attribution_vehicule')
+        .select(`
+          id,
+          type_attribution,
+          date_debut,
+          date_fin,
+          notes,
+          profil:profil_id(id, nom, prenom, matricule_tca),
+          loueur:loueur_id(id, nom, type)
+        `)
+        .eq('vehicule_id', vehicle.id)
+        .order('date_debut', { ascending: false });
+      if (error) throw error;
+      setAttributions(data || []);
+    } catch (error) {
+      console.error('Erreur chargement attributions:', error);
+    } finally {
+      setLoadingAttributions(false);
+    }
+  };
+
   // Charger les données complètes du véhicule au montage (une seule fois)
   useEffect(() => {
     fetchVehicleDetails();
     fetchHistoriqueAssurance();
+    fetchAttributions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1564,16 +1594,57 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                     </div>
                     <h3 className="text-base font-semibold text-gray-900">Historique des attributions</h3>
                   </div>
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                      <History className="w-8 h-8 text-gray-400" />
+                  {loadingAttributions ? (
+                    <div className="flex justify-center py-8"><LoadingSpinner /></div>
+                  ) : attributions.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <History className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500 font-medium">Aucune attribution enregistrée</p>
+                      <p className="text-gray-400 text-sm mt-1">Utilisez le bouton "Attribution" dans la liste pour attribuer ce véhicule</p>
                     </div>
-                    <p className="text-gray-500 font-medium">Aucune attribution enregistrée</p>
-                    <p className="text-gray-400 text-sm mt-1">Utilisez le bouton "Attribution" dans la liste pour attribuer ce véhicule</p>
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-xs text-gray-400 text-center">Les données réelles seront connectées à Supabase dans la prochaine étape</p>
-                  </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {attributions.map((attr) => {
+                        const isActive = !attr.date_fin || new Date(attr.date_fin) >= new Date();
+                        const nom = attr.profil
+                          ? `${attr.profil.prenom || ''} ${attr.profil.nom || ''}`.trim()
+                          : attr.loueur
+                          ? attr.loueur.nom
+                          : '—';
+                        const statut = vehicle.statut;
+                        const statutLabel = {
+                          'chauffeur_tca': '👤 Chauffeur TCA',
+                          'direction_administratif': '🏢 Direction',
+                          'location_pure': '🔄 Location pure',
+                          'loa': '💰 LOA',
+                          'en_pret': '🤝 En prêt',
+                          'en_garage': '🛠 En garage',
+                          'hors_service': '🚫 Hors service',
+                          'sur_parc': '🅿 Sur parc',
+                          'sorti_flotte': '📦 Sorti de flotte',
+                        }[statut] || statut;
+                        return (
+                          <div key={attr.id} className={`flex items-start gap-3 p-3 rounded-lg border ${isActive ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
+                            <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${isActive ? 'bg-emerald-500' : 'bg-gray-400'}`}></div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold text-gray-900">{statutLabel} {nom && `— ${nom}`}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                                  {isActive ? 'En cours' : 'Clôturé'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {attr.date_debut} {attr.date_fin ? `→ ${attr.date_fin}` : '→ En cours'}
+                              </p>
+                              {attr.notes && <p className="text-xs text-gray-400 mt-1">{attr.notes}</p>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
