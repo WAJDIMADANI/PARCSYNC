@@ -50,10 +50,10 @@ export interface GenerationResult {
  * Convertit "Féminin" / "femme" / "F" → "Mme", sinon → "M."
  */
 function getCivilite(genre: string | null): string {
-  if (!genre) return 'M.';
+  if (!genre) return 'M. ';
   const g = genre.toLowerCase().trim();
-  if (g.includes('f') || g.includes('mme')) return 'Mme';
-  return 'M.';
+  if (g.includes('f') || g.includes('mme')) return 'Mme ';
+  return 'M. ';
 }
 
 /**
