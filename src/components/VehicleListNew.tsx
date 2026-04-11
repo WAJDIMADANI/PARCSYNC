@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import {
   Car,
@@ -17,6 +18,7 @@ import {
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDetailModal } from './VehicleDetailModal';
 import { VehicleCreateModal } from './VehicleCreateModal';
+import { AttestationSignatureModal } from './AttestationSignatureModal';
 import { parseProprietaireCarteGrise } from '../utils/proprietaireParser';
 
 interface Chauffeur {
@@ -149,6 +151,7 @@ function SalarieSearch({ salaries, selectedId, onSelect }: {
 }
 
 export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, params?: any) => void } = {}) {
+  const { appUserId, appUserNom, appUserPrenom } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -168,6 +171,8 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
   const [attributionSalarieId, setAttributionSalarieId] = useState('');
   const [attributionLoueurId, setAttributionLoueurId] = useState('');
   const [savingAttribution, setSavingAttribution] = useState(false);
+  const [showAttestationModal, setShowAttestationModal] = useState(false);
+  const [attestationData, setAttestationData] = useState<any>(null);
 
   const [filters, setFilters] = useState<FilterState>({
     statut: '',
@@ -485,8 +490,9 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
 
       // 2. Créer nouvelle attribution SEULEMENT si personne concernée
       const necessitePersonne = ['chauffeur_tca', 'direction_administratif', 'location_pure', 'loa', 'en_pret'].includes(attributionType);
+      let createdAttributionId: string | null = null;
       if (necessitePersonne && (attributionSalarieId || attributionLoueurId)) {
-        await supabase
+        const { data: insertedAttribution, error: insertError } = await supabase
           .from('attribution_vehicule')
           .insert({
             vehicule_id: attributionVehicle.id,
@@ -497,7 +503,11 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
             date_fin: null,
             notes: attributionNotes || null,
             statut_vehicule: attributionType,
-          });
+          })
+          .select('id')
+          .single();
+        if (insertError) throw insertError;
+        createdAttributionId = insertedAttribution?.id || null;
       }
 
       // 3. Toujours mettre à jour le statut du véhicule
@@ -507,8 +517,51 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
         .eq('id', attributionVehicle.id);
 
       const wasLocation = attributionType === 'location_pure' || attributionType === 'loa';
+      const wasChauffeurTca = attributionType === 'chauffeur_tca';
       const vehiculeId = attributionVehicle.id;
       const vehiculeImmat = attributionVehicle.immatriculation;
+
+      // Si chauffeur TCA et qu'on a bien créé l'attribution → ouvrir modal d'attestation
+      if (wasChauffeurTca && createdAttributionId && appUserId) {
+        // Récupérer les données complètes du salarié (genre, date_naissance, secteur)
+        const { data: profilComplet } = await supabase
+          .from('profil')
+          .select('id, nom, prenom, genre, date_naissance, matricule_tca, secteur:secteur_id(nom)')
+          .eq('id', attributionSalarieId)
+          .maybeSingle();
+
+        if (profilComplet) {
+          setAttestationData({
+            attributionId: createdAttributionId,
+            vehiculeId: attributionVehicle.id,
+            immatriculation: attributionVehicle.immatriculation,
+            marque: attributionVehicle.marque || '',
+            modele: attributionVehicle.modele || '',
+            refTca: attributionVehicle.ref_tca || null,
+            carteEssence: attributionVehicle.carte_essence_numero || null,
+            licenceTransport: attributionVehicle.licence_transport_numero || null,
+            profilId: profilComplet.id,
+            salarieNom: profilComplet.nom,
+            salariePrenom: profilComplet.prenom,
+            salarieGenre: profilComplet.genre,
+            salarieMatriculeTca: profilComplet.matricule_tca,
+            salarieDateNaissance: profilComplet.date_naissance,
+            salarieSecteurNom: (profilComplet.secteur as any)?.nom || null,
+            adminId: appUserId,
+            adminNom: appUserNom || '',
+            adminPrenom: appUserPrenom || '',
+          });
+          setShowAttributionModal(false);
+          setAttributionVehicle(null);
+          setAttributionType('');
+          setAttributionSalarieId('');
+          setAttributionLoueurId('');
+          setAttributionNotes('');
+          setShowAttestationModal(true);
+          setSavingAttribution(false);
+          return; // ne pas appeler fetchVehicles ici, on le fera après l'attestation
+        }
+      }
 
       await fetchVehicles();
       setShowAttributionModal(false);
@@ -1151,6 +1204,23 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
             </div>
           </div>
         </div>
+      )}
+
+      {showAttestationModal && attestationData && (
+        <AttestationSignatureModal
+          isOpen={showAttestationModal}
+          onClose={async () => {
+            setShowAttestationModal(false);
+            setAttestationData(null);
+            await fetchVehicles();
+          }}
+          onSuccess={async () => {
+            setShowAttestationModal(false);
+            setAttestationData(null);
+            await fetchVehicles();
+          }}
+          {...attestationData}
+        />
       )}
     </div>
   );
