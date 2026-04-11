@@ -1,22 +1,15 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { FileText, X, Check, RefreshCw, Loader2 } from 'lucide-react';
-import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '../lib/supabase';
 import { generateAttestation, AttestationData } from '../lib/attestationGenerator';
-
-// ============================================================
-// TYPES
-// ============================================================
 
 interface AttestationSignatureModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (pdfPath: string, kmDepart: number) => void;
 
-  // Données nécessaires pour générer l'attestation
   attributionId: string;
 
-  // Véhicule
   vehiculeId: string;
   immatriculation: string;
   marque: string;
@@ -25,7 +18,6 @@ interface AttestationSignatureModalProps {
   carteEssence: string | null;
   licenceTransport: string | null;
 
-  // Salarié
   profilId: string;
   salarieNom: string;
   salariePrenom: string;
@@ -34,15 +26,120 @@ interface AttestationSignatureModalProps {
   salarieDateNaissance: string | null;
   salarieSecteurNom: string | null;
 
-  // Admin connecté
   adminId: string;
   adminNom: string;
   adminPrenom: string;
 }
 
-// ============================================================
-// COMPOSANT
-// ============================================================
+interface SignaturePadProps {
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+  disabled?: boolean;
+}
+
+function SignaturePad({ canvasRef, disabled }: SignaturePadProps) {
+  const isDrawing = useRef(false);
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+
+  const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    if ('touches' in e) {
+      return {
+        x: (e.touches[0].clientX - rect.left) * scaleX,
+        y: (e.touches[0].clientY - rect.top) * scaleY,
+      };
+    }
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = canvas.offsetWidth * window.devicePixelRatio || 600;
+    canvas.height = canvas.offsetHeight * window.devicePixelRatio || 128;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const startDraw = (e: MouseEvent | TouchEvent) => {
+      if (disabled) return;
+      e.preventDefault();
+      isDrawing.current = true;
+      lastPos.current = getPos(e, canvas);
+    };
+
+    const draw = (e: MouseEvent | TouchEvent) => {
+      if (!isDrawing.current || disabled) return;
+      e.preventDefault();
+      const pos = getPos(e, canvas);
+      ctx.beginPath();
+      if (lastPos.current) {
+        ctx.moveTo(lastPos.current.x, lastPos.current.y);
+      }
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      lastPos.current = pos;
+    };
+
+    const stopDraw = () => {
+      isDrawing.current = false;
+      lastPos.current = null;
+    };
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
+
+    return () => {
+      canvas.removeEventListener('mousedown', startDraw);
+      canvas.removeEventListener('mousemove', draw);
+      canvas.removeEventListener('mouseup', stopDraw);
+      canvas.removeEventListener('mouseleave', stopDraw);
+      canvas.removeEventListener('touchstart', startDraw);
+      canvas.removeEventListener('touchmove', draw);
+      canvas.removeEventListener('touchend', stopDraw);
+    };
+  }, [canvasRef, disabled]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: '100%', height: '128px', cursor: disabled ? 'not-allowed' : 'crosshair' }}
+      className="rounded-lg"
+    />
+  );
+}
+
+function isCanvasEmpty(canvas: HTMLCanvasElement | null): boolean {
+  if (!canvas) return true;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return true;
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] > 0) return false;
+  }
+  return true;
+}
+
+function clearCanvas(canvas: HTMLCanvasElement | null) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
 
 export function AttestationSignatureModal(props: AttestationSignatureModalProps) {
   const {
@@ -74,39 +171,29 @@ export function AttestationSignatureModal(props: AttestationSignatureModalProps)
   const [error, setError] = useState<string | null>(null);
   const [pdfPath, setPdfPath] = useState<string | null>(null);
 
-  const sigChauffeurRef = useRef<SignatureCanvas | null>(null);
-  const sigAdminRef = useRef<SignatureCanvas | null>(null);
+  const sigChauffeurRef = useRef<HTMLCanvasElement>(null);
+  const sigAdminRef = useRef<HTMLCanvasElement>(null);
+
+  const handleClearChauffeur = useCallback(() => clearCanvas(sigChauffeurRef.current), []);
+  const handleClearAdmin = useCallback(() => clearCanvas(sigAdminRef.current), []);
 
   if (!isOpen) return null;
-
-  // ============================================================
-  // HANDLERS
-  // ============================================================
-
-  const handleClearChauffeur = () => {
-    sigChauffeurRef.current?.clear();
-  };
-
-  const handleClearAdmin = () => {
-    sigAdminRef.current?.clear();
-  };
 
   const handleGenerer = async () => {
     setError(null);
 
-    // Validations
     const km = parseInt(kmDepart, 10);
     if (!kmDepart || isNaN(km) || km < 0) {
       setError('Veuillez saisir un kilométrage de départ valide');
       return;
     }
 
-    if (sigChauffeurRef.current?.isEmpty()) {
+    if (isCanvasEmpty(sigChauffeurRef.current)) {
       setError('La signature du chauffeur est obligatoire');
       return;
     }
 
-    if (sigAdminRef.current?.isEmpty()) {
+    if (isCanvasEmpty(sigAdminRef.current)) {
       setError('La signature du responsable est obligatoire');
       return;
     }
@@ -114,11 +201,9 @@ export function AttestationSignatureModal(props: AttestationSignatureModalProps)
     setGenerating(true);
 
     try {
-      // Récupérer les signatures en base64
       const signatureChauffeurDataUrl = sigChauffeurRef.current?.toDataURL('image/png') || '';
       const signatureAdminDataUrl = sigAdminRef.current?.toDataURL('image/png') || '';
 
-      // Construire les données pour le générateur
       const data: AttestationData = {
         vehiculeId,
         immatriculation,
@@ -144,14 +229,12 @@ export function AttestationSignatureModal(props: AttestationSignatureModalProps)
         attributionId,
       };
 
-      // Générer le PDF (étape 2B)
       const result = await generateAttestation(data);
 
       if (!result.success || !result.pdfPath) {
         throw new Error(result.error || 'Erreur lors de la génération du PDF');
       }
 
-      // Sauvegarder en BDD : km, signatures, document_pdf_path
       const { error: updateError } = await supabase
         .from('attribution_vehicule')
         .update({
@@ -165,28 +248,19 @@ export function AttestationSignatureModal(props: AttestationSignatureModalProps)
         throw new Error(`Erreur sauvegarde BDD: ${updateError.message}`);
       }
 
-      console.log('[AttestationSignatureModal] Attestation générée et sauvegardée:', result.pdfPath);
       setPdfPath(result.pdfPath);
-
-      // Notifier le parent
       onSuccess(result.pdfPath, km);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Erreur inconnue';
-      console.error('[AttestationSignatureModal] Erreur:', errorMsg);
       setError(errorMsg);
     } finally {
       setGenerating(false);
     }
   };
 
-  // ============================================================
-  // RENDU
-  // ============================================================
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-        {/* HEADER */}
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
             <FileText className="w-5 h-5 text-blue-600" />
@@ -208,9 +282,7 @@ export function AttestationSignatureModal(props: AttestationSignatureModalProps)
           </button>
         </div>
 
-        {/* CORPS */}
         <div className="space-y-5">
-          {/* Kilométrage */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Kilométrage de départ <span className="text-red-500">*</span>
@@ -225,7 +297,6 @@ export function AttestationSignatureModal(props: AttestationSignatureModalProps)
             />
           </div>
 
-          {/* Signature CHAUFFEUR */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">
@@ -242,21 +313,13 @@ export function AttestationSignatureModal(props: AttestationSignatureModalProps)
               </button>
             </div>
             <div className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-              <SignatureCanvas
-                ref={sigChauffeurRef}
-                canvasProps={{
-                  className: 'w-full h-32 rounded-lg',
-                }}
-                penColor="black"
-                backgroundColor="rgba(255,255,255,0)"
-              />
+              <SignaturePad canvasRef={sigChauffeurRef} disabled={generating} />
             </div>
             <p className="text-xs text-gray-400 mt-1">
               Le chauffeur signe avec le doigt ou la souris
             </p>
           </div>
 
-          {/* Signature ADMIN */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">
@@ -274,25 +337,16 @@ export function AttestationSignatureModal(props: AttestationSignatureModalProps)
               </button>
             </div>
             <div className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-              <SignatureCanvas
-                ref={sigAdminRef}
-                canvasProps={{
-                  className: 'w-full h-32 rounded-lg',
-                }}
-                penColor="black"
-                backgroundColor="rgba(255,255,255,0)"
-              />
+              <SignaturePad canvasRef={sigAdminRef} disabled={generating} />
             </div>
           </div>
 
-          {/* Erreur */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
 
-          {/* Succès */}
           {pdfPath && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
               <Check className="w-4 h-4 text-green-600" />
@@ -303,7 +357,6 @@ export function AttestationSignatureModal(props: AttestationSignatureModalProps)
           )}
         </div>
 
-        {/* FOOTER */}
         <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-gray-200">
           <button
             onClick={onClose}
