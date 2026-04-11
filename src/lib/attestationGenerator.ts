@@ -1,4 +1,5 @@
 import * as fflate from 'fflate';
+import { PDFDocument } from 'pdf-lib';
 import { supabase } from './supabase';
 
 // ============================================================
@@ -6,7 +7,6 @@ import { supabase } from './supabase';
 // ============================================================
 
 export interface AttestationData {
-  // Données véhicule
   vehiculeId: string;
   immatriculation: string;
   marque: string;
@@ -15,7 +15,6 @@ export interface AttestationData {
   carte_essence_numero: string | null;
   licence_transport_numero: string | null;
 
-  // Données salarié (chauffeur TCA)
   profilId: string;
   salarieNom: string;
   salariePrenom: string;
@@ -24,14 +23,16 @@ export interface AttestationData {
   salarieDateNaissance: string | null;
   salarieSecteurNom: string | null;
 
-  // Données admin connecté
   adminId: string;
   adminNom: string;
   adminPrenom: string;
 
-  // Données saisies dans le formulaire
   kmDepart: number;
   attributionId: string;
+
+  // Signatures (base64 PNG dataURL) - optionnelles
+  signatureChauffeurDataUrl?: string;
+  signatureAdminDataUrl?: string;
 }
 
 export interface GenerationResult {
@@ -46,9 +47,6 @@ export interface GenerationResult {
 // HELPERS
 // ============================================================
 
-/**
- * Convertit "Féminin" / "femme" / "F" → "Mme", sinon → "M."
- */
 function getCivilite(genre: string | null): string {
   if (!genre) return 'M. ';
   const g = genre.toLowerCase().trim();
@@ -56,17 +54,10 @@ function getCivilite(genre: string | null): string {
   return 'M. ';
 }
 
-/**
- * Formate une date YYYY-MM-DD → DD/MM/YYYY
- * Gère aussi les timestamps ISO
- */
 function formatDateFr(dateStr: string | null): string {
   if (!dateStr) return '';
   try {
-    // Si c'est déjà au format DD/MM/YYYY, retourne tel quel
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
-
-    // Extraire la partie date (YYYY-MM-DD)
     const datePart = dateStr.split('T')[0];
     const parts = datePart.split('-');
     if (parts.length !== 3) return '';
@@ -76,9 +67,6 @@ function formatDateFr(dateStr: string | null): string {
   }
 }
 
-/**
- * Date du jour au format DD/MM/YYYY
- */
 function dateAujourdhuiFr(): string {
   const d = new Date();
   const dd = String(d.getDate()).padStart(2, '0');
@@ -87,9 +75,6 @@ function dateAujourdhuiFr(): string {
   return `${dd}/${mm}/${yyyy}`;
 }
 
-/**
- * Heure actuelle au format HH:MM
- */
 function heureActuelle(): string {
   const d = new Date();
   const hh = String(d.getHours()).padStart(2, '0');
@@ -97,16 +82,25 @@ function heureActuelle(): string {
   return `${hh}:${mm}`;
 }
 
-/**
- * Supprime les caractères XML interdits
- */
 function sanitizeForXml(text: string): string {
   return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
 }
 
+/**
+ * Convertit un dataURL base64 en Uint8Array (pour pdf-lib)
+ */
+function dataUrlToBytes(dataUrl: string): Uint8Array {
+  const base64 = dataUrl.split(',')[1] || '';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 // ============================================================
 // REMPLACEMENT DES VARIABLES (gère la fragmentation XML)
-// Logique reproduite depuis useLetterGeneration.ts
 // ============================================================
 
 function replaceVariablesAcrossWT(
@@ -163,7 +157,6 @@ function replaceVariablesAcrossWT(
         break;
       }
     }
-    // On accepte les valeurs vides (ex: km_retour à la création)
     replacements.push({
       startChar: varMatch.index,
       endChar: varMatch.index + varMatch[0].length,
@@ -174,7 +167,6 @@ function replaceVariablesAcrossWT(
 
   if (replacements.length === 0) return xmlContent;
 
-  // Trier de droite à gauche pour ne pas décaler les indices
   replacements.sort((a, b) => b.startChar - a.startChar);
 
   replacements.forEach((replacement) => {
@@ -234,6 +226,81 @@ function replaceVariablesAcrossWT(
 }
 
 // ============================================================
+// TAMPONNAGE DES SIGNATURES SUR LE PDF
+// Coordonnées mesurées sur le PDF généré (page A4 = 595.32 x 841.92)
+// ============================================================
+
+const PAGE_HEIGHT = 841.92;
+
+// Signature CHAUFFEUR : sous "Signature :" colonne DÉPART
+const SIG_CHAUFFEUR = {
+  x: 180,
+  yTop: 547,
+  width: 110,
+  height: 45,
+};
+
+// Signature ADMIN : sous "Date & Signature responsable saisie : ..."
+const SIG_ADMIN = {
+  x: 250,
+  yTop: 690,
+  width: 120,
+  height: 50,
+};
+
+async function stampSignaturesOnPdf(
+  pdfBytes: Uint8Array,
+  signatureChauffeurDataUrl: string,
+  signatureAdminDataUrl: string
+): Promise<Uint8Array> {
+  console.log('[attestationGenerator] Tamponnage des signatures sur le PDF...');
+
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+  const pages = pdfDoc.getPages();
+  const firstPage = pages[0];
+
+  if (!firstPage) {
+    throw new Error('PDF vide, impossible de tamponner les signatures');
+  }
+
+  // Tamponner signature CHAUFFEUR
+  if (signatureChauffeurDataUrl) {
+    const sigChauffeurBytes = dataUrlToBytes(signatureChauffeurDataUrl);
+    const sigChauffeurImage = await pdfDoc.embedPng(sigChauffeurBytes);
+
+    // pdf-lib : y est le coin BAS de l'image, origine en bas-gauche
+    const yPdfLib = PAGE_HEIGHT - SIG_CHAUFFEUR.yTop - SIG_CHAUFFEUR.height;
+
+    firstPage.drawImage(sigChauffeurImage, {
+      x: SIG_CHAUFFEUR.x,
+      y: yPdfLib,
+      width: SIG_CHAUFFEUR.width,
+      height: SIG_CHAUFFEUR.height,
+    });
+    console.log('[attestationGenerator] Signature chauffeur tamponnée');
+  }
+
+  // Tamponner signature ADMIN
+  if (signatureAdminDataUrl) {
+    const sigAdminBytes = dataUrlToBytes(signatureAdminDataUrl);
+    const sigAdminImage = await pdfDoc.embedPng(sigAdminBytes);
+
+    const yPdfLib = PAGE_HEIGHT - SIG_ADMIN.yTop - SIG_ADMIN.height;
+
+    firstPage.drawImage(sigAdminImage, {
+      x: SIG_ADMIN.x,
+      y: yPdfLib,
+      width: SIG_ADMIN.width,
+      height: SIG_ADMIN.height,
+    });
+    console.log('[attestationGenerator] Signature admin tamponnée');
+  }
+
+  const modifiedPdfBytes = await pdfDoc.save();
+  return modifiedPdfBytes;
+}
+
+// ============================================================
 // FONCTION PRINCIPALE
 // ============================================================
 
@@ -241,70 +308,37 @@ const TEMPLATE_BUCKET = 'documents-vehicules';
 const TEMPLATE_PATH = 'templates/attestation.docx';
 const OUTPUT_BUCKET = 'documents-vehicules';
 
-/**
- * Génère l'attestation de mise à disposition pour un chauffeur TCA.
- *
- * Étapes :
- * 1. Construit l'objet des 20 variables depuis les données reçues
- * 2. Télécharge le template Word
- * 3. Remplace les variables via fflate
- * 4. Upload le DOCX rempli dans Storage
- * 5. Appelle l'Edge Function convert-docx-to-pdf
- * 6. Retourne l'URL du PDF
- */
 export async function generateAttestation(
   data: AttestationData
 ): Promise<GenerationResult> {
   try {
     console.log('[attestationGenerator] Démarrage génération pour véhicule', data.immatriculation);
 
-    // ============================================================
-    // 1. CONSTRUIRE LES 20 VARIABLES
-    // ============================================================
+    // 1. Construire les variables
     const variables: Record<string, string> = {
-      // EN-TÊTE
       matricule: data.salarieMatriculeTca || '',
       lot_entite: data.salarieSecteurNom || '',
-
-      // CORPS
       civilite: getCivilite(data.salarieGenre),
       nom_complet: `${data.salariePrenom} ${data.salarieNom}`.trim(),
       date_naissance: formatDateFr(data.salarieDateNaissance),
-
-      // VÉHICULE
       ref_tca: data.ref_tca || '',
       immatriculation: data.immatriculation || '',
       marque: data.marque || '',
       modele: data.modele || '',
       carte_essence: data.carte_essence_numero || '',
       licence_transport: data.licence_transport_numero || '',
-
-      // DATE
       date_attribution: dateAujourdhuiFr(),
-
-      // KM
       km_depart: String(data.kmDepart || ''),
-      km_retour: '', // vide à la création, rempli à la restitution
-
-      // DATES TABLEAU DÉPART
+      km_retour: '',
       date_depart: dateAujourdhuiFr(),
       heure_depart: heureActuelle(),
-
-      // DATES TABLEAU RETOUR (vides à la création)
       date_retour: '',
       heure_retour: '',
-
-      // RESPONSABLE SAISIE
       date_responsable: dateAujourdhuiFr(),
       nom_responsable: `${data.adminPrenom} ${data.adminNom}`.trim(),
     };
 
-    console.log('[attestationGenerator] Variables construites:', variables);
-
-    // ============================================================
-    // 2. TÉLÉCHARGER LE TEMPLATE WORD
-    // ============================================================
-    console.log('[attestationGenerator] Téléchargement du template...');
+    // 2. Télécharger le template
     const { data: templateData, error: downloadError } = await supabase.storage
       .from(TEMPLATE_BUCKET)
       .download(TEMPLATE_PATH);
@@ -314,11 +348,8 @@ export async function generateAttestation(
     }
 
     const arrayBuffer = await templateData.arrayBuffer();
-    console.log('[attestationGenerator] Template téléchargé, taille:', arrayBuffer.byteLength);
 
-    // ============================================================
-    // 3. DÉCOMPRESSER + REMPLACER VARIABLES + RECOMPRESSER
-    // ============================================================
+    // 3. Décompresser + remplacer + recompresser
     const filledDocxBlob = await new Promise<Blob>((resolve, reject) => {
       fflate.unzip(new Uint8Array(arrayBuffer), (err, unzipped) => {
         if (err) {
@@ -347,14 +378,13 @@ export async function generateAttestation(
           partsToProcess.forEach((partPath) => {
             const xmlData = unzipped[partPath];
             if (!xmlData) return;
-
             const xmlContent = decoder.decode(xmlData);
             const replacedContent = replaceVariablesAcrossWT(xmlContent, variables, partPath);
             unzipped[partPath] = encoder.encode(replacedContent);
           });
 
           if (!unzipped['word/document.xml']) {
-            reject(new Error('document.xml non trouvé dans le template'));
+            reject(new Error('document.xml non trouvé'));
             return;
           }
 
@@ -366,7 +396,6 @@ export async function generateAttestation(
             const blob = new Blob([zipData], {
               type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             });
-            console.log('[attestationGenerator] DOCX rempli, taille:', blob.size);
             resolve(blob);
           });
         } catch (e) {
@@ -375,11 +404,8 @@ export async function generateAttestation(
       });
     });
 
-    // ============================================================
-    // 4. UPLOAD DU DOCX REMPLI DANS STORAGE
-    // ============================================================
+    // 4. Upload DOCX
     const docxPath = `attestations/${data.attributionId}.docx`;
-    console.log('[attestationGenerator] Upload DOCX vers:', docxPath);
 
     const { error: uploadError } = await supabase.storage
       .from(OUTPUT_BUCKET)
@@ -392,11 +418,8 @@ export async function generateAttestation(
       throw new Error(`Erreur upload DOCX: ${uploadError.message}`);
     }
 
-    // ============================================================
-    // 5. APPELER L'EDGE FUNCTION CONVERT-DOCX-TO-PDF
-    // ============================================================
+    // 5. Convertir en PDF via Edge Function
     const pdfPath = `attestations/${data.attributionId}.pdf`;
-    console.log('[attestationGenerator] Conversion DOCX -> PDF...');
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -426,12 +449,44 @@ export async function generateAttestation(
     }
 
     const result = await response.json();
-
     if (!result.success) {
       throw new Error(`Conversion échouée: ${result.error || 'erreur inconnue'}`);
     }
 
-    console.log('[attestationGenerator] PDF généré avec succès:', pdfPath);
+    console.log('[attestationGenerator] PDF généré');
+
+    // 6. Tamponner les signatures (si fournies)
+    if (data.signatureChauffeurDataUrl || data.signatureAdminDataUrl) {
+      const { data: pdfFileData, error: pdfDownloadError } = await supabase.storage
+        .from(OUTPUT_BUCKET)
+        .download(pdfPath);
+
+      if (pdfDownloadError || !pdfFileData) {
+        throw new Error(`Erreur téléchargement PDF pour tamponnage: ${pdfDownloadError?.message}`);
+      }
+
+      const pdfArrayBuffer = await pdfFileData.arrayBuffer();
+      const pdfBytes = new Uint8Array(pdfArrayBuffer);
+
+      const stampedPdfBytes = await stampSignaturesOnPdf(
+        pdfBytes,
+        data.signatureChauffeurDataUrl || '',
+        data.signatureAdminDataUrl || ''
+      );
+
+      const { error: stampUploadError } = await supabase.storage
+        .from(OUTPUT_BUCKET)
+        .upload(pdfPath, stampedPdfBytes, {
+          contentType: 'application/pdf',
+          upsert: true,
+        });
+
+      if (stampUploadError) {
+        throw new Error(`Erreur upload PDF tamponné: ${stampUploadError.message}`);
+      }
+
+      console.log('[attestationGenerator] PDF tamponné et uploadé (écrase l\'ancien)');
+    }
 
     return {
       success: true,
