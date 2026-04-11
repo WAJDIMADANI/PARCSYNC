@@ -227,6 +227,8 @@ export function AttestationSignatureModal(props: AttestationSignatureModalProps)
 
         kmDepart: km,
         attributionId,
+        signatureChauffeurDataUrl,
+        signatureAdminDataUrl,
       };
 
       const result = await generateAttestation(data);
