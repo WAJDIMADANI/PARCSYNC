@@ -242,6 +242,8 @@ export function AttestationSignatureModal(props: AttestationSignatureModalProps)
         .update({
           document_pdf_path: result.pdfPath,
           signature_chauffeur: signatureChauffeurDataUrl,
+          signature_admin: signatureAdminDataUrl,
+          km_depart: km,
           attribue_par: adminId,
         })
         .eq('id', attributionId);
