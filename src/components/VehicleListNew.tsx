@@ -19,6 +19,7 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDetailModal } from './VehicleDetailModal';
 import { VehicleCreateModal } from './VehicleCreateModal';
 import { AttestationSignatureModal } from './AttestationSignatureModal';
+import { RestitutionModal } from './RestitutionModal';
 import { parseProprietaireCarteGrise } from '../utils/proprietaireParser';
 
 interface Chauffeur {
@@ -173,6 +174,8 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
   const [savingAttribution, setSavingAttribution] = useState(false);
   const [showAttestationModal, setShowAttestationModal] = useState(false);
   const [attestationData, setAttestationData] = useState<any>(null);
+  const [showRestitutionModal, setShowRestitutionModal] = useState(false);
+  const [restitutionData, setRestitutionData] = useState<any>(null);
 
   const [filters, setFilters] = useState<FilterState>({
     statut: '',
@@ -464,11 +467,75 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
     return <span className="text-xs text-gray-700 max-w-[150px] truncate block">{fournisseur}</span>;
   };
 
+  const handleRestituer = async (vehicle: Vehicle) => {
+    if (vehicle.statut !== 'chauffeur_tca') {
+      alert('Restitution disponible uniquement pour les chauffeurs TCA pour le moment. Les autres types arrivent bientôt.');
+      return;
+    }
+    if (!appUserId) {
+      alert('Utilisateur non connecté');
+      return;
+    }
+    try {
+      const { data: attribution, error } = await supabase
+        .from('attribution_vehicule')
+        .select(`
+          id, vehicule_id, profil_id, km_depart, date_debut,
+          signature_chauffeur, signature_admin, attribue_par, created_at,
+          profil:profil_id(id, nom, prenom, genre, date_naissance, matricule_tca, secteur:secteur_id(nom)),
+          admin:attribue_par(nom, prenom)
+        `)
+        .eq('vehicule_id', vehicle.id)
+        .eq('statut_vehicule', 'chauffeur_tca')
+        .is('date_fin', null)
+        .maybeSingle();
+
+      if (error || !attribution) {
+        alert('Aucune attribution active trouvée pour ce véhicule');
+        return;
+      }
+
+      const profil: any = attribution.profil;
+      const admin: any = attribution.admin;
+
+      setRestitutionData({
+        attributionId: attribution.id,
+        vehiculeId: vehicle.id,
+        immatriculation: vehicle.immatriculation,
+        marque: vehicle.marque || '',
+        modele: vehicle.modele || '',
+        refTca: vehicle.ref_tca || null,
+        carteEssence: (vehicle as any).carte_essence_numero || null,
+        licenceTransport: (vehicle as any).licence_transport_numero || null,
+        profilId: profil?.id || '',
+        salarieNom: profil?.nom || '',
+        salariePrenom: profil?.prenom || '',
+        salarieGenre: profil?.genre || null,
+        salarieMatriculeTca: profil?.matricule_tca || null,
+        salarieDateNaissance: profil?.date_naissance || null,
+        salarieSecteurNom: profil?.secteur?.nom || null,
+        kmDepart: attribution.km_depart || 0,
+        dateDepart: attribution.date_debut || '',
+        signatureChauffeurDepart: attribution.signature_chauffeur || '',
+        signatureAdminDepart: attribution.signature_admin || '',
+        adminDepartNom: admin?.nom || '',
+        adminDepartPrenom: admin?.prenom || '',
+        dateDepartResponsable: attribution.created_at || '',
+        adminId: appUserId,
+        adminNom: appUserNom || '',
+        adminPrenom: appUserPrenom || '',
+      });
+      setShowRestitutionModal(true);
+    } catch (e) {
+      console.error('Erreur récupération attribution:', e);
+      alert('Erreur lors de la récupération des données');
+    }
+  };
+
   const handleValiderAttribution = async () => {
     if (!attributionVehicle || !attributionType) return;
     setSavingAttribution(true);
     try {
-      // 1. TOUJOURS clôturer les attributions actives
       const hier = new Date(attributionDate);
       hier.setDate(hier.getDate() - 1);
       const hierStr = hier.toISOString().split('T')[0];
@@ -479,7 +546,6 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
         .eq('vehicule_id', attributionVehicle.id)
         .is('date_fin', null);
 
-      // Si le nouveau statut n'est pas location, terminer les locations en cours
       if (attributionType !== 'location_pure' && attributionType !== 'loa') {
         await supabase
           .from('locations')
@@ -488,7 +554,6 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
           .eq('statut', 'en_cours');
       }
 
-      // 2. Créer nouvelle attribution SEULEMENT si personne concernée
       const necessitePersonne = ['chauffeur_tca', 'direction_administratif', 'location_pure', 'loa', 'en_pret'].includes(attributionType);
       let createdAttributionId: string | null = null;
       if (necessitePersonne && (attributionSalarieId || attributionLoueurId)) {
@@ -510,7 +575,6 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
         createdAttributionId = insertedAttribution?.id || null;
       }
 
-      // 3. Toujours mettre à jour le statut du véhicule
       await supabase
         .from('vehicule')
         .update({ statut: attributionType })
@@ -521,9 +585,7 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
       const vehiculeId = attributionVehicle.id;
       const vehiculeImmat = attributionVehicle.immatriculation;
 
-      // Si chauffeur TCA et qu'on a bien créé l'attribution → ouvrir modal d'attestation
       if (wasChauffeurTca && createdAttributionId && appUserId) {
-        // Récupérer les données complètes du salarié (genre, date_naissance, secteur)
         const { data: profilComplet } = await supabase
           .from('profil')
           .select('id, nom, prenom, genre, date_naissance, matricule_tca, secteur:secteur_id(nom)')
@@ -559,7 +621,7 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
           setAttributionNotes('');
           setShowAttestationModal(true);
           setSavingAttribution(false);
-          return; // ne pas appeler fetchVehicles ici, on le fera après l'attestation
+          return;
         }
       }
 
@@ -581,7 +643,6 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
       setSavingAttribution(false);
     }
   };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -940,6 +1001,17 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
                           >
                             Attribution
                           </button>
+                          {['chauffeur_tca','direction_administratif','location_pure','loa','en_pret'].includes(vehicle.statut) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRestituer(vehicle);
+                              }}
+                              className="text-orange-600 hover:text-orange-800 font-semibold transition-colors border border-orange-300 rounded px-2 py-0.5 text-xs hover:bg-orange-50"
+                            >
+                              Restituer
+                            </button>
+                          )}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1220,6 +1292,22 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
             await fetchVehicles();
           }}
           {...attestationData}
+        />
+      )}
+
+      {showRestitutionModal && restitutionData && (
+        <RestitutionModal
+          isOpen={showRestitutionModal}
+          onClose={() => {
+            setShowRestitutionModal(false);
+            setRestitutionData(null);
+          }}
+          onSuccess={async () => {
+            setShowRestitutionModal(false);
+            setRestitutionData(null);
+            await fetchVehicles();
+          }}
+          {...restitutionData}
         />
       )}
     </div>
