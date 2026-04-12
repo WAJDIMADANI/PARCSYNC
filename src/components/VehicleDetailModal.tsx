@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart, FileText, AlertCircle, Wrench, Users, History, MapPin, Receipt, ClipboardList } from 'lucide-react';
+import { X, Car, CreditCard as Edit, Save, Upload, Trash2, Package, CreditCard, Shield, ShoppingCart, FileText, AlertCircle, Wrench, Users, History, MapPin, Receipt, ClipboardList, Download } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleDocuments } from './VehicleDocuments';
 import { VehicleMaintenances } from './VehicleMaintenances';
@@ -590,6 +590,25 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
         {config.label}
       </span>
     );
+  };
+
+  const handleDownloadAttestation = async (attributionId: string) => {
+    try {
+      const path = `attestations/${attributionId}.pdf`;
+      const { data, error } = await supabase.storage
+        .from('documents-vehicules')
+        .createSignedUrl(path, 3600);
+
+      if (error || !data?.signedUrl) {
+        alert('Aucune attestation disponible pour cette attribution.\n\n(L\'attestation n\'a peut-être pas encore été générée, ou elle a été créée avant l\'activation de cette fonctionnalité.)');
+        return;
+      }
+
+      window.open(data.signedUrl, '_blank');
+    } catch (e) {
+      console.error('Erreur téléchargement attestation:', e);
+      alert('Erreur lors de la récupération de l\'attestation');
+    }
   };
 
   return (
@@ -1673,6 +1692,16 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                                 {attr.date_debut} {attr.date_fin ? `→ ${attr.date_fin}` : '→ En cours'}
                               </p>
                               {attr.notes && <p className="text-xs text-gray-400 mt-1">{attr.notes}</p>}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownloadAttestation(attr.id);
+                                }}
+                                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 border border-blue-300 rounded px-2 py-1 hover:bg-blue-50 transition-colors"
+                              >
+                                <Download className="w-3 h-3" />
+                                Télécharger l'attestation
+                              </button>
                             </div>
                           </div>
                         );
