@@ -10,11 +10,16 @@ import UploadAllMissingDocuments from './components/UploadAllMissingDocuments';
 import { FirstAdminSetup } from './components/FirstAdminSetup';
 import { DemandeExterne } from './components/DemandeExterne';
 import { SetPassword } from './components/SetPassword';
+import { usePermissions } from './contexts/PermissionsContext';
+import { ChooseModeModal, DisplayMode } from './components/ChooseModeModal';
+import { MobileFlotteHome } from './components/MobileFlotteHome';
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const { isFlotteAutoOnly, loading: permLoading } = usePermissions();
+  const [displayMode, setDisplayMode] = useState<DisplayMode | null>(null);
   const [needsAdminSetup, setNeedsAdminSetup] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
 
@@ -95,6 +100,10 @@ function AppContent() {
     };
   }, [user?.id]);
 
+  useEffect(() => {
+    setDisplayMode(null);
+  }, [user?.id]);
+
   if (loading || checkingSetup) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
@@ -109,6 +118,22 @@ function AppContent() {
 
   if (needsAdminSetup) {
     return <FirstAdminSetup onComplete={() => setNeedsAdminSetup(false)} />;
+  }
+
+  if (permLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (isFlotteAutoOnly && displayMode === null) {
+    return <ChooseModeModal onSelect={(mode) => setDisplayMode(mode)} />;
+  }
+
+  if (isFlotteAutoOnly && displayMode === 'mobile') {
+    return <MobileFlotteHome onSwitchToDesktop={() => setDisplayMode('desktop')} />;
   }
 
   return <Dashboard />;
