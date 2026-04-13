@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
-
 interface AppUser {
   id: string;
   auth_user_id: string;
@@ -11,28 +10,24 @@ interface AppUser {
   actif: boolean;
   permissions: string[];
 }
-
 interface PermissionsContextType {
   appUser: AppUser | null;
   permissions: string[];
   loading: boolean;
+  isFlotteAutoOnly: boolean;
   hasPermission: (sectionId: string) => boolean;
   refreshPermissions: () => Promise<void>;
 }
-
 const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
-
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
   useEffect(() => {
     console.log('PermissionsContext effect triggered, user:', user?.id);
     let timeoutId: NodeJS.Timeout;
-
     const loadPermissions = async () => {
       if (!user) {
         console.log('No user in PermissionsContext, setting loading to false');
@@ -41,25 +36,20 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
-
       console.log('Loading permissions for user:', user.email);
-
       try {
         const emailToSearch = user.email?.trim().toLowerCase();
-
         if (!emailToSearch) {
           setAppUser(null);
           setPermissions([]);
           setLoading(false);
           return;
         }
-
         const { data, error } = await supabase
           .from('utilisateur_avec_permissions')
           .select('*')
           .eq('email', emailToSearch)
           .maybeSingle();
-
         if (error) {
           console.error('Error loading permissions:', error);
           setAppUser(null);
@@ -82,34 +72,30 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     };
-
     // Timeout de sécurité : après 5 secondes, forcer le déverrouillage
     timeoutId = setTimeout(() => {
       console.warn('Permission loading timeout - forcing unlock');
       setLoading(false);
     }, 5000);
-
     loadPermissions();
-
     return () => {
       clearTimeout(timeoutId);
     };
   }, [user?.id, refreshTrigger]);
-
   const hasPermission = (sectionId: string): boolean => {
     return permissions.includes(sectionId);
   };
-
   const refreshPermissions = async () => {
     setRefreshTrigger(prev => prev + 1);
   };
-
+  const isFlotteAutoOnly = permissions.length > 0 && permissions.every(p => p.startsWith('parc/'));
   return (
     <PermissionsContext.Provider
       value={{
         appUser,
         permissions,
         loading,
+        isFlotteAutoOnly,
         hasPermission,
         refreshPermissions,
       }}
@@ -118,7 +104,6 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     </PermissionsContext.Provider>
   );
 }
-
 export function usePermissions() {
   const context = useContext(PermissionsContext);
   if (context === undefined) {
