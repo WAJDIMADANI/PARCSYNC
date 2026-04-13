@@ -239,6 +239,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
           date_debut,
           date_fin,
           notes,
+          signature_chauffeur_retour,
           profil:profil_id(id, nom, prenom, matricule_tca),
           loueur:loueur_id(id, nom, type)
         `)
@@ -1684,9 +1685,24 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-semibold text-gray-900">{statutLabel} {nom && `— ${nom}`}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-                                  {isActive ? 'En cours' : 'Clôturé'}
-                                </span>
+                                <div className="flex items-center gap-1">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                                    {isActive ? 'En cours' : 'Clôturé'}
+                                  </span>
+                                  {isActive ? (
+                                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
+                                      📤 Départ
+                                    </span>
+                                  ) : attr.signature_chauffeur_retour ? (
+                                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
+                                      🔄 Restituée
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                                      ⚠️ Sans restitution
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               <p className="text-xs text-gray-500 mt-1">
                                 {attr.date_debut} {attr.date_fin ? `→ ${attr.date_fin}` : '→ En cours'}
