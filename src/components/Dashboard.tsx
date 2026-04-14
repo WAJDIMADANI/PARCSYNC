@@ -46,8 +46,16 @@ import LocatairesExternesManager from './LocatairesExternesManager';
 import { ImportVehicleReferences } from './ImportVehicleReferences';
 import { LocationsManager } from './LocationsManager';
 
-export function Dashboard() {
-  const [view, setView] = useState<View>('dashboards/rh');
+// 🆕 ÉTAPE C : ajout d'une prop optionnelle `initialView` pour que App.tsx puisse
+// dire au Dashboard sur quelle vue démarrer selon le profil de l'utilisateur.
+interface DashboardProps {
+  initialView?: View;
+}
+
+export function Dashboard({ initialView }: DashboardProps = {}) {
+  // 🆕 ÉTAPE C : si initialView est fourni, on démarre dessus ; sinon, comportement
+  // historique inchangé (démarrage sur 'dashboards/rh').
+  const [view, setView] = useState<View>(initialView || 'dashboards/rh');
   const [viewParams, setViewParams] = useState<any>(null);
   const [previousView, setPreviousView] = useState<View | null>(null);
   const { signOut, user, appUserNom, appUserPrenom } = useAuth();
