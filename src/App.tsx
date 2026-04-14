@@ -2,6 +2,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
+import { View } from './components/Sidebar'; // 🆕 ÉTAPE C : import du type View
 import { Apply } from './components/Apply';
 import { OnboardingForm } from './components/OnboardingForm';
 import ContractSignature from './components/ContractSignature';
@@ -16,9 +17,24 @@ import { MobileFlotteHome } from './components/MobileFlotteHome';
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
+// 🆕 ÉTAPE C : détermine la page d'accueil d'un utilisateur selon son pôle principal.
+// Règles métier (validées avec l'utilisateur) :
+//   1. Si l'user a au moins une perm rh/*    → dashboard RH    (priorité 1, ex: Misba)
+//   2. Sinon si une perm parc/*              → dashboard Parc  (ex: houzaifa)
+//   3. Sinon si une perm compta/*            → compta/entrees  (pas de dashboards/compta dans l'app)
+//   4. Fallback                              → dashboard RH    (user admin-only / exports-only)
+// Note : admin et exports ne sont PAS des pôles, ce sont des permissions transverses.
+function getDefaultView(permissions: string[]): View {
+  if (permissions.some((p) => p.startsWith('rh/'))) return 'dashboards/rh';
+  if (permissions.some((p) => p.startsWith('parc/'))) return 'dashboards/parc';
+  if (permissions.some((p) => p.startsWith('compta/'))) return 'compta/entrees';
+  return 'dashboards/rh';
+}
+
 function AppContent() {
   const { user, loading } = useAuth();
-  const { isFlotteAutoOnly, loading: permLoading } = usePermissions();
+  // 🆕 ÉTAPE C : on récupère aussi `permissions` pour calculer la vue initiale.
+  const { isFlotteAutoOnly, permissions, loading: permLoading } = usePermissions();
   const [displayMode, setDisplayMode] = useState<DisplayMode | null>(null);
   const [needsAdminSetup, setNeedsAdminSetup] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
@@ -136,7 +152,9 @@ function AppContent() {
     return <MobileFlotteHome onSwitchToDesktop={() => setDisplayMode('desktop')} />;
   }
 
-  return <Dashboard />;
+  // 🆕 ÉTAPE C : on passe la vue initiale calculée à partir des permissions.
+  // Misba (rh/*) → dashboards/rh | houzaifa (parc/* only, mode desktop) → dashboards/parc
+  return <Dashboard initialView={getDefaultView(permissions)} />;
 }
 
 function App() {
