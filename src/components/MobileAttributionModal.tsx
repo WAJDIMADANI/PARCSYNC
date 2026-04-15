@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { AttestationSignatureModal } from './AttestationSignatureModal';
+import { EDLModal } from './EDLModal'; // 🆕 ÉTAPE D3
 
 interface VehicleForAttribution {
   id: string;
@@ -41,7 +42,8 @@ interface MobileAttributionModalProps {
  * 3. Notes optionnelles
  * 4. Valider → clôture attribs actives + insert + update statut véhicule
  * 5. Ouverture automatique de AttestationSignatureModal pour la signature
- * 6. PDF généré + succès → refresh de la liste
+ * 6. PDF attestation généré → ouverture automatique de EDLModal pour l'état des lieux 🆕
+ * 7. EDL validé → succès + refresh de la liste 🆕
  */
 export function MobileAttributionModal({ vehicle, onClose, onSuccess }: MobileAttributionModalProps) {
   const { appUserId, appUserNom, appUserPrenom } = useAuth();
@@ -59,6 +61,10 @@ export function MobileAttributionModal({ vehicle, onClose, onSuccess }: MobileAt
 
   const [showAttestation, setShowAttestation] = useState(false);
   const [attestationData, setAttestationData] = useState<any>(null);
+
+  // 🆕 ÉTAPE D3 : États pour la modal EDL qui s'ouvre après l'attestation
+  const [showEDL, setShowEDL] = useState(false);
+  const [edlData, setEdlData] = useState<any>(null);
 
   useEffect(() => {
     fetchSalaries();
@@ -198,23 +204,78 @@ export function MobileAttributionModal({ vehicle, onClose, onSuccess }: MobileAt
     }
   };
 
+  // 🆕 ÉTAPE D3 : Quand l'attestation est signée avec succès, on ouvre l'EDL au lieu de fermer.
+  // Le `pdfPath` et `kmDepart` viennent de `AttestationSignatureModal.onSuccess(pdfPath, kmDepart)`.
+  const handleAttestationSuccess = (_pdfPath: string, kmDepart: number) => {
+    if (!attestationData) return;
+
+    setEdlData({
+      typeEdl: 'sortie',
+      attributionId: attestationData.attributionId,
+      vehiculeId: attestationData.vehiculeId,
+      profilId: attestationData.profilId,
+      immatriculation: attestationData.immatriculation,
+      marque: attestationData.marque,
+      modele: attestationData.modele,
+      refTca: attestationData.refTca,
+      salarieNom: attestationData.salarieNom,
+      salariePrenom: attestationData.salariePrenom,
+      kmInitial: kmDepart,
+      adminId: attestationData.adminId,
+      adminNom: attestationData.adminNom,
+      adminPrenom: attestationData.adminPrenom,
+    });
+
+    // On ferme l'attestation et on ouvre l'EDL
+    setShowAttestation(false);
+    setAttestationData(null);
+    setShowEDL(true);
+  };
+
+  // 🆕 ÉTAPE D3 : Quand l'EDL est validé avec succès, on ferme tout
+  const handleEDLSuccess = () => {
+    setShowEDL(false);
+    setEdlData(null);
+    onSuccess();
+    onClose();
+  };
+
+  // 🆕 ÉTAPE D3 : Si l'admin annule l'EDL (ferme la modal sans valider), on quitte quand même
+  // l'attribution (l'attestation est déjà signée et sauvegardée). L'EDL pourra être fait plus
+  // tard manuellement depuis l'onglet "États des lieux" du véhicule (sera ajouté en D6).
+  const handleEDLClose = () => {
+    setShowEDL(false);
+    setEdlData(null);
+    onSuccess();
+    onClose();
+  };
+
+  // 🆕 ÉTAPE D3 : Si la modal EDL est ouverte, on l'affiche par-dessus
+  if (showEDL && edlData) {
+    return (
+      <EDLModal
+        isOpen={showEDL}
+        onClose={handleEDLClose}
+        onSuccess={handleEDLSuccess}
+        {...edlData}
+      />
+    );
+  }
+
   // Si la modal d'attestation est ouverte, on l'affiche à la place (overlay)
   if (showAttestation && attestationData) {
     return (
       <AttestationSignatureModal
         isOpen={showAttestation}
         onClose={() => {
+          // 🆕 ÉTAPE D3 : Si l'admin annule l'attestation (sans signer), on ne déclenche PAS
+          // l'EDL (rien à tracer). On ferme tout simplement.
           setShowAttestation(false);
           setAttestationData(null);
           onSuccess();
           onClose();
         }}
-        onSuccess={() => {
-          setShowAttestation(false);
-          setAttestationData(null);
-          onSuccess();
-          onClose();
-        }}
+        onSuccess={handleAttestationSuccess}
         {...attestationData}
       />
     );
@@ -385,9 +446,10 @@ export function MobileAttributionModal({ vehicle, onClose, onSuccess }: MobileAt
           </div>
         )}
 
+        {/* 🆕 ÉTAPE D3 : message d'info mis à jour pour mentionner les 2 prochaines étapes */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
           <p className="text-xs text-blue-800">
-            <strong>ℹ️ Prochaine étape :</strong> Après validation, vous signerez l'attestation de mise à disposition avec le chauffeur sur cet écran.
+            <strong>ℹ️ Prochaines étapes :</strong> 1) Signature de l'attestation de mise à disposition, puis 2) État des lieux du véhicule.
           </p>
         </div>
       </div>
