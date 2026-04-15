@@ -1283,23 +1283,62 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
         </div>
       )}
 
-      {showAttestationModal && attestationData && (
+    {showAttestationModal && attestationData && (
         <AttestationSignatureModal
           isOpen={showAttestationModal}
           onClose={async () => {
+            // 🆕 ÉTAPE D3 : Si l'admin annule l'attestation (sans signer), on ne déclenche PAS
+            // l'EDL (rien à tracer). On ferme tout simplement.
             setShowAttestationModal(false);
             setAttestationData(null);
             await fetchVehicles();
           }}
-          onSuccess={async () => {
+          onSuccess={(_pdfPath: string, kmDepart: number) => {
+            // 🆕 ÉTAPE D3 : Au lieu de fermer, on ouvre l'EDL avec les infos de l'attribution
+            if (!attestationData) return;
+            setEdlData({
+              typeEdl: 'sortie',
+              attributionId: attestationData.attributionId,
+              vehiculeId: attestationData.vehiculeId,
+              profilId: attestationData.profilId,
+              immatriculation: attestationData.immatriculation,
+              marque: attestationData.marque,
+              modele: attestationData.modele,
+              refTca: attestationData.refTca,
+              salarieNom: attestationData.salarieNom,
+              salariePrenom: attestationData.salariePrenom,
+              kmInitial: kmDepart,
+              adminId: attestationData.adminId,
+              adminNom: attestationData.adminNom,
+              adminPrenom: attestationData.adminPrenom,
+            });
             setShowAttestationModal(false);
             setAttestationData(null);
-            await fetchVehicles();
+            setShowEDLModal(true);
           }}
           {...attestationData}
         />
       )}
 
+      {/* 🆕 ÉTAPE D3 : Modal EDL qui s'ouvre après la signature de l'attestation */}
+      {showEDLModal && edlData && (
+        <EDLModal
+          isOpen={showEDLModal}
+          onClose={async () => {
+            // L'attestation est déjà signée et sauvegardée. Si l'admin ferme l'EDL sans le valider,
+            // l'EDL pourra être fait plus tard manuellement (sera ajouté en D6).
+            setShowEDLModal(false);
+            setEdlData(null);
+            await fetchVehicles();
+          }}
+          onSuccess={async () => {
+            setShowEDLModal(false);
+            setEdlData(null);
+            await fetchVehicles();
+          }}
+          {...edlData}
+        />
+      )}
       {showRestitutionModal && restitutionData && (
         <RestitutionModal
           isOpen={showRestitutionModal}
