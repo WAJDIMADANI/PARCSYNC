@@ -20,6 +20,7 @@ import { VehicleDetailModal } from './VehicleDetailModal';
 import { VehicleCreateModal } from './VehicleCreateModal';
 import { AttestationSignatureModal } from './AttestationSignatureModal';
 import { RestitutionModal } from './RestitutionModal';
+import { EDLModal } from './EDLModal'; // 🆕 ÉTAPE D3
 import { parseProprietaireCarteGrise } from '../utils/proprietaireParser';
 
 interface Chauffeur {
@@ -174,8 +175,12 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
   const [savingAttribution, setSavingAttribution] = useState(false);
   const [showAttestationModal, setShowAttestationModal] = useState(false);
   const [attestationData, setAttestationData] = useState<any>(null);
-  const [showRestitutionModal, setShowRestitutionModal] = useState(false);
+ const [showRestitutionModal, setShowRestitutionModal] = useState(false);
   const [restitutionData, setRestitutionData] = useState<any>(null);
+
+  // 🆕 ÉTAPE D3 : États pour la modal EDL qui s'ouvre après l'attestation
+  const [showEDLModal, setShowEDLModal] = useState(false);
+  const [edlData, setEdlData] = useState<any>(null);
 
   const [filters, setFilters] = useState<FilterState>({
     statut: '',
