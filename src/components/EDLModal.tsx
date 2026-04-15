@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ClipboardList, X, Check, RefreshCw, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext'; // 🆕 D3 fix : pour récupérer user.id (auth.users.id)
 
 // 🆕 ÉTAPE D3 : Modal de saisie d'un État Des Lieux (EDL).
 // Version minimale : pas de photos, pas de PDF — juste sauvegarde en BDD.
@@ -186,6 +187,10 @@ export function EDLModal(props: EDLModalProps) {
   const sigAgentRef = useRef<HTMLCanvasElement>(null);
   const sigChauffeurRef = useRef<HTMLCanvasElement>(null);
 
+  // 🆕 D3 fix : etat_des_lieux.created_by a une FK vers auth.users(id), donc on doit
+  // passer l'ID Supabase Auth (= user.id) et NON adminId qui est l'ID métier app_utilisateur.
+  const { user } = useAuth();
+
   const handleClearAgent = useCallback(() => clearCanvas(sigAgentRef.current), []);
   const handleClearChauffeur = useCallback(() => clearCanvas(sigChauffeurRef.current), []);
 
@@ -304,11 +309,11 @@ export function EDLModal(props: EDLModalProps) {
           interieur_siege: interieurSiege,
           interieur_tableau_bord: interieurTableauBord,
           cric_triangle_gilet: cricTriangleGilet,
-         observations: observations || null,
+          observations: observations || null,
           signature_agent: sigAgent,
           signature_chauffeur: sigChauffeur,
-          created_by: adminId,
-          statut: 'finalise',
+          created_by: user?.id || null, // 🆕 D3 fix : auth.users.id (FK exige cet ID)
+          statut: 'finalise', // 🆕 D3 fix : valeurs autorisées par contrainte CHECK = 'en_cours' | 'finalise'
         });
 
       if (insertError) {
