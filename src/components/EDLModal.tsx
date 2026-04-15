@@ -304,11 +304,11 @@ export function EDLModal(props: EDLModalProps) {
           interieur_siege: interieurSiege,
           interieur_tableau_bord: interieurTableauBord,
           cric_triangle_gilet: cricTriangleGilet,
-          observations: observations || null,
+         observations: observations || null,
           signature_agent: sigAgent,
           signature_chauffeur: sigChauffeur,
           created_by: adminId,
-          statut: 'valide',
+          statut: 'finalise',
         });
 
       if (insertError) {
