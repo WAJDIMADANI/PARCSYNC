@@ -69,8 +69,10 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteModalContent, setNoteModalContent] = useState<{ nom: string; prenom: string; note: string }>({ nom: '', prenom: '', note: '' });
-  const [showAutreModal, setShowAutreModal] = useState(false);
-  const [autreNote, setAutreNote] = useState('');
+
+  // Nouveau : édition de la note
+  const [showEditNoteModal, setShowEditNoteModal] = useState(false);
+  const [editNoteValue, setEditNoteValue] = useState('');
 
   useEffect(() => {
     loadEvents();
@@ -93,18 +95,15 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
       const eventIndex = filteredEvents.findIndex(e => e.id === focusArEventId);
 
       if (eventIndex !== -1) {
-        // Calculer la page contenant l'événement
         const targetPage = Math.floor(eventIndex / itemsPerPage) + 1;
         setCurrentPage(targetPage);
 
-        // Attendre que le DOM soit mis à jour, puis scroller et surligner
         setTimeout(() => {
           const element = document.querySelector(`[data-ar-event-id="${focusArEventId}"]`);
           if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setHighlightedEventId(focusArEventId);
 
-            // Retirer le surlignage après 4 secondes
             setTimeout(() => {
               setHighlightedEventId(null);
             }, 4000);
@@ -359,7 +358,6 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   const calculerDuree = (dateDebut: string, dateFin: string | null): string => {
     if (!dateDebut || !dateFin) return '-';
 
-    // Gère les formats DD/MM/YYYY et YYYY-MM-DD
     const parseDate = (d: string) => {
       if (d.includes('/')) {
         const [day, month, year] = d.split('/');
@@ -400,27 +398,31 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     setShowProlongerModal(true);
   };
 
-  const handleAutre = (event: AREvent) => {
+  // Nouveau : ouvre le modal d'édition de la note
+  const handleEditNote = (event: AREvent) => {
     setSelectedEvent(event);
-    setAutreNote('');
-    setShowAutreModal(true);
+    setEditNoteValue(event.note || '');
+    setShowEditNoteModal(true);
     setOpenDropdownId(null);
   };
 
-  const submitAutre = async () => {
+  // Nouveau : enregistre uniquement la note modifiée (n'impacte PAS le statut)
+  const submitEditNote = async () => {
     if (!selectedEvent) return;
     try {
       setSaving(true);
       const { error } = await supabase
         .from('compta_ar_events')
-        .update({ statut: 'autre', justification_note: autreNote || null })
+        .update({ justification_note: editNoteValue || null })
         .eq('id', selectedEvent.id);
       if (error) throw error;
-      setShowAutreModal(false);
+      setShowEditNoteModal(false);
       setSelectedEvent(null);
+      setEditNoteValue('');
       loadEvents();
     } catch (error: any) {
-      alert('Erreur: ' + error.message);
+      console.error('Error updating note:', error);
+      alert('Erreur lors de la modification: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -480,13 +482,14 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
         justificatif_path = filePath;
       }
 
+      // Après prolongation, le statut reste 'en_cours' (décision produit)
       const { error } = await supabase
         .from('compta_ar_events')
         .update({
           end_date: prolongerData.nouvelle_date_fin,
           justification_note: prolongerData.note || null,
           justificatif_file_path: justificatif_path,
-          statut: 'prolonge'
+          statut: 'en_cours'
         })
         .eq('id', selectedEvent.id);
 
@@ -677,8 +680,6 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                         const map: Record<string, { label: string; className: string }> = {
                           en_cours: { label: 'En cours', className: 'bg-gray-100 text-gray-700' },
                           cloture:  { label: 'Clôturé',  className: 'bg-red-100 text-red-700' },
-                          prolonge: { label: 'Prolongé', className: 'bg-blue-100 text-blue-700' },
-                          autre:    { label: 'Autre',    className: 'bg-orange-100 text-orange-700' },
                         };
                         const info = map[s] || map['en_cours'];
                         return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${info.className}`}>{info.label}</span>;
@@ -726,7 +727,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                         ⋮
                       </button>
                       {openDropdownId === event.id && (
-                        <div className="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                        <div className="absolute right-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                           <button
                             onClick={() => { handleCloturer(event); setOpenDropdownId(null); }}
                             className="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center gap-2"
@@ -736,9 +737,9 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                             className="w-full text-left px-4 py-2 text-sm text-orange-700 hover:bg-orange-50 flex items-center gap-2"
                           >🔄 Prolonger</button>
                           <button
-                            onClick={() => handleAutre(event)}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                          >📝 Autre</button>
+                            onClick={() => handleEditNote(event)}
+                            className="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 flex items-center gap-2"
+                          >✏️ Modifier la note</button>
                           <hr className="my-1" />
                           {event.justificatif_file_path && (
                             <button
@@ -987,26 +988,46 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
         </div>
       )}
 
-      {showAutreModal && selectedEvent && (
+      {showEditNoteModal && selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-900">📝 Autre — {selectedEvent.prenom} {selectedEvent.nom}</h3>
-              <button onClick={() => { setShowAutreModal(false); setSelectedEvent(null); }} className="text-gray-400 hover:text-gray-600">
+              <h3 className="text-lg font-bold text-gray-900">
+                ✏️ Modifier la note — {selectedEvent.prenom} {selectedEvent.nom}
+              </h3>
+              <button
+                onClick={() => { setShowEditNoteModal(false); setSelectedEvent(null); setEditNoteValue(''); }}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Note
+            </label>
             <textarea
-              value={autreNote}
-              onChange={(e) => setAutreNote(e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-              placeholder="Note optionnelle..."
+              value={editNoteValue}
+              onChange={(e) => setEditNoteValue(e.target.value)}
+              rows={5}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Note additionnelle..."
             />
+            <p className="mt-1 text-xs text-gray-500">
+              La modification de la note n'impacte pas le statut de l'absence.
+            </p>
             <div className="flex justify-end gap-3 mt-4">
-              <button onClick={() => { setShowAutreModal(false); setSelectedEvent(null); }} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Annuler</button>
-              <button onClick={submitAutre} disabled={saving} className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50">
-                {saving ? 'Enregistrement...' : 'Confirmer'}
+              <button
+                onClick={() => { setShowEditNoteModal(false); setSelectedEvent(null); setEditNoteValue(''); }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={submitEditNote}
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? 'Enregistrement...' : 'Enregistrer'}
               </button>
             </div>
           </div>
