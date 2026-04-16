@@ -734,28 +734,28 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
             <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Matricule
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Matric.
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Secteur
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Nom
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Prénom
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Statut
                   </th>
                   <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSortClick('date_debut')}
                     title="Cliquer pour trier"
                   >
                     <div className="flex items-center gap-1">
-                      Date début
+                      Début
                       {sortColumn === 'date_debut' && (
                         <span className="text-blue-600 font-bold">
                           {sortDirection === 'asc' ? '↑' : '↓'}
@@ -764,12 +764,12 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                     </div>
                   </th>
                   <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSortClick('date_fin')}
                     title="Cliquer pour trier"
                   >
                     <div className="flex items-center gap-1">
-                      Date fin
+                      Fin
                       {sortColumn === 'date_fin' && (
                         <span className="text-blue-600 font-bold">
                           {sortDirection === 'asc' ? '↑' : '↓'}
@@ -777,16 +777,16 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Durée
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Justifié
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Note
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -802,19 +802,19 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                         : ''
                     }`}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {event.matricule}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {event.secteur || <span className="text-gray-400 italic">non renseigné</span>}
+                    <td className="px-3 py-3 text-sm text-gray-700 max-w-[140px]">
+                      {event.secteur || <span className="text-gray-400 italic">-</span>}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 py-3 text-sm text-gray-900 font-medium">
                       {event.nom}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {event.prenom}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       {(() => {
                         const s = event.statut || 'en_cours';
                         const map: Record<string, { label: string; className: string }> = {
@@ -825,28 +825,29 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                         return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${info.className}`}>{info.label}</span>;
                       })()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(event.date_debut)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {event.date_fin ? formatDate(event.date_fin) : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {calculerDuree(event.date_debut, event.date_fin)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 py-3 whitespace-nowrap text-center">
                       <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-bold ${
                           event.is_justified
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
                         }`}
+                        title={event.is_justified ? 'Justifié' : 'Non justifié'}
                       >
-                        {event.is_justified ? 'OUI' : 'NON'}
+                        {event.is_justified ? '✓' : '✗'}
                       </span>
                     </td>
                     <td
-                      className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate cursor-pointer hover:text-blue-600"
+                      className="px-3 py-3 text-sm text-gray-900 max-w-[180px] truncate cursor-pointer hover:text-blue-600"
                       title="Cliquer pour voir la note complète"
                       onClick={() => {
                         setNoteModalContent({ nom: event.nom, prenom: event.prenom, note: event.note || 'Aucune note' });
@@ -855,7 +856,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                     >
                       {event.note ? <span className="underline decoration-dotted">{event.note}</span> : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 relative">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
