@@ -159,16 +159,16 @@ export default function AccountingDashboard({ currentView, onViewChange, viewPar
               Mutuelle
             </button>
             <button
-              onClick={() => handleTabChange('ar')}
-              className={`py-2 px-2 border-b-2 font-medium transition-colors flex items-center gap-2 ${
-                activeTab === 'ar'
-                  ? 'border-amber-500 text-amber-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Clock className="w-5 h-5" />
-              A&R
-            </button>
+  onClick={() => handleTabChange('ar')}
+  className={`py-2 px-2 border-b-2 font-medium transition-colors flex items-center gap-2 ${
+    activeTab === 'ar'
+      ? 'border-amber-500 text-amber-600'
+      : 'border-transparent text-gray-600 hover:text-gray-900'
+  }`}
+>
+  <CalendarOff className="w-5 h-5" />
+  Absences
+</button>
             <button
               onClick={() => handleTabChange('avance-frais')}
               className={`py-2 px-2 border-b-2 font-medium transition-colors flex items-center gap-2 ${
