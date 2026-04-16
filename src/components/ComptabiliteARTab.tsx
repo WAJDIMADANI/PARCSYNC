@@ -11,6 +11,7 @@ interface AREvent {
   nom: string;
   prenom: string;
   poste: string | null;
+  secteur: string | null;
   kind: 'absence';
   date_debut: string;
   date_fin: string | null;
@@ -378,6 +379,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
 
       const exportData = (data || []).map((e: any) => ({
         Matricule: e.matricule,
+        Secteur: e.secteur || '',
         Nom: e.nom,
         Prénom: e.prenom,
         Poste: e.poste || '',
@@ -736,6 +738,9 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                     Matricule
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Secteur
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Nom
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -799,6 +804,9 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {event.matricule}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                      {event.secteur || <span className="text-gray-400 italic">non renseigné</span>}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {event.nom}
