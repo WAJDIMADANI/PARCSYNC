@@ -11,10 +11,9 @@ interface AREvent {
   nom: string;
   prenom: string;
   poste: string | null;
-  kind: 'absence' | 'retard';
+  kind: 'absence';
   date_debut: string;
   date_fin: string | null;
-  retard_minutes: number | null;
   is_justified: boolean;
   note: string | null;
   justificatif_file_path: string | null;
@@ -54,10 +53,8 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   const employeeSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [formData, setFormData] = useState({
-    ar_type: 'RETARD' as 'ABSENCE' | 'RETARD',
     start_date: '',
     end_date: '',
-    retard_minutes: 0,
     isJustified: false,
     note: '',
   });
@@ -146,15 +143,18 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   const loadEvents = async () => {
     try {
       setLoading(true);
+      // On ne charge QUE les absences — les retards (s'il y en a un jour) seront gérés
+      // dans le futur module Avertissements
       const { data, error } = await supabase
         .from('v_compta_ar_v2')
         .select('*')
+        .eq('kind', 'absence')
         .order('date_debut', { ascending: false });
 
       if (error) throw error;
       setEvents(data || []);
     } catch (error) {
-      console.error('Error loading A&R events:', error);
+      console.error('Error loading absences:', error);
     } finally {
       setLoading(false);
     }
@@ -231,15 +231,6 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     try {
       setSaving(true);
 
-      if (formData.ar_type === 'RETARD') {
-        const minutes = parseInt(String(formData.retard_minutes), 10);
-        if (isNaN(minutes) || minutes <= 0) {
-          alert('Erreur: Minutes > 0 obligatoire pour un retard');
-          setSaving(false);
-          return;
-        }
-      }
-
       let justificatif_path = null;
       if (justificatifFile) {
         const fileExt = justificatifFile.name.split('.').pop();
@@ -254,23 +245,16 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
         justificatif_path = filePath;
       }
 
-      const eventData: any = {
+      const eventData = {
         profil_id: selectedEmployee.id,
-        kind: formData.ar_type.toLowerCase(),
+        kind: 'absence',
         start_date: formData.start_date,
+        end_date: formData.end_date,
+        retard_minutes: null,
         is_justified: formData.isJustified,
         justification_note: formData.note || null,
         justificatif_file_path: justificatif_path,
       };
-
-      if (formData.ar_type === 'RETARD') {
-        const minutes = parseInt(String(formData.retard_minutes), 10);
-        eventData.retard_minutes = minutes;
-        eventData.end_date = formData.start_date;
-      } else {
-        eventData.end_date = formData.end_date;
-        eventData.retard_minutes = null;
-      }
 
       const { error } = await supabase
         .from('compta_ar_events')
@@ -282,7 +266,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
       resetForm();
       loadEvents();
     } catch (error: any) {
-      console.error('Error creating A&R event:', error);
+      console.error('Error creating absence:', error);
       alert('Erreur lors de la création: ' + error.message);
     } finally {
       setSaving(false);
@@ -295,10 +279,8 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     setEmployees([]);
     setShowEmployeeDropdown(false);
     setFormData({
-      ar_type: 'RETARD',
       start_date: '',
       end_date: '',
-      retard_minutes: 0,
       isJustified: false,
       note: '',
     });
@@ -322,7 +304,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer cet événement ?')) return;
+    if (!confirm('Supprimer cette absence ?')) return;
 
     try {
       const { error } = await supabase
@@ -333,7 +315,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
       if (error) throw error;
       loadEvents();
     } catch (error: any) {
-      console.error('Error deleting event:', error);
+      console.error('Error deleting absence:', error);
       alert('Erreur lors de la suppression: ' + error.message);
     }
   };
@@ -343,6 +325,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
       const { data, error } = await supabase
         .from('v_compta_ar_v2')
         .select('*')
+        .eq('kind', 'absence')
         .order('date_debut', { ascending: false });
 
       if (error) throw error;
@@ -352,19 +335,17 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
         Nom: e.nom,
         Prénom: e.prenom,
         Poste: e.poste || '',
-        Type: e.kind?.toUpperCase() || '',
         'Date début': e.date_debut,
         'Date fin': e.date_fin || '',
-        'Minutes de retard': e.retard_minutes || '',
-        'Heures de retard': e.retard_minutes ? (e.retard_minutes / 60).toFixed(2) : '',
+        'Durée': calculerDuree(e.date_debut, e.date_fin),
         Justifié: e.is_justified ? 'OUI' : 'NON',
         Note: e.note || '',
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'A&R');
-      XLSX.writeFile(wb, `absences_retards_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, 'Absences');
+      XLSX.writeFile(wb, `absences_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error: any) {
       console.error('Error exporting to Excel:', error);
       alert('Erreur lors de l\'export: ' + error.message);
@@ -375,7 +356,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     return new Date(dateStr).toLocaleDateString('fr-FR');
   };
 
-  const calculerDuree = (dateDebut: string, dateFin: string): string => {
+  const calculerDuree = (dateDebut: string, dateFin: string | null): string => {
     if (!dateDebut || !dateFin) return '-';
 
     // Gère les formats DD/MM/YYYY et YYYY-MM-DD
@@ -525,7 +506,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Absences & Retards</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Absences</h2>
         <div className="flex gap-2">
           <button
             onClick={exportToExcel}
@@ -539,7 +520,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus className="w-4 h-4" />
-            Nouveau
+            Nouvelle absence
           </button>
         </div>
       </div>
@@ -648,9 +629,6 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                     Prénom
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Statut
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -694,17 +672,6 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                       {event.prenom}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          event.kind === 'absence'
-                            ? 'bg-orange-100 text-orange-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {event.kind.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
                       {(() => {
                         const s = event.statut || 'en_cours';
                         const map: Record<string, { label: string; className: string }> = {
@@ -724,9 +691,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                       {event.date_fin ? formatDate(event.date_fin) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {event.kind === 'retard'
-                        ? `${event.retard_minutes} min (${(event.retard_minutes! / 60).toFixed(2)}h)`
-                        : calculerDuree(event.date_debut, event.date_fin)}
+                      {calculerDuree(event.date_debut, event.date_fin)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -762,23 +727,19 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                       </button>
                       {openDropdownId === event.id && (
                         <div className="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                          {event.kind === 'absence' && (
-                            <>
-                              <button
-                                onClick={() => { handleCloturer(event); setOpenDropdownId(null); }}
-                                className="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center gap-2"
-                              >✅ Clôturer</button>
-                              <button
-                                onClick={() => { handleProlonger(event); setOpenDropdownId(null); }}
-                                className="w-full text-left px-4 py-2 text-sm text-orange-700 hover:bg-orange-50 flex items-center gap-2"
-                              >🔄 Prolonger</button>
-                              <button
-                                onClick={() => handleAutre(event)}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >📝 Autre</button>
-                              <hr className="my-1" />
-                            </>
-                          )}
+                          <button
+                            onClick={() => { handleCloturer(event); setOpenDropdownId(null); }}
+                            className="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center gap-2"
+                          >✅ Clôturer</button>
+                          <button
+                            onClick={() => { handleProlonger(event); setOpenDropdownId(null); }}
+                            className="w-full text-left px-4 py-2 text-sm text-orange-700 hover:bg-orange-50 flex items-center gap-2"
+                          >🔄 Prolonger</button>
+                          <button
+                            onClick={() => handleAutre(event)}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          >📝 Autre</button>
+                          <hr className="my-1" />
                           {event.justificatif_file_path && (
                             <button
                               onClick={() => { downloadJustificatif(event.justificatif_file_path!); setOpenDropdownId(null); }}
@@ -799,7 +760,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
           </div>
           {filteredEvents.length === 0 && (
             <div className="text-center py-12 text-gray-500">
-              Aucun événement trouvé
+              Aucune absence trouvée
             </div>
           )}
           {filteredEvents.length > 0 && (
@@ -1057,7 +1018,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b">
               <h3 className="text-xl font-bold text-gray-900">
-                Nouvel événement A&R
+                Nouvelle absence
               </h3>
               <button
                 onClick={() => {
@@ -1152,108 +1113,34 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Type *
+                  Date début *
                 </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="RETARD"
-                      checked={formData.ar_type === 'RETARD'}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ar_type: e.target.value as 'RETARD' })
-                      }
-                      className="mr-2"
-                    />
-                    Retard
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="ABSENCE"
-                      checked={formData.ar_type === 'ABSENCE'}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ar_type: e.target.value as 'ABSENCE' })
-                      }
-                      className="mr-2"
-                    />
-                    Absence
-                  </label>
-                </div>
+                <input
+                  type="date"
+                  value={formData.start_date}
+                  onChange={(e) =>
+                    setFormData({ ...formData, start_date: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                />
               </div>
 
-              {formData.ar_type === 'RETARD' ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date *
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.start_date}
-                      onChange={(e) =>
-                        setFormData({ ...formData, start_date: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Durée du retard (minutes) *
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.retard_minutes}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          retard_minutes: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                      Soit {(formData.retard_minutes / 60).toFixed(2)} heure(s)
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date début *
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.start_date}
-                      onChange={(e) =>
-                        setFormData({ ...formData, start_date: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date fin *
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.end_date}
-                      onChange={(e) =>
-                        setFormData({ ...formData, end_date: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                </>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date fin *
+                </label>
+                <input
+                  type="date"
+                  value={formData.end_date}
+                  min={formData.start_date || undefined}
+                  onChange={(e) =>
+                    setFormData({ ...formData, end_date: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
 
               <div>
                 <label className="flex items-center">
