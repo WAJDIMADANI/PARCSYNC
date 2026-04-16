@@ -74,6 +74,11 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   const [showEditNoteModal, setShowEditNoteModal] = useState(false);
   const [editNoteValue, setEditNoteValue] = useState('');
 
+  // Nouveau : filtre par statut (cartes cliquables) + tri sur les colonnes de date
+  const [statutFilter, setStatutFilter] = useState<'tous' | 'en_cours' | 'cloture'>('tous');
+  const [sortColumn, setSortColumn] = useState<'date_debut' | 'date_fin'>('date_debut');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
   useEffect(() => {
     loadEvents();
     if (searchInputRef.current) {
@@ -83,11 +88,11 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
 
   useEffect(() => {
     filterEvents();
-  }, [events, searchTerm, startDateFilter, endDateFilter]);
+  }, [events, searchTerm, startDateFilter, endDateFilter, statutFilter, sortColumn, sortDirection]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, startDateFilter, endDateFilter]);
+  }, [searchTerm, startDateFilter, endDateFilter, statutFilter, sortColumn, sortDirection]);
 
   // Gérer le focus sur un événement spécifique depuis l'Inbox
   useEffect(() => {
@@ -217,11 +222,41 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
       filtered = filtered.filter((e) => e.date_debut <= endDateFilter);
     }
 
+    // Filtre par statut (sélectionné via les cartes cliquables en haut de page)
+    if (statutFilter !== 'tous') {
+      filtered = filtered.filter((e) => (e.statut || 'en_cours') === statutFilter);
+    }
+
+    // Tri par date_debut ou date_fin (croissant/décroissant)
+    filtered.sort((a, b) => {
+      const aVal = sortColumn === 'date_debut' ? a.date_debut : (a.date_fin || '');
+      const bVal = sortColumn === 'date_debut' ? b.date_debut : (b.date_fin || '');
+      if (sortDirection === 'asc') {
+        return aVal.localeCompare(bVal);
+      }
+      return bVal.localeCompare(aVal);
+    });
+
     setFilteredEvents(filtered);
   };
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedEvents = filteredEvents.slice(startIndex, startIndex + itemsPerPage);
+
+  // Compteurs par statut (calculés depuis TOUS les events, non filtrés — ils restent fixes)
+  const countAll = events.length;
+  const countEnCours = events.filter((e) => (e.statut || 'en_cours') === 'en_cours').length;
+  const countCloture = events.filter((e) => e.statut === 'cloture').length;
+
+  // Bascule du tri sur une colonne de date : même colonne → inverser le sens, autre colonne → descendant par défaut
+  const handleSortClick = (column: 'date_debut' | 'date_fin') => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -528,6 +563,46 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
         </div>
       </div>
 
+      {/* Cartes cliquables : filtre par statut */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button
+          type="button"
+          onClick={() => setStatutFilter('tous')}
+          className={`p-4 rounded-lg border-2 text-left transition-all ${
+            statutFilter === 'tous'
+              ? 'border-gray-700 bg-gray-50 shadow-md'
+              : 'border-gray-200 bg-white hover:border-gray-400'
+          }`}
+        >
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tous</p>
+          <p className="text-3xl font-bold text-gray-800 mt-1">{countAll}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatutFilter('en_cours')}
+          className={`p-4 rounded-lg border-2 text-left transition-all ${
+            statutFilter === 'en_cours'
+              ? 'border-blue-500 bg-blue-50 shadow-md'
+              : 'border-gray-200 bg-white hover:border-blue-300'
+          }`}
+        >
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">En cours</p>
+          <p className="text-3xl font-bold text-blue-700 mt-1">{countEnCours}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatutFilter('cloture')}
+          className={`p-4 rounded-lg border-2 text-left transition-all ${
+            statutFilter === 'cloture'
+              ? 'border-green-500 bg-green-50 shadow-md'
+              : 'border-gray-200 bg-white hover:border-green-300'
+          }`}
+        >
+          <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">Clôturés</p>
+          <p className="text-3xl font-bold text-green-700 mt-1">{countCloture}</p>
+        </button>
+      </div>
+
       <div className="bg-white rounded-lg shadow p-6 space-y-6">
         <div className="space-y-4">
           <div>
@@ -634,11 +709,33 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Statut
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date début
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    onClick={() => handleSortClick('date_debut')}
+                    title="Cliquer pour trier"
+                  >
+                    <div className="flex items-center gap-1">
+                      Date début
+                      {sortColumn === 'date_debut' && (
+                        <span className="text-blue-600 font-bold">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date fin
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    onClick={() => handleSortClick('date_fin')}
+                    title="Cliquer pour trier"
+                  >
+                    <div className="flex items-center gap-1">
+                      Date fin
+                      {sortColumn === 'date_fin' && (
+                        <span className="text-blue-600 font-bold">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Durée
