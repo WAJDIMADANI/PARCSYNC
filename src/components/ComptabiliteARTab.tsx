@@ -75,7 +75,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   const [editNoteValue, setEditNoteValue] = useState('');
 
   // Nouveau : filtre par statut (cartes cliquables) + tri sur les colonnes de date
-  const [statutFilter, setStatutFilter] = useState<'tous' | 'en_cours' | 'cloture'>('tous');
+  const [statutFilter, setStatutFilter] = useState<'tous' | 'en_cours' | 'cloture' | 'a_traiter'>('tous');
   const [sortColumn, setSortColumn] = useState<'date_debut' | 'date_fin'>('date_debut');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -223,7 +223,9 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     }
 
     // Filtre par statut (sélectionné via les cartes cliquables en haut de page)
-    if (statutFilter !== 'tous') {
+    if (statutFilter === 'a_traiter') {
+      filtered = filtered.filter(isATraiter);
+    } else if (statutFilter !== 'tous') {
       filtered = filtered.filter((e) => (e.statut || 'en_cours') === statutFilter);
     }
 
@@ -243,10 +245,20 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedEvents = filteredEvents.slice(startIndex, startIndex + itemsPerPage);
 
+  // Helper : une absence est "à traiter" si elle est en cours ET sa date de fin est dépassée
+  // (l'admin doit soit la clôturer, soit la prolonger)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isATraiter = (e: AREvent) => {
+    return (e.statut || 'en_cours') === 'en_cours'
+      && e.date_fin !== null
+      && e.date_fin < todayStr;
+  };
+
   // Compteurs par statut (calculés depuis TOUS les events, non filtrés — ils restent fixes)
   const countAll = events.length;
   const countEnCours = events.filter((e) => (e.statut || 'en_cours') === 'en_cours').length;
   const countCloture = events.filter((e) => e.statut === 'cloture').length;
+  const countATraiter = events.filter(isATraiter).length;
 
   // Bascule du tri sur une colonne de date : même colonne → inverser le sens, autre colonne → descendant par défaut
   const handleSortClick = (column: 'date_debut' | 'date_fin') => {
@@ -564,7 +576,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
       </div>
 
       {/* Cartes cliquables : filtre par statut */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <button
           type="button"
           onClick={() => setStatutFilter('tous')}
@@ -600,6 +612,29 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
         >
           <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">Clôturés</p>
           <p className="text-3xl font-bold text-green-700 mt-1">{countCloture}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatutFilter('a_traiter')}
+          className={`p-4 rounded-lg border-2 text-left transition-all ${
+            statutFilter === 'a_traiter'
+              ? 'border-red-600 bg-red-50 shadow-md'
+              : countATraiter > 0
+                ? 'border-red-300 bg-white hover:border-red-500 animate-pulse'
+                : 'border-gray-200 bg-white hover:border-gray-400'
+          }`}
+          title={countATraiter > 0 ? `${countATraiter} absence(s) dont la date de fin est dépassée — à clôturer ou prolonger` : 'Aucune absence en retard'}
+        >
+          <p className={`text-xs font-semibold uppercase tracking-wider ${
+            countATraiter > 0 ? 'text-red-600' : 'text-gray-500'
+          }`}>
+            ⚠️ À traiter
+          </p>
+          <p className={`text-3xl font-bold mt-1 ${
+            countATraiter > 0 ? 'text-red-700' : 'text-gray-800'
+          }`}>
+            {countATraiter}
+          </p>
         </button>
       </div>
 
