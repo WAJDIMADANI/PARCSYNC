@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, CreditCard, MapPin, FileText, HeartHandshake, Clock, Banknote, ShieldOff } from 'lucide-react';
+import { TrendingUp, TrendingDown, CreditCard, MapPin, FileText, HeartHandshake, CalendarOff, Banknote, ShieldOff } from 'lucide-react';
 import { ComptabiliteEntriesTab } from './ComptabiliteEntriesTab';
 import { ComptabiliteExitsTab } from './ComptabiliteExitsTab';
 import { ComptabiliteRibTab } from './ComptabiliteRibTab';
