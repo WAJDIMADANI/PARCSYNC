@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Search, Plus, X, Calendar, Clock, FileText, Download, Upload, Trash2, CheckCircle, PauseCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Pagination } from './Pagination';
+import SendAbsenceJustificatifModal from './SendAbsenceJustificatifModal';
 
 interface AREvent {
   id: string;
@@ -76,6 +77,9 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   // Nouveau : édition de la note
   const [showEditNoteModal, setShowEditNoteModal] = useState(false);
   const [editNoteValue, setEditNoteValue] = useState('');
+
+  // Nouveau : demande de justificatif par email
+  const [showJustificatifModal, setShowJustificatifModal] = useState(false);
 
   // Nouveau : filtre par statut (cartes cliquables) + tri sur les colonnes de date
   const [statutFilter, setStatutFilter] = useState<'tous' | 'en_cours' | 'cloture' | 'a_traiter'>('tous');
@@ -927,11 +931,20 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                             className="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 flex items-center gap-2"
                           >✏️ Modifier la note</button>
                           <hr className="my-1" />
-                          {event.justificatif_file_path && (
+                          {event.justificatif_file_path ? (
                             <button
                               onClick={() => { downloadJustificatif(event.justificatif_file_path!); setOpenDropdownId(null); }}
                               className="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 flex items-center gap-2"
                             >⬇️ Télécharger justificatif</button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setSelectedEvent(event);
+                                setShowJustificatifModal(true);
+                                setOpenDropdownId(null);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-orange-700 hover:bg-orange-50 flex items-center gap-2"
+                            >📩 Demander justificatif</button>
                           )}
                           <button
                             onClick={() => { handleDelete(event.id); setOpenDropdownId(null); }}
@@ -1219,6 +1232,19 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
             </div>
           </div>
         </div>
+      )}
+
+      {showJustificatifModal && selectedEvent && (
+        <SendAbsenceJustificatifModal
+          absenceId={selectedEvent.id}
+          profilId={selectedEvent.profil_id}
+          employeeName={`${selectedEvent.prenom} ${selectedEvent.nom}`}
+          dateDebut={selectedEvent.date_debut}
+          dateFin={selectedEvent.date_fin}
+          note={selectedEvent.note}
+          onClose={() => { setShowJustificatifModal(false); setSelectedEvent(null); }}
+          onSuccess={() => { loadEvents(); }}
+        />
       )}
 
       {showModal && (
