@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import UploadAbsenceJustificatif from './components/UploadAbsenceJustificatif';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
@@ -183,6 +184,9 @@ function App() {
 
   if (path === '/upload-all-documents' || path.startsWith('/upload-all-documents')) {
     return <UploadAllMissingDocuments />;
+  }
+  if (path === '/upload-absence-justificatif' || path.startsWith('/upload-absence-justificatif')) {
+    return <UploadAbsenceJustificatif />;
   }
 
   if (path === '/demande-externe' || path.startsWith('/demande-externe')) {
