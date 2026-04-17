@@ -20,6 +20,8 @@ interface AREvent {
   justificatif_file_path: string | null;
   created_at: string;
   statut?: string | null;
+  admin_nom?: string | null;
+  admin_pole?: string | null;
 }
 
 interface Employee {
@@ -271,6 +273,30 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     }
   };
 
+  // Couleurs par pôle : fond de ligne (très pâle) + pastille (plus visible)
+  const getPoleColors = (pole: string | null | undefined): { row: string; badge: string; text: string } => {
+    switch (pole) {
+      case 'Comptabilité/RH':
+        return { row: 'bg-purple-50', badge: 'bg-purple-200 text-purple-800', text: 'text-purple-700' };
+      case 'Direction':
+        return { row: 'bg-blue-50', badge: 'bg-blue-200 text-blue-800', text: 'text-blue-700' };
+      case 'Accueil - Recrutement':
+        return { row: 'bg-orange-50', badge: 'bg-orange-200 text-orange-800', text: 'text-orange-700' };
+      case 'Flottes - Auto':
+        return { row: 'bg-emerald-50', badge: 'bg-emerald-200 text-emerald-800', text: 'text-emerald-700' };
+      default:
+        return { row: '', badge: 'bg-gray-200 text-gray-800', text: 'text-gray-700' };
+    }
+  };
+
+  // Extraire les initiales d'un nom complet (ex: "Saiyma PATWARY" → "SP")
+  const getInitials = (fullName: string | null | undefined): string => {
+    if (!fullName) return '?';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmployee) return;
@@ -388,6 +414,8 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
         'Durée': calculerDuree(e.date_debut, e.date_fin),
         Justifié: e.is_justified ? 'OUI' : 'NON',
         Note: e.note || '',
+        'Créé par': e.admin_nom || '',
+        'Pôle': e.admin_pole || '',
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -786,20 +814,25 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Note
                   </th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Créé par
+                  </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedEvents.map((event) => (
+                {paginatedEvents.map((event) => {
+                  const poleColors = getPoleColors(event.admin_pole);
+                  return (
                   <tr
                     key={event.id}
                     data-ar-event-id={event.id}
-                    className={`hover:bg-gray-50 transition-colors duration-300 ${
+                    className={`hover:bg-gray-100 transition-colors duration-300 ${
                       highlightedEventId === event.id
                         ? 'bg-gradient-to-r from-orange-100 via-amber-100 to-orange-100 shadow-lg scale-105'
-                        : ''
+                        : poleColors.row
                     }`}
                   >
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -856,6 +889,18 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                     >
                       {event.note ? <span className="underline decoration-dotted">{event.note}</span> : '-'}
                     </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-center">
+                      {event.admin_nom ? (
+                        <span
+                          className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${poleColors.badge}`}
+                          title={`${event.admin_nom} — ${event.admin_pole || 'Pôle inconnu'}`}
+                        >
+                          {getInitials(event.admin_nom)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 relative">
                       <button
                         onClick={(e) => {
@@ -896,7 +941,8 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
