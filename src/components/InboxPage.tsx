@@ -25,7 +25,7 @@ interface Tache {
 
 interface DemandeExterne {
   id: string;
-  type: 'demande_externe' | 'rdv_visite_medicale' | 'ar_fin_absence';
+  type: 'demande_externe' | 'rdv_visite_medicale' | 'ar_fin_absence' | 'ar_justificatif_recu';
   titre: string;
   description: string;
   contenu: string | any;
@@ -278,7 +278,7 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
           const formattedAutres = await Promise.all(autresMessages.map(async (inbox: any) => {
             let profilData = undefined;
 
-            // Si c'est un message de type "profil", charger les infos du profil
+            // Si c'est un message de type "profil" ou "compta_ar_event", charger les infos du profil
             if (inbox.reference_type === 'profil' && inbox.reference_id) {
               try {
                 const { data: profil } = await supabase
@@ -292,6 +292,26 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
                 }
               } catch (error) {
                 console.error('Erreur chargement profil:', error);
+              }
+            }
+
+            // Pour les notifications A&R (justificatif reçu), charger le profil depuis le contenu JSON
+            if (inbox.reference_type === 'compta_ar_event' && inbox.contenu) {
+              try {
+                const contenuParsed = typeof inbox.contenu === 'string' ? JSON.parse(inbox.contenu) : inbox.contenu;
+                if (contenuParsed?.profil_id) {
+                  const { data: profil } = await supabase
+                    .from('profil')
+                    .select('prenom, nom, email, matricule_tca, poste')
+                    .eq('id', contenuParsed.profil_id)
+                    .single();
+
+                  if (profil) {
+                    profilData = profil;
+                  }
+                }
+              } catch (error) {
+                console.error('Erreur parsing contenu AR:', error);
               }
             }
 
@@ -351,7 +371,8 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
       const rdvVisiteMedicale = formattedDemandes.filter(d => d.type === 'rdv_visite_medicale');
       const rdvVisiteMedicaleCount = rdvVisiteMedicale.length;
 
-      const arFinAbsence = formattedDemandes.filter(d => d.type === 'ar_fin_absence');
+      // MODIFICATION 3/3 : Compteur A&R inclut ar_fin_absence ET ar_justificatif_recu
+      const arFinAbsence = formattedDemandes.filter(d => d.type === 'ar_fin_absence' || d.type === 'ar_justificatif_recu');
       const arFinAbsenceCount = arFinAbsence.length;
 
       console.log('📅 RDV Visite Médicale détails:', {
@@ -433,7 +454,6 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
 
   const markAsRead = async (tache: Tache) => {
     try {
-      // Si je suis l'assignee et que ce n'est pas déjà lu
       if (tache.assignee_id === appUserId && !tache.lu_par_assignee) {
         const { error } = await supabase.rpc('mark_task_as_read', { task_uuid: tache.id });
 
@@ -445,7 +465,6 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
         }
       }
 
-      // Si je suis l'expéditeur et que ce n'est pas déjà lu
       if (tache.expediteur_id === appUserId && !tache.lu_par_expediteur) {
         const { error } = await supabase.rpc('mark_task_as_read_by_sender', { task_uuid: tache.id });
 
@@ -491,8 +510,8 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
       }
     }
 
-    // Si c'est une notification A&R, naviguer vers le module A&R
-    if (demande.type === 'ar_fin_absence' && demande.reference_id && onNavigateToAR) {
+    // MODIFICATION 1/3 : Si c'est une notification A&R (fin absence OU justificatif reçu), naviguer vers le module Absences
+    if ((demande.type === 'ar_fin_absence' || demande.type === 'ar_justificatif_recu') && demande.reference_id && onNavigateToAR) {
       onNavigateToAR(demande.reference_id);
       return;
     }
@@ -570,6 +589,7 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
     }
   };
 
+  // MODIFICATION 2/3 : Filtre A&R inclut ar_fin_absence ET ar_justificatif_recu
   const filteredItems = filter === 'all'
     ? inboxItems
     : filter === 'rdv_visite_medicale'
@@ -578,7 +598,7 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
       )
     : filter === 'ar_fin_absence'
     ? inboxItems.filter(item =>
-        item.itemType === 'demande_externe' && item.type === 'ar_fin_absence'
+        item.itemType === 'demande_externe' && (item.type === 'ar_fin_absence' || item.type === 'ar_justificatif_recu')
       )
     : inboxItems.filter(item =>
         item.itemType === 'tache' && item.statut === filter
@@ -1156,7 +1176,6 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus, onViewProfile }
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  // Parser le contenu s'il est en JSON
   const parseContenu = () => {
     if (typeof demande.contenu === 'object') {
       return demande.contenu;
