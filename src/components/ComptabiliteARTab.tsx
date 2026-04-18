@@ -91,8 +91,24 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
-  }, []);
 
+    // Abonnement temps réel : recharge automatiquement quand un justificatif
+    // est uploadé ou qu'une absence est modifiée depuis l'extérieur
+    const channel = supabase
+      .channel('absences-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'compta_ar_events' },
+        () => {
+          loadEvents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
   useEffect(() => {
     filterEvents();
   }, [events, searchTerm, startDateFilter, endDateFilter, statutFilter, sortColumn, sortDirection]);
