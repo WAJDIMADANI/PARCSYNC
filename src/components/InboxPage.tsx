@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Send, Reply, FileText, Download, MessageSquare } from 'lucide-react';
+import { Inbox, Plus, Clock, CheckCircle, AlertCircle, User, Calendar, Send, Reply, FileText, Download, MessageSquare, X, Trash2 } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { Pagination } from './Pagination';
 
@@ -91,7 +91,6 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
   const [currentPage, setCurrentPage] = useState(viewParams?.currentPage || 1);
   const itemsPerPage = 10;
 
-  // Restaurer la pagination quand viewParams change
   useEffect(() => {
     if (viewParams?.currentPage) {
       setCurrentPage(viewParams.currentPage);
@@ -101,62 +100,15 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
   useEffect(() => {
     fetchTaches();
 
-    // Abonnement temps réel pour les mises à jour de tâches et demandes externes
     const subscription = supabase
       .channel('inbox_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'taches',
-        },
-        () => {
-          // Recharger toutes les tâches quand il y a un changement
-          fetchTaches();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'taches_messages',
-        },
-        () => {
-          // Recharger quand il y a un nouveau message
-          fetchTaches();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'inbox',
-        },
-        () => {
-          // Recharger quand il y a une nouvelle demande externe
-          fetchTaches();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'demandes_externes',
-        },
-        () => {
-          // Recharger quand une demande externe est modifiée
-          fetchTaches();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'taches' }, () => { fetchTaches(); })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'taches_messages' }, () => { fetchTaches(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox' }, () => { fetchTaches(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes_externes' }, () => { fetchTaches(); })
       .subscribe();
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => { subscription.unsubscribe(); };
   }, [user, appUserId]);
 
   const fetchTaches = async () => {
@@ -166,14 +118,9 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
       const [tachesResult, inboxResult] = await Promise.all([
         supabase
           .from('taches')
-          .select(`
-            *,
-            expediteur:expediteur_id(nom, prenom, email, pole_id, pole:pole_id(nom)),
-            assignee:assignee_id(nom, prenom, email)
-          `)
+          .select(`*, expediteur:expediteur_id(nom, prenom, email, pole_id, pole:pole_id(nom)), assignee:assignee_id(nom, prenom, email)`)
           .or(`assignee_id.eq.${appUserId},expediteur_id.eq.${appUserId}`)
           .order('date_derniere_reponse', { ascending: false, nullsFirst: false }),
-
         supabase
           .from('inbox')
           .select('id, titre, description, contenu, reference_id, reference_type, statut, lu, created_at, updated_at, utilisateur_id, type')
@@ -184,213 +131,64 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
       if (tachesResult.error) throw tachesResult.error;
 
       const formattedTaches: (Tache & { itemType: 'tache' })[] = (tachesResult.data || []).map((t: any) => ({
-        ...t,
-        itemType: 'tache' as const,
-        expediteur_nom: t.expediteur?.nom || '',
-        expediteur_prenom: t.expediteur?.prenom || '',
-        expediteur_email: t.expediteur?.email || '',
-        expediteur_pole_nom: t.expediteur?.pole?.nom || 'Sans pôle',
-        lu_par_assignee: t.lu_par_assignee ?? false,
-        lu_par_expediteur: t.lu_par_expediteur ?? true
+        ...t, itemType: 'tache' as const,
+        expediteur_nom: t.expediteur?.nom || '', expediteur_prenom: t.expediteur?.prenom || '',
+        expediteur_email: t.expediteur?.email || '', expediteur_pole_nom: t.expediteur?.pole?.nom || 'Sans pôle',
+        lu_par_assignee: t.lu_par_assignee ?? false, lu_par_expediteur: t.lu_par_expediteur ?? true
       }));
 
       let formattedDemandes: (DemandeExterne & { itemType: 'demande_externe' })[] = [];
 
-      console.log('🔍 Tous les messages inbox bruts:', inboxResult.data?.map(x => ({
-        id: x.id,
-        titre: x.titre,
-        reference_type: x.reference_type,
-        type: x.type,
-        statut: x.statut,
-        lu: x.lu
-      })));
-
-      const rdvDansInbox = inboxResult.data?.filter(x => x.type === 'rdv_visite_medicale') || [];
-      console.log('🔍 RDV dans inbox (brut):', rdvDansInbox.length, 'trouvés', rdvDansInbox.map(r => ({
-        id: r.id,
-        titre: r.titre,
-        statut: r.statut,
-        lu: r.lu,
-        created_at: r.created_at
-      })));
-
-      console.log('Chargement messages inbox...');
-      console.log('Inbox result:', inboxResult.data?.length || 0, 'entrées', inboxResult.error);
-
       if (inboxResult.error) {
         console.warn('Erreur chargement inbox:', inboxResult.error);
       } else if (inboxResult.data && inboxResult.data.length > 0) {
-        // Séparer les demandes externes des autres messages (profil, etc.)
         const demandesExternesInbox = inboxResult.data.filter((i: any) => i.reference_type === 'demande_externe');
         const autresMessages = inboxResult.data.filter((i: any) => i.reference_type !== 'demande_externe');
 
-        // Charger les détails des demandes externes uniquement
         if (demandesExternesInbox.length > 0) {
           const demandeIds = demandesExternesInbox.map((i: any) => i.reference_id);
-          console.log('IDs des demandes externes à charger:', demandeIds);
-
           const { data: demandesData, error: demandesError } = await supabase
             .from('demandes_externes')
-            .select(`
-              id,
-              profil_id,
-              pole_id,
-              fichiers,
-              profil:profil_id(prenom, nom, email, matricule_tca, poste),
-              pole:pole_id(nom)
-            `)
+            .select(`id, profil_id, pole_id, fichiers, profil:profil_id(prenom, nom, email, matricule_tca, poste), pole:pole_id(nom)`)
             .in('id', demandeIds);
-
-          console.log('🔍 Détails demandes avec profil_id:', demandesData?.map(d => ({ id: d.id, profil_id: d.profil_id })));
-
-          console.log('Détails demandes chargés:', demandesData?.length || 0, 'demandes', demandesError);
 
           if (!demandesError) {
             const demandesMap = new Map((demandesData || []).map((d: any) => [d.id, d]));
-
             const formattedDemandesExternes = demandesExternesInbox.map((inbox: any) => {
               const demandeDetails = demandesMap.get(inbox.reference_id);
-              return {
-                id: inbox.id,
-                itemType: 'demande_externe' as const,
-                type: 'demande_externe' as const,
-                titre: inbox.titre,
-                description: inbox.description,
-                contenu: inbox.contenu,
-                reference_id: inbox.reference_id,
-                profil_id: demandeDetails?.profil_id,
-                statut: inbox.statut || 'nouveau',
-                lu: inbox.lu ?? false,
-                created_at: inbox.created_at,
-                profil: demandeDetails?.profil,
-                pole: demandeDetails?.pole,
-                fichiers: demandeDetails?.fichiers || []
-              };
+              return { id: inbox.id, itemType: 'demande_externe' as const, type: 'demande_externe' as const, titre: inbox.titre, description: inbox.description, contenu: inbox.contenu, reference_id: inbox.reference_id, profil_id: demandeDetails?.profil_id, statut: inbox.statut || 'nouveau', lu: inbox.lu ?? false, created_at: inbox.created_at, profil: demandeDetails?.profil, pole: demandeDetails?.pole, fichiers: demandeDetails?.fichiers || [] };
             });
-
             formattedDemandes = [...formattedDemandesExternes];
-            console.log('Demandes externes formatées:', formattedDemandesExternes.length);
           }
         }
 
-        // Ajouter les autres messages (profil, etc.) et charger les infos du profil si nécessaire
         if (autresMessages.length > 0) {
           const formattedAutres = await Promise.all(autresMessages.map(async (inbox: any) => {
             let profilData = undefined;
-
-            // Si c'est un message de type "profil" ou "compta_ar_event", charger les infos du profil
             if (inbox.reference_type === 'profil' && inbox.reference_id) {
-              try {
-                const { data: profil } = await supabase
-                  .from('profil')
-                  .select('prenom, nom, email, matricule_tca, poste')
-                  .eq('id', inbox.reference_id)
-                  .single();
-
-                if (profil) {
-                  profilData = profil;
-                }
-              } catch (error) {
-                console.error('Erreur chargement profil:', error);
-              }
+              try { const { data: profil } = await supabase.from('profil').select('prenom, nom, email, matricule_tca, poste').eq('id', inbox.reference_id).single(); if (profil) profilData = profil; } catch (error) { console.error('Erreur chargement profil:', error); }
             }
-
-            // Pour les notifications A&R (justificatif reçu), charger le profil depuis le contenu JSON
             if (inbox.reference_type === 'compta_ar_event' && inbox.contenu) {
-              try {
-                const contenuParsed = typeof inbox.contenu === 'string' ? JSON.parse(inbox.contenu) : inbox.contenu;
-                if (contenuParsed?.profil_id) {
-                  const { data: profil } = await supabase
-                    .from('profil')
-                    .select('prenom, nom, email, matricule_tca, poste')
-                    .eq('id', contenuParsed.profil_id)
-                    .single();
-
-                  if (profil) {
-                    profilData = profil;
-                  }
-                }
-              } catch (error) {
-                console.error('Erreur parsing contenu AR:', error);
-              }
+              try { const contenuParsed = typeof inbox.contenu === 'string' ? JSON.parse(inbox.contenu) : inbox.contenu; if (contenuParsed?.profil_id) { const { data: profil } = await supabase.from('profil').select('prenom, nom, email, matricule_tca, poste').eq('id', contenuParsed.profil_id).single(); if (profil) profilData = profil; } } catch (error) { console.error('Erreur parsing contenu AR:', error); }
             }
-
-            return {
-              id: inbox.id,
-              itemType: 'demande_externe' as const,
-              type: inbox.type || 'demande_externe' as const,
-              titre: inbox.titre,
-              description: inbox.description || '',
-              contenu: inbox.contenu || '',
-              reference_id: inbox.reference_id,
-              reference_type: inbox.reference_type,
-              profil_id: inbox.reference_type === 'profil' ? inbox.reference_id : undefined,
-              statut: inbox.statut || 'nouveau',
-              lu: inbox.lu ?? false,
-              created_at: inbox.created_at,
-              profil: profilData,
-              pole: undefined,
-              fichiers: []
-            };
+            return { id: inbox.id, itemType: 'demande_externe' as const, type: inbox.type || 'demande_externe' as const, titre: inbox.titre, description: inbox.description || '', contenu: inbox.contenu || '', reference_id: inbox.reference_id, reference_type: inbox.reference_type, profil_id: inbox.reference_type === 'profil' ? inbox.reference_id : undefined, statut: inbox.statut || 'nouveau', lu: inbox.lu ?? false, created_at: inbox.created_at, profil: profilData, pole: undefined, fichiers: [] };
           }));
-
           formattedDemandes = [...formattedDemandes, ...formattedAutres];
-          console.log('Autres messages formatés:', autresMessages.length, '(type profil, etc.)');
-          console.log('🔍 Messages profil avec profil_id:', formattedAutres.filter(m => m.profil_id).map(m => ({ titre: m.titre, profil_id: m.profil_id })));
         }
-
-        console.log('Total messages inbox:', formattedDemandes.length);
-      } else {
-        console.log('Aucun message trouvé dans inbox');
       }
 
       setTaches(formattedTaches);
       setDemandesExternes(formattedDemandes);
 
-      const allItems = [...formattedTaches, ...formattedDemandes].sort((a, b) => {
-        const dateA = new Date(a.created_at).getTime();
-        const dateB = new Date(b.created_at).getTime();
-        return dateB - dateA;
-      });
+      const allItems = [...formattedTaches, ...formattedDemandes].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setInboxItems(allItems);
 
-      const nonLusTaches = formattedTaches.filter((t) =>
-        (t.assignee_id === appUserId && !t.lu_par_assignee) ||
-        (t.expediteur_id === appUserId && !t.lu_par_expediteur)
-      ).length;
+      const nonLusTaches = formattedTaches.filter((t) => (t.assignee_id === appUserId && !t.lu_par_assignee) || (t.expediteur_id === appUserId && !t.lu_par_expediteur)).length;
       const nonLusDemandes = formattedDemandes.filter(d => !d.lu).length;
+      const rdvVisiteMedicaleCount = formattedDemandes.filter(d => d.type === 'rdv_visite_medicale').length;
+      const arFinAbsenceCount = formattedDemandes.filter(d => d.type === 'ar_fin_absence' || d.type === 'ar_justificatif_recu').length;
 
-      console.log('🔍 formattedDemandes total:', formattedDemandes.length, formattedDemandes.map(d => ({
-        id: d.id,
-        titre: d.titre,
-        type: d.type,
-        statut: d.statut,
-        lu: d.lu
-      })));
-
-      const rdvVisiteMedicale = formattedDemandes.filter(d => d.type === 'rdv_visite_medicale');
-      const rdvVisiteMedicaleCount = rdvVisiteMedicale.length;
-
-      // MODIFICATION 3/3 : Compteur A&R inclut ar_fin_absence ET ar_justificatif_recu
-      const arFinAbsence = formattedDemandes.filter(d => d.type === 'ar_fin_absence' || d.type === 'ar_justificatif_recu');
-      const arFinAbsenceCount = arFinAbsence.length;
-
-      console.log('📅 RDV Visite Médicale détails:', {
-        total: rdvVisiteMedicaleCount,
-        lus: rdvVisiteMedicale.filter(r => r.lu).length,
-        nonLus: rdvVisiteMedicale.filter(r => !r.lu).length,
-        consultes: rdvVisiteMedicale.filter(r => r.statut === 'consulte').length,
-        traites: rdvVisiteMedicale.filter(r => r.statut === 'traite').length,
-        ouverts: rdvVisiteMedicale.filter(r => r.statut === 'ouvert').length,
-        liste: rdvVisiteMedicale.map(r => ({
-          titre: r.titre,
-          statut: r.statut,
-          lu: r.lu,
-          created_at: r.created_at
-        }))
-      });
-
-      const newStats = {
+      setStats({
         en_attente: formattedTaches.filter((t) => t.statut === 'en_attente').length,
         en_cours: formattedTaches.filter((t) => t.statut === 'en_cours').length,
         completee: formattedTaches.filter((t) => t.statut === 'completee').length,
@@ -398,20 +196,7 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
         non_lus: nonLusTaches + nonLusDemandes,
         rdv_visite_medicale: rdvVisiteMedicaleCount,
         ar_fin_absence: arFinAbsenceCount
-      };
-
-      console.log('📊 Page Inbox:', {
-        tachesCount: formattedTaches.length,
-        demandesCount: formattedDemandes.length,
-        total: allItems.length,
-        non_lus: newStats.non_lus,
-        filters: {
-          utilisateur_id: appUserId,
-          source: 'taches + inbox'
-        }
       });
-
-      setStats(newStats);
     } catch (error) {
       console.error('Erreur chargement inbox:', error);
     } finally {
@@ -421,483 +206,257 @@ export function InboxPage({ onViewProfile, onNavigateToAR, viewParams }: InboxPa
 
   const updateTaskStatus = async (taskId: string, newStatus: 'en_attente' | 'en_cours' | 'completee') => {
     try {
-      const { error } = await supabase
-        .from('taches')
-        .update({ statut: newStatus })
-        .eq('id', taskId);
-
+      const { error } = await supabase.from('taches').update({ statut: newStatus }).eq('id', taskId);
       if (error) throw error;
-
       setTaches(prev => prev.map(t => t.id === taskId ? { ...t, statut: newStatus } : t));
-      if (selectedTask?.id === taskId) {
-        setSelectedTask(prev => prev ? { ...prev, statut: newStatus } : null);
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur');
-    }
+      if (selectedTask?.id === taskId) setSelectedTask(prev => prev ? { ...prev, statut: newStatus } : null);
+    } catch (error) { console.error('Erreur:', error); alert('Erreur'); }
   };
 
   const deleteTask = async (taskId: string) => {
     if (!confirm('Supprimer cette tâche ?')) return;
-
-    try {
-      await supabase.from('taches').delete().eq('id', taskId);
-      setTaches(prev => prev.filter(t => t.id !== taskId));
-      if (selectedTask?.id === taskId) {
-        setSelectedTask(null);
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-    }
+    try { await supabase.from('taches').delete().eq('id', taskId); setTaches(prev => prev.filter(t => t.id !== taskId)); if (selectedTask?.id === taskId) setSelectedTask(null); } catch (error) { console.error('Erreur:', error); }
   };
 
   const markAsRead = async (tache: Tache) => {
     try {
-      if (tache.assignee_id === appUserId && !tache.lu_par_assignee) {
-        const { error } = await supabase.rpc('mark_task_as_read', { task_uuid: tache.id });
-
-        if (!error) {
-          setTaches(prev => prev.map(t =>
-            t.id === tache.id ? { ...t, lu_par_assignee: true } : t
-          ));
-          setStats(prev => ({ ...prev, non_lus: Math.max(0, prev.non_lus - 1) }));
-        }
-      }
-
-      if (tache.expediteur_id === appUserId && !tache.lu_par_expediteur) {
-        const { error } = await supabase.rpc('mark_task_as_read_by_sender', { task_uuid: tache.id });
-
-        if (!error) {
-          setTaches(prev => prev.map(t =>
-            t.id === tache.id ? { ...t, lu_par_expediteur: true } : t
-          ));
-          setStats(prev => ({ ...prev, non_lus: Math.max(0, prev.non_lus - 1) }));
-        }
-      }
-    } catch (error) {
-      console.error('Erreur marquage lu:', error);
-    }
+      if (tache.assignee_id === appUserId && !tache.lu_par_assignee) { const { error } = await supabase.rpc('mark_task_as_read', { task_uuid: tache.id }); if (!error) { setTaches(prev => prev.map(t => t.id === tache.id ? { ...t, lu_par_assignee: true } : t)); setStats(prev => ({ ...prev, non_lus: Math.max(0, prev.non_lus - 1) })); } }
+      if (tache.expediteur_id === appUserId && !tache.lu_par_expediteur) { const { error } = await supabase.rpc('mark_task_as_read_by_sender', { task_uuid: tache.id }); if (!error) { setTaches(prev => prev.map(t => t.id === tache.id ? { ...t, lu_par_expediteur: true } : t)); setStats(prev => ({ ...prev, non_lus: Math.max(0, prev.non_lus - 1) })); } }
+    } catch (error) { console.error('Erreur marquage lu:', error); }
   };
 
-  const handleOpenTask = (tache: Tache) => {
-    setSelectedTask(tache);
-    markAsRead(tache);
-  };
+  const handleOpenTask = (tache: Tache) => { setSelectedTask(tache); markAsRead(tache); };
 
   const handleOpenDemandeExterne = async (demande: DemandeExterne) => {
-    // Marquer comme lu si ce n'est pas déjà fait
     if (!demande.lu) {
-      try {
-        const { error } = await supabase
-          .from('inbox')
-          .update({ lu: true })
-          .eq('id', demande.id);
-
-        if (!error) {
-          setDemandesExternes(prev => prev.map(d =>
-            d.id === demande.id ? { ...d, lu: true } : d
-          ));
-          setInboxItems(prev => prev.map(item =>
-            item.itemType === 'demande_externe' && item.id === demande.id
-              ? { ...item, lu: true }
-              : item
-          ));
-          setStats(prev => ({ ...prev, non_lus: Math.max(0, prev.non_lus - 1) }));
-        }
-      } catch (error) {
-        console.error('Erreur marquage lu:', error);
-      }
+      try { const { error } = await supabase.from('inbox').update({ lu: true }).eq('id', demande.id); if (!error) { setDemandesExternes(prev => prev.map(d => d.id === demande.id ? { ...d, lu: true } : d)); setInboxItems(prev => prev.map(item => item.itemType === 'demande_externe' && item.id === demande.id ? { ...item, lu: true } : item)); setStats(prev => ({ ...prev, non_lus: Math.max(0, prev.non_lus - 1) })); } } catch (error) { console.error('Erreur marquage lu:', error); }
     }
-
-    // MODIFICATION 1/3 : Si c'est une notification A&R (fin absence OU justificatif reçu), naviguer vers le module Absences
-    if ((demande.type === 'ar_fin_absence' || demande.type === 'ar_justificatif_recu') && demande.reference_id && onNavigateToAR) {
-      onNavigateToAR(demande.reference_id);
-      return;
-    }
-
+    if ((demande.type === 'ar_fin_absence' || demande.type === 'ar_justificatif_recu') && demande.reference_id && onNavigateToAR) { onNavigateToAR(demande.reference_id); return; }
     setSelectedDemandeExterne(demande);
   };
 
   const updateDemandeExterneStatus = async (demandeId: string, newStatus: 'nouveau' | 'consulte' | 'traite') => {
     try {
-      const { error } = await supabase
-        .from('inbox')
-        .update({ statut: newStatus })
-        .eq('id', demandeId);
-
+      const { error } = await supabase.from('inbox').update({ statut: newStatus }).eq('id', demandeId);
       if (error) throw error;
-
       setDemandesExternes(prev => prev.map(d => d.id === demandeId ? { ...d, statut: newStatus } : d));
-      setInboxItems(prev => prev.map(item =>
-        item.itemType === 'demande_externe' && item.id === demandeId
-          ? { ...item, statut: newStatus }
-          : item
-      ));
-      if (selectedDemandeExterne?.id === demandeId) {
-        setSelectedDemandeExterne(prev => prev ? { ...prev, statut: newStatus } : null);
-      }
-    } catch (error) {
-      console.error('Erreur mise à jour statut:', error);
-      alert('Erreur lors de la mise à jour du statut');
-    }
+      setInboxItems(prev => prev.map(item => item.itemType === 'demande_externe' && item.id === demandeId ? { ...item, statut: newStatus } : item));
+      if (selectedDemandeExterne?.id === demandeId) setSelectedDemandeExterne(prev => prev ? { ...prev, statut: newStatus } : null);
+    } catch (error) { console.error('Erreur mise à jour statut:', error); alert('Erreur lors de la mise à jour du statut'); }
   };
 
-  const getPriorityColor = (priorite: string) => {
-    switch (priorite) {
-      case 'haute':
-        return 'bg-gradient-to-br from-red-500 via-orange-500 to-red-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 backdrop-blur-sm';
-      case 'normal':
-        return 'bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-400 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 backdrop-blur-sm';
-      case 'basse':
-        return 'bg-gradient-to-br from-slate-400 via-gray-400 to-slate-500 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 backdrop-blur-sm';
-      default:
-        return 'bg-gradient-to-br from-gray-400 to-gray-500 text-white shadow-md';
-    }
+  // ── Helpers visuels ──
+
+  const getItemAccent = (item: InboxItem): string => {
+    if (item.itemType === 'tache') return '#0073ea';
+    const d = item as DemandeExterne;
+    if (d.type === 'ar_justificatif_recu') return '#00c875';
+    if (d.type === 'ar_fin_absence') return '#fdab3d';
+    if (d.type === 'rdv_visite_medicale') return '#fdab3d';
+    return '#a25ddc';
   };
 
-  const getStatusIcon = (statut: string) => {
-    switch (statut) {
-      case 'en_attente': return <Clock className="w-4 h-4 text-white drop-shadow-sm" />;
-      case 'en_cours': return <AlertCircle className="w-4 h-4 text-white drop-shadow-sm" />;
-      case 'completee': return <CheckCircle className="w-4 h-4 text-white drop-shadow-sm" />;
-      default: return null;
-    }
+  const getItemTypeLabel = (item: InboxItem): { text: string; bg: string; color: string } => {
+    if (item.itemType === 'tache') return { text: 'Tâche', bg: '#0073ea15', color: '#185FA5' };
+    const d = item as DemandeExterne;
+    if (d.type === 'ar_justificatif_recu') return { text: 'Justificatif reçu', bg: '#00c87520', color: '#0F6E56' };
+    if (d.type === 'ar_fin_absence') return { text: 'Fin d\'absence', bg: '#fdab3d20', color: '#854F0B' };
+    if (d.type === 'rdv_visite_medicale') return { text: 'RDV Visite médicale', bg: '#fdab3d20', color: '#854F0B' };
+    return { text: 'Document reçu', bg: '#a25ddc20', color: '#3C3489' };
   };
 
-  const getStatusBadgeClass = (statut: string) => {
-    switch (statut) {
-      case 'en_attente':
-        return 'bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
-      case 'en_cours':
-        return 'bg-gradient-to-br from-amber-500 via-yellow-500 to-amber-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
-      case 'completee':
-        return 'bg-gradient-to-br from-emerald-500 via-green-500 to-emerald-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
-      default:
-        return 'bg-gradient-to-br from-gray-500 to-gray-600 text-white shadow-md';
+  const getStatusBadge = (item: InboxItem): { text: string; bg: string; color: string } => {
+    if (item.itemType === 'tache') {
+      const t = item as Tache;
+      if (t.statut === 'completee') return { text: 'Complétée', bg: '#00c87520', color: '#0F6E56' };
+      if (t.statut === 'en_cours') return { text: 'En cours', bg: '#0073ea15', color: '#185FA5' };
+      return { text: 'En attente', bg: '#fdab3d20', color: '#854F0B' };
     }
+    const d = item as DemandeExterne;
+    if (d.statut === 'traite') return { text: 'Traité', bg: '#00c87520', color: '#0F6E56' };
+    if (d.statut === 'consulte') return { text: 'Consulté', bg: '#0073ea15', color: '#185FA5' };
+    return { text: 'Nouveau', bg: '#0073ea', color: '#ffffff' };
   };
 
-  const getDemandeStatusBadgeClass = (statut: string) => {
-    switch (statut) {
-      case 'traite':
-        return 'bg-gradient-to-br from-emerald-500 via-green-500 to-emerald-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
-      case 'consulte':
-        return 'bg-gradient-to-br from-sky-500 via-blue-500 to-sky-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
-      default:
-        return 'bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 text-white shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300';
+  const isItemUnread = (item: InboxItem): boolean => {
+    if (item.itemType === 'tache') {
+      const t = item as Tache;
+      return (t.assignee_id === appUserId && !t.lu_par_assignee) || (t.expediteur_id === appUserId && !t.lu_par_expediteur);
     }
+    return !(item as DemandeExterne).lu;
   };
 
-  // MODIFICATION 2/3 : Filtre A&R inclut ar_fin_absence ET ar_justificatif_recu
-  const filteredItems = filter === 'all'
-    ? inboxItems
-    : filter === 'rdv_visite_medicale'
-    ? inboxItems.filter(item =>
-        item.itemType === 'demande_externe' && item.type === 'rdv_visite_medicale'
-      )
-    : filter === 'ar_fin_absence'
-    ? inboxItems.filter(item =>
-        item.itemType === 'demande_externe' && (item.type === 'ar_fin_absence' || item.type === 'ar_justificatif_recu')
-      )
-    : inboxItems.filter(item =>
-        item.itemType === 'tache' && item.statut === filter
-      );
+  const filteredItems = filter === 'all' ? inboxItems
+    : filter === 'rdv_visite_medicale' ? inboxItems.filter(item => item.itemType === 'demande_externe' && item.type === 'rdv_visite_medicale')
+    : filter === 'ar_fin_absence' ? inboxItems.filter(item => item.itemType === 'demande_externe' && (item.type === 'ar_fin_absence' || item.type === 'ar_justificatif_recu'))
+    : inboxItems.filter(item => item.itemType === 'tache' && item.statut === filter);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filter]);
+  useEffect(() => { setCurrentPage(1); }, [filter]);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" text="Chargement..." />
-      </div>
-    );
+    return (<div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" text="Chargement..." /></div>);
   }
 
+  // ── RENDER ──
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl relative shadow-md">
-            <Inbox className="w-8 h-8 text-white" />
-            {stats.non_lus > 0 && (
-              <div className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg animate-pulse">
-                {stats.non_lus}
-              </div>
-            )}
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#fdab3d15' }}>
+            <Inbox className="w-5 h-5" style={{ color: '#fdab3d' }} />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">
-              Boîte de Réception
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl font-bold text-gray-900">Boîte de réception</h1>
               {stats.non_lus > 0 && (
-                <span className="ml-2 px-4 py-1.5 bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white text-sm font-extrabold rounded-full shadow-lg animate-pulse ring-2 ring-orange-300 ring-offset-2">
-                  {stats.non_lus} non {stats.non_lus === 1 ? 'lu' : 'lus'}
+                <span className="px-2.5 py-0.5 text-xs font-bold rounded-full text-white" style={{ background: '#e44258' }}>
+                  {stats.non_lus} non lu{stats.non_lus > 1 ? 's' : ''}
                 </span>
               )}
-            </h1>
-            <p className="text-gray-600">Tâches assignées</p>
+            </div>
+            <p className="text-sm text-gray-400">Tâches et notifications</p>
           </div>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white rounded-full hover:from-orange-600 hover:via-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transition-all duration-300 font-bold transform hover:scale-105 ring-2 ring-orange-300 ring-offset-2"
+          className="flex items-center gap-2 px-4 py-2.5 text-white text-sm font-medium rounded-lg transition-all hover:opacity-90"
+          style={{ background: '#0073ea' }}
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           Nouvelle tâche
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard label="Total" value={stats.total} icon={<Inbox className="w-10 h-10 text-gray-500" />} />
-        <StatCard label="En attente" value={stats.en_attente} icon={<Clock className="w-10 h-10 text-orange-500" />} />
-        <StatCard label="En cours" value={stats.en_cours} icon={<AlertCircle className="w-10 h-10 text-amber-500" />} />
-        <StatCard label="Complétées" value={stats.completee} icon={<CheckCircle className="w-10 h-10 text-emerald-500" />} />
-        <StatCard
-          label="RDV Visite Médicale"
-          value={stats.rdv_visite_medicale}
-          icon={<Calendar className="w-10 h-10 text-orange-500" />}
-          highlight={true}
-        />
-        <StatCard
-          label="A&R"
-          value={stats.ar_fin_absence}
-          icon={<FileText className="w-10 h-10 text-orange-500" />}
-          highlight={true}
-        />
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <MiniStat label="Total" value={stats.total} />
+        <MiniStat label="En attente" value={stats.en_attente} valueColor="#fdab3d" />
+        <MiniStat label="En cours" value={stats.en_cours} valueColor="#0073ea" />
+        <MiniStat label="Complétées" value={stats.completee} valueColor="#00c875" />
+        <MiniStat label="RDV Visite" value={stats.rdv_visite_medicale} />
+        <MiniStat label="A&R" value={stats.ar_fin_absence} highlight />
       </div>
 
-      <div className="bg-white rounded-xl shadow-md border border-gray-100">
-        <div className="border-b bg-gradient-to-r from-gray-50 to-white p-4 flex gap-3 flex-wrap">
-          <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>Toutes ({stats.total})</FilterButton>
-          <FilterButton active={filter === 'en_attente'} onClick={() => setFilter('en_attente')}>En attente ({stats.en_attente})</FilterButton>
-          <FilterButton active={filter === 'en_cours'} onClick={() => setFilter('en_cours')}>En cours ({stats.en_cours})</FilterButton>
-          <FilterButton active={filter === 'completee'} onClick={() => setFilter('completee')}>Complétées ({stats.completee})</FilterButton>
-          <FilterButton
-            active={filter === 'rdv_visite_medicale'}
-            onClick={() => setFilter('rdv_visite_medicale')}
-            rdv={true}
-          >
-            <Calendar className="w-4 h-4 inline mr-1" />
-            RDV Visite Médicale ({stats.rdv_visite_medicale})
-          </FilterButton>
-          <FilterButton
-            active={filter === 'ar_fin_absence'}
-            onClick={() => setFilter('ar_fin_absence')}
-            rdv={true}
-          >
-            <FileText className="w-4 h-4 inline mr-1" />
-            A&R ({stats.ar_fin_absence})
-          </FilterButton>
+      {/* List container */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {/* Filter tabs */}
+        <div className="px-4 py-3 border-b border-gray-100 flex gap-2 flex-wrap">
+          <FilterPill active={filter === 'all'} onClick={() => setFilter('all')}>Toutes ({stats.total})</FilterPill>
+          <FilterPill active={filter === 'en_attente'} onClick={() => setFilter('en_attente')}>En attente ({stats.en_attente})</FilterPill>
+          <FilterPill active={filter === 'en_cours'} onClick={() => setFilter('en_cours')}>En cours ({stats.en_cours})</FilterPill>
+          <FilterPill active={filter === 'completee'} onClick={() => setFilter('completee')}>Complétées ({stats.completee})</FilterPill>
+          <FilterPill active={filter === 'rdv_visite_medicale'} onClick={() => setFilter('rdv_visite_medicale')} accent>RDV ({stats.rdv_visite_medicale})</FilterPill>
+          <FilterPill active={filter === 'ar_fin_absence'} onClick={() => setFilter('ar_fin_absence')} accent>A&R ({stats.ar_fin_absence})</FilterPill>
         </div>
 
-        <div className="py-2">
+        {/* Items */}
+        <div>
           {filteredItems.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">Aucun message</div>
+            <div className="py-16 text-center text-sm text-gray-400">Aucun message</div>
           ) : (
             paginatedItems.map(item => {
-              if (item.itemType === 'tache') {
-                const tache = item;
-                const isUnread =
-                  (tache.assignee_id === appUserId && !tache.lu_par_assignee) ||
-                  (tache.expediteur_id === appUserId && !tache.lu_par_expediteur);
-                return (
-                  <div
-                    key={`tache-${tache.id}`}
-                    onClick={() => handleOpenTask(tache)}
-                    className={`mx-4 my-3 p-5 rounded-lg cursor-pointer transition-all duration-200 ${
-                      isUnread
-                        ? 'bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-400 shadow-lg hover:shadow-xl hover:from-orange-100 hover:to-amber-100'
-                        : 'bg-white border border-gray-200 shadow-sm hover:shadow-md hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className={`mt-1 p-2 rounded-lg flex-shrink-0 ${
-                          isUnread ? 'bg-orange-100' : 'bg-gray-100'
-                        }`}>
-                          <MessageSquare className={`w-5 h-5 ${isUnread ? 'text-orange-600' : 'text-gray-500'}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            {isUnread && (
-                              <span className="px-2 py-0.5 bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white text-xs font-extrabold rounded-full uppercase tracking-tight shadow-lg animate-pulse">
-                                Nouveau
-                              </span>
-                            )}
-                            <p className={`text-sm font-semibold ${isUnread ? 'text-orange-900' : 'text-gray-600'}`}>
-                              {tache.expediteur_pole_nom}
-                            </p>
-                          </div>
-                          <p className={`text-base truncate mb-2 ${isUnread ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>
-                            {tache.titre}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Par {tache.expediteur_prenom} {tache.expediteur_nom}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-2">
-                        <span className={`px-2 py-1 text-xs font-extrabold rounded-full uppercase tracking-wide ${getPriorityColor(tache.priorite)}`}>
-                          {tache.priorite}
-                        </span>
-                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${getStatusBadgeClass(tache.statut)}`}>
-                          {getStatusIcon(tache.statut)}
-                          <span className="text-xs font-bold uppercase tracking-tight whitespace-nowrap">{tache.statut.replace('_', ' ')}</span>
-                        </div>
-                      </div>
-                    </div>
+              const accent = getItemAccent(item);
+              const typeLabel = getItemTypeLabel(item);
+              const statusBadge = getStatusBadge(item);
+              const unread = isItemUnread(item);
+
+              const handleClick = () => {
+                if (item.itemType === 'tache') handleOpenTask(item as Tache);
+                else handleOpenDemandeExterne(item as DemandeExterne);
+              };
+
+              return (
+                <div
+                  key={`${item.itemType}-${item.id}`}
+                  onClick={handleClick}
+                  className={`mx-2 my-1.5 rounded-lg cursor-pointer transition-all border-l-[3px] flex items-start gap-3 px-4 py-3.5 ${
+                    unread ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'
+                  }`}
+                  style={{ borderLeftColor: accent }}
+                >
+                  {/* Icon */}
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${accent}15` }}>
+                    {item.itemType === 'tache'
+                      ? <MessageSquare className="w-4 h-4" style={{ color: accent }} />
+                      : <FileText className="w-4 h-4" style={{ color: accent }} />
+                    }
                   </div>
-                );
-              } else {
-                const demande = item;
-                const isUnread = !demande.lu;
-                return (
-                  <div
-                    key={`demande-${demande.id}`}
-                    onClick={() => handleOpenDemandeExterne(demande)}
-                    className={`mx-4 my-3 p-5 rounded-lg cursor-pointer transition-all duration-200 ${
-                      isUnread
-                        ? 'bg-gradient-to-r from-rose-50 to-orange-50 border-2 border-rose-400 shadow-lg hover:shadow-xl hover:from-rose-100 hover:to-orange-100'
-                        : 'bg-white border border-gray-200 shadow-sm hover:shadow-md hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className={`mt-1 p-2 rounded-lg flex-shrink-0 ${
-                          isUnread ? 'bg-rose-100' : 'bg-gray-100'
-                        }`}>
-                          <FileText className={`w-5 h-5 ${isUnread ? 'text-rose-600' : 'text-gray-500'}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            {isUnread && (
-                              <span className="px-2 py-0.5 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white text-xs font-extrabold rounded-full uppercase tracking-tight shadow-lg animate-pulse">
-                                Nouveau
-                              </span>
-                            )}
-                            <p className={`text-sm font-semibold ${isUnread ? 'text-rose-900' : 'text-gray-600'}`}>
-                              {demande.pole?.nom || 'Demande externe'}
-                            </p>
-                          </div>
-                          <p className={`text-base truncate mb-2 ${isUnread ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>
-                            {demande.titre}
-                          </p>
-                          <p className="text-sm text-gray-500 line-clamp-2">
-                            {demande.description}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-2">
-                        <span className={`px-2 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight whitespace-nowrap ${getDemandeStatusBadgeClass(demande.statut)}`}>
-                          {demande.statut}
-                        </span>
-                      </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded" style={{ background: typeLabel.bg, color: typeLabel.color }}>
+                        {typeLabel.text}
+                      </span>
                     </div>
+                    <p className={`text-sm truncate mb-0.5 ${unread ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                      {item.itemType === 'tache' ? (item as Tache).titre : (item as DemandeExterne).titre}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {item.itemType === 'tache'
+                        ? `Par ${(item as Tache).expediteur_prenom} ${(item as Tache).expediteur_nom}`
+                        : (item as DemandeExterne).description
+                      }
+                    </p>
                   </div>
-                );
-              }
+
+                  {/* Status badge */}
+                  <span
+                    className="text-[11px] font-medium px-2.5 py-0.5 rounded-full flex-shrink-0 mt-1"
+                    style={{ background: statusBadge.bg, color: statusBadge.color }}
+                  >
+                    {statusBadge.text}
+                  </span>
+                </div>
+              );
             })
           )}
         </div>
 
         {filteredItems.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalItems={filteredItems.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-          />
+          <Pagination currentPage={currentPage} totalItems={filteredItems.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
         )}
       </div>
 
-      {selectedTask && (
-        <TaskModal
-          task={selectedTask}
-          onClose={() => setSelectedTask(null)}
-          onUpdateStatus={updateTaskStatus}
-          onDelete={deleteTask}
-        />
-      )}
-
-      {selectedDemandeExterne && (
-        <DemandeExterneModal
-          demande={selectedDemandeExterne}
-          onClose={() => setSelectedDemandeExterne(null)}
-          onUpdateStatus={updateDemandeExterneStatus}
-          onViewProfile={onViewProfile}
-        />
-      )}
-
-      {showCreateModal && (
-        <CreateModal
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            setShowCreateModal(false);
-            fetchTaches();
-          }}
-        />
-      )}
+      {/* Modals */}
+      {selectedTask && (<TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} onUpdateStatus={updateTaskStatus} onDelete={deleteTask} />)}
+      {selectedDemandeExterne && (<DemandeExterneModal demande={selectedDemandeExterne} onClose={() => setSelectedDemandeExterne(null)} onUpdateStatus={updateDemandeExterneStatus} onViewProfile={onViewProfile} />)}
+      {showCreateModal && (<CreateModal onClose={() => setShowCreateModal(false)} onSuccess={() => { setShowCreateModal(false); fetchTaches(); }} />)}
     </div>
   );
 }
 
-function StatCard({ label, value, icon, highlight }: any) {
+// ── Sub-components ──
+
+function MiniStat({ label, value, valueColor, highlight }: { label: string; value: number; valueColor?: string; highlight?: boolean }) {
   return (
-    <div className={`rounded-xl shadow-md hover:shadow-lg transition-all p-6 border ${
-      highlight
-        ? 'bg-gradient-to-br from-orange-50 to-amber-50 border-orange-300 ring-2 ring-orange-200 hover:ring-orange-300'
-        : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
-    }`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className={`text-sm font-semibold mb-1 ${highlight ? 'text-orange-800' : 'text-gray-600'}`}>{label}</p>
-          <p className={`text-4xl font-bold ${highlight ? 'text-orange-700' : 'text-gray-900'}`}>{value}</p>
-        </div>
-        <div className={`p-3 rounded-xl shadow-sm ${
-          highlight
-            ? 'bg-gradient-to-br from-orange-100 to-amber-100'
-            : 'bg-gradient-to-br from-gray-50 to-white'
-        }`}>
-          {icon}
-        </div>
-      </div>
+    <div className={`rounded-xl border px-4 py-3 text-center ${highlight ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-white'}`}>
+      <p className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">{label}</p>
+      <p className="text-2xl font-bold mt-1" style={{ color: valueColor || (highlight ? '#854F0B' : undefined) }}>{value}</p>
     </div>
   );
 }
 
-function FilterButton({ active, onClick, children, rdv }: any) {
+function FilterPill({ active, onClick, children, accent }: { active: boolean; onClick: () => void; children: React.ReactNode; accent?: boolean }) {
   return (
-    <button
-      onClick={onClick}
-      className={`px-5 py-2.5 rounded-full font-bold transition-all duration-300 transform flex items-center gap-1 ${
-        active
-          ? rdv
-            ? 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-lg scale-105 ring-2 ring-orange-300 ring-offset-2'
-            : 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-lg scale-105 ring-2 ring-orange-300 ring-offset-2'
-          : rdv
-          ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 hover:from-orange-200 hover:to-amber-200 hover:shadow-md hover:scale-102 border border-orange-300'
-          : 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 hover:from-gray-200 hover:to-slate-200 hover:shadow-md hover:scale-102 border border-gray-300'
-      }`}
-    >
+    <button onClick={onClick} className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+      active ? 'text-white' : accent ? 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+    }`} style={active ? { background: '#0073ea' } : undefined}>
       {children}
     </button>
   );
 }
 
-interface TaskModalProps {
-  task: Tache;
-  onClose: () => void;
-  onUpdateStatus: (id: string, status: any) => void;
-  onDelete: (id: string) => void;
-}
+// ── Task Modal (logique identique, design nettoyé) ──
 
-function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) {
-  const { appUserId, user } = useAuth();
+function TaskModal({ task, onClose, onUpdateStatus, onDelete }: { task: Tache; onClose: () => void; onUpdateStatus: (id: string, status: any) => void; onDelete: (id: string) => void }) {
+  const { appUserId } = useAuth();
   const [messages, setMessages] = useState<TacheMessage[]>([]);
   const [replyText, setReplyText] = useState('');
   const [showReply, setShowReply] = useState(false);
@@ -906,506 +465,193 @@ function TaskModal({ task, onClose, onUpdateStatus, onDelete }: TaskModalProps) 
 
   useEffect(() => {
     fetchMessages();
-
-    const channel = supabase
-      .channel(`taches_messages:${task.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'taches_messages',
-          filter: `tache_id=eq.${task.id}`
-        },
-        (payload) => {
-          fetchMessages();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const channel = supabase.channel(`taches_messages:${task.id}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'taches_messages', filter: `tache_id=eq.${task.id}` }, () => { fetchMessages(); }).subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [task.id]);
 
   const fetchMessages = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('taches_messages')
-        .select(`
-          *,
-          auteur:auteur_id(nom, prenom, email)
-        `)
-        .eq('tache_id', task.id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      const formattedMessages = data.map((m: any) => ({
-        ...m,
-        auteur_nom: m.auteur?.nom || '',
-        auteur_prenom: m.auteur?.prenom || '',
-        auteur_email: m.auteur?.email || ''
-      }));
-
-      setMessages(formattedMessages);
-    } catch (error) {
-      console.error('Erreur chargement messages:', error);
-    } finally {
-      setLoadingMessages(false);
-    }
+    try { const { data, error } = await supabase.from('taches_messages').select(`*, auteur:auteur_id(nom, prenom, email)`).eq('tache_id', task.id).order('created_at', { ascending: true }); if (error) throw error; setMessages(data.map((m: any) => ({ ...m, auteur_nom: m.auteur?.nom || '', auteur_prenom: m.auteur?.prenom || '', auteur_email: m.auteur?.email || '' }))); } catch (error) { console.error('Erreur chargement messages:', error); } finally { setLoadingMessages(false); }
   };
 
   const sendReply = async () => {
     if (!replyText.trim() || !appUserId) return;
-
     setSending(true);
-    try {
-      const { error } = await supabase
-        .from('taches_messages')
-        .insert({
-          tache_id: task.id,
-          auteur_id: appUserId,
-          contenu: replyText
-        });
-
-      if (error) throw error;
-
-      setReplyText('');
-      setShowReply(false);
-    } catch (error) {
-      console.error('Erreur envoi message:', error);
-      alert('Erreur lors de l\'envoi du message');
-    } finally {
-      setSending(false);
-    }
+    try { const { error } = await supabase.from('taches_messages').insert({ tache_id: task.id, auteur_id: appUserId, contenu: replyText }); if (error) throw error; setReplyText(''); setShowReply(false); } catch (error) { console.error('Erreur envoi message:', error); alert('Erreur lors de l\'envoi du message'); } finally { setSending(false); }
   };
 
-  const getInitials = (prenom: string, nom: string) => {
-    const p = prenom?.charAt(0) || '?';
-    const n = nom?.charAt(0) || '?';
-    return `${p}${n}`.toUpperCase();
+  const getInitials = (prenom: string, nom: string) => `${prenom?.charAt(0) || '?'}${nom?.charAt(0) || '?'}`.toUpperCase();
+  const formatDate = (dateString: string) => { const d = new Date(dateString); const h = Math.floor((Date.now() - d.getTime()) / 3600000); return h < 24 ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); };
+
+  const priorityStyle: Record<string, { bg: string; color: string }> = {
+    haute: { bg: '#e4425815', color: '#A32D2D' },
+    normal: { bg: '#fdab3d15', color: '#854F0B' },
+    basse: { bg: '#f1f1f1', color: '#666' },
+  };
+  const statusStyle: Record<string, { bg: string; color: string }> = {
+    en_attente: { bg: '#fdab3d20', color: '#854F0B' },
+    en_cours: { bg: '#0073ea15', color: '#185FA5' },
+    completee: { bg: '#00c87520', color: '#0F6E56' },
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-
-    if (hours < 24) {
-      return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    }
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: hours > 8760 ? 'numeric' : undefined });
-  };
+  const ps = priorityStyle[task.priorite] || priorityStyle.normal;
+  const ss = statusStyle[task.statut] || statusStyle.en_attente;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <div className="bg-white border-b p-4 flex items-center justify-between rounded-t-xl">
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-900">{task.titre}</h2>
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className={`px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight shadow-md ${
-                task.priorite === 'haute' ? 'bg-gradient-to-r from-red-500 to-orange-600 text-white' :
-                task.priorite === 'normal' ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white' :
-                'bg-gradient-to-r from-slate-400 to-gray-500 text-white'
-              }`}>
-                {task.priorite}
-              </span>
-              <span className={`px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight shadow-md ${
-                task.statut === 'completee' ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white' :
-                task.statut === 'en_cours' ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-white' :
-                'bg-gradient-to-r from-orange-500 to-amber-600 text-white'
-              }`}>
-                {task.statut.replace('_', ' ')}
-              </span>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-gray-200">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">{task.titre}</h2>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded" style={{ background: ps.bg, color: ps.color }}>{task.priorite}</span>
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded" style={{ background: ss.bg, color: ss.color }}>{task.statut.replace('_', ' ')}</span>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X className="w-5 h-5" /></button>
         </div>
 
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          <div className="bg-white border rounded-lg p-4">
+          <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                {getInitials(task.expediteur_prenom, task.expediteur_nom)}
-              </div>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: '#0073ea' }}>{getInitials(task.expediteur_prenom, task.expediteur_nom)}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <div>
-                    <p className="font-semibold text-gray-900">{task.expediteur_prenom} {task.expediteur_nom}</p>
-                    <p className="text-sm text-gray-500">{task.expediteur_email}</p>
-                  </div>
-                  <p className="text-xs text-gray-500">{formatDate(task.created_at)}</p>
+                  <p className="text-sm font-bold text-gray-900">{task.expediteur_prenom} {task.expediteur_nom}</p>
+                  <p className="text-xs text-gray-400">{formatDate(task.created_at)}</p>
                 </div>
-                <div className="mt-3 text-gray-700 whitespace-pre-wrap">
-                  {task.contenu || <span className="text-gray-400 italic">Aucun contenu</span>}
-                </div>
+                <div className="text-sm text-gray-600 whitespace-pre-wrap">{task.contenu || <span className="italic text-gray-400">Aucun contenu</span>}</div>
               </div>
             </div>
           </div>
 
-          {loadingMessages ? (
-            <div className="flex justify-center py-8">
-              <LoadingSpinner size="sm" />
-            </div>
-          ) : messages.length > 0 ? (
-            <div className="space-y-3">
-              {messages.map((message) => (
-                <div key={message.id} className="bg-gray-50 border rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                      {getInitials(message.auteur_prenom, message.auteur_nom)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div>
-                          <p className="font-semibold text-gray-900">{message.auteur_prenom} {message.auteur_nom}</p>
-                          <p className="text-sm text-gray-500">{message.auteur_email}</p>
-                        </div>
-                        <p className="text-xs text-gray-500">{formatDate(message.created_at)}</p>
-                      </div>
-                      <div className="mt-2 text-gray-700 whitespace-pre-wrap">
-                        {message.contenu}
-                      </div>
-                    </div>
+          {loadingMessages ? (<div className="flex justify-center py-6"><LoadingSpinner size="sm" /></div>) : messages.map((m) => (
+            <div key={m.id} className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: '#00c875' }}>{getInitials(m.auteur_prenom, m.auteur_nom)}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-bold text-gray-900">{m.auteur_prenom} {m.auteur_nom}</p>
+                    <p className="text-xs text-gray-400">{formatDate(m.created_at)}</p>
                   </div>
+                  <div className="text-sm text-gray-600 whitespace-pre-wrap">{m.contenu}</div>
                 </div>
-              ))}
+              </div>
             </div>
-          ) : null}
+          ))}
 
           {showReply && (
-            <div className="bg-white border rounded-lg p-4">
-              <textarea
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder="Écrivez votre réponse..."
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                rows={4}
-                autoFocus
-              />
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
-                <button
-                  onClick={sendReply}
-                  disabled={sending || !replyText.trim()}
-                  className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  <Send className="w-3 h-3" />
-                  {sending ? 'Envoi...' : 'Envoyer'}
+            <div className="border border-gray-200 rounded-lg p-4">
+              <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Écrivez votre réponse..." className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm" rows={3} autoFocus />
+              <div className="flex items-center gap-2 mt-3">
+                <button onClick={sendReply} disabled={sending || !replyText.trim()} className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-lg text-xs font-medium disabled:opacity-50" style={{ background: '#00c875' }}>
+                  <Send className="w-3 h-3" />{sending ? 'Envoi...' : 'Envoyer'}
                 </button>
-                <button
-                  onClick={() => {
-                    setShowReply(false);
-                    setReplyText('');
-                  }}
-                  className="px-3 py-2 bg-gradient-to-r from-gray-200 to-slate-200 text-gray-700 rounded-full hover:from-gray-300 hover:to-slate-300 text-xs font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
-                >
-                  Annuler
-                </button>
+                <button onClick={() => { setShowReply(false); setReplyText(''); }} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200">Annuler</button>
               </div>
             </div>
           )}
         </div>
 
-        <div className="border-t bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-b-xl">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex gap-2 flex-wrap">
-              {!showReply && (
-                <button
-                  onClick={() => setShowReply(true)}
-                  className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-full hover:from-sky-600 hover:to-blue-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  <Reply className="w-3 h-3" />
-                  Répondre
-                </button>
-              )}
-              {task.statut === 'en_attente' && (
-                <button
-                  onClick={() => onUpdateStatus(task.id, 'en_cours')}
-                  className="px-3 py-2 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white rounded-full hover:from-amber-600 hover:to-yellow-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  En cours
-                </button>
-              )}
-              {task.statut === 'en_cours' && (
-                <button
-                  onClick={() => onUpdateStatus(task.id, 'completee')}
-                  className="px-3 py-2 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  Complétée
-                </button>
-              )}
-            </div>
-            <button
-              onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete(task.id); onClose(); } }}
-              className="px-3 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-full hover:from-red-600 hover:to-rose-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-            >
-              Supprimer
-            </button>
+        {/* Footer */}
+        <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between">
+          <div className="flex gap-2">
+            {!showReply && (<button onClick={() => setShowReply(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-lg text-xs font-medium" style={{ background: '#0073ea' }}><Reply className="w-3 h-3" />Répondre</button>)}
+            {task.statut === 'en_attente' && (<button onClick={() => onUpdateStatus(task.id, 'en_cours')} className="px-3 py-1.5 text-xs font-medium rounded-lg" style={{ background: '#fdab3d20', color: '#854F0B' }}>En cours</button>)}
+            {task.statut === 'en_cours' && (<button onClick={() => onUpdateStatus(task.id, 'completee')} className="px-3 py-1.5 text-xs font-medium rounded-lg" style={{ background: '#00c87520', color: '#0F6E56' }}>Complétée</button>)}
           </div>
+          <button onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete(task.id); onClose(); } }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50"><Trash2 className="w-3 h-3" />Supprimer</button>
         </div>
       </div>
     </div>
   );
 }
 
-interface DemandeExterneModalProps {
-  demande: DemandeExterne;
-  onClose: () => void;
-  onUpdateStatus: (id: string, status: 'nouveau' | 'consulte' | 'traite') => void;
-  onViewProfile?: (profilId: string) => void;
-}
+// ── DemandeExterne Modal (logique identique, design nettoyé) ──
 
-function DemandeExterneModal({ demande, onClose, onUpdateStatus, onViewProfile }: DemandeExterneModalProps) {
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+function DemandeExterneModal({ demande, onClose, onUpdateStatus, onViewProfile }: { demande: DemandeExterne; onClose: () => void; onUpdateStatus: (id: string, status: 'nouveau' | 'consulte' | 'traite') => void; onViewProfile?: (profilId: string) => void }) {
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const formatFileSize = (bytes: number): string => bytes < 1024 ? bytes + ' B' : bytes < 1048576 ? (bytes / 1024).toFixed(1) + ' KB' : (bytes / 1048576).toFixed(1) + ' MB';
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
-  const parseContenu = () => {
-    if (typeof demande.contenu === 'object') {
-      return demande.contenu;
-    }
-    try {
-      return JSON.parse(demande.contenu);
-    } catch {
-      return null;
-    }
-  };
-
+  const parseContenu = () => { if (typeof demande.contenu === 'object') return demande.contenu; try { return JSON.parse(demande.contenu); } catch { return null; } };
   const contenuData = parseContenu();
-  const isRdvVisiteMedicale = demande.type === 'rdv_visite_medicale';
+  const isRdv = demande.type === 'rdv_visite_medicale';
+  const accentColor = isRdv ? '#fdab3d' : '#00c875';
 
   const handleDownloadFile = async (filePath: string, fileName: string) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from('demandes-externes')
-        .download(filePath);
-
-      if (error) throw error;
-
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Erreur téléchargement fichier:', error);
-      alert('Erreur lors du téléchargement du fichier');
-    }
+    try { const { data, error } = await supabase.storage.from('demandes-externes').download(filePath); if (error) throw error; const url = URL.createObjectURL(data); const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); } catch (error) { console.error('Erreur téléchargement fichier:', error); alert('Erreur lors du téléchargement du fichier'); }
   };
 
+  const statusStyle: Record<string, { bg: string; color: string }> = {
+    nouveau: { bg: '#0073ea', color: '#fff' },
+    consulte: { bg: '#0073ea15', color: '#185FA5' },
+    traite: { bg: '#00c87520', color: '#0F6E56' },
+  };
+  const ss = statusStyle[demande.statut] || statusStyle.nouveau;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
-        <div className={`text-white p-5 flex items-center justify-between rounded-t-xl ${
-          isRdvVisiteMedicale
-            ? 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600'
-            : 'bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600'
-        }`}>
-          <div className="flex-1">
-            <h2 className="text-xl font-extrabold">{demande.titre}</h2>
-            <p className={`text-sm mt-1 font-medium ${isRdvVisiteMedicale ? 'text-orange-50' : 'text-green-50'}`}>
-              {demande.description}
-            </p>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-gray-200">
+        {/* Header */}
+        <div className="px-6 py-4 border-b flex items-start justify-between" style={{ borderBottomColor: accentColor, borderBottomWidth: '3px' }}>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">{demande.titre}</h2>
+            <p className="text-sm text-gray-500 mt-1">{demande.description}</p>
           </div>
-          <button onClick={onClose} className="text-white hover:opacity-80 text-2xl font-light transition-colors">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X className="w-5 h-5" /></button>
         </div>
 
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {demande.profil && (
-            <div className="bg-gray-50 border rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2 justify-between">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  {isRdvVisiteMedicale ? 'Informations du salarié' : 'Informations du chauffeur'}
-                </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-gray-500 flex items-center gap-2"><User className="w-4 h-4" />{isRdv ? 'Informations du salarié' : 'Informations du chauffeur'}</p>
                 {demande.profil_id && onViewProfile && (
-                  <button
-                    onClick={() => {
-                      onViewProfile(demande.profil_id!);
-                      onClose();
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105 font-bold text-sm"
-                    title="Voir le profil complet"
-                  >
-                    <User className="w-4 h-4" />
-                    Voir le profil
-                  </button>
+                  <button onClick={() => { onViewProfile(demande.profil_id!); onClose(); }} className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-lg text-xs font-medium" style={{ background: '#0073ea' }}><User className="w-3 h-3" />Voir le profil</button>
                 )}
-              </h3>
+              </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-gray-600">Nom complet:</span>
-                  <p className="font-medium">{demande.profil?.prenom} {demande.profil?.nom}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Matricule:</span>
-                  <p className="font-medium">{demande.profil?.matricule_tca || contenuData?.matricule || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Email:</span>
-                  <p className="font-medium">{demande.profil?.email || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Poste:</span>
-                  <p className="font-medium">{demande.profil?.poste || '-'}</p>
-                </div>
+                <div><span className="text-gray-400 text-xs">Nom complet</span><p className="font-medium text-gray-800">{demande.profil?.prenom} {demande.profil?.nom}</p></div>
+                <div><span className="text-gray-400 text-xs">Matricule</span><p className="font-medium text-gray-800">{demande.profil?.matricule_tca || contenuData?.matricule || '-'}</p></div>
+                <div><span className="text-gray-400 text-xs">Email</span><p className="font-medium text-gray-800">{demande.profil?.email || '-'}</p></div>
+                <div><span className="text-gray-400 text-xs">Poste</span><p className="font-medium text-gray-800">{demande.profil?.poste || '-'}</p></div>
               </div>
             </div>
           )}
 
-          {isRdvVisiteMedicale && contenuData && (
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-orange-900 mb-3 flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Détails du rendez-vous
-              </h3>
-              <div className="space-y-3">
-                {contenuData.rdv_date && (
-                  <div className="bg-white rounded-lg p-3 border border-orange-200">
-                    <span className="text-sm text-gray-600 block mb-1">Date du RDV:</span>
-                    <p className="font-bold text-lg text-orange-700">
-                      {new Date(contenuData.rdv_date).toLocaleDateString('fr-FR', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                )}
-                {contenuData.rdv_heure && (
-                  <div className="bg-white rounded-lg p-3 border border-orange-200">
-                    <span className="text-sm text-gray-600 block mb-1">Heure du RDV:</span>
-                    <p className="font-bold text-lg text-orange-700">
-                      <Clock className="w-4 h-4 inline mr-2" />
-                      {contenuData.rdv_heure}
-                    </p>
-                  </div>
-                )}
-                {contenuData.urgence && (
-                  <div className="bg-gradient-to-r from-red-500 to-orange-600 text-white rounded-lg p-3 shadow-lg">
-                    <span className="font-extrabold text-sm uppercase tracking-wide flex items-center gap-2">
-                      <AlertCircle className="w-5 h-5" />
-                      {contenuData.urgence}
-                    </span>
-                  </div>
-                )}
-              </div>
+          {isRdv && contenuData && (
+            <div className="rounded-lg p-4 border" style={{ background: '#fdab3d08', borderColor: '#fdab3d40' }}>
+              <p className="text-sm font-medium mb-3 flex items-center gap-2" style={{ color: '#854F0B' }}><Calendar className="w-4 h-4" />Détails du rendez-vous</p>
+              {contenuData.rdv_date && (<div className="bg-white rounded-lg p-3 border border-amber-200 mb-2"><span className="text-xs text-gray-400">Date du RDV</span><p className="font-bold text-lg" style={{ color: '#854F0B' }}>{new Date(contenuData.rdv_date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p></div>)}
+              {contenuData.rdv_heure && (<div className="bg-white rounded-lg p-3 border border-amber-200 mb-2"><span className="text-xs text-gray-400">Heure du RDV</span><p className="font-bold text-lg flex items-center gap-2" style={{ color: '#854F0B' }}><Clock className="w-4 h-4" />{contenuData.rdv_heure}</p></div>)}
+              {contenuData.urgence && (<div className="rounded-lg p-3 text-white text-sm font-bold" style={{ background: '#e44258' }}><AlertCircle className="w-4 h-4 inline mr-2" />{contenuData.urgence}</div>)}
             </div>
           )}
 
-          {!isRdvVisiteMedicale && (
-            <div className="bg-white border rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Détails de la demande
-              </h3>
-              <div className="space-y-3">
-                {demande.pole?.nom && (
-                  <div>
-                    <span className="text-sm text-gray-600">Pôle concerné:</span>
-                    <p className="font-medium">{demande.pole.nom}</p>
-                  </div>
-                )}
-                <div>
-                  <span className="text-sm text-gray-600">Date de création:</span>
-                  <p className="font-medium">{formatDate(demande.created_at)}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600">Statut actuel:</span>
-                  <span className={`inline-block ml-2 px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight shadow-md ${
-                    demande.statut === 'traite' ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white' :
-                    demande.statut === 'consulte' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white' :
-                    'bg-gradient-to-r from-orange-500 to-amber-600 text-white'
-                  }`}>
-                    {demande.statut}
-                  </span>
-                </div>
-                {typeof demande.contenu === 'string' && demande.contenu && (
-                  <div>
-                    <span className="text-sm text-gray-600 block mb-2">Contenu de la demande:</span>
-                    <div className="bg-gray-50 rounded p-3 whitespace-pre-wrap text-gray-700">
-                      {demande.contenu}
-                    </div>
-                  </div>
-                )}
-              </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <p className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2"><FileText className="w-4 h-4" />{isRdv ? 'Détails de la notification' : 'Détails de la demande'}</p>
+            <div className="space-y-2 text-sm">
+              {demande.pole?.nom && (<div className="flex justify-between"><span className="text-gray-400">Pôle</span><span className="font-medium">{demande.pole.nom}</span></div>)}
+              <div className="flex justify-between"><span className="text-gray-400">Date</span><span className="font-medium">{formatDate(demande.created_at)}</span></div>
+              <div className="flex justify-between items-center"><span className="text-gray-400">Statut</span><span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: ss.bg, color: ss.color }}>{demande.statut}</span></div>
+              {isRdv && demande.description && (<div className="mt-3 p-3 rounded-lg border text-gray-600" style={{ background: '#fdab3d08', borderColor: '#fdab3d40' }}>{demande.description}</div>)}
+              {!isRdv && typeof demande.contenu === 'string' && demande.contenu && (<div className="mt-3 p-3 bg-gray-50 rounded-lg text-gray-600 whitespace-pre-wrap">{demande.contenu}</div>)}
             </div>
-          )}
-
-          {isRdvVisiteMedicale && (
-            <div className="bg-white border rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Détails de la notification
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <span className="text-sm text-gray-600">Date de création:</span>
-                  <p className="font-medium">{formatDate(demande.created_at)}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600">Statut actuel:</span>
-                  <span className={`inline-block ml-2 px-3 py-1 text-xs font-extrabold rounded-full uppercase tracking-tight shadow-md ${
-                    demande.statut === 'traite' ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white' :
-                    demande.statut === 'consulte' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white' :
-                    'bg-gradient-to-r from-orange-500 to-amber-600 text-white'
-                  }`}>
-                    {demande.statut}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600 block mb-2">Message:</span>
-                  <div className="bg-orange-50 rounded p-3 text-gray-700 border border-orange-200">
-                    {demande.description}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
 
           {demande.fichiers && demande.fichiers.length > 0 && (
-            <div className="bg-white border rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                Fichiers joints ({demande.fichiers.length})
-              </h3>
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2"><Download className="w-4 h-4" />Fichiers joints ({demande.fichiers.length})</p>
               <div className="space-y-2">
                 {demande.fichiers.map((file, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                        <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
-                      </div>
+                      <FileText className="w-4 h-4 flex-shrink-0" style={{ color: '#0073ea' }} />
+                      <div className="min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{file.name}</p><p className="text-xs text-gray-400">{formatFileSize(file.size)}</p></div>
                     </div>
-                    <button
-                      onClick={() => handleDownloadFile(file.path, file.name)}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-full text-xs hover:from-sky-600 hover:to-blue-700 flex-shrink-0 font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
-                    >
-                      <Download className="w-3 h-3" />
-                      <span className="hidden sm:inline">Télécharger</span>
-                    </button>
+                    <button onClick={() => handleDownloadFile(file.path, file.name)} className="flex items-center gap-1 px-3 py-1.5 text-white rounded-lg text-xs font-medium flex-shrink-0" style={{ background: '#0073ea' }}><Download className="w-3 h-3" />Télécharger</button>
                   </div>
                 ))}
               </div>
@@ -1413,60 +659,25 @@ function DemandeExterneModal({ demande, onClose, onUpdateStatus, onViewProfile }
           )}
         </div>
 
-        <div className="border-t bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-b-xl">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex gap-2 flex-wrap">
-              {demande.statut === 'nouveau' && (
-                <button
-                  onClick={() => onUpdateStatus(demande.id, 'consulte')}
-                  className="px-3 py-2 bg-gradient-to-r from-sky-500 via-blue-500 to-sky-600 text-white rounded-full hover:from-sky-600 hover:to-blue-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  Consulté
-                </button>
-              )}
-              {demande.statut === 'consulte' && (
-                <button
-                  onClick={() => onUpdateStatus(demande.id, 'traite')}
-                  className="px-3 py-2 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 text-xs font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  Traité
-                </button>
-              )}
-            </div>
-            <button
-              onClick={onClose}
-              className="px-3 py-2 bg-gradient-to-r from-gray-200 to-slate-200 text-gray-700 rounded-full hover:from-gray-300 hover:to-slate-300 text-xs font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
-            >
-              Fermer
-            </button>
+        {/* Footer */}
+        <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between">
+          <div className="flex gap-2">
+            {demande.statut === 'nouveau' && (<button onClick={() => onUpdateStatus(demande.id, 'consulte')} className="px-3 py-1.5 text-xs font-medium rounded-lg" style={{ background: '#0073ea15', color: '#185FA5' }}>Consulté</button>)}
+            {demande.statut === 'consulte' && (<button onClick={() => onUpdateStatus(demande.id, 'traite')} className="px-3 py-1.5 text-xs font-medium rounded-lg" style={{ background: '#00c87520', color: '#0F6E56' }}>Traité</button>)}
           </div>
+          <button onClick={onClose} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200">Fermer</button>
         </div>
       </div>
     </div>
   );
 }
 
-interface CreateModalProps {
-  onClose: () => void;
-  onSuccess: () => void;
-}
+// ── CreateModal (logique identique, design nettoyé) ──
 
-interface Pole {
-  id: string;
-  nom: string;
-  description: string | null;
-  actif: boolean;
-}
+interface Pole { id: string; nom: string; description: string | null; actif: boolean; }
+interface AppUser { id: string; nom: string; prenom: string; pole_id: string | null; pole_nom?: string; }
 
-interface AppUser {
-  id: string;
-  nom: string;
-  prenom: string;
-  pole_id: string | null;
-  pole_nom?: string;
-}
-
-function CreateModal({ onClose, onSuccess }: CreateModalProps) {
+function CreateModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const { appUserId } = useAuth();
   const [poles, setPoles] = useState<Pole[]>([]);
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
@@ -1477,160 +688,66 @@ function CreateModal({ onClose, onSuccess }: CreateModalProps) {
 
   useEffect(() => {
     const fetchData = async () => {
-      const [polesResult, usersResult] = await Promise.all([
-        supabase.from('poles').select('*').eq('actif', true).order('nom'),
-        supabase.from('app_utilisateur').select('id, nom, prenom, pole_id').eq('actif', true).order('nom')
-      ]);
-
-      const polesData = polesResult.data || [];
-      const usersData = usersResult.data || [];
-
+      const [polesResult, usersResult] = await Promise.all([supabase.from('poles').select('*').eq('actif', true).order('nom'), supabase.from('app_utilisateur').select('id, nom, prenom, pole_id').eq('actif', true).order('nom')]);
+      const polesData = polesResult.data || []; const usersData = usersResult.data || [];
       setPoles(polesData);
-
-      const usersWithPole = usersData.map((user: any) => {
-        const pole = polesData.find((p: Pole) => p.id === user.pole_id);
-        return {
-          ...user,
-          pole_nom: pole ? pole.nom : 'Admin'
-        };
-      });
-
-      setAllUsers(usersWithPole);
-      setFilteredUsers(usersWithPole);
+      const usersWithPole = usersData.map((user: any) => ({ ...user, pole_nom: polesData.find((p: Pole) => p.id === user.pole_id)?.nom || 'Admin' }));
+      setAllUsers(usersWithPole); setFilteredUsers(usersWithPole);
     };
-
     fetchData();
-
-    const handlePolesUpdate = () => {
-      fetchData();
-    };
-
-    window.addEventListener('poles-updated', handlePolesUpdate);
-
-    return () => {
-      window.removeEventListener('poles-updated', handlePolesUpdate);
-    };
+    const h = () => { fetchData(); }; window.addEventListener('poles-updated', h); return () => { window.removeEventListener('poles-updated', h); };
   }, []);
 
   useEffect(() => {
-    if (selectedPole === 'all') {
-      setFilteredUsers(allUsers);
-    } else {
-      const filtered = allUsers.filter(user =>
-        user.pole_id === selectedPole
-      );
-      setFilteredUsers(filtered);
-    }
+    setFilteredUsers(selectedPole === 'all' ? allUsers : allUsers.filter(u => u.pole_id === selectedPole));
     setForm(prev => ({ ...prev, assignee_id: '' }));
   }, [selectedPole, allUsers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.assignee_id || !form.titre) {
-      alert('Remplissez les champs');
-      return;
-    }
-
+    if (!form.assignee_id || !form.titre) { alert('Remplissez les champs'); return; }
     setSending(true);
-    try {
-      await supabase.from('taches').insert({
-        expediteur_id: appUserId,
-        assignee_id: form.assignee_id,
-        titre: form.titre,
-        contenu: form.contenu,
-        priorite: form.priorite,
-        statut: 'en_attente'
-      });
-      onSuccess();
-    } catch (error) {
-      alert('Erreur');
-    } finally {
-      setSending(false);
-    }
+    try { await supabase.from('taches').insert({ expediteur_id: appUserId, assignee_id: form.assignee_id, titre: form.titre, contenu: form.contenu, priorite: form.priorite, statut: 'en_attente' }); onSuccess(); } catch (error) { alert('Erreur'); } finally { setSending(false); }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl">
-        <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white p-5 rounded-t-xl">
-          <h2 className="text-xl font-extrabold">Nouvelle tâche</h2>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl w-full max-w-xl border border-gray-200">
+        <div className="px-6 py-4 border-b" style={{ borderBottomColor: '#0073ea', borderBottomWidth: '3px' }}>
+          <h2 className="text-lg font-bold text-gray-900">Nouvelle tâche</h2>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Pôle</label>
-            <select
-              value={selectedPole}
-              onChange={(e) => setSelectedPole(e.target.value)}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-            >
+            <label className="block text-sm font-medium text-gray-600 mb-1.5">Pôle</label>
+            <select value={selectedPole} onChange={(e) => setSelectedPole(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm">
               <option value="all">Tous les pôles</option>
-              {poles.map(pole => (
-                <option key={pole.id} value={pole.id}>{pole.nom}</option>
-              ))}
+              {poles.map(pole => (<option key={pole.id} value={pole.id}>{pole.nom}</option>))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Assigner à *</label>
-            <select
-              value={form.assignee_id}
-              onChange={(e) => setForm({...form, assignee_id: e.target.value})}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              required
-            >
+            <label className="block text-sm font-medium text-gray-600 mb-1.5">Assigner à *</label>
+            <select value={form.assignee_id} onChange={(e) => setForm({...form, assignee_id: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm" required>
               <option value="">Sélectionner un utilisateur...</option>
-              {filteredUsers.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.prenom} {user.nom} ({user.pole_nom})
-                </option>
-              ))}
+              {filteredUsers.map(user => (<option key={user.id} value={user.id}>{user.prenom} {user.nom} ({user.pole_nom})</option>))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Titre *</label>
-            <input
-              type="text"
-              value={form.titre}
-              onChange={(e) => setForm({...form, titre: e.target.value})}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
+            <label className="block text-sm font-medium text-gray-600 mb-1.5">Titre *</label>
+            <input type="text" value={form.titre} onChange={(e) => setForm({...form, titre: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Contenu</label>
-            <textarea
-              value={form.contenu}
-              onChange={(e) => setForm({...form, contenu: e.target.value})}
-              rows={3}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            <label className="block text-sm font-medium text-gray-600 mb-1.5">Contenu</label>
+            <textarea value={form.contenu} onChange={(e) => setForm({...form, contenu: e.target.value})} rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Priorité</label>
-            <select
-              value={form.priorite}
-              onChange={(e) => setForm({...form, priorite: e.target.value})}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-            >
-              <option value="basse">Basse</option>
-              <option value="normal">Normale</option>
-              <option value="haute">Haute</option>
+            <label className="block text-sm font-medium text-gray-600 mb-1.5">Priorité</label>
+            <select value={form.priorite} onChange={(e) => setForm({...form, priorite: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm">
+              <option value="basse">Basse</option><option value="normal">Normale</option><option value="haute">Haute</option>
             </select>
           </div>
-          <div className="flex gap-3 pt-4">
-            <button
-              type="submit"
-              disabled={sending}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              {sending ? 'Création...' : 'Créer'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-3 bg-gradient-to-r from-gray-200 to-slate-200 text-gray-700 rounded-full hover:from-gray-300 hover:to-slate-300 transition-all duration-300 font-bold shadow-md hover:shadow-lg transform hover:scale-105"
-            >
-              Annuler
-            </button>
+          <div className="flex gap-3 pt-2">
+            <button type="submit" disabled={sending} className="flex-1 px-4 py-2.5 text-white rounded-lg text-sm font-medium disabled:opacity-50" style={{ background: '#00c875' }}>{sending ? 'Création...' : 'Créer'}</button>
+            <button type="button" onClick={onClose} className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200">Annuler</button>
           </div>
         </form>
       </div>
