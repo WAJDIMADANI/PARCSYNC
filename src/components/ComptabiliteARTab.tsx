@@ -82,7 +82,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   const [showJustificatifModal, setShowJustificatifModal] = useState(false);
 
   // Nouveau : filtre par statut (cartes cliquables) + tri sur les colonnes de date
-  const [statutFilter, setStatutFilter] = useState<'tous' | 'en_cours' | 'cloture' | 'a_traiter'>('tous');
+  const [statutFilter, setStatutFilter] = useState<'tous' | 'en_cours' | 'cloture' | 'a_traiter' | 'sans_justificatif'>('tous');
   const [sortColumn, setSortColumn] = useState<'date_debut' | 'date_fin'>('date_debut');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -91,24 +91,8 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
-
-    // Abonnement temps réel : recharge automatiquement quand un justificatif
-    // est uploadé ou qu'une absence est modifiée depuis l'extérieur
-    const channel = supabase
-      .channel('absences-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'compta_ar_events' },
-        () => {
-          loadEvents();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
+
   useEffect(() => {
     filterEvents();
   }, [events, searchTerm, startDateFilter, endDateFilter, statutFilter, sortColumn, sortDirection]);
@@ -248,6 +232,8 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     // Filtre par statut (sélectionné via les cartes cliquables en haut de page)
     if (statutFilter === 'a_traiter') {
       filtered = filtered.filter(isATraiter);
+    } else if (statutFilter === 'sans_justificatif') {
+      filtered = filtered.filter((e) => !e.justificatif_file_path);
     } else if (statutFilter !== 'tous') {
       filtered = filtered.filter((e) => (e.statut || 'en_cours') === statutFilter);
     }
@@ -282,6 +268,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   const countEnCours = events.filter((e) => (e.statut || 'en_cours') === 'en_cours').length;
   const countCloture = events.filter((e) => e.statut === 'cloture').length;
   const countATraiter = events.filter(isATraiter).length;
+  const countSansJustificatif = events.filter((e) => !e.justificatif_file_path).length;
 
   // Bascule du tri sur une colonne de date : même colonne → inverser le sens, autre colonne → descendant par défaut
   const handleSortClick = (column: 'date_debut' | 'date_fin') => {
@@ -626,7 +613,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
       </div>
 
       {/* Cartes cliquables : filtre par statut */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <button
           type="button"
           onClick={() => setStatutFilter('tous')}
@@ -684,6 +671,29 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
             countATraiter > 0 ? 'text-red-700' : 'text-gray-800'
           }`}>
             {countATraiter}
+          </p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatutFilter('sans_justificatif')}
+          className={`p-4 rounded-lg border-2 text-left transition-all ${
+            statutFilter === 'sans_justificatif'
+              ? 'border-amber-600 bg-amber-50 shadow-md'
+              : countSansJustificatif > 0
+                ? 'border-amber-300 bg-white hover:border-amber-500'
+                : 'border-gray-200 bg-white hover:border-gray-400'
+          }`}
+          title={countSansJustificatif > 0 ? `${countSansJustificatif} absence(s) sans justificatif uploadé` : 'Toutes les absences ont un justificatif'}
+        >
+          <p className={`text-xs font-semibold uppercase tracking-wider ${
+            countSansJustificatif > 0 ? 'text-amber-600' : 'text-gray-500'
+          }`}>
+            📎 Sans justificatif
+          </p>
+          <p className={`text-3xl font-bold mt-1 ${
+            countSansJustificatif > 0 ? 'text-amber-700' : 'text-gray-800'
+          }`}>
+            {countSansJustificatif}
           </p>
         </button>
       </div>
