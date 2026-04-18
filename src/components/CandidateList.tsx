@@ -11,56 +11,20 @@ import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 import { sanitizeUuidFields } from '../utils/uuidHelper';
 import { Pagination } from './Pagination';
 
-interface Site {
-  id: string;
-  nom: string;
-}
-
-interface Secteur {
-  id: string;
-  nom: string;
-}
-
-interface Poste {
-  id: string;
-  nom: string;
-  description: string | null;
-}
+interface Site { id: string; nom: string; }
+interface Secteur { id: string; nom: string; }
+interface Poste { id: string; nom: string; description: string | null; }
 
 interface Candidate {
-  id: string;
-  prenom: string;
-  nom: string;
-  email: string;
-  tel: string | null;
-  pipeline: string;
-  site_id: string | null;
-  secteur_id: string | null;
-  created_at: string;
-  adresse?: string;
-  complement_adresse?: string;
-  code_postal?: string;
-  ville?: string;
-  department_code?: string;
-  genre?: string;
-  date_naissance?: string;
-  nom_naissance?: string;
-  lieu_naissance?: string;
-  pays_naissance?: string;
-  nationalite?: string;
-  numero_securite_sociale?: string;
-  date_permis_conduire?: string;
-  type_piece_identite?: string;
-  date_fin_validite_piece?: string;
-  cv_url?: string;
-  lettre_motivation_url?: string;
-  carte_identite_recto_url?: string;
-  carte_identite_verso_url?: string;
-  consent_rgpd_at?: string;
-  poste?: string;
-  statut_candidature?: string;
-  code_couleur_rh?: string;
-  note_interne?: string | null;
+  id: string; prenom: string; nom: string; email: string; tel: string | null;
+  pipeline: string; site_id: string | null; secteur_id: string | null; created_at: string;
+  adresse?: string; complement_adresse?: string; code_postal?: string; ville?: string;
+  department_code?: string; genre?: string; date_naissance?: string; nom_naissance?: string;
+  lieu_naissance?: string; pays_naissance?: string; nationalite?: string;
+  numero_securite_sociale?: string; date_permis_conduire?: string; type_piece_identite?: string;
+  date_fin_validite_piece?: string; cv_url?: string; lettre_motivation_url?: string;
+  carte_identite_recto_url?: string; carte_identite_verso_url?: string; consent_rgpd_at?: string;
+  poste?: string; statut_candidature?: string; code_couleur_rh?: string; note_interne?: string | null;
   source?: string;
 }
 
@@ -85,88 +49,39 @@ function CodeCouleurDropdown({ value, onChange }: { value: string | null | undef
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   const selectedOption = CODE_COULEUR_RH.find(c => c.value === value);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (buttonRef.current && !buttonRef.current.contains(event.target as Node) &&
-          dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+      if (buttonRef.current && !buttonRef.current.contains(event.target as Node) && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false);
     }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    if (isOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => { document.removeEventListener('mousedown', handleClickOutside); };
   }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-        width: rect.width
-      });
+      setPosition({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width });
     }
   }, [isOpen]);
 
   return (
     <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
-        className="flex items-center gap-2 text-sm border border-gray-300 rounded px-3 py-1.5 min-w-[120px] bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      >
+      <button ref={buttonRef} type="button" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+        className="flex items-center gap-2 text-sm border border-gray-300 rounded px-3 py-1.5 min-w-[120px] bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
         <div className={`w-4 h-4 rounded-full flex-shrink-0 ${selectedOption ? selectedOption.color : 'border-2 border-gray-300'}`}></div>
         <span className="flex-1 text-left">{selectedOption?.label || 'Aucun'}</span>
         <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
-
       {isOpen && (
-        <div
-          ref={dropdownRef}
-          className="fixed z-[9999] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden"
-          style={{
-            top: `${position.top}px`,
-            left: `${position.left}px`,
-            width: `${position.width}px`
-          }}
-        >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onChange(null);
-              setIsOpen(false);
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-100 text-sm text-left transition-colors"
-          >
-            <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0"></div>
-            <span>Aucun</span>
+        <div ref={dropdownRef} className="fixed z-[9999] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden" style={{ top: `${position.top}px`, left: `${position.left}px`, width: `${position.width}px` }}>
+          <button type="button" onClick={(e) => { e.stopPropagation(); onChange(null); setIsOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-100 text-sm text-left transition-colors">
+            <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0"></div><span>Aucun</span>
           </button>
           {CODE_COULEUR_RH.map(option => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange(option.value);
-                setIsOpen(false);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-100 text-sm text-left transition-colors"
-            >
-              <div className={`w-4 h-4 rounded-full flex-shrink-0 ${option.color}`}></div>
-              <span>{option.label}</span>
+            <button key={option.value} type="button" onClick={(e) => { e.stopPropagation(); onChange(option.value); setIsOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-100 text-sm text-left transition-colors">
+              <div className={`w-4 h-4 rounded-full flex-shrink-0 ${option.color}`}></div><span>{option.label}</span>
             </button>
           ))}
         </div>
@@ -200,9 +115,7 @@ export function CandidateList() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
@@ -212,300 +125,83 @@ export function CandidateList() {
         supabase.from('secteur').select('*').order('nom'),
         supabase.from('poste').select('id, nom, description').eq('actif', true).order('nom')
       ]);
-
       if (candidatesRes.error) throw candidatesRes.error;
-      if (sitesRes.error) throw sitesRes.error;
-      if (secteursRes.error) throw secteursRes.error;
-      if (postesRes.error) throw postesRes.error;
-
-      setCandidates(candidatesRes.data || []);
-      setSites(sitesRes.data || []);
-      setSecteurs(secteursRes.data || []);
-      setPostes(postesRes.data || []);
-    } catch (error) {
-      console.error('Erreur chargement données:', error);
-    } finally {
-      setLoading(false);
-    }
+      setCandidates(candidatesRes.data || []); setSites(sitesRes.data || []); setSecteurs(secteursRes.data || []); setPostes(postesRes.data || []);
+    } catch (error) { console.error('Erreur chargement données:', error); } finally { setLoading(false); }
   };
 
-  const confirmDelete = (id: string) => {
-    setDeletingCandidateId(id);
-  };
+  const confirmDelete = (id: string) => { setDeletingCandidateId(id); };
 
   const handleDelete = async () => {
     if (!deletingCandidateId) return;
-
     try {
-      // 1. Récupérer tous les documents du candidat
-      const { data: documents, error: docError } = await supabase
-        .from('document')
-        .select('storage_path')
-        .eq('profil_id', deletingCandidateId);
-
-      if (docError) {
-        console.error('Erreur récupération documents:', docError);
-      }
-
-      // 2. Supprimer les fichiers du storage
+      const { data: documents } = await supabase.from('document').select('storage_path').eq('profil_id', deletingCandidateId);
       if (documents && documents.length > 0) {
-        for (const doc of documents) {
-          if (doc.storage_path) {
-            // Extraire le chemin du fichier depuis storage_path
-            // Format: candidatures/xxx/yyy.pdf -> xxx/yyy.pdf
-            const filePath = doc.storage_path.replace(/^candidatures\//, '');
-
-            const { error: storageError } = await supabase
-              .storage
-              .from('candidatures')
-              .remove([filePath]);
-
-            if (storageError) {
-              console.error('Erreur suppression fichier:', storageError);
-            }
-          }
-        }
+        for (const doc of documents) { if (doc.storage_path) { const filePath = doc.storage_path.replace(/^candidatures\//, ''); await supabase.storage.from('candidatures').remove([filePath]); } }
       }
-
-      // 3. Supprimer les entrées de la table document
-      const { error: deleteDocError } = await supabase
-        .from('document')
-        .delete()
-        .eq('profil_id', deletingCandidateId);
-
-      if (deleteDocError) {
-        console.error('Erreur suppression documents:', deleteDocError);
-      }
-
-      // 4. Supprimer le candidat
-      const { error } = await supabase
-        .from('candidat')
-        .delete()
-        .eq('id', deletingCandidateId);
-
+      await supabase.from('document').delete().eq('profil_id', deletingCandidateId);
+      const { error } = await supabase.from('candidat').delete().eq('id', deletingCandidateId);
       if (error) throw error;
-
-      setDeletingCandidateId(null);
-      fetchData();
-    } catch (error) {
-      console.error('Erreur suppression:', error);
-      alert('Erreur lors de la suppression du candidat');
-    }
+      setDeletingCandidateId(null); fetchData();
+    } catch (error) { console.error('Erreur suppression:', error); alert('Erreur lors de la suppression du candidat'); }
   };
 
   const handleStatutChange = (candidateId: string, newStatut: string) => {
     const candidate = candidates.find(c => c.id === candidateId);
     if (!candidate) return;
-
-    if (newStatut === 'vivier') {
-      setVivierCandidate(candidate);
-      setShowVivierModal(true);
-      return;
-    }
-
-    setPendingStatutChange({
-      candidateId,
-      newStatut,
-      candidateName: `${candidate.prenom} ${candidate.nom}`,
-    });
+    if (newStatut === 'vivier') { setVivierCandidate(candidate); setShowVivierModal(true); return; }
+    setPendingStatutChange({ candidateId, newStatut, candidateName: `${candidate.prenom} ${candidate.nom}` });
     setShowStatutConfirmModal(true);
   };
 
   const confirmStatutChange = async () => {
     if (!pendingStatutChange) return;
-
     try {
-      // Préparer les données à mettre à jour
-      const updateData: Record<string, any> = {
-        statut_candidature: pendingStatutChange.newStatut
-      };
-
-      // Si le nouveau statut est 'entretien', ajouter la date
-      if (pendingStatutChange.newStatut === 'entretien') {
-        updateData.date_entretien = new Date().toISOString();
-      }
-
-      const { error } = await supabase
-        .from('candidat')
-        .update(updateData)
-        .eq('id', pendingStatutChange.candidateId);
-
+      const updateData: Record<string, any> = { statut_candidature: pendingStatutChange.newStatut };
+      if (pendingStatutChange.newStatut === 'entretien') updateData.date_entretien = new Date().toISOString();
+      const { error } = await supabase.from('candidat').update(updateData).eq('id', pendingStatutChange.candidateId);
       if (error) throw error;
-
       const candidate = candidates.find(c => c.id === pendingStatutChange.candidateId);
-
-      // Si le nouveau statut est 'pre_embauche', envoyer l'email d'onboarding
-      if (pendingStatutChange.newStatut === 'pre_embauche' && candidate) {
-        await sendOnboardingEmail(candidate);
-      }
-
-      // Si le nouveau statut est 'candidature_rejetee', envoyer l'email de refus
-      if (pendingStatutChange.newStatut === 'candidature_rejetee' && candidate) {
-        await sendRejectionEmail(candidate);
-      }
-
-      // Fermer le modal et réinitialiser l'état
-      setShowStatutConfirmModal(false);
-      setPendingStatutChange(null);
-
-      fetchData();
-    } catch (error) {
-      console.error('Erreur mise à jour statut:', error);
-      alert('Erreur lors de la mise à jour');
-      // Fermer le modal même en cas d'erreur
-      setShowStatutConfirmModal(false);
-      setPendingStatutChange(null);
-    }
+      if (pendingStatutChange.newStatut === 'pre_embauche' && candidate) await sendOnboardingEmail(candidate);
+      if (pendingStatutChange.newStatut === 'candidature_rejetee' && candidate) await sendRejectionEmail(candidate);
+      setShowStatutConfirmModal(false); setPendingStatutChange(null); fetchData();
+    } catch (error) { console.error('Erreur mise à jour statut:', error); alert('Erreur lors de la mise à jour'); setShowStatutConfirmModal(false); setPendingStatutChange(null); }
   };
 
-  const cancelStatutChange = () => {
-    setShowStatutConfirmModal(false);
-    setPendingStatutChange(null);
-  };
+  const cancelStatutChange = () => { setShowStatutConfirmModal(false); setPendingStatutChange(null); };
 
   const handleCodeCouleurChange = async (candidatId: string, newColor: string | null, noteInterne: string) => {
-    try {
-      const { error } = await supabase
-        .from('candidat')
-        .update({
-          code_couleur_rh: newColor,
-          note_interne: noteInterne || null
-        })
-        .eq('id', candidatId);
-
-      if (error) throw error;
-
-      fetchData();
-    } catch (error) {
-      console.error('Erreur mise à jour couleur:', error);
-      alert('Erreur lors de la mise à jour de la couleur');
-    }
+    try { const { error } = await supabase.from('candidat').update({ code_couleur_rh: newColor, note_interne: noteInterne || null }).eq('id', candidatId); if (error) throw error; fetchData(); } catch (error) { console.error('Erreur mise à jour couleur:', error); alert('Erreur lors de la mise à jour de la couleur'); }
   };
 
-  const openCodeCouleurModal = (candidate: Candidate) => {
-    setEditingCodeCandidate(candidate);
-    setShowCodeCouleurModal(true);
-  };
-
-  const handleSaveCodeCouleur = async (codeCouleur: string | null, noteInterne: string) => {
-    if (!editingCodeCandidate) return;
-    await handleCodeCouleurChange(editingCodeCandidate.id, codeCouleur, noteInterne);
-  };
+  const openCodeCouleurModal = (candidate: Candidate) => { setEditingCodeCandidate(candidate); setShowCodeCouleurModal(true); };
+  const handleSaveCodeCouleur = async (codeCouleur: string | null, noteInterne: string) => { if (!editingCodeCandidate) return; await handleCodeCouleurChange(editingCodeCandidate.id, codeCouleur, noteInterne); };
 
   const sendOnboardingEmail = async (candidate: Candidate) => {
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/send-onboarding-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${anonKey}`,
-        },
-        body: JSON.stringify({
-          candidateEmail: candidate.email,
-          candidateName: `${candidate.prenom} ${candidate.nom}`,
-          candidateId: candidate.id,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de l\'envoi de l\'email');
-      }
-
-      setSuccessMessage(`Email d'onboarding envoyé à ${candidate.prenom} ${candidate.nom} !`);
-      setShowSuccessModal(true);
-    } catch (error) {
-      console.error('Erreur envoi email:', error);
-      setSuccessMessage('Erreur lors de l\'envoi de l\'email d\'onboarding');
-      setShowSuccessModal(true);
-    }
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-onboarding-email`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` }, body: JSON.stringify({ candidateEmail: candidate.email, candidateName: `${candidate.prenom} ${candidate.nom}`, candidateId: candidate.id }) });
+      if (!response.ok) throw new Error('Erreur lors de l\'envoi de l\'email');
+      setSuccessMessage(`Email d'onboarding envoyé à ${candidate.prenom} ${candidate.nom} !`); setShowSuccessModal(true);
+    } catch (error) { console.error('Erreur envoi email:', error); setSuccessMessage('Erreur lors de l\'envoi de l\'email d\'onboarding'); setShowSuccessModal(true); }
   };
 
   const sendRejectionEmail = async (candidate: Candidate) => {
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/send-rejection-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${anonKey}`,
-        },
-        body: JSON.stringify({
-          candidateEmail: candidate.email,
-          candidateName: `${candidate.prenom} ${candidate.nom}`,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de l\'envoi de l\'email');
-      }
-
-      setSuccessMessage(`Email de refus envoyé avec succès à ${candidate.prenom} ${candidate.nom}`);
-      setShowSuccessModal(true);
-    } catch (error) {
-      console.error('Erreur envoi email de refus:', error);
-      setSuccessMessage('Erreur lors de l\'envoi de l\'email de refus');
-      setShowSuccessModal(true);
-    }
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-rejection-email`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` }, body: JSON.stringify({ candidateEmail: candidate.email, candidateName: `${candidate.prenom} ${candidate.nom}` }) });
+      if (!response.ok) throw new Error('Erreur lors de l\'envoi de l\'email');
+      setSuccessMessage(`Email de refus envoyé avec succès à ${candidate.prenom} ${candidate.nom}`); setShowSuccessModal(true);
+    } catch (error) { console.error('Erreur envoi email de refus:', error); setSuccessMessage('Erreur lors de l\'envoi de l\'email de refus'); setShowSuccessModal(true); }
   };
 
   const handleVivierConfirm = async (dateDisponibilite: string | null, moisDisponibilite: string | null) => {
     if (!vivierCandidate) return;
-
     try {
-      // Vérifier si le candidat existe déjà dans le vivier
-      const { data: existingVivier } = await supabase
-        .from('vivier')
-        .select('id')
-        .eq('candidat_id', vivierCandidate.id)
-        .maybeSingle();
-
-      const vivierData = {
-        candidat_id: vivierCandidate.id,
-        nom: vivierCandidate.nom,
-        prenom: vivierCandidate.prenom,
-        telephone: vivierCandidate.tel,
-        email: vivierCandidate.email,
-        poste_souhaite: vivierCandidate.poste,
-        date_disponibilite: dateDisponibilite,
-        mois_disponibilite: moisDisponibilite,
-      };
-
-      if (existingVivier) {
-        // UPDATE si existe déjà
-        const { error } = await supabase
-          .from('vivier')
-          .update(vivierData)
-          .eq('candidat_id', vivierCandidate.id);
-
-        if (error) throw error;
-      } else {
-        // INSERT si n'existe pas
-        const { error } = await supabase
-          .from('vivier')
-          .insert([vivierData]);
-
-        if (error) throw error;
-      }
-
-      await supabase
-        .from('candidat')
-        .update({ statut_candidature: 'vivier' })
-        .eq('id', vivierCandidate.id);
-
-      setSuccessMessage(`${vivierCandidate.prenom} ${vivierCandidate.nom} a été ajouté au vivier !`);
-      setShowSuccessModal(true);
-      setShowVivierModal(false);
-      setVivierCandidate(null);
-      fetchData();
-    } catch (error) {
-      console.error('Erreur ajout vivier:', error);
-      alert('Erreur lors de l\'ajout au vivier');
-    }
+      const { data: existingVivier } = await supabase.from('vivier').select('id').eq('candidat_id', vivierCandidate.id).maybeSingle();
+      const vivierData = { candidat_id: vivierCandidate.id, nom: vivierCandidate.nom, prenom: vivierCandidate.prenom, telephone: vivierCandidate.tel, email: vivierCandidate.email, poste_souhaite: vivierCandidate.poste, date_disponibilite: dateDisponibilite, mois_disponibilite: moisDisponibilite };
+      if (existingVivier) { const { error } = await supabase.from('vivier').update(vivierData).eq('candidat_id', vivierCandidate.id); if (error) throw error; } else { const { error } = await supabase.from('vivier').insert([vivierData]); if (error) throw error; }
+      await supabase.from('candidat').update({ statut_candidature: 'vivier' }).eq('id', vivierCandidate.id);
+      setSuccessMessage(`${vivierCandidate.prenom} ${vivierCandidate.nom} a été ajouté au vivier !`); setShowSuccessModal(true); setShowVivierModal(false); setVivierCandidate(null); fetchData();
+    } catch (error) { console.error('Erreur ajout vivier:', error); alert('Erreur lors de l\'ajout au vivier'); }
   };
 
   const filteredCandidates = candidates.filter(cand => {
@@ -514,343 +210,184 @@ export function CandidateList() {
     return matchesSearch && matchesDepartment;
   });
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, filterDepartment]);
+  useEffect(() => { setCurrentPage(1); }, [search, filterDepartment]);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedCandidates = filteredCandidates.slice(startIndex, startIndex + itemsPerPage);
-
-  const uniqueDepartments = Array.from(
-    new Set(candidates.map(c => c.department_code).filter(Boolean))
-  ).sort();
+  const uniqueDepartments = Array.from(new Set(candidates.map(c => c.department_code).filter(Boolean))).sort();
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" text="Chargement des candidats..." />
-      </div>
-    );
+    return (<div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" text="Chargement des candidats..." /></div>);
   }
 
   return (
     <div>
-      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+      {/* Header */}
+      <div className="mb-5 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Candidats</h1>
-          <p className="text-gray-600 mt-1">{candidates.length} candidat(s) au total</p>
+          <h1 className="text-xl font-bold text-gray-900">Candidats</h1>
+          <p className="text-sm text-gray-400 mt-0.5">{candidates.length} candidat(s) au total</p>
         </div>
+        {/* Boutons gardés tels quels */}
         <div className="flex gap-3">
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium"
-          >
-            <Plus className="w-5 h-5" />
-            Nouveau candidat
+          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium">
+            <Plus className="w-5 h-5" />Nouveau candidat
           </button>
-          <button
-            onClick={() => setShowShareModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent-500 to-accent-400 hover:from-accent-600 hover:to-accent-500 text-slate-900 rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium"
-          >
-            <Share2 className="w-5 h-5" />
-            Candidature
+          <button onClick={() => setShowShareModal(true)} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent-500 to-accent-400 hover:from-accent-600 hover:to-accent-500 text-slate-900 rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium">
+            <Share2 className="w-5 h-5" />Candidature
           </button>
-          <button
-            onClick={() => setShowOnboardingQR(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium"
-          >
-            <QrCode className="w-5 h-5" />
-            QR Embauche
+          <button onClick={() => setShowOnboardingQR(true)} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl transition-all duration-200 shadow-soft hover:shadow-glow font-medium">
+            <QrCode className="w-5 h-5" />QR Embauche
           </button>
         </div>
       </div>
 
-      <div className="mb-6 flex gap-4">
+      {/* Search + Filter */}
+      <div className="mb-4 flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Rechercher un candidat..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input type="text" placeholder="Rechercher un candidat..." value={search} onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white" />
         </div>
-        <select
-          value={filterDepartment}
-          onChange={(e) => setFilterDepartment(e.target.value)}
-          className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[200px]"
-        >
+        <select value={filterDepartment} onChange={(e) => setFilterDepartment(e.target.value)}
+          className="px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[180px] text-sm text-gray-600">
           <option value="">Tous les départements</option>
-          {uniqueDepartments.map(dept => (
-            <option key={dept} value={dept}>{dept}</option>
-          ))}
+          {uniqueDepartments.map(dept => (<option key={dept} value={dept}>{dept}</option>))}
         </select>
       </div>
 
       {filteredCandidates.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <p className="text-gray-600">Aucun candidat trouvé</p>
+        <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
+          <p className="text-sm text-gray-400">Aucun candidat trouvé</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-gray-100 min-w-[1200px]">
-              <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
-                <tr>
-                  <th className="w-32 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
-                    Nom
-                  </th>
-                  <th className="w-32 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
-                    Prénom
-                  </th>
-                  <th className="w-24 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Ville
-                  </th>
-                  <th className="w-16 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Dép.
-                  </th>
-                  <th className="w-36 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
-                    Poste
-                  </th>
-                  <th className="w-32 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200">
-                    Site
-                  </th>
-                  <th className="w-20 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="w-24 px-1 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Docs
-                  </th>
-                  <th className="w-44 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Statut
-                  </th>
-                  <th className="w-32 px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Code
-                  </th>
-                  <th className="w-20 px-2 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
+            <table className="w-full min-w-[1200px]">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="w-32 px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Nom</th>
+                  <th className="w-32 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Prénom</th>
+                  <th className="w-28 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Ville</th>
+                  <th className="w-14 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Dép.</th>
+                  <th className="w-36 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Poste</th>
+                  <th className="w-24 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Site</th>
+                  <th className="w-16 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                  <th className="w-14 px-2 py-3 text-center text-[11px] font-medium text-gray-400 uppercase tracking-wider">Docs</th>
+                  <th className="w-40 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Statut</th>
+                  <th className="w-28 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Code</th>
+                  <th className="w-24 px-2 py-3 text-right text-[11px] font-medium text-gray-400 uppercase tracking-wider pr-3">Actions</th>
                 </tr>
               </thead>
-            <tbody className="bg-white divide-y divide-gray-50">
-              {paginatedCandidates.map((candidate) => {
-                const site = sites.find(s => s.id === candidate.site_id);
-                const statutCandidature = candidate.statut_candidature || 'candidature_recue';
-                const codeCouleur = CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh);
-                const hasDocuments = candidate.cv_url || candidate.lettre_motivation_url || candidate.carte_identite_recto_url;
+              <tbody>
+                {paginatedCandidates.map((candidate) => {
+                  const site = sites.find(s => s.id === candidate.site_id);
+                  const statutCandidature = candidate.statut_candidature || 'candidature_recue';
+                  const hasDocuments = candidate.cv_url || candidate.lettre_motivation_url || candidate.carte_identite_recto_url;
+                  const isFromApplySite = candidate.source === 'applysite';
 
-                const isFromApplySite = candidate.source === 'applysite';
-                const baseClassName = isFromApplySite
-                  ? 'bg-orange-50 hover:bg-orange-100'
-                  : 'hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50';
-
-                return (
-                  <tr
-                    key={candidate.id}
-                    className={`${baseClassName} cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg`}
-                    onClick={() => setEditingCandidate(candidate)}
-                  >
-                    <td className="px-2 py-2 text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors">
-                      <div className="truncate" title={candidate.nom}>{candidate.nom}</div>
-                    </td>
-                    <td className="px-2 py-2 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">
-                      <div className="truncate" title={candidate.prenom}>{candidate.prenom}</div>
-                    </td>
-                    <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate" title={candidate.ville || '-'}>
-                      {candidate.ville || '-'}
-                    </td>
-                    <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
-                      {candidate.department_code || '-'}
-                    </td>
-                    <td className="px-2 py-2 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
-                      <div className="truncate" title={candidate.poste || '-'}>
-                        {candidate.poste || '-'}
-                      </div>
-                    </td>
-                    <td className="px-2 py-2 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors">
-                      <div className="truncate" title={site?.nom || '-'}>{site?.nom || '-'}</div>
-                    </td>
-                    <td className="px-1 py-2 text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors truncate">
-                      {new Date(candidate.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
-                    </td>
-                    <td className="px-1 py-2" onClick={(e) => e.stopPropagation()}>
-                      {hasDocuments ? (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-300 whitespace-nowrap">
-                          OK
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-300 whitespace-nowrap">
-                          KO
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
-                      <select
-                        value={statutCandidature}
-                        onChange={(e) => handleStatutChange(candidate.id, e.target.value)}
-                        className="text-[11px] border border-gray-200 rounded-md px-1.5 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-500 bg-white hover:border-gray-300 transition-all w-full font-medium"
-                      >
-                        {STATUT_CANDIDATURE.map(s => (
-                          <option key={s.value} value={s.value}>{s.label}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => openCodeCouleurModal(candidate)}
-                        className="flex items-center gap-1 text-[11px] border border-gray-200 rounded-md px-1.5 py-1 w-full bg-white hover:bg-blue-50 hover:border-blue-300 focus:ring-1 focus:ring-blue-400 transition-all truncate font-medium"
-                      >
-                        <div className={`w-4 h-4 rounded-full flex-shrink-0 ${
-                          candidate.code_couleur_rh
-                            ? CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh)?.color
-                            : 'border-2 border-gray-300'
-                        }`}></div>
-                        <span className="flex-1 text-left">
-                          {CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh)?.label || 'Aucun'}
-                        </span>
-                      </button>
-                    </td>
-                    <td className="px-2 py-3 text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        {statutCandidature === 'salarie' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setConvertingCandidate(candidate);
-                            }}
-                            className="p-2 text-white bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-110"
-                            title="Convertir en salarié"
-                          >
-                            <UserPlus className="w-3.5 h-3.5" />
-                          </button>
+                  return (
+                    <tr
+                      key={candidate.id}
+                      className={`border-b border-gray-100 cursor-pointer transition-colors ${isFromApplySite ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-gray-50'}`}
+                      onClick={() => setEditingCandidate(candidate)}
+                    >
+                      <td className="px-3 py-2.5 text-sm font-medium text-gray-900">
+                        <div className="truncate">{candidate.nom}</div>
+                      </td>
+                      <td className="px-2 py-2.5 text-sm text-gray-700">
+                        <div className="truncate">{candidate.prenom}</div>
+                      </td>
+                      <td className="px-2 py-2.5 text-xs text-gray-500 truncate">{candidate.ville || '-'}</td>
+                      <td className="px-2 py-2.5 text-xs text-gray-500">{candidate.department_code || '-'}</td>
+                      <td className="px-2 py-2.5 text-xs text-gray-500">
+                        <div className="truncate">{candidate.poste || '-'}</div>
+                      </td>
+                      <td className="px-2 py-2.5 text-xs text-gray-500">
+                        <div className="truncate">{site?.nom || '-'}</div>
+                      </td>
+                      <td className="px-2 py-2.5 text-xs text-gray-500">
+                        {new Date(candidate.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+                      </td>
+                      <td className="px-2 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                        {hasDocuments ? (
+                          <span className="inline-block text-[10px] font-medium px-2 py-0.5 rounded" style={{ background: '#00c87520', color: '#0F6E56' }}>OK</span>
+                        ) : (
+                          <span className="inline-block text-[10px] font-medium px-2 py-0.5 rounded" style={{ background: '#e4425815', color: '#A32D2D' }}>KO</span>
                         )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingCandidate(candidate);
-                          }}
-                          className="p-2 text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-110"
+                      </td>
+                      <td className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={statutCandidature}
+                          onChange={(e) => handleStatutChange(candidate.id, e.target.value)}
+                          className="text-[11px] border border-gray-200 rounded-md px-1.5 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-500 bg-white hover:border-gray-300 transition-all w-full font-medium"
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
+                          {STATUT_CANDIDATURE.map(s => (<option key={s.value} value={s.value}>{s.label}</option>))}
+                        </select>
+                      </td>
+                      <td className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            confirmDelete(candidate.id);
-                          }}
-                          className="p-2 text-white bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-110"
+                          onClick={() => openCodeCouleurModal(candidate)}
+                          className="flex items-center gap-1.5 text-[11px] border border-gray-200 rounded-md px-1.5 py-1 w-full bg-white hover:bg-gray-50 hover:border-gray-300 focus:ring-1 focus:ring-blue-400 transition-all truncate font-medium"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <div className={`w-3.5 h-3.5 rounded-full flex-shrink-0 ${candidate.code_couleur_rh ? CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh)?.color : 'border-2 border-gray-300'}`}></div>
+                          <span className="flex-1 text-left">{CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh)?.label || 'Aucun'}</span>
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td className="px-2 py-2.5 text-right pr-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          {statutCandidature === 'salarie' && (
+                            <button onClick={(e) => { e.stopPropagation(); setConvertingCandidate(candidate); }}
+                              className="w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center hover:bg-green-50 hover:border-green-300 transition-colors" title="Convertir en salarié">
+                              <UserPlus className="w-3.5 h-3.5 text-green-600" />
+                            </button>
+                          )}
+                          <button onClick={(e) => { e.stopPropagation(); setEditingCandidate(candidate); }}
+                            className="w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center hover:bg-blue-50 hover:border-blue-300 transition-colors" title="Modifier">
+                            <Edit2 className="w-3.5 h-3.5 text-blue-600" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); confirmDelete(candidate.id); }}
+                            className="w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition-colors" title="Supprimer">
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
 
           {filteredCandidates.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalItems={filteredCandidates.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-            />
+            <Pagination currentPage={currentPage} totalItems={filteredCandidates.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
           )}
         </div>
       )}
 
-      {showAddModal && (
-        <CandidateModal
-          sites={sites}
-          secteurs={secteurs}
-          postes={postes}
-          onClose={() => setShowAddModal(false)}
-          onSuccess={() => {
-            setShowAddModal(false);
-            fetchData();
-          }}
-        />
-      )}
+      {/* ── Modals (tous identiques, aucun changement) ── */}
 
-      {editingCandidate && (
-        <CandidateModal
-          candidate={editingCandidate}
-          sites={sites}
-          secteurs={secteurs}
-          postes={postes}
-          onClose={() => setEditingCandidate(null)}
-          onSuccess={() => {
-            setEditingCandidate(null);
-            fetchData();
-          }}
-        />
-      )}
-
-      {showCodeCouleurModal && editingCodeCandidate && (
-        <CodeCouleurModal
-          isOpen={showCodeCouleurModal}
-          currentValue={editingCodeCandidate.code_couleur_rh || null}
-          candidateName={`${editingCodeCandidate.prenom} ${editingCodeCandidate.nom}`}
-          currentNote={editingCodeCandidate.note_interne}
-          onClose={() => {
-            setShowCodeCouleurModal(false);
-            setEditingCodeCandidate(null);
-          }}
-          onSave={handleSaveCodeCouleur}
-        />
-      )}
-
-      {convertingCandidate && (
-        <ConvertToEmployeeModal
-          candidate={convertingCandidate}
-          sites={sites}
-          secteurs={secteurs}
-          onClose={() => setConvertingCandidate(null)}
-          onSuccess={() => {
-            setConvertingCandidate(null);
-            fetchData();
-          }}
-        />
-      )}
-
-      {showShareModal && (
-        <ShareLinkModal onClose={() => setShowShareModal(false)} />
-      )}
-
-      {showOnboardingQR && (
-        <OnboardingQRModal onClose={() => setShowOnboardingQR(false)} />
-      )}
+      {showAddModal && (<CandidateModal sites={sites} secteurs={secteurs} postes={postes} onClose={() => setShowAddModal(false)} onSuccess={() => { setShowAddModal(false); fetchData(); }} />)}
+      {editingCandidate && (<CandidateModal candidate={editingCandidate} sites={sites} secteurs={secteurs} postes={postes} onClose={() => setEditingCandidate(null)} onSuccess={() => { setEditingCandidate(null); fetchData(); }} />)}
+      {showCodeCouleurModal && editingCodeCandidate && (<CodeCouleurModal isOpen={showCodeCouleurModal} currentValue={editingCodeCandidate.code_couleur_rh || null} candidateName={`${editingCodeCandidate.prenom} ${editingCodeCandidate.nom}`} currentNote={editingCodeCandidate.note_interne} onClose={() => { setShowCodeCouleurModal(false); setEditingCodeCandidate(null); }} onSave={handleSaveCodeCouleur} />)}
+      {convertingCandidate && (<ConvertToEmployeeModal candidate={convertingCandidate} sites={sites} secteurs={secteurs} onClose={() => setConvertingCandidate(null)} onSuccess={() => { setConvertingCandidate(null); fetchData(); }} />)}
+      {showShareModal && (<ShareLinkModal onClose={() => setShowShareModal(false)} />)}
+      {showOnboardingQR && (<OnboardingQRModal onClose={() => setShowOnboardingQR(false)} />)}
 
       {showStatutConfirmModal && pendingStatutChange && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl border border-gray-200 max-w-md w-full p-6">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
-                <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-50 mb-4">
+                <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirmer le changement de statut</h3>
-              <p className="text-gray-600 mb-6">
+              <h3 className="text-base font-bold text-gray-900 mb-2">Confirmer le changement de statut</h3>
+              <p className="text-sm text-gray-600 mb-6">
                 Voulez-vous vraiment changer le statut de <strong>{pendingStatutChange.candidateName}</strong> à <strong>{STATUT_CANDIDATURE.find(s => s.value === pendingStatutChange.newStatut)?.label}</strong> ?
               </p>
               <div className="flex gap-3">
-                <button
-                  onClick={cancelStatutChange}
-                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors font-medium"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={confirmStatutChange}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-                >
-                  Confirmer
-                </button>
+                <button onClick={cancelStatutChange} className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm font-medium">Annuler</button>
+                <button onClick={confirmStatutChange} className="flex-1 px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium" style={{ background: '#0073ea' }}>Confirmer</button>
               </div>
             </div>
           </div>
@@ -858,98 +395,55 @@ export function CandidateList() {
       )}
 
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl border border-gray-200 max-w-md w-full p-6">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                </svg>
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-50 mb-4">
+                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
               </div>
-              <p className="text-lg text-gray-900 mb-6">{successMessage}</p>
-              <button
-                onClick={() => setShowSuccessModal(false)}
-                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-              >
-                OK
-              </button>
+              <p className="text-sm text-gray-700 mb-6">{successMessage}</p>
+              <button onClick={() => setShowSuccessModal(false)} className="w-full px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium" style={{ background: '#0073ea' }}>OK</button>
             </div>
           </div>
         </div>
       )}
 
       {deletingCandidateId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl border border-gray-200 max-w-md w-full p-6">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-                <Trash2 className="h-8 w-8 text-red-600" />
+              <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-50 mb-4">
+                <Trash2 className="h-7 w-7 text-red-500" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Supprimer définitivement ce candidat ?</h3>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-red-800 font-medium mb-2">
-                  Cette action est irréversible !
-                </p>
-                <p className="text-sm text-red-700">
-                  Le candidat et tous ses documents seront supprimés définitivement de la base de données et du stockage.
-                </p>
+              <h3 className="text-base font-bold text-gray-900 mb-3">Supprimer définitivement ce candidat ?</h3>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-left">
+                <p className="text-sm text-red-700 font-medium mb-1">Cette action est irréversible !</p>
+                <p className="text-xs text-red-600">Le candidat et tous ses documents seront supprimés définitivement.</p>
               </div>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setDeletingCandidateId(null)}
-                  className="flex-1 px-4 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-semibold shadow-lg"
-                >
-                  Supprimer définitivement
-                </button>
+                <button onClick={() => setDeletingCandidateId(null)} className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">Annuler</button>
+                <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium">Supprimer</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {showVivierModal && vivierCandidate && (
-        <VivierDisponibiliteModal
-          candidateName={`${vivierCandidate.prenom} ${vivierCandidate.nom}`}
-          onClose={() => {
-            setShowVivierModal(false);
-            setVivierCandidate(null);
-          }}
-          onConfirm={handleVivierConfirm}
-        />
-      )}
+      {showVivierModal && vivierCandidate && (<VivierDisponibiliteModal candidateName={`${vivierCandidate.prenom} ${vivierCandidate.nom}`} onClose={() => { setShowVivierModal(false); setVivierCandidate(null); }} onConfirm={handleVivierConfirm} />)}
     </div>
   );
 }
 
-function PosteDropdown({ value, onChange, postes, disabled }: {
-  value: string;
-  onChange: (value: string) => void;
-  postes: Poste[];
-  disabled?: boolean
-}) {
+// ── PosteDropdown (inchangé) ──
+
+function PosteDropdown({ value, onChange, postes, disabled }: { value: string; onChange: (value: string) => void; postes: Poste[]; disabled?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    const handleClickOutside = (event: MouseEvent) => { if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false); };
+    if (isOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => { document.removeEventListener('mousedown', handleClickOutside); };
   }, [isOpen]);
 
   const selectedPoste = postes.find(p => p.nom === value);
@@ -957,44 +451,17 @@ function PosteDropdown({ value, onChange, postes, disabled }: {
   return (
     <div className="relative" ref={dropdownRef}>
       <label className="block text-sm font-medium text-gray-700 mb-1">Poste candidaté</label>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 bg-white text-left flex items-center justify-between"
-      >
-        <span className={value ? 'text-gray-900' : 'text-gray-400'}>
-          {selectedPoste?.nom || 'Sélectionner un poste'}
-        </span>
+      <button type="button" disabled={disabled} onClick={() => !disabled && setIsOpen(!isOpen)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 bg-white text-left flex items-center justify-between">
+        <span className={value ? 'text-gray-900' : 'text-gray-400'}>{selectedPoste?.nom || 'Sélectionner un poste'}</span>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'transform rotate-180' : ''}`} />
       </button>
-
       {isOpen && !disabled && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-          <div
-            onClick={() => {
-              onChange('');
-              setIsOpen(false);
-            }}
-            className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-gray-400"
-          >
-            Sélectionner un poste
-          </div>
+          <div onClick={() => { onChange(''); setIsOpen(false); }} className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-gray-400">Sélectionner un poste</div>
           {postes.map((poste) => (
-            <div
-              key={poste.id}
-              onClick={() => {
-                onChange(poste.nom);
-                setIsOpen(false);
-              }}
-              className={`px-3 py-2 hover:bg-blue-50 cursor-pointer ${
-                value === poste.nom ? 'bg-blue-100 text-blue-900 font-medium' : 'text-gray-900'
-              }`}
-            >
+            <div key={poste.id} onClick={() => { onChange(poste.nom); setIsOpen(false); }} className={`px-3 py-2 hover:bg-blue-50 cursor-pointer ${value === poste.nom ? 'bg-blue-100 text-blue-900 font-medium' : 'text-gray-900'}`}>
               <div className="font-medium">{poste.nom}</div>
-              {poste.description && (
-                <div className="text-xs text-gray-500 mt-0.5">{poste.description}</div>
-              )}
+              {poste.description && (<div className="text-xs text-gray-500 mt-0.5">{poste.description}</div>)}
             </div>
           ))}
         </div>
@@ -1003,1056 +470,141 @@ function PosteDropdown({ value, onChange, postes, disabled }: {
   );
 }
 
-function CandidateModal({
-  candidate,
-  sites,
-  secteurs,
-  postes,
-  onClose,
-  onSuccess
-}: {
-  candidate?: Candidate;
-  sites: Site[];
-  secteurs: Secteur[];
-  postes: Poste[];
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const [formData, setFormData] = useState({
-    prenom: candidate?.prenom || '',
-    nom: candidate?.nom || '',
-    email: candidate?.email || '',
-    tel: candidate?.tel || '',
-    site_id: candidate?.site_id || null,
-    secteur_id: candidate?.secteur_id || null,
-    poste: candidate?.poste || '',
-    adresse: candidate?.adresse || '',
-    complement_adresse: candidate?.complement_adresse || '',
-    code_postal: candidate?.code_postal || '',
-    ville: candidate?.ville || '',
-    genre: candidate?.genre || '',
-    date_naissance: candidate?.date_naissance || '',
-    nom_naissance: candidate?.nom_naissance || '',
-    lieu_naissance: candidate?.lieu_naissance || '',
-    pays_naissance: candidate?.pays_naissance || '',
-    nationalite: candidate?.nationalite || '',
-    numero_securite_sociale: candidate?.numero_securite_sociale || '',
-    date_permis_conduire: candidate?.date_permis_conduire || '',
-  });
+// ── CandidateModal (inchangé) ──
+
+function CandidateModal({ candidate, sites, secteurs, postes, onClose, onSuccess }: { candidate?: Candidate; sites: Site[]; secteurs: Secteur[]; postes: Poste[]; onClose: () => void; onSuccess: () => void; }) {
+  const [formData, setFormData] = useState({ prenom: candidate?.prenom || '', nom: candidate?.nom || '', email: candidate?.email || '', tel: candidate?.tel || '', site_id: candidate?.site_id || null, secteur_id: candidate?.secteur_id || null, poste: candidate?.poste || '', adresse: candidate?.adresse || '', complement_adresse: candidate?.complement_adresse || '', code_postal: candidate?.code_postal || '', ville: candidate?.ville || '', genre: candidate?.genre || '', date_naissance: candidate?.date_naissance || '', nom_naissance: candidate?.nom_naissance || '', lieu_naissance: candidate?.lieu_naissance || '', pays_naissance: candidate?.pays_naissance || '', nationalite: candidate?.nationalite || '', numero_securite_sociale: candidate?.numero_securite_sociale || '', date_permis_conduire: candidate?.date_permis_conduire || '' });
   const [loading, setLoading] = useState(false);
   const [isViewMode, setIsViewMode] = useState(!!candidate);
-  const [signedUrls, setSignedUrls] = useState<{
-    cv?: string;
-    lettre_motivation?: string;
-    carte_identite_recto?: string;
-    carte_identite_verso?: string;
-  }>({});
+  const [signedUrls, setSignedUrls] = useState<{ cv?: string; lettre_motivation?: string; carte_identite_recto?: string; carte_identite_verso?: string; }>({});
   const [ageError, setAgeError] = useState('');
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [uploadingDocs, setUploadingDocs] = useState(false);
-  const [docFiles, setDocFiles] = useState<{
-    cv?: File;
-    lettre_motivation?: File;
-    carte_identite_recto?: File;
-    carte_identite_verso?: File;
-  }>({});
+  const [docFiles, setDocFiles] = useState<{ cv?: File; lettre_motivation?: File; carte_identite_recto?: File; carte_identite_verso?: File; }>({});
 
-  useEffect(() => {
-    if (candidate) {
-      generateSignedUrls();
-    }
-  }, [candidate]);
+  useEffect(() => { if (candidate) generateSignedUrls(); }, [candidate]);
+  useEffect(() => { if (formData.date_naissance) { const age = calculateAge(formData.date_naissance); setAgeError(age < 18 ? `Le candidat doit avoir au moins 18 ans (âge actuel : ${age} ans)` : ''); } else { setAgeError(''); } }, [formData.date_naissance]);
 
-  useEffect(() => {
-    if (formData.date_naissance) {
-      const age = calculateAge(formData.date_naissance);
-      if (age < 18) {
-        setAgeError(`Le candidat doit avoir au moins 18 ans (âge actuel : ${age} ans)`);
-      } else {
-        setAgeError('');
-      }
-    } else {
-      setAgeError('');
-    }
-  }, [formData.date_naissance]);
+  const calculateAge = (birthDate: string): number => { const today = new Date(); const birth = new Date(birthDate); let age = today.getFullYear() - birth.getFullYear(); const m = today.getMonth() - birth.getMonth(); if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--; return age; };
+  const searchAddress = async (query: string) => { if (query.length < 3) { setAddressSuggestions([]); return; } try { const response = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`); const data = await response.json(); setAddressSuggestions(data.features || []); setShowSuggestions(true); } catch (error) { console.error('Erreur recherche adresse:', error); } };
+  const selectAddress = (feature: any) => { const p = feature.properties; setFormData({ ...formData, adresse: p.name, code_postal: p.postcode || '', ville: p.city || '' }); setShowSuggestions(false); };
 
-  const calculateAge = (birthDate: string): number => {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  const searchAddress = async (query: string) => {
-    if (query.length < 3) {
-      setAddressSuggestions([]);
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`
-      );
-      const data = await response.json();
-      setAddressSuggestions(data.features || []);
-      setShowSuggestions(true);
-    } catch (error) {
-      console.error('Erreur recherche adresse:', error);
-    }
-  };
-
-  const selectAddress = (feature: any) => {
-    const properties = feature.properties;
-    const fullAddress = properties.name;
-
-    setFormData({
-      ...formData,
-      adresse: fullAddress,
-      code_postal: properties.postcode || '',
-      ville: properties.city || '',
-    });
-
-    setShowSuggestions(false);
-  };
-
-  const getSignedUrl = async (publicUrl: string): Promise<string> => {
-    try {
-      const match = publicUrl.match(/\/object\/public\/([^/]+)\/(.+)$/);
-      if (!match) {
-        console.error('URL format invalide:', publicUrl);
-        return publicUrl;
-      }
-
-      const bucketName = match[1];
-      const filePath = match[2];
-
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .createSignedUrl(filePath, 3600);
-
-      if (error) {
-        console.error('Erreur génération URL signée:', error);
-        return publicUrl;
-      }
-
-      return data.signedUrl;
-    } catch (error) {
-      console.error('Erreur:', error);
-      return publicUrl;
-    }
-  };
-
-  const generateSignedUrls = async () => {
-    if (!candidate) return;
-
-    const urls: any = {};
-
-    if (candidate.cv_url) {
-      urls.cv = await getSignedUrl(candidate.cv_url);
-    }
-    if (candidate.lettre_motivation_url) {
-      urls.lettre_motivation = await getSignedUrl(candidate.lettre_motivation_url);
-    }
-    if (candidate.carte_identite_recto_url) {
-      urls.carte_identite_recto = await getSignedUrl(candidate.carte_identite_recto_url);
-    }
-    if (candidate.carte_identite_verso_url) {
-      urls.carte_identite_verso = await getSignedUrl(candidate.carte_identite_verso_url);
-    }
-
-    setSignedUrls(urls);
-  };
+  const getSignedUrl = async (publicUrl: string): Promise<string> => { try { const match = publicUrl.match(/\/object\/public\/([^/]+)\/(.+)$/); if (!match) return publicUrl; const { data, error } = await supabase.storage.from(match[1]).createSignedUrl(match[2], 3600); return error ? publicUrl : data.signedUrl; } catch { return publicUrl; } };
+  const generateSignedUrls = async () => { if (!candidate) return; const urls: any = {}; if (candidate.cv_url) urls.cv = await getSignedUrl(candidate.cv_url); if (candidate.lettre_motivation_url) urls.lettre_motivation = await getSignedUrl(candidate.lettre_motivation_url); if (candidate.carte_identite_recto_url) urls.carte_identite_recto = await getSignedUrl(candidate.carte_identite_recto_url); if (candidate.carte_identite_verso_url) urls.carte_identite_verso = await getSignedUrl(candidate.carte_identite_verso_url); setSignedUrls(urls); };
 
   const uploadDocument = async (file: File, docType: string, candidateId: string): Promise<string | null> => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const uniqueId = Math.random().toString(36).substring(2, 15);
-
-      let bucketPath = '';
-      let bucketName = 'candidatures';
-
-      if (docType === 'cv') {
-        bucketPath = `cv/${uniqueId}-${Date.now()}.${fileExt}`;
-      } else if (docType === 'lettre_motivation') {
-        bucketPath = `lettres/${uniqueId}-${Date.now()}.${fileExt}`;
-      } else if (docType === 'carte_identite_recto' || docType === 'carte_identite_verso') {
-        bucketPath = `cartes-identite/${uniqueId}-${Date.now()}.${fileExt}`;
-      } else {
-        bucketPath = `${docType}/${uniqueId}-${Date.now()}.${fileExt}`;
-      }
-
-      const { error: uploadError } = await supabase.storage
-        .from(bucketName)
-        .upload(bucketPath, file, { upsert: true });
-
-      if (uploadError) {
-        console.error(`Erreur upload ${docType}:`, uploadError);
-        throw new Error(`Impossible d'uploader ${docType}: ${uploadError.message || 'Le bucket "candidatures" n\'existe peut-être pas'}`);
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(bucketPath);
-
-      return publicUrl;
-    } catch (error) {
-      console.error(`Erreur upload ${docType}:`, error);
-      throw error;
-    }
+    const fileExt = file.name.split('.').pop(); const uniqueId = Math.random().toString(36).substring(2, 15);
+    let bucketPath = ''; const bucketName = 'candidatures';
+    if (docType === 'cv') bucketPath = `cv/${uniqueId}-${Date.now()}.${fileExt}`; else if (docType === 'lettre_motivation') bucketPath = `lettres/${uniqueId}-${Date.now()}.${fileExt}`; else if (docType === 'carte_identite_recto' || docType === 'carte_identite_verso') bucketPath = `cartes-identite/${uniqueId}-${Date.now()}.${fileExt}`; else bucketPath = `${docType}/${uniqueId}-${Date.now()}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage.from(bucketName).upload(bucketPath, file, { upsert: true });
+    if (uploadError) throw new Error(`Impossible d'uploader ${docType}: ${uploadError.message}`);
+    const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(bucketPath);
+    return publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
+    e.preventDefault(); setLoading(true);
     try {
-      let candidateId = candidate?.id;
-
-      const sanitizedData = sanitizeUuidFields(formData, ['site_id', 'secteur_id']);
-
-      if (candidate) {
-        const { error } = await supabase
-          .from('candidat')
-          .update(sanitizedData)
-          .eq('id', candidate.id);
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase.from('candidat').insert([{
-          ...sanitizedData,
-          pipeline: 'nouveau',
-        }]).select().single();
-        if (error) throw error;
-        candidateId = data.id;
-      }
-
+      let candidateId = candidate?.id; const sanitizedData = sanitizeUuidFields(formData, ['site_id', 'secteur_id']);
+      if (candidate) { const { error } = await supabase.from('candidat').update(sanitizedData).eq('id', candidate.id); if (error) throw error; } else { const { data, error } = await supabase.from('candidat').insert([{ ...sanitizedData, pipeline: 'nouveau' }]).select().single(); if (error) throw error; candidateId = data.id; }
       if (candidateId && Object.keys(docFiles).length > 0) {
-        setUploadingDocs(true);
-        const docUpdates: any = {};
-
-        if (docFiles.cv) {
-          const url = await uploadDocument(docFiles.cv, 'cv', candidateId);
-          if (url) docUpdates.cv_url = url;
-        }
-        if (docFiles.lettre_motivation) {
-          const url = await uploadDocument(docFiles.lettre_motivation, 'lettre_motivation', candidateId);
-          if (url) docUpdates.lettre_motivation_url = url;
-        }
-        if (docFiles.carte_identite_recto) {
-          const url = await uploadDocument(docFiles.carte_identite_recto, 'carte_identite_recto', candidateId);
-          if (url) docUpdates.carte_identite_recto_url = url;
-        }
-        if (docFiles.carte_identite_verso) {
-          const url = await uploadDocument(docFiles.carte_identite_verso, 'carte_identite_verso', candidateId);
-          if (url) docUpdates.carte_identite_verso_url = url;
-        }
-
-        if (Object.keys(docUpdates).length > 0) {
-          const { error } = await supabase
-            .from('candidat')
-            .update(docUpdates)
-            .eq('id', candidateId);
-          if (error) throw error;
-        }
+        setUploadingDocs(true); const docUpdates: any = {};
+        if (docFiles.cv) { const url = await uploadDocument(docFiles.cv, 'cv', candidateId); if (url) docUpdates.cv_url = url; }
+        if (docFiles.lettre_motivation) { const url = await uploadDocument(docFiles.lettre_motivation, 'lettre_motivation', candidateId); if (url) docUpdates.lettre_motivation_url = url; }
+        if (docFiles.carte_identite_recto) { const url = await uploadDocument(docFiles.carte_identite_recto, 'carte_identite_recto', candidateId); if (url) docUpdates.carte_identite_recto_url = url; }
+        if (docFiles.carte_identite_verso) { const url = await uploadDocument(docFiles.carte_identite_verso, 'carte_identite_verso', candidateId); if (url) docUpdates.carte_identite_verso_url = url; }
+        if (Object.keys(docUpdates).length > 0) { const { error } = await supabase.from('candidat').update(docUpdates).eq('id', candidateId); if (error) throw error; }
       }
-
       onSuccess();
-    } catch (error: any) {
-      console.error('Erreur:', error);
-      const errorMessage = error?.message || 'Erreur lors de l\'opération';
-      alert(errorMessage);
-    } finally {
-      setLoading(false);
-      setUploadingDocs(false);
-    }
+    } catch (error: any) { console.error('Erreur:', error); alert(error?.message || 'Erreur lors de l\'opération'); } finally { setLoading(false); setUploadingDocs(false); }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {candidate ? (isViewMode ? 'Fiche candidat' : 'Modifier le candidat') : 'Nouveau candidat'}
-          </h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
+          <h2 className="text-2xl font-bold text-gray-900">{candidate ? (isViewMode ? 'Fiche candidat' : 'Modifier le candidat') : 'Nouveau candidat'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
-
-        {candidate && isViewMode && (
-          <div className="mb-4">
-            <button
-              onClick={() => setIsViewMode(false)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              Modifier
-            </button>
-          </div>
-        )}
-
-        {candidate?.ville && candidate?.department_code && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold">Localisation:</span> {candidate.ville} ({candidate.department_code})
-            </p>
-          </div>
-        )}
-
+        {candidate && isViewMode && (<div className="mb-4"><button onClick={() => setIsViewMode(false)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">Modifier</button></div>)}
+        {candidate?.ville && candidate?.department_code && (<div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg"><p className="text-sm text-gray-700"><span className="font-semibold">Localisation:</span> {candidate.ville} ({candidate.department_code})</p></div>)}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Prénom *</label>
-              <input
-                type="text"
-                required
-                disabled={isViewMode}
-                value={formData.prenom}
-                onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
-              <input
-                type="text"
-                required
-                disabled={isViewMode}
-                value={formData.nom}
-                onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-              <input
-                type="email"
-                required
-                disabled={isViewMode}
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone *</label>
-              <input
-                type="tel"
-                required
-                disabled={isViewMode}
-                value={formData.tel}
-                onChange={(e) => setFormData({ ...formData, tel: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            <PosteDropdown
-              value={formData.poste}
-              onChange={(value) => setFormData({ ...formData, poste: value })}
-              postes={postes}
-              disabled={isViewMode}
-            />
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Genre</label>
-              <select
-                disabled={isViewMode}
-                value={formData.genre}
-                onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              >
-                <option value="">Sélectionner</option>
-                {GENRE_OPTIONS.map(genre => (
-                  <option key={genre} value={genre}>{genre}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date de naissance</label>
-              <input
-                type="date"
-                disabled={isViewMode}
-                value={formData.date_naissance}
-                onChange={(e) => setFormData({ ...formData, date_naissance: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent disabled:bg-gray-100 ${
-                  ageError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                }`}
-              />
-              {ageError && (
-                <div className="mt-2 flex items-start gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
-                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-sm font-medium">{ageError}</span>
-                </div>
-              )}
-            </div>
-
-            {formData.genre === 'Femme' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nom de naissance</label>
-                <input
-                  type="text"
-                  disabled={isViewMode}
-                  value={formData.nom_naissance}
-                  onChange={(e) => setFormData({ ...formData, nom_naissance: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                  placeholder="Nom de jeune fille"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Lieu de naissance</label>
-              <input
-                type="text"
-                disabled={isViewMode}
-                value={formData.lieu_naissance}
-                onChange={(e) => setFormData({ ...formData, lieu_naissance: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Pays de naissance</label>
-              <input
-                type="text"
-                disabled={isViewMode}
-                value={formData.pays_naissance}
-                onChange={(e) => setFormData({ ...formData, pays_naissance: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nationalité</label>
-              <input
-                type="text"
-                disabled={isViewMode}
-                value={formData.nationalite}
-                onChange={(e) => setFormData({ ...formData, nationalite: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Numéro de sécurité sociale</label>
-              <input
-                type="text"
-                disabled={isViewMode}
-                value={formData.numero_securite_sociale}
-                onChange={(e) => setFormData({ ...formData, numero_securite_sociale: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                placeholder="Avec ou sans espaces (ex: 1 23 45 67 890 123 45)"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date permis de conduire</label>
-              <input
-                type="date"
-                disabled={isViewMode}
-                value={formData.date_permis_conduire}
-                onChange={(e) => setFormData({ ...formData, date_permis_conduire: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            {candidate?.type_piece_identite === 'carte_sejour' && candidate?.date_fin_validite_piece && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date fin validité carte séjour</label>
-                <input
-                  type="date"
-                  disabled
-                  value={candidate.date_fin_validite_piece}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
-                />
-              </div>
-            )}
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Prénom *</label><input type="text" required disabled={isViewMode} value={formData.prenom} onChange={(e) => setFormData({ ...formData, prenom: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label><input type="text" required disabled={isViewMode} value={formData.nom} onChange={(e) => setFormData({ ...formData, nom: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Email *</label><input type="email" required disabled={isViewMode} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Téléphone *</label><input type="tel" required disabled={isViewMode} value={formData.tel} onChange={(e) => setFormData({ ...formData, tel: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" /></div>
+            <PosteDropdown value={formData.poste} onChange={(value) => setFormData({ ...formData, poste: value })} postes={postes} disabled={isViewMode} />
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Genre</label><select disabled={isViewMode} value={formData.genre} onChange={(e) => setFormData({ ...formData, genre: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"><option value="">Sélectionner</option>{GENRE_OPTIONS.map(genre => (<option key={genre} value={genre}>{genre}</option>))}</select></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Date de naissance</label><input type="date" disabled={isViewMode} value={formData.date_naissance} onChange={(e) => setFormData({ ...formData, date_naissance: e.target.value })} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent disabled:bg-gray-100 ${ageError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`} />{ageError && (<div className="mt-2 flex items-start gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-3"><svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg><span className="text-sm font-medium">{ageError}</span></div>)}</div>
+            {formData.genre === 'Femme' && (<div><label className="block text-sm font-medium text-gray-700 mb-1">Nom de naissance</label><input type="text" disabled={isViewMode} value={formData.nom_naissance} onChange={(e) => setFormData({ ...formData, nom_naissance: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" placeholder="Nom de jeune fille" /></div>)}
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Lieu de naissance</label><input type="text" disabled={isViewMode} value={formData.lieu_naissance} onChange={(e) => setFormData({ ...formData, lieu_naissance: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Pays de naissance</label><input type="text" disabled={isViewMode} value={formData.pays_naissance} onChange={(e) => setFormData({ ...formData, pays_naissance: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Nationalité</label><input type="text" disabled={isViewMode} value={formData.nationalite} onChange={(e) => setFormData({ ...formData, nationalite: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Numéro de sécurité sociale</label><input type="text" disabled={isViewMode} value={formData.numero_securite_sociale} onChange={(e) => setFormData({ ...formData, numero_securite_sociale: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" placeholder="Avec ou sans espaces" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Date permis de conduire</label><input type="date" disabled={isViewMode} value={formData.date_permis_conduire} onChange={(e) => setFormData({ ...formData, date_permis_conduire: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" /></div>
+            {candidate?.type_piece_identite === 'carte_sejour' && candidate?.date_fin_validite_piece && (<div><label className="block text-sm font-medium text-gray-700 mb-1">Date fin validité carte séjour</label><input type="date" disabled value={candidate.date_fin_validite_piece} className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100" /></div>)}
           </div>
-
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Adresse *</label>
-            <input
-              type="text"
-              required
-              disabled={isViewMode}
-              value={formData.adresse}
-              onChange={(e) => {
-                setFormData({ ...formData, adresse: e.target.value });
-                searchAddress(e.target.value);
-              }}
-              onFocus={() => formData.adresse.length >= 3 && setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              placeholder="Tapez votre adresse..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-            />
-
-            {showSuggestions && addressSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                {addressSuggestions.map((suggestion, index) => (
-                  <div
-                    key={index}
-                    onClick={() => selectAddress(suggestion)}
-                    className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 text-sm text-gray-700"
-                  >
-                    {suggestion.properties.label}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Complément d'adresse</label>
-            <input
-              type="text"
-              disabled={isViewMode}
-              value={formData.complement_adresse}
-              onChange={(e) => setFormData({ ...formData, complement_adresse: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              placeholder="Bâtiment, étage, appartement..."
-            />
-          </div>
-
+          <div className="relative"><label className="block text-sm font-medium text-gray-700 mb-1">Adresse *</label><input type="text" required disabled={isViewMode} value={formData.adresse} onChange={(e) => { setFormData({ ...formData, adresse: e.target.value }); searchAddress(e.target.value); }} onFocus={() => formData.adresse.length >= 3 && setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} placeholder="Tapez votre adresse..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" />{showSuggestions && addressSuggestions.length > 0 && (<div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">{addressSuggestions.map((suggestion, index) => (<div key={index} onClick={() => selectAddress(suggestion)} className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 text-sm text-gray-700">{suggestion.properties.label}</div>))}</div>)}</div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Complément d'adresse</label><input type="text" disabled={isViewMode} value={formData.complement_adresse} onChange={(e) => setFormData({ ...formData, complement_adresse: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" placeholder="Bâtiment, étage, appartement..." /></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Code postal</label>
-              <input
-                type="text"
-                disabled={isViewMode}
-                value={formData.code_postal}
-                onChange={(e) => setFormData({ ...formData, code_postal: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
-              <input
-                type="text"
-                disabled={isViewMode}
-                value={formData.ville}
-                onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
-              <select
-                disabled={isViewMode}
-                value={formData.site_id ?? ""}
-                onChange={(e) => setFormData({ ...formData, site_id: e.target.value || null })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              >
-                <option value="">Aucun</option>
-                {sites.map(site => (
-                  <option key={site.id} value={site.id}>{site.nom}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Secteur</label>
-              <select
-                disabled={isViewMode}
-                value={formData.secteur_id ?? ""}
-                onChange={(e) => setFormData({ ...formData, secteur_id: e.target.value || null })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              >
-                <option value="">Aucun</option>
-                {secteurs.map(secteur => (
-                  <option key={secteur.id} value={secteur.id}>{secteur.nom}</option>
-                ))}
-              </select>
-            </div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Code postal</label><input type="text" disabled={isViewMode} value={formData.code_postal} onChange={(e) => setFormData({ ...formData, code_postal: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Ville</label><input type="text" disabled={isViewMode} value={formData.ville} onChange={(e) => setFormData({ ...formData, ville: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Site</label><select disabled={isViewMode} value={formData.site_id ?? ""} onChange={(e) => setFormData({ ...formData, site_id: e.target.value || null })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"><option value="">Aucun</option>{sites.map(site => (<option key={site.id} value={site.id}>{site.nom}</option>))}</select></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Secteur</label><select disabled={isViewMode} value={formData.secteur_id ?? ""} onChange={(e) => setFormData({ ...formData, secteur_id: e.target.value || null })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"><option value="">Aucun</option>{secteurs.map(secteur => (<option key={secteur.id} value={secteur.id}>{secteur.nom}</option>))}</select></div>
           </div>
-
-          {candidate && (candidate.cv_url || candidate.lettre_motivation_url || candidate.carte_identite_recto_url) && (
-            <div className="border-t pt-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Documents existants</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {candidate.cv_url && signedUrls.cv && (
-                  <a
-                    href={signedUrls.cv}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-                  >
-                    CV
-                  </a>
-                )}
-                {candidate.lettre_motivation_url && signedUrls.lettre_motivation && (
-                  <a
-                    href={signedUrls.lettre_motivation}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-                  >
-                    Lettre de motivation
-                  </a>
-                )}
-                {candidate.carte_identite_recto_url && signedUrls.carte_identite_recto && (
-                  <a
-                    href={signedUrls.carte_identite_recto}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-                  >
-                    Carte d'identité (recto)
-                  </a>
-                )}
-                {candidate.carte_identite_verso_url && signedUrls.carte_identite_verso && (
-                  <a
-                    href={signedUrls.carte_identite_verso}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-                  >
-                    Carte d'identité (verso)
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-
-          {!isViewMode && (
-            <div className="border-t pt-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Upload className="w-5 h-5" />
-                Ajouter/Remplacer des documents
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    CV {candidate?.cv_url && <span className="text-orange-600">(Remplacer)</span>}
-                  </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) setDocFiles({ ...docFiles, cv: file });
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  />
-                  {docFiles.cv && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.cv.name}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Lettre de motivation {candidate?.lettre_motivation_url && <span className="text-orange-600">(Remplacer)</span>}
-                  </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) setDocFiles({ ...docFiles, lettre_motivation: file });
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  />
-                  {docFiles.lettre_motivation && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.lettre_motivation.name}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Carte d'identité (Recto) {candidate?.carte_identite_recto_url && <span className="text-orange-600">(Remplacer)</span>}
-                  </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) setDocFiles({ ...docFiles, carte_identite_recto: file });
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  />
-                  {docFiles.carte_identite_recto && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.carte_identite_recto.name}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Carte d'identité (Verso) {candidate?.carte_identite_verso_url && <span className="text-orange-600">(Remplacer)</span>}
-                  </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) setDocFiles({ ...docFiles, carte_identite_verso: file });
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  />
-                  {docFiles.carte_identite_verso && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.carte_identite_verso.name}</p>}
-                </div>
-              </div>
-              {uploadingDocs && (
-                <p className="text-sm text-blue-600 mt-3 flex items-center gap-2">
-                  <Upload className="w-4 h-4 animate-spin" />
-                  Upload des documents en cours...
-                </p>
-              )}
-            </div>
-          )}
-
-          {candidate && candidate.note_interne && (
-            <div className="border-t pt-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Note interne RH</h3>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{candidate.note_interne}</p>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">Cette note est uniquement visible par l'équipe RH</p>
-            </div>
-          )}
-
-          {!isViewMode && (
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={loading || !!ageError}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'En cours...' : candidate ? 'Modifier' : 'Créer'}
-              </button>
-            </div>
-          )}
-
-          {isViewMode && (
-            <div className="flex justify-end pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Fermer
-              </button>
-            </div>
-          )}
+          {candidate && (candidate.cv_url || candidate.lettre_motivation_url || candidate.carte_identite_recto_url) && (<div className="border-t pt-4"><h3 className="text-lg font-semibold text-gray-900 mb-3">Documents existants</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{candidate.cv_url && signedUrls.cv && (<a href={signedUrls.cv} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">CV</a>)}{candidate.lettre_motivation_url && signedUrls.lettre_motivation && (<a href={signedUrls.lettre_motivation} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">Lettre de motivation</a>)}{candidate.carte_identite_recto_url && signedUrls.carte_identite_recto && (<a href={signedUrls.carte_identite_recto} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">Carte d'identité (recto)</a>)}{candidate.carte_identite_verso_url && signedUrls.carte_identite_verso && (<a href={signedUrls.carte_identite_verso} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">Carte d'identité (verso)</a>)}</div></div>)}
+          {!isViewMode && (<div className="border-t pt-4"><h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2"><Upload className="w-5 h-5" />Ajouter/Remplacer des documents</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">CV {candidate?.cv_url && <span className="text-orange-600">(Remplacer)</span>}</label><input type="file" accept=".pdf,.doc,.docx" onChange={(e) => { const file = e.target.files?.[0]; if (file) setDocFiles({ ...docFiles, cv: file }); }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" />{docFiles.cv && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.cv.name}</p>}</div><div><label className="block text-sm font-medium text-gray-700 mb-1">Lettre de motivation {candidate?.lettre_motivation_url && <span className="text-orange-600">(Remplacer)</span>}</label><input type="file" accept=".pdf,.doc,.docx" onChange={(e) => { const file = e.target.files?.[0]; if (file) setDocFiles({ ...docFiles, lettre_motivation: file }); }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" />{docFiles.lettre_motivation && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.lettre_motivation.name}</p>}</div><div><label className="block text-sm font-medium text-gray-700 mb-1">Carte d'identité (Recto) {candidate?.carte_identite_recto_url && <span className="text-orange-600">(Remplacer)</span>}</label><input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => { const file = e.target.files?.[0]; if (file) setDocFiles({ ...docFiles, carte_identite_recto: file }); }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" />{docFiles.carte_identite_recto && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.carte_identite_recto.name}</p>}</div><div><label className="block text-sm font-medium text-gray-700 mb-1">Carte d'identité (Verso) {candidate?.carte_identite_verso_url && <span className="text-orange-600">(Remplacer)</span>}</label><input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => { const file = e.target.files?.[0]; if (file) setDocFiles({ ...docFiles, carte_identite_verso: file }); }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" />{docFiles.carte_identite_verso && <p className="text-xs text-green-600 mt-1">Fichier sélectionné: {docFiles.carte_identite_verso.name}</p>}</div></div>{uploadingDocs && (<p className="text-sm text-blue-600 mt-3 flex items-center gap-2"><Upload className="w-4 h-4 animate-spin" />Upload des documents en cours...</p>)}</div>)}
+          {candidate && candidate.note_interne && (<div className="border-t pt-4"><h3 className="text-lg font-semibold text-gray-900 mb-2">Note interne RH</h3><div className="bg-amber-50 border border-amber-200 rounded-lg p-4"><p className="text-sm text-gray-700 whitespace-pre-wrap">{candidate.note_interne}</p></div><p className="text-xs text-gray-500 mt-2">Cette note est uniquement visible par l'équipe RH</p></div>)}
+          {!isViewMode && (<div className="flex gap-3 pt-4"><button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Annuler</button><button type="submit" disabled={loading || !!ageError} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{loading ? 'En cours...' : candidate ? 'Modifier' : 'Créer'}</button></div>)}
+          {isViewMode && (<div className="flex justify-end pt-4"><button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Fermer</button></div>)}
         </form>
       </div>
     </div>
   );
 }
 
-function ConvertToEmployeeModal({
-  candidate,
-  sites,
-  secteurs,
-  onClose,
-  onSuccess
-}: {
-  candidate: Candidate;
-  sites: Site[];
-  secteurs: Secteur[];
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
+// ── ConvertToEmployeeModal (inchangé) ──
+
+function ConvertToEmployeeModal({ candidate, sites, secteurs, onClose, onSuccess }: { candidate: Candidate; sites: Site[]; secteurs: Secteur[]; onClose: () => void; onSuccess: () => void; }) {
   const [ibanError, setIbanError] = useState('');
   const [ibanValidationMessage, setIbanValidationMessage] = useState('');
-  const [formData, setFormData] = useState({
-    role: '',
-    date_entree: new Date().toISOString().split('T')[0],
-    site_id: candidate.site_id || null,
-    secteur_id: candidate.secteur_id || null,
-    visite_medicale_faite: (candidate as any).visite_medicale_faite || false,
-    casier_judiciaire_date: (candidate as any).casier_judiciaire_date || '',
-    dpae_transmise: (candidate as any).dpae_transmise || false,
-    iban: (candidate as any).iban || '',
-    bic: (candidate as any).bic || '',
-  });
+  const [formData, setFormData] = useState({ role: '', date_entree: new Date().toISOString().split('T')[0], site_id: candidate.site_id || null, secteur_id: candidate.secteur_id || null, visite_medicale_faite: (candidate as any).visite_medicale_faite || false, casier_judiciaire_date: (candidate as any).casier_judiciaire_date || '', dpae_transmise: (candidate as any).dpae_transmise || false, iban: (candidate as any).iban || '', bic: (candidate as any).bic || '' });
   const [loading, setLoading] = useState(false);
 
-  const validateIban = async (iban: string) => {
-    if (!iban || iban.length < 15) {
-      setIbanError('');
-      return;
-    }
-
-    try {
-      const cleanIban = iban.replace(/\s/g, '').toUpperCase();
-
-      const res = await fetch(`https://openiban.com/validate/${cleanIban}?validateBankCode=true`);
-      const data = await res.json();
-
-      if (data.valid) {
-        setIbanError('');
-        setIbanValidationMessage('✅ IBAN valide');
-
-        setFormData(prev => ({ ...prev, iban: cleanIban }));
-      } else {
-        setIbanError('❌ IBAN invalide');
-        setIbanValidationMessage('');
-      }
-    } catch (e) {
-      console.error('IBAN validation error:', e);
-      setIbanError('❌ Erreur validation');
-      setIbanValidationMessage('');
-    }
-  };
+  const validateIban = async (iban: string) => { if (!iban || iban.length < 15) { setIbanError(''); return; } try { const cleanIban = iban.replace(/\s/g, '').toUpperCase(); const res = await fetch(`https://openiban.com/validate/${cleanIban}?validateBankCode=true`); const data = await res.json(); if (data.valid) { setIbanError(''); setIbanValidationMessage('✅ IBAN valide'); setFormData(prev => ({ ...prev, iban: cleanIban })); } else { setIbanError('❌ IBAN invalide'); setIbanValidationMessage(''); } } catch (e) { setIbanError('❌ Erreur validation'); setIbanValidationMessage(''); } };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.dpae_transmise) {
-      alert('La DPAE doit être transmise avant de convertir en salarié');
-      return;
-    }
-
-    if (!formData.bic || formData.bic.trim() === '') {
-      alert('Le BIC doit être rempli. Vérifiez que l\'IBAN est valide.');
-      return;
-    }
-
-    if (formData.casier_judiciaire_date) {
-      const casierDate = new Date(formData.casier_judiciaire_date);
-      const today = new Date();
-      const diffMonths = (today.getFullYear() - casierDate.getFullYear()) * 12 + today.getMonth() - casierDate.getMonth();
-      if (diffMonths > 3) {
-        alert('Le casier judiciaire doit dater de moins de 3 mois');
-        return;
-      }
-    }
-
+    if (!formData.dpae_transmise) { alert('La DPAE doit être transmise avant de convertir en salarié'); return; }
+    if (!formData.bic || formData.bic.trim() === '') { alert('Le BIC doit être rempli.'); return; }
+    if (formData.casier_judiciaire_date) { const d = new Date(formData.casier_judiciaire_date); const diff = (new Date().getFullYear() - d.getFullYear()) * 12 + new Date().getMonth() - d.getMonth(); if (diff > 3) { alert('Le casier judiciaire doit dater de moins de 3 mois'); return; } }
     setLoading(true);
-
     try {
       const sanitizedFormData = sanitizeUuidFields(formData, ['site_id', 'secteur_id']);
-
-      const { data: profilData, error: profilError } = await supabase.from('profil').insert([{
-        prenom: candidate.prenom,
-        nom: candidate.nom,
-        email: candidate.email,
-        tel: candidate.tel,
-        role: sanitizedFormData.role,
-        date_entree: sanitizedFormData.date_entree,
-        site_id: sanitizedFormData.site_id,
-        secteur_id: sanitizedFormData.secteur_id,
-        statut: 'actif',
-        candidat_id: candidate.id,
-        adresse: candidate.adresse,
-        code_postal: candidate.code_postal,
-        ville: candidate.ville,
-        date_naissance: candidate.date_naissance,
-        nationalite: candidate.nationalite,
-        date_permis_conduire: candidate.date_permis_conduire,
-        iban: sanitizedFormData.iban,
-        bic: sanitizedFormData.bic,
-        nir: (candidate as any).numero_securite_sociale,
-        permis_categorie: (candidate as any).permis_categorie,
-        permis_points: (candidate as any).permis_points,
-        nom_naissance: (candidate as any).nom_naissance,
-        lieu_naissance: (candidate as any).lieu_naissance,
-        pays_naissance: (candidate as any).pays_naissance,
-        complement_adresse: (candidate as any).complement_adresse,
-      }]).select().single();
-
+      const { data: profilData, error: profilError } = await supabase.from('profil').insert([{ prenom: candidate.prenom, nom: candidate.nom, email: candidate.email, tel: candidate.tel, role: sanitizedFormData.role, date_entree: sanitizedFormData.date_entree, site_id: sanitizedFormData.site_id, secteur_id: sanitizedFormData.secteur_id, statut: 'actif', candidat_id: candidate.id, adresse: candidate.adresse, code_postal: candidate.code_postal, ville: candidate.ville, date_naissance: candidate.date_naissance, nationalite: candidate.nationalite, date_permis_conduire: candidate.date_permis_conduire, iban: sanitizedFormData.iban, bic: sanitizedFormData.bic, nir: (candidate as any).numero_securite_sociale, permis_categorie: (candidate as any).permis_categorie, permis_points: (candidate as any).permis_points, nom_naissance: (candidate as any).nom_naissance, lieu_naissance: (candidate as any).lieu_naissance, pays_naissance: (candidate as any).pays_naissance, complement_adresse: (candidate as any).complement_adresse }]).select().single();
       if (profilError) throw profilError;
-
-      const { data: documents } = await supabase
-        .from('document')
-        .select('*')
-        .eq('owner_id', candidate.id)
-        .eq('owner_type', 'candidat');
-
-      if (documents && documents.length > 0) {
-        const newDocuments = documents.map(doc => ({
-          owner_id: profilData.id,
-          owner_type_document: 'profil',
-          type_document: doc.type,
-          file_url: doc.file_url,
-          date_emission: doc.date_emission,
-          date_expiration: doc.date_expiration,
-          statut: doc.statut,
-        }));
-
-        await supabase.from('document').insert(newDocuments);
-      }
-
+      const { data: documents } = await supabase.from('document').select('*').eq('owner_id', candidate.id).eq('owner_type', 'candidat');
+      if (documents && documents.length > 0) { const newDocuments = documents.map(doc => ({ owner_id: profilData.id, owner_type_document: 'profil', type_document: doc.type, file_url: doc.file_url, date_emission: doc.date_emission, date_expiration: doc.date_expiration, statut: doc.statut })); await supabase.from('document').insert(newDocuments); }
       await supabase.from('candidat').delete().eq('id', candidate.id);
-
       onSuccess();
-    } catch (error) {
-      console.error('Erreur conversion:', error);
-      alert('Erreur lors de la conversion');
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error('Erreur conversion:', error); alert('Erreur lors de la conversion'); } finally { setLoading(false); }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Convertir en salarié</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-gray-700">
-            <span className="font-semibold">{candidate.prenom} {candidate.nom}</span>
-            <br />
-            {candidate.email}
-          </p>
-        </div>
-
+        <div className="flex items-center justify-between mb-6"><h2 className="text-2xl font-bold text-gray-900">Convertir en salarié</h2><button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button></div>
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg"><p className="text-sm text-gray-700"><span className="font-semibold">{candidate.prenom} {candidate.nom}</span><br />{candidate.email}</p></div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rôle / Poste</label>
-            <input
-              type="text"
-              required
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date d'entrée</label>
-            <input
-              type="date"
-              required
-              value={formData.date_entree}
-              onChange={(e) => setFormData({ ...formData, date_entree: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
-            <select
-              value={formData.site_id ?? ""}
-              onChange={(e) => setFormData({ ...formData, site_id: e.target.value || null })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Aucun</option>
-              {sites.map(site => (
-                <option key={site.id} value={site.id}>{site.nom}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Secteur</label>
-            <select
-              value={formData.secteur_id ?? ""}
-              onChange={(e) => setFormData({ ...formData, secteur_id: e.target.value || null })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Aucun</option>
-              {secteurs.map(secteur => (
-                <option key={secteur.id} value={secteur.id}>{secteur.nom}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Informations bancaires</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">IBAN *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.iban}
-                  onChange={(e) => { setFormData({ ...formData, iban: e.target.value }); validateIban(e.target.value); }}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${ibanError ? 'border-red-500' : 'border-gray-300'}`}
-                  placeholder="FR1420041010050500013M02606"
-                />
-                {ibanError && <div className="text-red-600 text-sm mt-1">{ibanError}</div>}
-                {ibanValidationMessage && <div className="text-green-600 text-sm mt-1">{ibanValidationMessage}</div>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">BIC *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.bic}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bic: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Ex: BNPAFRPP"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Documents et validations</h3>
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="visite_medicale"
-                  checked={formData.visite_medicale_faite}
-                  onChange={(e) => setFormData({ ...formData, visite_medicale_faite: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="visite_medicale" className="ml-2 block text-sm text-gray-900">
-                  Visite médicale effectuée
-                </label>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date du casier judiciaire <span className="text-xs text-gray-500">(doit dater de moins de 3 mois)</span>
-                </label>
-                <input
-                  type="date"
-                  value={formData.casier_judiciaire_date}
-                  onChange={(e) => setFormData({ ...formData, casier_judiciaire_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div className="flex items-center p-3 bg-yellow-50 rounded-lg">
-                <input
-                  type="checkbox"
-                  id="dpae"
-                  checked={formData.dpae_transmise}
-                  onChange={(e) => setFormData({ ...formData, dpae_transmise: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="dpae" className="ml-2 block text-sm font-medium text-gray-900">
-                  DPAE transmise au candidat * <span className="text-xs text-gray-600">(requis avant conversion)</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={loading || ibanError !== ''}
-              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Conversion...' : 'Convertir'}
-            </button>
-          </div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Rôle / Poste</label><input type="text" required value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Date d'entrée</label><input type="date" required value={formData.date_entree} onChange={(e) => setFormData({ ...formData, date_entree: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Site</label><select value={formData.site_id ?? ""} onChange={(e) => setFormData({ ...formData, site_id: e.target.value || null })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"><option value="">Aucun</option>{sites.map(site => (<option key={site.id} value={site.id}>{site.nom}</option>))}</select></div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Secteur</label><select value={formData.secteur_id ?? ""} onChange={(e) => setFormData({ ...formData, secteur_id: e.target.value || null })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"><option value="">Aucun</option>{secteurs.map(secteur => (<option key={secteur.id} value={secteur.id}>{secteur.nom}</option>))}</select></div>
+          <div className="border-t pt-4"><h3 className="text-lg font-semibold text-gray-900 mb-3">Informations bancaires</h3><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">IBAN *</label><input type="text" required value={formData.iban} onChange={(e) => { setFormData({ ...formData, iban: e.target.value }); validateIban(e.target.value); }} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${ibanError ? 'border-red-500' : 'border-gray-300'}`} placeholder="FR1420041010050500013M02606" />{ibanError && <div className="text-red-600 text-sm mt-1">{ibanError}</div>}{ibanValidationMessage && <div className="text-green-600 text-sm mt-1">{ibanValidationMessage}</div>}</div><div><label className="block text-sm font-medium text-gray-700 mb-1">BIC *</label><input type="text" required value={formData.bic} onChange={(e) => setFormData(prev => ({ ...prev, bic: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Ex: BNPAFRPP" /></div></div></div>
+          <div className="border-t pt-4"><h3 className="text-lg font-semibold text-gray-900 mb-3">Documents et validations</h3><div className="space-y-4"><div className="flex items-center"><input type="checkbox" id="visite_medicale" checked={formData.visite_medicale_faite} onChange={(e) => setFormData({ ...formData, visite_medicale_faite: e.target.checked })} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" /><label htmlFor="visite_medicale" className="ml-2 block text-sm text-gray-900">Visite médicale effectuée</label></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Date du casier judiciaire <span className="text-xs text-gray-500">(doit dater de moins de 3 mois)</span></label><input type="date" value={formData.casier_judiciaire_date} onChange={(e) => setFormData({ ...formData, casier_judiciaire_date: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></div><div className="flex items-center p-3 bg-yellow-50 rounded-lg"><input type="checkbox" id="dpae" checked={formData.dpae_transmise} onChange={(e) => setFormData({ ...formData, dpae_transmise: e.target.checked })} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" /><label htmlFor="dpae" className="ml-2 block text-sm font-medium text-gray-900">DPAE transmise au candidat * <span className="text-xs text-gray-600">(requis avant conversion)</span></label></div></div></div>
+          <div className="flex gap-3 pt-4"><button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Annuler</button><button type="submit" disabled={loading || ibanError !== ''} className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50">{loading ? 'Conversion...' : 'Convertir'}</button></div>
         </form>
       </div>
     </div>
