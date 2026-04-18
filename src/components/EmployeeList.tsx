@@ -662,34 +662,36 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
     <div>
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Employés</h1>
+          <h1 className="text-xl font-bold text-gray-900 mb-3">Salariés</h1>
 
           {/* Onglets */}
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setActiveTab('salaries')}
-              className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 activeTab === 'salaries'
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
+                  ? 'text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              style={activeTab === 'salaries' ? { background: '#0073ea' } : undefined}
             >
               Salariés
             </button>
             <button
               onClick={() => setActiveTab('sortants')}
-              className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 activeTab === 'sortants'
-                  ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md'
+                  ? 'text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              style={activeTab === 'sortants' ? { background: '#e44258' } : undefined}
             >
               Sortants
             </button>
           </div>
 
           <div className="flex items-center gap-4">
-            <p className="text-gray-600">
+            <p className="text-sm text-gray-400">
               {filteredAndSortedEmployees.length} employé(s) {hasActiveFilters && `(sur ${employees.length} au total)`}
             </p>
             <div className="flex items-center gap-2">
@@ -868,7 +870,7 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
             placeholder="Rechercher un employé..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           />
         </div>
       </div>
@@ -878,14 +880,14 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
           <p className="text-gray-600">Aucun employé trouvé</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-6 border border-gray-100">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
           <div>
             <table className="w-full divide-y divide-gray-100 table-fixed">
-              <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50">
+              <thead className="bg-gray-50/80">
                 <tr>
                   <th
                     onClick={() => handleSort('matricule_tca')}
-                    className="w-[7%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[7%] px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Matricule
@@ -894,7 +896,7 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                   </th>
                   <th
                     onClick={() => handleSort('prenom')}
-                    className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[9%] px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Prénom
@@ -903,7 +905,7 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                   </th>
                   <th
                     onClick={() => handleSort('nom')}
-                    className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[9%] px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Nom
@@ -912,7 +914,7 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                   </th>
                   <th
                     onClick={() => handleSort('email')}
-                    className="w-[16%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[16%] px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Email
@@ -921,7 +923,7 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                   </th>
                   <th
                     onClick={() => handleSort('type_contrat')}
-                    className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[9%] px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Type
@@ -930,7 +932,7 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                   </th>
                   <th
                     onClick={() => handleSort('date_entree')}
-                    className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[9%] px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Début
@@ -939,7 +941,7 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                   </th>
                   <th
                     onClick={() => handleSort('statut_contrat')}
-                    className="w-[11%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[11%] px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Statut
@@ -948,7 +950,7 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                   </th>
                   <th
                     onClick={() => handleSort('secteur')}
-                    className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[10%] px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Secteur
@@ -957,19 +959,19 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                   </th>
                   <th
                     onClick={() => handleSort('department_code')}
-                    className="w-[6%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
+                    className="w-[6%] px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-1 group-hover:text-blue-700 transition-colors">
                       Dép.
                       {getSortIcon('department_code')}
                     </div>
                   </th>
-                  <th className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="w-[9%] px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-50">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedEmployees.map((employee) => (
                   <tr
                     key={employee.id}
@@ -977,18 +979,18 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                       setSelectedEmployee(employee);
                       setIsModalOpen(true);
                     }}
-                    className="hover:bg-gradient-to-r hover:from-blue-50 hover:via-sky-50 hover:to-blue-50 cursor-pointer transition-all duration-200 group border-l-4 border-transparent hover:border-l-blue-500 hover:shadow-lg relative"
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
                   >
-                    <td className="px-3 py-3 text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors truncate">
+                    <td className="px-3 py-3 text-sm font-mono font-medium text-gray-400 truncate">
                       {employee.matricule_tca || '-'}
                     </td>
-                    <td className="px-3 py-3 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors truncate">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-900 truncate">
                       {employee.prenom}
                     </td>
-                    <td className="px-3 py-3 text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors truncate">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-900 truncate">
                       {employee.nom}
                     </td>
-                    <td className="px-3 py-3 text-sm text-gray-700 group-hover:text-blue-800 transition-colors truncate" title={employee.email}>
+                    <td className="px-3 py-3 text-sm text-gray-700 truncate" title={employee.email}>
                       {employee.email}
                     </td>
                     <td className="px-3 py-3 text-sm text-gray-900">
@@ -1005,16 +1007,16 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
   return activeContract?.variables?.type_contrat || activeContract?.modeles_contrats?.nom || employee.modele_contrat || undefined;
 })()} />
                     </td>
-                    <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors truncate">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-700 truncate">
                       {formatDate(employee.date_entree)}
                     </td>
                     <td className="px-3 py-3 text-sm text-gray-900">
                       <ContractBadge type="status" value={employee.statut || 'actif'} />
                     </td>
-                    <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors truncate">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-700 truncate">
                       {employee.secteur?.nom || '-'}
                     </td>
-                    <td className="px-3 py-3 text-sm font-medium text-gray-700 group-hover:text-blue-800 transition-colors truncate text-center">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-700 truncate text-center">
                       {employee.department_code || '-'}
                     </td>
                     <td className="px-3 py-3">
@@ -1024,7 +1026,8 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                           setSelectedEmployee(employee);
                           setIsModalOpen(true);
                         }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-bold rounded-lg transition-all duration-300 shadow-md hover:shadow-xl transform hover:scale-110"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-colors hover:opacity-90"
+                        style={{ background: '#0073ea' }}
                       >
                         <Eye className="w-3.5 h-3.5" />
                         Voir
@@ -1038,18 +1041,16 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="px-6 py-5 bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50 border-t border-gray-100 flex items-center justify-between">
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm">
-                <span className="font-bold text-gray-800">Affichage de {startIndex + 1} à {endIndex}</span>
-                <span className="text-gray-500">sur</span>
-                <span className="font-bold text-blue-600">{totalItems}</span>
+                <span className="text-sm text-gray-400">Affichage de {startIndex + 1} à {endIndex} sur {totalItems}</span>
               </div>
 
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => handlePageChange(1)}
                   disabled={currentPage === 1}
-                  className="p-2.5 rounded-xl bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105"
+                  className="p-2 rounded-lg bg-white hover:bg-gray-50 border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   title="Première page"
                 >
                   <ChevronsLeft className="w-5 h-5 text-gray-700" />
@@ -1058,23 +1059,22 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="p-2.5 rounded-xl bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105"
+                  className="p-2 rounded-lg bg-white hover:bg-gray-50 border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   title="Page précédente"
                 >
                   <ChevronLeft className="w-5 h-5 text-gray-700" />
                 </button>
 
-                <div className="flex items-center gap-3 px-5 py-2.5 bg-white rounded-xl shadow-md border-2 border-gray-200">
-                  <span className="text-sm font-semibold text-gray-700">Page</span>
-                  <span className="px-4 py-1.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg font-bold text-sm shadow-sm">{currentPage}</span>
-                  <span className="text-sm text-gray-500">sur</span>
-                  <span className="text-sm font-bold text-gray-800">{totalPages}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">Page</span>
+                  <span className="px-3 py-1 text-white rounded-md text-sm font-medium" style={{ background: '#0073ea' }}>{currentPage}</span>
+                  <span className="text-sm text-gray-500">sur {totalPages}</span>
                 </div>
 
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="p-2.5 rounded-xl bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105"
+                  className="p-2 rounded-lg bg-white hover:bg-gray-50 border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   title="Page suivante"
                 >
                   <ChevronRight className="w-5 h-5 text-gray-700" />
@@ -1083,7 +1083,7 @@ export function EmployeeList({ initialProfilId, onCloseProfile }: EmployeeListPr
                 <button
                   onClick={() => handlePageChange(totalPages)}
                   disabled={currentPage === totalPages}
-                  className="p-2.5 rounded-xl bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105"
+                  className="p-2 rounded-lg bg-white hover:bg-gray-50 border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   title="Dernière page"
                 >
                   <ChevronsRight className="w-5 h-5 text-gray-700" />
