@@ -81,6 +81,12 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
   // Nouveau : demande de justificatif par email
   const [showJustificatifModal, setShowJustificatifModal] = useState(false);
 
+  // Calendrier des absences
+  const [viewMode, setViewMode] = useState<'liste' | 'calendrier'>('liste');
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [selectedDayEvents, setSelectedDayEvents] = useState<{ date: string; events: AREvent[] } | null>(null);
+
   // Nouveau : filtre par statut (cartes cliquables) + tri sur les colonnes de date
   const [statutFilter, setStatutFilter] = useState<'tous' | 'en_cours' | 'cloture' | 'a_traiter' | 'sans_justificatif'>('tous');
   const [sortColumn, setSortColumn] = useState<'date_debut' | 'date_fin'>('date_debut');
@@ -303,6 +309,54 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   };
+
+  // === CALENDRIER : fonctions helper ===
+
+  // Obtenir les jours du mois pour le calendrier
+  const getCalendarDays = () => {
+    const firstDay = new Date(calendarYear, calendarMonth, 1);
+    const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
+    const startDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Lundi = 0
+    const daysInMonth = lastDay.getDate();
+
+    const days: (number | null)[] = [];
+    // Cases vides avant le 1er jour
+    for (let i = 0; i < startDayOfWeek; i++) {
+      days.push(null);
+    }
+    // Jours du mois
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(i);
+    }
+    return days;
+  };
+
+  // Obtenir les absences pour un jour donné
+  const getEventsForDay = (day: number): AREvent[] => {
+    const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return events.filter((e) => {
+      if (!e.date_debut) return false;
+      const debut = e.date_debut;
+      const fin = e.date_fin || e.date_debut;
+      return dateStr >= debut && dateStr <= fin;
+    });
+  };
+
+  // Couleur d'un jour selon les absences (statut + justification)
+  const getDayColor = (dayEvents: AREvent[]): string => {
+    if (dayEvents.length === 0) return '';
+    const allJustified = dayEvents.every((e) => e.is_justified);
+    const noneJustified = dayEvents.every((e) => !e.is_justified);
+    const allCloture = dayEvents.every((e) => e.statut === 'cloture');
+
+    if (allCloture) return 'bg-green-100 border-green-300 text-green-800';
+    if (noneJustified) return 'bg-red-100 border-red-300 text-red-800';
+    if (allJustified) return 'bg-blue-100 border-blue-300 text-blue-800';
+    return 'bg-amber-100 border-amber-300 text-amber-800'; // Mix justifié/non justifié
+  };
+
+  const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -594,7 +648,30 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Absences</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {/* Toggle vue Liste / Calendrier */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('liste')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                viewMode === 'liste'
+                  ? 'bg-white shadow text-gray-900'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              📋 Liste
+            </button>
+            <button
+              onClick={() => setViewMode('calendrier')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                viewMode === 'calendrier'
+                  ? 'bg-white shadow text-gray-900'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              📅 Calendrier
+            </button>
+          </div>
           <button
             onClick={exportToExcel}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
@@ -698,6 +775,7 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
         </button>
       </div>
 
+      {viewMode === 'liste' && (<>
       <div className="bg-white rounded-lg shadow p-6 space-y-6">
         <div className="space-y-4">
           <div>
@@ -998,6 +1076,204 @@ export default function ComptabiliteARTab({ focusArEventId }: ComptabiliteARTabP
               onPageChange={setCurrentPage}
             />
           )}
+        </div>
+      )}
+      </>)}
+
+      {viewMode === 'calendrier' && (
+        <div className="bg-white rounded-lg shadow">
+          {/* Navigation mois */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <button
+              onClick={() => {
+                if (calendarMonth === 0) {
+                  setCalendarMonth(11);
+                  setCalendarYear(calendarYear - 1);
+                } else {
+                  setCalendarMonth(calendarMonth - 1);
+                }
+              }}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition-colors"
+            >
+              ← Précédent
+            </button>
+            <h3 className="text-xl font-bold text-gray-800">
+              {monthNames[calendarMonth]} {calendarYear}
+            </h3>
+            <button
+              onClick={() => {
+                if (calendarMonth === 11) {
+                  setCalendarMonth(0);
+                  setCalendarYear(calendarYear + 1);
+                } else {
+                  setCalendarMonth(calendarMonth + 1);
+                }
+              }}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition-colors"
+            >
+              Suivant →
+            </button>
+          </div>
+
+          {/* Légende */}
+          <div className="flex items-center gap-4 px-4 py-2 border-b bg-gray-50 text-xs text-gray-600 flex-wrap">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded bg-blue-200 border border-blue-300"></div>
+              <span>Tous justifiés</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded bg-red-200 border border-red-300"></div>
+              <span>Non justifiés</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded bg-amber-200 border border-amber-300"></div>
+              <span>Mixte</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded bg-green-200 border border-green-300"></div>
+              <span>Tous clôturés</span>
+            </div>
+          </div>
+
+          {/* Grille du calendrier */}
+          <div className="p-4">
+            {/* En-têtes des jours */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {dayNames.map((day) => (
+                <div key={day} className="text-center text-xs font-bold text-gray-500 uppercase py-2">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Cases du calendrier */}
+            <div className="grid grid-cols-7 gap-1">
+              {getCalendarDays().map((day, index) => {
+                if (day === null) {
+                  return <div key={`empty-${index}`} className="h-20 bg-gray-50 rounded" />;
+                }
+
+                const dayEvents = getEventsForDay(day);
+                const dayColor = getDayColor(dayEvents);
+                const today = new Date();
+                const isToday = day === today.getDate() && calendarMonth === today.getMonth() && calendarYear === today.getFullYear();
+
+                return (
+                  <div
+                    key={day}
+                    onClick={() => {
+                      if (dayEvents.length > 0) {
+                        const dateStr = `${String(day).padStart(2, '0')}/${String(calendarMonth + 1).padStart(2, '0')}/${calendarYear}`;
+                        setSelectedDayEvents({ date: dateStr, events: dayEvents });
+                      }
+                    }}
+                    className={`h-20 rounded-lg border p-1.5 transition-all ${
+                      dayEvents.length > 0
+                        ? `${dayColor} cursor-pointer hover:shadow-md hover:scale-105`
+                        : 'bg-white border-gray-100 hover:bg-gray-50'
+                    } ${isToday ? 'ring-2 ring-blue-500 ring-offset-1' : ''}`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className={`text-sm font-semibold ${isToday ? 'text-blue-600' : dayEvents.length > 0 ? '' : 'text-gray-700'}`}>
+                        {day}
+                      </span>
+                      {dayEvents.length > 0 && (
+                        <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-white/70">
+                          {dayEvents.length}
+                        </span>
+                      )}
+                    </div>
+                    {dayEvents.length > 0 && dayEvents.length <= 3 && (
+                      <div className="mt-1 space-y-0.5">
+                        {dayEvents.slice(0, 2).map((e) => (
+                          <div key={e.id} className="text-[10px] truncate font-medium">
+                            {e.nom}
+                          </div>
+                        ))}
+                        {dayEvents.length > 2 && (
+                          <div className="text-[10px] font-medium opacity-70">+{dayEvents.length - 2} autres</div>
+                        )}
+                      </div>
+                    )}
+                    {dayEvents.length > 3 && (
+                      <div className="mt-1">
+                        <div className="text-[10px] font-bold">{dayEvents.length} absences</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup détail d'un jour du calendrier */}
+      {selectedDayEvents && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+              <h3 className="text-lg font-bold text-gray-900">
+                📅 Absences du {selectedDayEvents.date}
+              </h3>
+              <button
+                onClick={() => setSelectedDayEvents(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 overflow-y-auto max-h-[60vh]">
+              <p className="text-sm text-gray-600 mb-2">
+                {selectedDayEvents.events.length} absence{selectedDayEvents.events.length > 1 ? 's' : ''} ce jour
+              </p>
+              {selectedDayEvents.events.map((event) => {
+                const poleColors = getPoleColors(event.admin_pole);
+                return (
+                  <div
+                    key={event.id}
+                    className={`p-3 rounded-lg border ${poleColors.row || 'bg-white'} border-gray-200`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-gray-900">{event.prenom} {event.nom}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                          (event.statut || 'en_cours') === 'cloture'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {(event.statut || 'en_cours') === 'cloture' ? 'Clôturé' : 'En cours'}
+                        </span>
+                        <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${
+                          event.is_justified
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {event.is_justified ? '✓' : '✗'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      <span className="font-medium">{event.matricule}</span>
+                      {event.secteur && <span> · {event.secteur}</span>}
+                      <span> · Du {formatDate(event.date_debut)} au {event.date_fin ? formatDate(event.date_fin) : '-'}</span>
+                    </div>
+                    {event.note && (
+                      <p className="text-xs text-gray-500 mt-1 italic">{event.note}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-end p-4 border-t">
+              <button
+                onClick={() => setSelectedDayEvents(null)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
