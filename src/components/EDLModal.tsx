@@ -470,6 +470,57 @@ export function EDLModal(props: EDLModalProps) {
         }
       }
 
+// 🆕 D5 : Génération du PDF EDL (non bloquant — si ça plante, l'EDL est quand même sauvé)
+      try {
+        const uploadedPhotos2 = photoSlots.filter((s) => s.uploaded && s.storagePath);
+        const edlPdfData: EDLGenerationData = {
+          edlId,
+          typeEdl,
+          vehiculeId,
+          immatriculation,
+          marque,
+          modele,
+          refTca,
+          conducteurNom: salarieNom,
+          conducteurPrenom: salariePrenom,
+          adminNom,
+          adminPrenom,
+          kilometrage: km,
+          dateValiditeCt: dateValiditeCt || null,
+          dateDerniereVidange: dateDerniereVidange || null,
+          dateProchaineRevision: dateProchaineRevision || null,
+          carrosserieAvant,
+          carrosserieArriere,
+          carrosserieGauche,
+          carrosserieDroite,
+          vitres,
+          retroviseurs,
+          pneus,
+          interieurSiege,
+          interieurTableauBord,
+          cricTriangleGilet,
+          observations: observations || null,
+          nbPhotos: uploadedPhotos2.length,
+          signatureAgentDataUrl: sigAgent,
+          signatureChauffeurDataUrl: sigChauffeur,
+        };
+
+        const pdfResult = await generateEDL(edlPdfData);
+
+        if (pdfResult.success && pdfResult.pdfPath) {
+          // Sauver le chemin PDF dans etat_des_lieux
+          await supabase
+            .from('etat_des_lieux')
+            .update({ pdf_path: pdfResult.pdfPath })
+            .eq('id', edlId);
+          console.log('[EDLModal] PDF EDL généré et sauvé:', pdfResult.pdfPath);
+        } else {
+          console.warn('[EDLModal] Génération PDF échouée (non bloquant):', pdfResult.error);
+        }
+      } catch (pdfErr) {
+        console.warn('[EDLModal] Erreur génération PDF (non bloquant):', pdfErr);
+      }
+
       // 2. Mise à jour kilometrage_actuel du véhicule
       const { error: kmUpdateError } = await supabase
         .from('vehicule')
