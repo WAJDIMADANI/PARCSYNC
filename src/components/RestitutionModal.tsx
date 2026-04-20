@@ -312,7 +312,7 @@ export function RestitutionModal(props: RestitutionModalProps) {
 
       // 🆕 D6 : Au lieu de fermer, on prépare l'EDL retour et on l'ouvre après 1s
       setEdlData({
-        typeEdl: 'retour',
+typeEdl: 'entree',
         attributionId: attributionId,
         vehiculeId: vehiculeId,
         profilId: profilId,
