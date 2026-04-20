@@ -206,9 +206,9 @@ export function MobileAttributionModal({ vehicle, onClose, onSuccess }: MobileAt
 
   // 🆕 ÉTAPE D3 : Quand l'attestation est signée avec succès, on ouvre l'EDL au lieu de fermer.
   // Le `pdfPath` et `kmDepart` viennent de `AttestationSignatureModal.onSuccess(pdfPath, kmDepart)`.
-  const handleAttestationSuccess = (_pdfPath: string, kmDepart: number) => {
+const handleAttestationSuccess = (_pdfPath: string, kmDepart: number) => {
+    alert('DEBUG: handleAttestationSuccess appelé. attestationData=' + (attestationData ? 'OK' : 'NULL') + ', kmDepart=' + kmDepart);
     if (!attestationData) return;
-
     setEdlData({
       typeEdl: 'sortie',
       attributionId: attestationData.attributionId,
