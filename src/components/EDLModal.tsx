@@ -496,7 +496,7 @@ export function EDLModal(props: EDLModalProps) {
     }
   };
 
-  const titre = typeEdl === 'sortie' ? 'État des lieux — Sortie' : 'État des lieux — Retour';
+ const titre = typeEdl === 'sortie' ? 'État des lieux — Sortie' : 'État des lieux — Retour';
 
   // 🆕 D4 : Compteur photos
   const nbPhotosUploaded = photoSlots.filter((s) => s.uploaded).length;
