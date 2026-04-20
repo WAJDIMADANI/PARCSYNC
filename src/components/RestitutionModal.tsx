@@ -53,19 +53,20 @@ function SignaturePad({ canvasRef, disabled }: SignaturePadProps) {
   const isDrawing = useRef(false);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
 
-  const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
+ const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    // 🆕 FIX MOBILE : pas de multiplication par scaleX/scaleY ici,
+    // car ctx.scale(devicePixelRatio) s'en charge déjà dans le useEffect.
+    // Sinon les coordonnées sont double-scalées et le trait sort de la zone visible sur mobile.
     if ('touches' in e) {
       return {
-        x: (e.touches[0].clientX - rect.left) * scaleX,
-        y: (e.touches[0].clientY - rect.top) * scaleY,
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top,
       };
     }
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
     };
   };
 
