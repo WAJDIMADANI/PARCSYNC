@@ -126,9 +126,9 @@ function SignaturePad({ canvasRef, disabled }: SignaturePadProps) {
   }, [canvasRef, disabled]);
 
   return (
-    <canvas
+<canvas
       ref={canvasRef}
-      style={{ width: '100%', height: '128px', cursor: disabled ? 'not-allowed' : 'crosshair' }}
+      style={{ width: '100%', height: '128px', cursor: disabled ? 'not-allowed' : 'crosshair', touchAction: 'none' }}
       className="rounded-lg"
     />
   );
