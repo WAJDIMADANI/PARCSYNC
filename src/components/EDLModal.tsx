@@ -629,7 +629,6 @@ export function EDLModal(props: EDLModalProps) {
                   )}
                   {/* Input file caché */}
                   <input
-                   <input
                     ref={(el) => { fileInputRefs.current[slot.id] = el; }}
                     type="file"
                     accept="image/*"
