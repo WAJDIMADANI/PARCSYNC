@@ -3,7 +3,7 @@ import { ClipboardList, X, Check, RefreshCw, Loader2, Camera, Trash2, Plus, Imag
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
-export type EDLType = 'sortie' | 'retour';
+export type EDLType = 'sortie' | 'entree';
 
 interface EDLModalProps {
   isOpen: boolean;
