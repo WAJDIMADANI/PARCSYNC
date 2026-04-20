@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { ClipboardList, X, Check, RefreshCw, Loader2, Camera, Trash2, Plus, ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { generateEDL, EDLGenerationData } from '../lib/edlGenerator'; // 🆕 D5
 
 export type EDLType = 'sortie' | 'entree';
 
