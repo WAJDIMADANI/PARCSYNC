@@ -53,7 +53,7 @@ function SignaturePad({ canvasRef, disabled }: SignaturePadProps) {
   const isDrawing = useRef(false);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
 
- const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
+const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
     // 🆕 FIX MOBILE : pas de multiplication par scaleX/scaleY ici,
     // car ctx.scale(devicePixelRatio) s'en charge déjà dans le useEffect.
