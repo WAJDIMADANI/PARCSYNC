@@ -2,16 +2,15 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { RotateCcw, X, Check, RefreshCw, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { generateAttestation, AttestationData } from '../lib/attestationGenerator';
+import { EDLModal } from './EDLModal'; // 🆕 D6
 
 interface RestitutionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 
-  // ID de l'attribution active à clôturer
   attributionId: string;
 
-  // Véhicule
   vehiculeId: string;
   immatriculation: string;
   marque: string;
@@ -20,7 +19,6 @@ interface RestitutionModalProps {
   carteEssence: string | null;
   licenceTransport: string | null;
 
-  // Chauffeur (depuis attribution active + profil)
   profilId: string;
   salarieNom: string;
   salariePrenom: string;
@@ -29,7 +27,6 @@ interface RestitutionModalProps {
   salarieDateNaissance: string | null;
   salarieSecteurNom: string | null;
 
-  // Données du DÉPART (depuis BDD)
   kmDepart: number;
   dateDepart: string;
   signatureChauffeurDepart: string;
@@ -38,7 +35,6 @@ interface RestitutionModalProps {
   adminDepartPrenom: string;
   dateDepartResponsable: string;
 
-  // Admin connecté qui fait la restitution
   adminId: string;
   adminNom: string;
   adminPrenom: string;
@@ -53,11 +49,9 @@ function SignaturePad({ canvasRef, disabled }: SignaturePadProps) {
   const isDrawing = useRef(false);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
 
-const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
+  const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
-    // 🆕 FIX MOBILE : pas de multiplication par scaleX/scaleY ici,
-    // car ctx.scale(devicePixelRatio) s'en charge déjà dans le useEffect.
-    // Sinon les coordonnées sont double-scalées et le trait sort de la zone visible sur mobile.
+    // 🆕 FIX MOBILE : pas de multiplication par scaleX/scaleY
     if ('touches' in e) {
       return {
         x: e.touches[0].clientX - rect.left,
@@ -127,7 +121,7 @@ const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
   }, [canvasRef, disabled]);
 
   return (
-<canvas
+    <canvas
       ref={canvasRef}
       style={{ width: '100%', height: '128px', cursor: disabled ? 'not-allowed' : 'crosshair', touchAction: 'none' }}
       className="rounded-lg"
@@ -181,10 +175,36 @@ export function RestitutionModal(props: RestitutionModalProps) {
   const sigChauffeurRef = useRef<HTMLCanvasElement>(null);
   const sigAdminRef = useRef<HTMLCanvasElement>(null);
 
+  // 🆕 D6 : États pour la modal EDL retour
+  const [showEDL, setShowEDL] = useState(false);
+  const [edlData, setEdlData] = useState<any>(null);
+
   const handleClearChauffeur = useCallback(() => clearCanvas(sigChauffeurRef.current), []);
   const handleClearAdmin = useCallback(() => clearCanvas(sigAdminRef.current), []);
 
   if (!isOpen) return null;
+
+  // 🆕 D6 : Si la modal EDL retour est ouverte, on l'affiche par-dessus
+  if (showEDL && edlData) {
+    return (
+      <EDLModal
+        isOpen={showEDL}
+        onClose={() => {
+          // L'admin ferme l'EDL sans valider — la restitution est déjà faite.
+          // L'EDL pourra être fait plus tard manuellement (D6 futur).
+          setShowEDL(false);
+          setEdlData(null);
+          onSuccess();
+        }}
+        onSuccess={() => {
+          setShowEDL(false);
+          setEdlData(null);
+          onSuccess();
+        }}
+        {...edlData}
+      />
+    );
+  }
 
   const handleValider = async () => {
     setError(null);
@@ -235,17 +255,14 @@ export function RestitutionModal(props: RestitutionModalProps) {
         kmDepart,
         attributionId,
 
-        // Signatures DÉPART (depuis BDD)
         signatureChauffeurDataUrl: signatureChauffeurDepart,
         signatureAdminDataUrl: signatureAdminDepart,
 
-        // Mode RESTITUTION
         isRestitution: true,
         kmRetour: kmR,
         signatureChauffeurRetourDataUrl: sigChauffeurRetour,
         signatureAdminRetourDataUrl: sigAdminRetour,
 
-        // Données admin DÉPART d'origine (à réafficher en bas)
         adminNomDepartOrigine: adminDepartNom,
         adminPrenomDepartOrigine: adminDepartPrenom,
         dateDepartResponsableOrigine: formatDateFr(dateDepartResponsable),
@@ -292,7 +309,28 @@ export function RestitutionModal(props: RestitutionModalProps) {
 
       console.log('[RestitutionModal] Restitution complète');
       setDone(true);
-      setTimeout(() => onSuccess(), 1000);
+
+      // 🆕 D6 : Au lieu de fermer, on prépare l'EDL retour et on l'ouvre après 1s
+      setEdlData({
+        typeEdl: 'retour',
+        attributionId: attributionId,
+        vehiculeId: vehiculeId,
+        profilId: profilId,
+        immatriculation: immatriculation,
+        marque: marque,
+        modele: modele,
+        refTca: refTca,
+        salarieNom: salarieNom,
+        salariePrenom: salariePrenom,
+        kmInitial: kmR, // Le km retour devient le km initial de l'EDL retour
+        adminId: adminId,
+        adminNom: adminNom,
+        adminPrenom: adminPrenom,
+      });
+
+      setTimeout(() => {
+        setShowEDL(true);
+      }, 1000);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erreur inconnue';
       console.error('[RestitutionModal] Erreur:', msg);
@@ -327,7 +365,6 @@ export function RestitutionModal(props: RestitutionModalProps) {
         </div>
 
         <div className="space-y-5">
-          {/* Infos départ en lecture seule */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-xs font-semibold text-blue-900 mb-1">Données départ</p>
             <p className="text-sm text-blue-800">
@@ -335,7 +372,6 @@ export function RestitutionModal(props: RestitutionModalProps) {
             </p>
           </div>
 
-          {/* KM retour */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Kilométrage de retour <span className="text-red-500">*</span>
@@ -350,7 +386,6 @@ export function RestitutionModal(props: RestitutionModalProps) {
             />
           </div>
 
-          {/* Signature chauffeur retour */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">
@@ -371,7 +406,6 @@ export function RestitutionModal(props: RestitutionModalProps) {
             </div>
           </div>
 
-          {/* Signature admin retour */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">
@@ -392,6 +426,13 @@ export function RestitutionModal(props: RestitutionModalProps) {
             </div>
           </div>
 
+          {/* 🆕 D6 : Info sur la prochaine étape */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-xs text-blue-800">
+              <strong>ℹ️ Prochaine étape :</strong> Après validation, un état des lieux de retour sera à remplir.
+            </p>
+          </div>
+
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
               <p className="text-sm text-red-700">{error}</p>
@@ -402,7 +443,7 @@ export function RestitutionModal(props: RestitutionModalProps) {
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
               <Check className="w-4 h-4 text-green-600" />
               <p className="text-sm text-green-700">
-                Véhicule restitué avec succès
+                Véhicule restitué avec succès — ouverture de l'état des lieux...
               </p>
             </div>
           )}
