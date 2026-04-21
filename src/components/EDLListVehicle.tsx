@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClipboardList, Download, Loader2, Camera, Check, X, Eye } from 'lucide-react';
+import { ClipboardList, Download, Loader2, Camera, Check, X, Eye, ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface EDLRecord {
@@ -26,14 +26,34 @@ interface EDLRecord {
   cric_triangle_gilet: boolean;
 }
 
+interface PhotoRecord {
+  id: string;
+  angle: string;
+  photo_path: string;
+  signedUrl?: string;
+}
+
 interface Props {
   vehicleId: string;
 }
+
+const ANGLE_LABELS: Record<string, string> = {
+  avant: 'Avant',
+  arriere: 'Arrière',
+  gauche: 'Côté gauche',
+  droite: 'Côté droit',
+  compteur: 'Compteur',
+  interieur: 'Intérieur',
+  coffre: 'Coffre',
+  libre: 'Photo libre',
+};
 
 export function EDLListVehicle({ vehicleId }: Props) {
   const [edls, setEdls] = useState<EDLRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<Record<string, PhotoRecord[]>>({});
+  const [loadingPhotos, setLoadingPhotos] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEDLs();
@@ -55,7 +75,6 @@ export function EDLListVehicle({ vehicleId }: Props) {
 
       if (error) throw error;
 
-      // Pour chaque EDL, compter les photos
       const edlsWithPhotos: EDLRecord[] = [];
       for (const edl of data || []) {
         const { count } = await supabase
@@ -96,16 +115,58 @@ export function EDLListVehicle({ vehicleId }: Props) {
     }
   };
 
+  // Charger les photos quand on déplie un EDL
+  const handleToggleExpand = async (edlId: string) => {
+    if (expandedId === edlId) {
+      setExpandedId(null);
+      return;
+    }
+
+    setExpandedId(edlId);
+
+    // Si les photos ne sont pas encore chargées pour cet EDL
+    if (!photos[edlId]) {
+      setLoadingPhotos(edlId);
+      try {
+        const { data, error } = await supabase
+          .from('etat_des_lieux_photos')
+          .select('id, angle, photo_path')
+          .eq('edl_id', edlId)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        // Générer les URLs signées pour chaque photo
+        const photosWithUrls: PhotoRecord[] = [];
+        for (const photo of data || []) {
+          const { data: signedData } = await supabase.storage
+            .from('edl-photos')
+            .createSignedUrl(photo.photo_path, 3600);
+
+          photosWithUrls.push({
+            id: photo.id,
+            angle: photo.angle,
+            photo_path: photo.photo_path,
+            signedUrl: signedData?.signedUrl || undefined,
+          });
+        }
+
+        setPhotos(prev => ({ ...prev, [edlId]: photosWithUrls }));
+      } catch (err) {
+        console.error('[EDLListVehicle] Erreur chargement photos:', err);
+        setPhotos(prev => ({ ...prev, [edlId]: [] }));
+      } finally {
+        setLoadingPhotos(null);
+      }
+    }
+  };
+
   const handleDownloadPdf = async (pdfPath: string) => {
     try {
       const { data, error } = await supabase.storage
         .from('edl-documents')
         .createSignedUrl(pdfPath, 3600);
-
-      if (error || !data?.signedUrl) {
-        alert('PDF non disponible');
-        return;
-      }
+      if (error || !data?.signedUrl) { alert('PDF non disponible'); return; }
       window.open(data.signedUrl, '_blank');
     } catch (e) {
       console.error('Erreur téléchargement PDF EDL:', e);
@@ -115,9 +176,8 @@ export function EDLListVehicle({ vehicleId }: Props) {
 
   const formatDate = (d: string) => {
     if (!d) return '—';
-    try {
-      return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    } catch { return d; }
+    try { return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    catch { return d; }
   };
 
   const getTypeBadge = (type: string) => {
@@ -126,20 +186,13 @@ export function EDLListVehicle({ vehicleId }: Props) {
   };
 
   const getEquipementsSummary = (edl: EDLRecord) => {
-    const items = [
-      edl.carrosserie_avant, edl.carrosserie_arriere, edl.carrosserie_gauche, edl.carrosserie_droite,
-      edl.vitres, edl.retroviseurs, edl.pneus, edl.interieur_siege, edl.interieur_tableau_bord, edl.cric_triangle_gilet
-    ];
+    const items = [edl.carrosserie_avant, edl.carrosserie_arriere, edl.carrosserie_gauche, edl.carrosserie_droite, edl.vitres, edl.retroviseurs, edl.pneus, edl.interieur_siege, edl.interieur_tableau_bord, edl.cric_triangle_gilet];
     const ok = items.filter(Boolean).length;
     return `${ok}/10 conformes`;
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-      </div>
-    );
+    return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
   }
 
   if (edls.length === 0) {
@@ -159,19 +212,17 @@ export function EDLListVehicle({ vehicleId }: Props) {
       <p className="text-sm text-gray-500">{edls.length} état{edls.length > 1 ? 's' : ''} des lieux</p>
       {edls.map((edl) => {
         const isExpanded = expandedId === edl.id;
+        const edlPhotos = photos[edl.id] || [];
+        const isLoadingThisPhotos = loadingPhotos === edl.id;
+
         return (
           <div key={edl.id} className="border border-gray-200 rounded-lg overflow-hidden">
             {/* Ligne résumé */}
-            <div
-              className="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={() => setExpandedId(isExpanded ? null : edl.id)}
-            >
+            <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => handleToggleExpand(edl.id)}>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   {getTypeBadge(edl.type_edl)}
-                  <span className="text-sm font-medium text-gray-900">
-                    {edl.conducteur_prenom} {edl.conducteur_nom}
-                  </span>
+                  <span className="text-sm font-medium text-gray-900">{edl.conducteur_prenom} {edl.conducteur_nom}</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   {formatDate(edl.created_at)} · {edl.kilometrage ? `${edl.kilometrage.toLocaleString()} km` : '—'} · {getEquipementsSummary(edl)}
@@ -179,16 +230,10 @@ export function EDLListVehicle({ vehicleId }: Props) {
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {edl.nb_photos > 0 && (
-                  <span className="flex items-center gap-1 text-xs text-gray-500">
-                    <Camera className="w-3 h-3" /> {edl.nb_photos}
-                  </span>
+                  <span className="flex items-center gap-1 text-xs text-gray-500"><Camera className="w-3 h-3" /> {edl.nb_photos}</span>
                 )}
                 {edl.pdf_path && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDownloadPdf(edl.pdf_path!); }}
-                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                    title="Télécharger le PDF"
-                  >
+                  <button onClick={(e) => { e.stopPropagation(); handleDownloadPdf(edl.pdf_path!); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Télécharger le PDF">
                     <Download className="w-4 h-4" />
                   </button>
                 )}
@@ -198,7 +243,7 @@ export function EDLListVehicle({ vehicleId }: Props) {
 
             {/* Détails (accordéon) */}
             {isExpanded && (
-              <div className="border-t border-gray-200 p-4 bg-gray-50 space-y-3">
+              <div className="border-t border-gray-200 p-4 bg-gray-50 space-y-4">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><span className="text-gray-500">Type :</span> <strong>{edl.type_edl === 'sortie' ? 'Sortie' : 'Retour'}</strong></div>
                   <div><span className="text-gray-500">Statut :</span> <strong>{edl.statut}</strong></div>
@@ -206,7 +251,7 @@ export function EDLListVehicle({ vehicleId }: Props) {
                   <div><span className="text-gray-500">Photos :</span> <strong>{edl.nb_photos}</strong></div>
                 </div>
 
-                {/* Équipements détaillés */}
+                {/* Équipements */}
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Équipements</p>
                   <div className="grid grid-cols-2 gap-1 text-xs">
@@ -236,6 +281,49 @@ export function EDLListVehicle({ vehicleId }: Props) {
                     <p className="text-sm text-gray-700 bg-white p-2 rounded border border-gray-200">{edl.observations}</p>
                   </div>
                 )}
+
+                {/* 🆕 Galerie photos */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                    <Camera className="w-3 h-3 inline mr-1" />
+                    Photos ({edl.nb_photos})
+                  </p>
+
+                  {isLoadingThisPhotos ? (
+                    <div className="flex items-center gap-2 text-xs text-gray-500 py-4">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Chargement des photos...
+                    </div>
+                  ) : edlPhotos.length === 0 ? (
+                    <div className="flex items-center gap-2 text-xs text-gray-400 py-4">
+                      <ImageIcon className="w-4 h-4" /> Aucune photo pour cet EDL
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {edlPhotos.map((photo) => (
+                        <div key={photo.id} className="relative group">
+                          {photo.signedUrl ? (
+                            <a href={photo.signedUrl} target="_blank" rel="noopener noreferrer" title="Ouvrir en plein écran">
+                              <div className="aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer">
+                                <img
+                                  src={photo.signedUrl}
+                                  alt={ANGLE_LABELS[photo.angle] || photo.angle}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                />
+                              </div>
+                              <p className="text-xs text-gray-500 text-center mt-1 truncate">
+                                {ANGLE_LABELS[photo.angle] || photo.angle}
+                              </p>
+                            </a>
+                          ) : (
+                            <div className="aspect-square rounded-lg border border-gray-200 bg-gray-100 flex items-center justify-center">
+                              <ImageIcon className="w-6 h-6 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
