@@ -45,7 +45,7 @@ import { CRMSms } from './CRMSms';
 import LocatairesExternesManager from './LocatairesExternesManager';
 import { ImportVehicleReferences } from './ImportVehicleReferences';
 import { LocationsManager } from './LocationsManager';
-import { EDLListGlobal } from './EDLListGlobal'; // 🆕 Bonus 2
+import { EDLListGlobal } from './EDLListGlobal'; // 
 
 // 🆕 ÉTAPE C : ajout d'une prop optionnelle `initialView` pour que App.tsx puisse
 // dire au Dashboard sur quelle vue démarrer selon le profil de l'utilisateur.
