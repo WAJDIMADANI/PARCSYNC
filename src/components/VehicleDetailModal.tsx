@@ -1743,7 +1743,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
               </div>
             )}
 
-            {activeTab === 'etats-des-lieux' && (
+        {activeTab === 'etats-des-lieux' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -1751,13 +1751,7 @@ export function VehicleDetailModal({ vehicle: initialVehicle, onClose, onVehicle
                   </div>
                   <h3 className="text-base font-semibold text-gray-900">États des lieux</h3>
                 </div>
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <ClipboardList className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500 font-medium">Aucun état des lieux enregistré</p>
-                  <p className="text-gray-400 text-sm mt-1">Les états des lieux terrain seront disponibles dans la prochaine étape</p>
-                </div>
+                <EDLListVehicle vehicleId={vehicle.id} />
               </div>
             )}
 
