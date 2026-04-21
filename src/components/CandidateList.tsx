@@ -263,20 +263,20 @@ export function CandidateList() {
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1200px]">
+            <table className="w-full table-fixed">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="w-32 px-3 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Nom</th>
-                  <th className="w-32 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Prénom</th>
-                  <th className="w-28 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Ville</th>
-                  <th className="w-14 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Dép.</th>
-                  <th className="w-36 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Poste</th>
-                  <th className="w-24 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Site</th>
-                  <th className="w-16 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Date</th>
-                  <th className="w-14 px-2 py-3 text-center text-[11px] font-medium text-gray-400 uppercase tracking-wider">Docs</th>
-                  <th className="w-40 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Statut</th>
-                  <th className="w-28 px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Code</th>
-                  <th className="w-24 px-2 py-3 text-right text-[11px] font-medium text-gray-400 uppercase tracking-wider pr-3">Actions</th>
+                  <th className="w-[10%] px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Nom</th>
+                  <th className="w-[9%] px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Prénom</th>
+                  <th className="w-[12%] px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Ville</th>
+                  <th className="w-[4%] px-1 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Dép.</th>
+                  <th className="w-[14%] px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Poste</th>
+                  <th className="w-[7%] px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Site</th>
+                  <th className="w-[6%] px-1 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                  <th className="w-[5%] px-1 py-3 text-center text-[11px] font-medium text-gray-400 uppercase tracking-wider">Docs</th>
+                  <th className="w-[14%] px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Statut</th>
+                  <th className="w-[10%] px-2 py-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider">Code</th>
+                  <th className="w-[9%] px-1 py-3 text-right text-[11px] font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -292,24 +292,24 @@ export function CandidateList() {
                       className={`border-b border-gray-100 cursor-pointer transition-colors ${isFromApplySite ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-gray-50'}`}
                       onClick={() => setEditingCandidate(candidate)}
                     >
-                      <td className="px-3 py-2.5 text-sm font-medium text-gray-900">
+                      <td className="px-2 py-2.5 text-sm font-medium text-gray-900">
                         <div className="truncate">{candidate.nom}</div>
                       </td>
                       <td className="px-2 py-2.5 text-sm text-gray-700">
                         <div className="truncate">{candidate.prenom}</div>
                       </td>
                       <td className="px-2 py-2.5 text-xs text-gray-500 truncate">{candidate.ville || '-'}</td>
-                      <td className="px-2 py-2.5 text-xs text-gray-500">{candidate.department_code || '-'}</td>
+                      <td className="px-1 py-2.5 text-xs text-gray-500">{candidate.department_code || '-'}</td>
                       <td className="px-2 py-2.5 text-xs text-gray-500">
                         <div className="truncate">{candidate.poste || '-'}</div>
                       </td>
                       <td className="px-2 py-2.5 text-xs text-gray-500">
                         <div className="truncate">{site?.nom || '-'}</div>
                       </td>
-                      <td className="px-2 py-2.5 text-xs text-gray-500">
+                      <td className="px-1 py-2.5 text-xs text-gray-500">
                         {new Date(candidate.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                       </td>
-                      <td className="px-2 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-1 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
                         {hasDocuments ? (
                           <span className="inline-block text-[10px] font-medium px-2 py-0.5 rounded" style={{ background: '#00c87520', color: '#0F6E56' }}>OK</span>
                         ) : (
@@ -334,7 +334,7 @@ export function CandidateList() {
                           <span className="flex-1 text-left">{CODE_COULEUR_RH.find(c => c.value === candidate.code_couleur_rh)?.label || 'Aucun'}</span>
                         </button>
                       </td>
-                      <td className="px-2 py-2.5 text-right pr-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-1 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
                           {statutCandidature === 'salarie' && (
                             <button onClick={(e) => { e.stopPropagation(); setConvertingCandidate(candidate); }}
