@@ -7,6 +7,7 @@ import { VehicleMaintenances } from './VehicleMaintenances';
 import { SuccessModal } from './SuccessModal';
 import { ProprietaireSelector } from './ProprietaireSelector';
 import { VehicleLocations } from './VehicleLocations';
+import { EDLListVehicle } from './EDLListVehicle'; // 🆕 Bonus 1
 import { parseProprietaireCarteGrise, formatProprietaireCarteGrise } from '../utils/proprietaireParser';
 
 interface Vehicle {
