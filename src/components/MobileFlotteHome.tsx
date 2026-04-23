@@ -406,8 +406,9 @@ export function MobileFlotteHome({ onSwitchToDesktop }: MobileFlotteHomeProps) {
                   <option value="sur_parc">🅿 Sur parc</option>
                   <option value="chauffeur_tca">👤 Chauffeur TCA</option>
                   <option value="direction_administratif">🏢 Direction / Administratif</option>
-                  <option value="location_pure">🔄 Location pure</option>
-                  <option value="loa">💰 LOA</option>
+                 <option value="location_pure">🔄 Location pure</option>
+                  <option value="location_vente_particulier">💰 Location-vente particulier</option>
+                  <option value="location_vente_societe">🏢 Location-vente société</option>
                   <option value="en_pret">🤝 En prêt</option>
                   <option value="en_garage">🛠 En garage</option>
                   <option value="hors_service">🚫 Hors service</option>
