@@ -46,6 +46,7 @@ import LocatairesExternesManager from './LocatairesExternesManager';
 import { ImportVehicleReferences } from './ImportVehicleReferences';
 import { LocationsManager } from './LocationsManager';
 import { EDLListGlobal } from './EDLListGlobal'; // 
+import { ExportsRH } from './ExportsRH'; // 🆕 Module Exports RH (CSV + Excel)
 
 // 🆕 ÉTAPE C : ajout d'une prop optionnelle `initialView` pour que App.tsx puisse
 // dire au Dashboard sur quelle vue démarrer selon le profil de l'utilisateur.
@@ -159,12 +160,8 @@ export function Dashboard({ initialView }: DashboardProps = {}) {
       case 'dashboards/parc':
         return <ParcDashboard />;
       case 'exports/rh':
-        return (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Exports RH</h2>
-            <p className="text-gray-600">Export des données RH vers Excel/CSV à venir</p>
-          </div>
-        );
+        // 🆕 Remplace l'ancien placeholder « à venir » par le composant dédié
+        return <ExportsRH />;
       case 'exports/parc':
         return <ParcExports />;
       case 'admin/sites':
