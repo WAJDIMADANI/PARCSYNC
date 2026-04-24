@@ -559,7 +559,7 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
           .eq('statut', 'en_cours');
       }
 
-      const necessitePersonne = ['chauffeur_tca', 'direction_administratif', 'location_pure', 'loa', 'en_pret'].includes(attributionType);
+     const necessitePersonne = ['chauffeur_tca', 'direction_administratif', 'en_pret'].includes(attributionType);
       let createdAttributionId: string | null = null;
       if (necessitePersonne && (attributionSalarieId || attributionLoueurId)) {
         const { data: insertedAttribution, error: insertError } = await supabase
