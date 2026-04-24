@@ -20,7 +20,8 @@ import { VehicleDetailModal } from './VehicleDetailModal';
 import { VehicleCreateModal } from './VehicleCreateModal';
 import { AttestationSignatureModal } from './AttestationSignatureModal';
 import { RestitutionModal } from './RestitutionModal';
-import { EDLModal } from './EDLModal'; // 🆕 ÉTAPE D3
+import { EDLModal } from './EDLModal';
+import { LocationContractModal } from './LocationContractModal'; // 🆕 L2
 import { parseProprietaireCarteGrise } from '../utils/proprietaireParser';
 
 interface Chauffeur {
