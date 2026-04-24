@@ -585,7 +585,7 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
         .update({ statut: attributionType })
         .eq('id', attributionVehicle.id);
 
-      const wasLocation = attributionType === 'location_pure' || attributionType === 'loa';
+   const isLocation = ['location_pure', 'location_vente_particulier', 'location_vente_societe'].includes(attributionType);
       const wasChauffeurTca = attributionType === 'chauffeur_tca';
       const vehiculeId = attributionVehicle.id;
       const vehiculeImmat = attributionVehicle.immatriculation;
