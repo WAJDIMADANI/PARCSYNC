@@ -180,8 +180,12 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
   const [restitutionData, setRestitutionData] = useState<any>(null);
 
   // 🆕 ÉTAPE D3 : États pour la modal EDL qui s'ouvre après l'attestation
-  const [showEDLModal, setShowEDLModal] = useState(false);
+const [showEDLModal, setShowEDLModal] = useState(false);
   const [edlData, setEdlData] = useState<any>(null);
+
+  // 🆕 L2 : Modal contrat de location
+  const [showLocationContractModal, setShowLocationContractModal] = useState(false);
+  const [locationContractData, setLocationContractData] = useState<any>(null);
 
   const [filters, setFilters] = useState<FilterState>({
     statut: '',
