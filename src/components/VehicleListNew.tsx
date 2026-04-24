@@ -393,7 +393,8 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
       'chauffeur_tca':           { bg: 'bg-blue-500',    text: 'text-white',    label: '👤 Chauffeur TCA' },
       'direction_administratif': { bg: 'bg-blue-800',    text: 'text-white',    label: '🏢 Direction' },
       'location_pure':           { bg: 'bg-emerald-500', text: 'text-white',    label: '🔄 Location pure' },
-      'loa':                     { bg: 'bg-purple-500',  text: 'text-white',    label: '💰 LOA' },
+     'location_vente_particulier': { bg: 'bg-purple-500', text: 'text-white', label: '💰 Loc-vente particulier' },
+      'location_vente_societe':     { bg: 'bg-indigo-500', text: 'text-white', label: '🏢 Loc-vente société' },
       'en_pret':                 { bg: 'bg-cyan-500',    text: 'text-white',    label: '🤝 En prêt' },
       'en_garage':               { bg: 'bg-amber-500',   text: 'text-white',    label: '🛠 En garage' },
       'hors_service':            { bg: 'bg-red-500',     text: 'text-white',    label: '🚫 Hors service' },
@@ -1218,7 +1219,8 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
                   <option value="chauffeur_tca">👤 Chauffeur TCA</option>
                   <option value="direction_administratif">🏢 Direction / Administratif</option>
                   <option value="location_pure">🔄 Location pure</option>
-                  <option value="loa">💰 LOA</option>
+                 <option value="location_vente_particulier">💰 Location-vente particulier</option>
+                    <option value="location_vente_societe">🏢 Location-vente société</option>
                   <option value="en_pret">🤝 En prêt</option>
                   <option value="en_garage">🛠 En garage</option>
                   <option value="hors_service">🚫 Hors service</option>
