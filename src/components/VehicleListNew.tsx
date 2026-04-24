@@ -644,8 +644,26 @@ const [showEDLModal, setShowEDLModal] = useState(false);
       setAttributionLoueurId('');
       setAttributionNotes('');
 
-    // 🆕 L2 : Si c'est une location, on ne redirige plus vers la page Locations.
-      // Le formulaire de contrat s'ouvrira directement (L2c).
+// 🆕 L2 : Si c'est une location, ouvrir le formulaire de contrat
+      const isLocation = ['location_pure', 'location_vente_particulier', 'location_vente_societe'].includes(attributionType);
+      if (isLocation) {
+        setLocationContractData({
+          vehiculeId: attributionVehicle.id,
+          immatriculation: attributionVehicle.immatriculation,
+          marque: attributionVehicle.marque || '',
+          modele: attributionVehicle.modele || '',
+          refTca: attributionVehicle.ref_tca || null,
+          typeLocation: attributionType,
+          dateDebut: attributionDate,
+        });
+        setShowAttributionModal(false);
+        setAttributionVehicle(null);
+        setAttributionType('');
+        setAttributionNotes('');
+        setShowLocationContractModal(true);
+        setSavingAttribution(false);
+        return;
+      }
     } catch (error) {
       console.error('Erreur attribution:', error);
       alert('Erreur lors de l\'attribution. Veuillez réessayer.');
