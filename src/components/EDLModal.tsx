@@ -420,7 +420,7 @@ export function EDLModal(props: EDLModalProps) {
         .from('etat_des_lieux')
         .insert({
           vehicule_id: vehiculeId,
-          profil_id: profilId,
+         profil_id: profilId || null,
           attribution_id: attributionId,
           type_edl: typeEdl,
           kilometrage: km,
