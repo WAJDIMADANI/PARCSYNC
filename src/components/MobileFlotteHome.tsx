@@ -421,7 +421,7 @@ export function MobileFlotteHome({ onSwitchToDesktop }: MobileFlotteHomeProps) {
                   <SalarieSearchMobile salaries={salaries} selectedId={attributionSalarieId} onSelect={setAttributionSalarieId} />
                 </div>
               )}
-              {(attributionType === 'location_pure' || attributionType === 'loa') && (
+            {(['location_pure', 'location_vente_particulier', 'location_vente_societe'].includes(attributionType)) && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-800 font-medium">📋 Contrat de location</p>
                   <p className="text-xs text-blue-600 mt-1">Après validation, créez le contrat depuis la page "Locations".</p>
