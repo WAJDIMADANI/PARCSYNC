@@ -1007,7 +1007,7 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
                           >
                             Attribution
                           </button>
-                          {['chauffeur_tca','direction_administratif','location_pure','loa','en_pret'].includes(vehicle.statut) && (
+                         {['chauffeur_tca','direction_administratif','location_pure','location_vente_particulier','location_vente_societe','en_pret'].includes(vehicle.statut) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
