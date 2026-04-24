@@ -293,7 +293,28 @@ const [showEDLModal, setShowEDLModal] = useState(false);
         }
       }
 
-      // Pour les types non-chauffeur_tca : juste fermer et refresh
+  // 🆕 L2 : Si c'est une location, ouvrir le formulaire de contrat
+      const isLocation = ['location_pure', 'location_vente_particulier', 'location_vente_societe'].includes(attributionType);
+      if (isLocation) {
+        setLocationContractData({
+          vehiculeId: attributionVehicle.id,
+          immatriculation: attributionVehicle.immatriculation,
+          marque: attributionVehicle.marque || '',
+          modele: attributionVehicle.modele || '',
+          refTca: attributionVehicle.ref_tca || null,
+          typeLocation: attributionType,
+          dateDebut: attributionDate,
+        });
+        setShowAttributionModal(false);
+        setAttributionVehicle(null);
+        setAttributionType('');
+        setAttributionNotes('');
+        setShowLocationContractModal(true);
+        setSavingAttribution(false);
+        return;
+      }
+
+      // Pour les autres types : juste fermer et refresh
       await fetchVehicles();
       setShowAttributionModal(false);
       setAttributionVehicle(null);
