@@ -523,8 +523,39 @@ const [showEDLModal, setShowEDLModal] = useState(false);
         />
       )}
 
-      {/* Restitution */}
-      {showRestitutionModal && restitutionData && (
+{/* 🆕 L2 : Modal contrat de location */}
+      {showLocationContractModal && locationContractData && (
+        <LocationContractModal
+          isOpen={showLocationContractModal}
+          onClose={async () => {
+            setShowLocationContractModal(false);
+            setLocationContractData(null);
+            await fetchVehicles();
+          }}
+          onSuccess={(data) => {
+            setEdlData({
+              typeEdl: 'sortie',
+              attributionId: data.attributionId,
+              vehiculeId: locationContractData.vehiculeId,
+              profilId: '',
+              immatriculation: locationContractData.immatriculation,
+              marque: locationContractData.marque,
+              modele: locationContractData.modele,
+              refTca: locationContractData.refTca,
+              salarieNom: data.locataireNom,
+              salariePrenom: data.locatairePrenom,
+              kmInitial: data.kmDepart,
+              adminId: appUserId || '',
+              adminNom: appUserNom || '',
+              adminPrenom: appUserPrenom || '',
+            });
+            setShowLocationContractModal(false);
+            setLocationContractData(null);
+            setShowEDLModal(true);
+          }}
+          {...locationContractData}
+        />
+      )}
         <RestitutionModal
           isOpen={showRestitutionModal}
           onClose={() => { setShowRestitutionModal(false); setRestitutionData(null); }}
