@@ -555,7 +555,9 @@ const [showEDLModal, setShowEDLModal] = useState(false);
           }}
           {...locationContractData}
         />
-      )}
+  )}
+
+      {showRestitutionModal && restitutionData && (
         <RestitutionModal
           isOpen={showRestitutionModal}
           onClose={() => { setShowRestitutionModal(false); setRestitutionData(null); }}
