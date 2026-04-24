@@ -225,7 +225,7 @@ export function MobileFlotteHome({ onSwitchToDesktop }: MobileFlotteHomeProps) {
 
       await supabase.from('attribution_vehicule').update({ date_fin: hierStr }).eq('vehicule_id', attributionVehicle.id).is('date_fin', null);
 
-      if (attributionType !== 'location_pure' && attributionType !== 'loa') {
+     if (attributionType !== 'location_pure' && attributionType !== 'location_vente_particulier' && attributionType !== 'location_vente_societe') {
         await supabase.from('locations').update({ statut: 'terminee' }).eq('vehicule_id', attributionVehicle.id).eq('statut', 'en_cours');
       }
 
