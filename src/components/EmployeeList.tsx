@@ -1895,7 +1895,25 @@ function EmployeeDetailModal({
         .eq('id', documentToDelete.id);
 
       if (dbError) throw dbError;
-
+// ✨ Synchroniser le profil : si le document supprimé avait une date d'expiration,
+      // effacer la date correspondante du profil.
+      // Les triggers DB (profil_upsert_notifications_on_dates et profil_sync_incident_*)
+      // s'occuperont automatiquement de supprimer la notification et résoudre l'incident.
+      const expirationFieldMap: Record<string, string> = {
+        'certificat_medical': 'date_fin_visite_medicale',
+        'titre_sejour': 'titre_sejour_fin_validite',
+      };
+      const fieldToUpdate = expirationFieldMap[documentToDelete.type_document];
+      if (fieldToUpdate && documentToDelete.date_expiration) {
+        const { error: profilError } = await supabase
+          .from('profil')
+          .update({ [fieldToUpdate]: null })
+          .eq('id', currentEmployee.id);
+        if (profilError) {
+          console.error('Erreur synchronisation profil:', profilError);
+          // On ne bloque pas la suppression, on logue juste l'erreur
+        }
+      }
       // Refresh documents list
       await fetchDocuments();
 
