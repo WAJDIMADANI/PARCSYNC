@@ -645,7 +645,7 @@ const [showEDLModal, setShowEDLModal] = useState(false);
       setAttributionNotes('');
 
 // 🆕 L2 : Si c'est une location, ouvrir le formulaire de contrat
-      const isLocation = ['location_pure', 'location_vente_particulier', 'location_vente_societe'].includes(attributionType);
+      const isLocationType = ['location_pure', 'location_vente_particulier', 'location_vente_societe'].includes(attributionType);
       if (isLocation) {
         setLocationContractData({
           vehiculeId: attributionVehicle.id,
