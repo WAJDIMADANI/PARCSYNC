@@ -229,7 +229,7 @@ export function MobileFlotteHome({ onSwitchToDesktop }: MobileFlotteHomeProps) {
         await supabase.from('locations').update({ statut: 'terminee' }).eq('vehicule_id', attributionVehicle.id).eq('statut', 'en_cours');
       }
 
-      const necessitePersonne = ['chauffeur_tca', 'direction_administratif', 'location_pure', 'loa', 'en_pret'].includes(attributionType);
+     const necessitePersonne = ['chauffeur_tca', 'direction_administratif', 'en_pret'].includes(attributionType);
       let createdAttributionId: string | null = null;
       if (necessitePersonne && attributionSalarieId) {
         const { data: insertedAttribution, error: insertError } = await supabase
