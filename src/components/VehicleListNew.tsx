@@ -638,9 +638,8 @@ export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, par
       setAttributionLoueurId('');
       setAttributionNotes('');
 
-      if (wasLocation && onNavigate) {
-        onNavigate('parc/locations', { vehiculeId, vehiculeImmat });
-      }
+    // 🆕 L2 : Si c'est une location, on ne redirige plus vers la page Locations.
+      // Le formulaire de contrat s'ouvrira directement (L2c).
     } catch (error) {
       console.error('Erreur attribution:', error);
       alert('Erreur lors de l\'attribution. Veuillez réessayer.');
