@@ -120,8 +120,10 @@ export function MobileFlotteHome({ onSwitchToDesktop }: MobileFlotteHomeProps) {
   // Attestation + EDL
   const [showAttestationModal, setShowAttestationModal] = useState(false);
   const [attestationData, setAttestationData] = useState<any>(null);
-  const [showEDLModal, setShowEDLModal] = useState(false);
+const [showEDLModal, setShowEDLModal] = useState(false);
   const [edlData, setEdlData] = useState<any>(null);
+  const [showLocationContractModal, setShowLocationContractModal] = useState(false);
+  const [locationContractData, setLocationContractData] = useState<any>(null);
 
   useEffect(() => {
     fetchVehicles();
