@@ -7,6 +7,7 @@ import { MobileVehicleCard } from './MobileVehicleCard';
 import { AttestationSignatureModal } from './AttestationSignatureModal';
 import { RestitutionModal } from './RestitutionModal';
 import { EDLModal } from './EDLModal';
+import { LocationContractModal } from './LocationContractModal';
 
 interface Chauffeur {
   id: string;
