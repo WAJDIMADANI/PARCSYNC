@@ -421,7 +421,7 @@ export function EDLModal(props: EDLModalProps) {
         .insert({
           vehicule_id: vehiculeId,
          profil_id: profilId || null,
-          attribution_id: attributionId,
+          attribution_id: attributionId || null,
           type_edl: typeEdl,
           kilometrage: km,
           date_validite_ct: dateValiditeCt || null,
