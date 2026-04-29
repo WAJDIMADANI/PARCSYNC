@@ -41,7 +41,7 @@ loa:                     { bg: 'bg-purple-500',  text: 'text-white',    label: '
   sorti_flotte:            { bg: 'bg-gray-700',    text: 'text-white',    label: '📦 Sorti de flotte' },
 };
 
-const STATUTS_ATTRIBUABLES = ['sur_parc', 'chauffeur_tca', 'direction_administratif', 'location_pure', 'location_vente_particulier', 'location_vente_societe', 'en_pret', 'en_garage', 'hors_service'];
+const STATUTS_ATTRIBUABLES = ['sur_parc', 'en_garage', 'hors_service', 'sorti_flotte'];
 const STATUTS_RESTITUABLES = ['chauffeur_tca', 'direction_administratif', 'location_pure', 'location_vente_particulier', 'location_vente_societe', 'en_pret'];
 
 export function MobileVehicleCard({ vehicle, onAttribuer, onRestituer }: MobileVehicleCardProps) {
