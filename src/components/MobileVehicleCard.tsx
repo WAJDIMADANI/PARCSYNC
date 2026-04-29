@@ -51,7 +51,7 @@ export function MobileVehicleCard({ vehicle, onAttribuer, onRestituer }: MobileV
   const canRestituer = STATUTS_RESTITUABLES.includes(vehicle.statut);
 
   const getAttributeTo = (): string | null => {
-    if (vehicle.statut === 'location_pure' || vehicle.statut === 'loa') {
+    if (['location_pure', 'location_vente_particulier', 'location_vente_societe', 'loa'].includes(vehicle.statut)) {
       return vehicle.locataire_affiche && vehicle.locataire_affiche !== 'Non attribué' && vehicle.locataire_affiche !== 'TCA'
         ? vehicle.locataire_affiche
         : null;
