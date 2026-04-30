@@ -1019,17 +1019,19 @@ if (isLocationType) {
                           >
                             Voir
                           </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setAttributionVehicle(vehicle);
-                              setAttributionType('');
-                              setShowAttributionModal(true);
-                            }}
-                            className="text-emerald-600 hover:text-emerald-800 font-semibold transition-colors border border-emerald-300 rounded px-2 py-0.5 text-xs hover:bg-emerald-50"
-                          >
-                            Attribution
-                          </button>
+                          {['sur_parc', 'en_garage', 'hors_service', 'sorti_flotte'].includes(vehicle.statut) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAttributionVehicle(vehicle);
+                                setAttributionType('');
+                                setShowAttributionModal(true);
+                              }}
+                              className="text-emerald-600 hover:text-emerald-800 font-semibold transition-colors border border-emerald-300 rounded px-2 py-0.5 text-xs hover:bg-emerald-50"
+                            >
+                              Attribution
+                            </button>
+                          )}
                          {['chauffeur_tca','direction_administratif','location_pure','location_vente_particulier','location_vente_societe','en_pret'].includes(vehicle.statut) && (
                             <button
                               onClick={(e) => {
