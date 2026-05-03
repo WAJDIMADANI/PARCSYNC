@@ -129,10 +129,10 @@ export function VehicleLocations({ vehicleId }: Props) {
                         <div className="col-span-2 font-semibold text-gray-900 text-base">
                           {loueur.type === 'particulier' ? `${loueur.prenom || ''} ${loueur.nom}`.trim() : loueur.nom}
                         </div>
-                        {(loueur.telephone || loueur.tel) && (
+                      {loueur.telephone && (
                           <div className="flex items-center gap-1.5">
                             <Phone className="w-3.5 h-3.5 text-gray-400" />
-                            <span className="text-gray-700">{loueur.telephone || loueur.tel}</span>
+                            <span className="text-gray-700">{loueur.telephone}</span>
                           </div>
                         )}
                         {loueur.email && (
