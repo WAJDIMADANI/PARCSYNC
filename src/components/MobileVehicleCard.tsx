@@ -70,7 +70,7 @@ export function MobileVehicleCard({ vehicle, onAttribuer, onRestituer }: MobileV
   const canRestituer = STATUTS_RESTITUABLES.includes(vehicle.statut);
   const isLocation = STATUTS_LOCATION.includes(vehicle.statut);
 
-  const [loueurInfo, setLoueurInfo] = useState<LoueurInfo | null>(null);
+  const [loueurInfo, setLoueurInfo] = useState<LoueurInfo | null>(null);   const [showContact, setShowContact] = useState(false);
 
   useEffect(() => {
     if (!isLocation) { setLoueurInfo(null); return; }
