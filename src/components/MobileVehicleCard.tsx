@@ -149,24 +149,35 @@ export function MobileVehicleCard({ vehicle, onAttribuer, onRestituer }: MobileV
               <p className="text-sm text-gray-900 font-medium truncate">{attributedTo}</p>
             </div>
 
-            {isLocation && loueurInfo && (
-              <div className="ml-9 space-y-1">
-                {loueurInfo.telephone && (
-                  <a href={makeTelLink(loueurInfo.telephone)} className="flex items-center gap-1.5 text-blue-600 active:text-blue-800" onClick={(e) => e.stopPropagation()}>
-                    <Phone className="w-3.5 h-3.5" />
-                    <span className="text-sm font-medium underline">{loueurInfo.telephone}</span>
-                  </a>
-                )}
-                {loueurInfo.email && (
-                  <a href={makeMailLink(loueurInfo.email)} className="flex items-center gap-1.5 text-gray-600" onClick={(e) => e.stopPropagation()}>
-                    <Mail className="w-3.5 h-3.5 text-gray-400" />
-                    <span className="text-xs">{loueurInfo.email}</span>
-                  </a>
-                )}
-                {loueurInfo.adresse && (
-                  <div className="flex items-start gap-1.5 text-gray-500">
-                    <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
-                    <span className="text-xs">{loueurInfo.adresse}</span>
+      {isLocation && loueurInfo && (
+              <div className="ml-9">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setShowContact(!showContact); }}
+                  className="text-xs text-blue-600 font-medium flex items-center gap-1"
+                >
+                  {showContact ? '▲ Masquer les coordonnées' : '▼ Voir les coordonnées'}
+                </button>
+                {showContact && (
+                  <div className="mt-1.5 space-y-1 bg-gray-50 rounded-lg p-2 border border-gray-200">
+                    {loueurInfo.telephone && (
+                      <a href={makeTelLink(loueurInfo.telephone)} className="flex items-center gap-1.5 text-blue-600 active:text-blue-800" onClick={(e) => e.stopPropagation()}>
+                        <Phone className="w-3.5 h-3.5" />
+                        <span className="text-sm font-medium underline">{loueurInfo.telephone}</span>
+                      </a>
+                    )}
+                    {loueurInfo.email && (
+                      <a href={makeMailLink(loueurInfo.email)} className="flex items-center gap-1.5 text-gray-600" onClick={(e) => e.stopPropagation()}>
+                        <Mail className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-xs">{loueurInfo.email}</span>
+                      </a>
+                    )}
+                    {loueurInfo.adresse && (
+                      <div className="flex items-start gap-1.5 text-gray-500">
+                        <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
+                        <span className="text-xs">{loueurInfo.adresse}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
