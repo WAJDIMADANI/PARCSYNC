@@ -606,11 +606,27 @@ const [contactInfo, setContactInfo] = useState<{
         </div>
 
         {/* Bloc lecture seule */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div><span className="text-gray-500">Conducteur :</span> <strong>{salariePrenom} {salarieNom}</strong></div>
             <div><span className="text-gray-500">Réalisé par :</span> <strong>{adminPrenom} {adminNom}</strong></div>
           </div>
+          {contactInfo && (contactInfo.tel || contactInfo.email || contactInfo.adresse || contactInfo.secteur) && (
+            <div className="grid grid-cols-2 gap-2 text-sm mt-2 pt-2 border-t border-gray-200">
+              {contactInfo.tel && (
+                <div><span className="text-gray-500">📞 Tél :</span> <strong>{contactInfo.tel}</strong></div>
+              )}
+              {contactInfo.secteur && (
+                <div><span className="text-gray-500">📍 Secteur :</span> <strong>{contactInfo.secteur}</strong></div>
+              )}
+              {contactInfo.email && (
+                <div className="col-span-2"><span className="text-gray-500">📧 Email :</span> <strong className="text-xs">{contactInfo.email}</strong></div>
+              )}
+              {contactInfo.adresse && (
+                <div className="col-span-2"><span className="text-gray-500">🏠 Adresse :</span> <strong className="text-xs">{contactInfo.adresse}</strong></div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">
