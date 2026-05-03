@@ -293,7 +293,38 @@ export function EDLModal(props: EDLModalProps) {
     prefillDates();
     return () => { cancelled = true; };
   }, [isOpen, vehiculeId]);
+const [contactInfo, setContactInfo] = useState<{
+    tel: string | null;
+    email: string | null;
+    adresse: string | null;
+    secteur: string | null;
+  } | null>(null);
 
+  useEffect(() => {
+    if (!isOpen || !profilId) { setContactInfo(null); return; }
+    let cancelled = false;
+    const fetchContact = async () => {
+      try {
+        const { data } = await supabase
+          .from('profil')
+          .select('tel, email, adresse, secteur:secteur_id(nom)')
+          .eq('id', profilId)
+          .maybeSingle();
+        if (!cancelled && data) {
+          setContactInfo({
+            tel: data.tel || null,
+            email: data.email || null,
+            adresse: data.adresse || null,
+            secteur: (data.secteur as any)?.nom || null,
+          });
+        }
+      } catch (err) {
+        console.warn('[EDLModal] Erreur chargement coordonnées:', err);
+      }
+    };
+    fetchContact();
+    return () => { cancelled = true; };
+  }, [isOpen, profilId]);
   if (!isOpen) return null;
 
   // 🆕 D4 : Upload immédiat d'une photo avec compression
