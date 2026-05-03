@@ -994,7 +994,7 @@ if (isLocationType) {
                         <span className="text-xs text-gray-700">
                           {(() => {
                             const s = vehicle.statut;
-                            if (s === 'location_pure' || s === 'loa') {
+                            if (['location_pure', 'location_vente_particulier', 'location_vente_societe', 'loa'].includes(s)) {
                               return vehicle.locataire_affiche && vehicle.locataire_affiche !== 'Non attribué' && vehicle.locataire_affiche !== 'TCA'
                                 ? vehicle.locataire_affiche
                                 : <span className="text-gray-400">—</span>;
