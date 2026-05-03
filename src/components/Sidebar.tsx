@@ -33,6 +33,7 @@ export type View =
   | 'parc/locataires-externes'
   | 'parc/locations'
   | 'parc/etats-des-lieux'
+  | 'parc/paiements'
   | 'compta/entrees'
   | 'compta/sorties'
   | 'compta/rib'
