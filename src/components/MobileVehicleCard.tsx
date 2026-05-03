@@ -55,6 +55,14 @@ interface LoueurInfo {
   adresse: string | null;
 }
 
+function makeTelLink(phone: string): string {
+  return 'tel:' + phone.split(' ').join('');
+}
+
+function makeMailLink(email: string): string {
+  return 'mailto:' + email;
+}
+
 export function MobileVehicleCard({ vehicle, onAttribuer, onRestituer }: MobileVehicleCardProps) {
   const statusConfig = STATUS_STYLES[vehicle.statut] || { bg: 'bg-gray-400', text: 'text-white', label: vehicle.statut };
 
@@ -62,7 +70,6 @@ export function MobileVehicleCard({ vehicle, onAttribuer, onRestituer }: MobileV
   const canRestituer = STATUTS_RESTITUABLES.includes(vehicle.statut);
   const isLocation = STATUTS_LOCATION.includes(vehicle.statut);
 
-  // Charger les coordonnées du loueur si c'est une location
   const [loueurInfo, setLoueurInfo] = useState<LoueurInfo | null>(null);
 
   useEffect(() => {
@@ -97,7 +104,7 @@ export function MobileVehicleCard({ vehicle, onAttribuer, onRestituer }: MobileV
 
   const getAttributeTo = (): string | null => {
     if (isLocation) {
-      if (loueurInfo) return `${loueurInfo.prenom || ''} ${loueurInfo.nom}`.trim();
+      if (loueurInfo) return ((loueurInfo.prenom || '') + ' ' + loueurInfo.nom).trim();
       return vehicle.locataire_affiche && vehicle.locataire_affiche !== 'Non attribué' && vehicle.locataire_affiche !== 'TCA'
         ? vehicle.locataire_affiche
         : null;
@@ -105,7 +112,7 @@ export function MobileVehicleCard({ vehicle, onAttribuer, onRestituer }: MobileV
     if (vehicle.statut === 'chauffeur_tca' || vehicle.statut === 'direction_administratif' || vehicle.statut === 'en_pret') {
       if (vehicle.chauffeurs_actifs && vehicle.chauffeurs_actifs.length > 0) {
         const c = vehicle.chauffeurs_actifs[0];
-        return `${c.prenom || ''} ${c.nom || ''}`.trim();
+        return ((c.prenom || '') + ' ' + (c.nom || '')).trim();
       }
     }
     return null;
@@ -142,25 +149,16 @@ export function MobileVehicleCard({ vehicle, onAttribuer, onRestituer }: MobileV
               <p className="text-sm text-gray-900 font-medium truncate">{attributedTo}</p>
             </div>
 
-            {/* Coordonnées du locataire (location uniquement) */}
             {isLocation && loueurInfo && (
               <div className="ml-9 space-y-1">
                 {loueurInfo.telephone && (
-                  
-                    href={'tel:' + loueurInfo.telephone.split(' ').join('')}
-                    className="flex items-center gap-1.5 text-blue-600 active:text-blue-800"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <a href={makeTelLink(loueurInfo.telephone)} className="flex items-center gap-1.5 text-blue-600 active:text-blue-800" onClick={(e) => e.stopPropagation()}>
                     <Phone className="w-3.5 h-3.5" />
                     <span className="text-sm font-medium underline">{loueurInfo.telephone}</span>
                   </a>
                 )}
                 {loueurInfo.email && (
-                  
-                    href={`mailto:${loueurInfo.email}`}
-                    className="flex items-center gap-1.5 text-gray-600"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <a href={makeMailLink(loueurInfo.email)} className="flex items-center gap-1.5 text-gray-600" onClick={(e) => e.stopPropagation()}>
                     <Mail className="w-3.5 h-3.5 text-gray-400" />
                     <span className="text-xs">{loueurInfo.email}</span>
                   </a>
