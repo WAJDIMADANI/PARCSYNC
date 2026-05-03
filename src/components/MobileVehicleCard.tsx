@@ -147,7 +147,7 @@ export function MobileVehicleCard({ vehicle, onAttribuer, onRestituer }: MobileV
               <div className="ml-9 space-y-1">
                 {loueurInfo.telephone && (
                   
-                    href={`tel:${loueurInfo.telephone.replace(/\s/g, '')}`}
+                    href={'tel:' + loueurInfo.telephone.replace(/\s/g, '')}
                     className="flex items-center gap-1.5 text-blue-600 active:text-blue-800"
                     onClick={(e) => e.stopPropagation()}
                   >
