@@ -47,6 +47,7 @@ import { ImportVehicleReferences } from './ImportVehicleReferences';
 import { LocationsManager } from './LocationsManager';
 import { EDLListGlobal } from './EDLListGlobal';
 import { PaiementsManager } from './PaiementsManager'; // 
+import { ComptesBancairesManager } from './ComptesBancairesManager';
 import { ExportsRH } from './ExportsRH'; // 🆕 Module Exports RH (CSV + Excel)
 
 // 🆕 ÉTAPE C : ajout d'une prop optionnelle `initialView` pour que App.tsx puisse
