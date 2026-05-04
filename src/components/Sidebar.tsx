@@ -58,7 +58,8 @@ export type View =
   | 'admin/import-bulk'
   | 'admin/utilisateurs'
   | 'admin/demandes-externes'
-  | 'admin/import-vehicle-references';
+  | 'admin/import-vehicle-references'   
+  | 'admin/comptes-bancaires';
 
 interface SidebarProps {
   currentView: View;
