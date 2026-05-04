@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Banknote, Search, RefreshCw, Filter, X, Check, Loader2, AlertTriangle, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import { Banknote, Search, RefreshCw, X, Check, Loader2, AlertTriangle, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface PaiementRow {
@@ -24,10 +24,10 @@ interface PaiementRow {
 }
 
 const STATUT_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  paye:    { bg: 'bg-emerald-100', text: 'text-emerald-700', label: '✅ Payé' },
-  impaye:  { bg: 'bg-gray-100',    text: 'text-gray-600',    label: '⬜ À venir' },
-  partiel: { bg: 'bg-amber-100',   text: 'text-amber-700',   label: '🟡 Partiel' },
-  retard:  { bg: 'bg-red-100',     text: 'text-red-700',     label: '🔴 En retard' },
+  paye:    { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Paye' },
+  impaye:  { bg: 'bg-gray-100',    text: 'text-gray-600',    label: 'A venir' },
+  partiel: { bg: 'bg-amber-100',   text: 'text-amber-700',   label: 'Partiel' },
+  retard:  { bg: 'bg-red-100',     text: 'text-red-700',     label: 'En retard' },
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -51,16 +51,20 @@ export function PaiementsManager() {
   const [pointageId, setPointageId] = useState<string | null>(null);
   const [pointageMontant, setPointageMontant] = useState('');
   const [pointageDate, setPointageDate] = useState(new Date().toISOString().split('T')[0]);
- const [pointageMode, setPointageMode] = useState('');
+  const [pointageNotes, setPointageNotes] = useState('');
+  const [pointageMode, setPointageMode] = useState('');
   const [pointageCompteId, setPointageCompteId] = useState('');
   const [pointageReference, setPointageReference] = useState('');
   const [savingPointage, setSavingPointage] = useState(false);
+
+  // Comptes bancaires
   const [comptesBank, setComptesBank] = useState<{ id: string; nom: string; banque: string | null }[]>([]);
 
   useEffect(() => {
     supabase.from('comptes_bancaires').select('id, nom, banque').eq('actif', true).order('nom')
       .then(({ data }) => setComptesBank(data || []));
   }, []);
+
   useEffect(() => { fetchPaiements(); }, []);
 
   const fetchPaiements = async () => {
@@ -85,7 +89,6 @@ export function PaiementsManager() {
       const today = new Date().toISOString().split('T')[0];
       const rows: PaiementRow[] = (data || []).map((p: any) => {
         let statut = p.statut;
-        // Auto-détection retards : impayé + date dépassée
         if (statut === 'impaye' && p.mois < today) statut = 'retard';
 
         return {
@@ -111,8 +114,6 @@ export function PaiementsManager() {
       });
 
       setPaiements(rows);
-
-      // Auto-expand le mois courant
       const currentMonth = new Date().toISOString().slice(0, 7);
       setExpandedMonths(new Set([currentMonth]));
     } catch (err) {
@@ -126,12 +127,10 @@ export function PaiementsManager() {
   const filtered = useMemo(() => {
     let result = [...paiements];
 
-    // Filtrer les contrats terminés si pas cochés
     if (!showTermines) {
       result = result.filter(p => p.contrat_statut === 'en_cours');
     }
 
-    // Filtre période
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
@@ -150,7 +149,6 @@ export function PaiementsManager() {
       result = result.filter(p => p.mois?.startsWith(String(currentYear)));
     }
 
-    // Recherche texte
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(p =>
@@ -172,11 +170,10 @@ export function PaiementsManager() {
       if (!groups[key]) groups[key] = [];
       groups[key].push(p);
     });
-    // Trier les mois
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [filtered]);
 
-  // Synthèse globale (sur les données filtrées)
+  // Synthese
   const synthese = useMemo(() => {
     const attendu = filtered.reduce((sum, p) => sum + (p.montant_attendu_ttc || 0), 0);
     const encaisse = filtered.reduce((sum, p) => sum + (p.montant_paye || 0), 0);
@@ -199,14 +196,14 @@ export function PaiementsManager() {
   };
 
   // Pointage
-const handleOpenPointage = (p: PaiementRow) => {
+  const handleOpenPointage = (p: PaiementRow) => {
     setPointageId(p.id);
     const reste = (p.montant_attendu_ttc || 0) - (p.montant_paye || 0);
     setPointageMontant(String(reste > 0 ? reste : p.montant_attendu_ttc || 0));
     setPointageDate(new Date().toISOString().split('T')[0]);
     setPointageNotes('');
     setPointageMode('');
-    setPointageCompte('');
+    setPointageCompteId('');
     setPointageReference('');
   };
 
@@ -225,14 +222,14 @@ const handleOpenPointage = (p: PaiementRow) => {
       if (totalPaye <= 0) newStatut = 'impaye';
       else if (totalPaye < attendu) newStatut = 'partiel';
 
-    const { error } = await supabase
+      const { error } = await supabase
         .from('paiements_location')
         .update({
           montant_paye: totalPaye,
           date_paiement: pointageDate,
           statut: newStatut,
           mode_paiement: pointageMode || null,
-          compte_rib: pointageCompte || null,
+          compte_bancaire_id: pointageCompteId || null,
           reference_paiement: pointageReference || null,
           pointe_par: (await supabase.auth.getUser()).data.user?.id || null,
           notes: pointageNotes ? ((paiement.notes || '') + ' | ' + pointageNotes).replace(/^\s*\|\s*/, '') : paiement.notes,
@@ -242,7 +239,7 @@ const handleOpenPointage = (p: PaiementRow) => {
 
       if (error) throw error;
 
-      // Mettre à jour le compteur dans locations
+      // Mettre a jour le compteur dans locations
       const { data: allPaiements } = await supabase
         .from('paiements_location')
         .select('id, statut, montant_paye, montant_attendu_ttc')
@@ -292,14 +289,14 @@ const handleOpenPointage = (p: PaiementRow) => {
   };
 
   const formatDate = (d: string | null) => {
-    if (!d) return '—';
+    if (!d) return '';
     try { return new Date(d).toLocaleDateString('fr-FR'); } catch { return d; }
   };
 
   const periodeLabels: Record<PeriodeFilter, string> = {
     ce_mois: 'Ce mois',
     ce_trimestre: 'Ce trimestre',
-    cette_annee: 'Cette année',
+    cette_annee: 'Cette annee',
     tout: 'Tout',
   };
 
@@ -308,46 +305,47 @@ const handleOpenPointage = (p: PaiementRow) => {
   }
 
   const paiementPointage = paiements.find(p => p.id === pointageId);
+
   return (
     <div>
-      {/* En-tête */}
+      {/* En-tete */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Paiements</h1>
-          <p className="text-gray-600 mt-1">{filtered.length} échéance{filtered.length > 1 ? 's' : ''} · {groupedByMonth.length} mois</p>
+          <p className="text-gray-600 mt-1">{filtered.length} echeance{filtered.length > 1 ? 's' : ''} - {groupedByMonth.length} mois</p>
         </div>
         <button onClick={fetchPaiements} className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
           <RefreshCw className="w-4 h-4 mr-2" /> Actualiser
         </button>
       </div>
 
-      {/* Onglets période */}
+      {/* Onglets periode */}
       <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
         {(['ce_mois', 'ce_trimestre', 'cette_annee', 'tout'] as PeriodeFilter[]).map(p => (
           <button key={p} onClick={() => setPeriode(p)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              periode === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-            }`}>
+            className={'px-4 py-2 rounded-md text-sm font-medium transition-colors ' +
+              (periode === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900')
+            }>
             {periodeLabels[p]}
           </button>
         ))}
       </div>
 
-      {/* Synthèse */}
+      {/* Synthese */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 font-medium mb-1">Attendu</p>
-          <p className="text-xl font-bold text-gray-900">{synthese.attendu.toLocaleString('fr-FR')} €</p>
-          <p className="text-xs text-gray-400 mt-1">{synthese.totalEcheances} échéance{synthese.totalEcheances > 1 ? 's' : ''}</p>
+          <p className="text-xl font-bold text-gray-900">{synthese.attendu.toLocaleString('fr-FR')} EUR</p>
+          <p className="text-xs text-gray-400 mt-1">{synthese.totalEcheances} echeance{synthese.totalEcheances > 1 ? 's' : ''}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 font-medium mb-1">Encaissé</p>
-          <p className="text-xl font-bold text-emerald-600">{synthese.encaisse.toLocaleString('fr-FR')} €</p>
-          <p className="text-xs text-gray-400 mt-1">{synthese.nbPayes} payée{synthese.nbPayes > 1 ? 's' : ''}</p>
+          <p className="text-xs text-gray-500 font-medium mb-1">Encaisse</p>
+          <p className="text-xl font-bold text-emerald-600">{synthese.encaisse.toLocaleString('fr-FR')} EUR</p>
+          <p className="text-xs text-gray-400 mt-1">{synthese.nbPayes} payee{synthese.nbPayes > 1 ? 's' : ''}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 font-medium mb-1">Impayés</p>
-          <p className="text-xl font-bold text-red-600">{synthese.totalImpayes.toLocaleString('fr-FR')} €</p>
+          <p className="text-xs text-gray-500 font-medium mb-1">Impayes</p>
+          <p className="text-xl font-bold text-red-600">{synthese.totalImpayes.toLocaleString('fr-FR')} EUR</p>
           <p className="text-xs text-gray-400 mt-1">{synthese.nbRetards} en retard</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -358,8 +356,8 @@ const handleOpenPointage = (p: PaiementRow) => {
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 font-medium mb-1">Reste à encaisser</p>
-          <p className="text-xl font-bold text-amber-600">{(synthese.attendu - synthese.encaisse).toLocaleString('fr-FR')} €</p>
+          <p className="text-xs text-gray-500 font-medium mb-1">Reste a encaisser</p>
+          <p className="text-xl font-bold text-amber-600">{(synthese.attendu - synthese.encaisse).toLocaleString('fr-FR')} EUR</p>
         </div>
       </div>
 
@@ -367,21 +365,21 @@ const handleOpenPointage = (p: PaiementRow) => {
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input type="text" placeholder="Rechercher par véhicule, réf TCA ou locataire..." value={search} onChange={(e) => setSearch(e.target.value)}
+          <input type="text" placeholder="Rechercher par vehicule, ref TCA ou locataire..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         </div>
         <label className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
           <input type="checkbox" checked={showTermines} onChange={(e) => setShowTermines(e.target.checked)} className="w-4 h-4 rounded" />
-          <span className="text-sm text-gray-700">Contrats terminés</span>
+          <span className="text-sm text-gray-700">Contrats termines</span>
         </label>
       </div>
 
-      {/* Tableau groupé par mois */}
+      {/* Tableau groupe par mois */}
       {groupedByMonth.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Banknote className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 text-lg font-medium mb-2">Aucun paiement pour cette période</p>
-          <p className="text-gray-500 text-sm">Changez la période ou cochez "Contrats terminés"</p>
+          <p className="text-gray-600 text-lg font-medium mb-2">Aucun paiement pour cette periode</p>
+          <p className="text-gray-500 text-sm">Changez la periode ou cochez "Contrats termines"</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -395,7 +393,6 @@ const handleOpenPointage = (p: PaiementRow) => {
 
             return (
               <div key={monthKey} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                {/* En-tête du mois */}
                 <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => toggleMonth(monthKey)}>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -404,18 +401,17 @@ const handleOpenPointage = (p: PaiementRow) => {
                     <div>
                       <h3 className="text-base font-semibold text-gray-900">{formatMoisLabel(monthKey)}</h3>
                       <p className="text-xs text-gray-500">
-                        {monthNbTotal} échéance{monthNbTotal > 1 ? 's' : ''}
-                        {monthNbPayes > 0 && <span className="text-emerald-600"> · {monthNbPayes} payée{monthNbPayes > 1 ? 's' : ''}</span>}
-                        {monthNbRetards > 0 && <span className="text-red-600"> · {monthNbRetards} en retard</span>}
+                        {monthNbTotal} echeance{monthNbTotal > 1 ? 's' : ''}
+                        {monthNbPayes > 0 && <span className="text-emerald-600"> - {monthNbPayes} payee{monthNbPayes > 1 ? 's' : ''}</span>}
+                        {monthNbRetards > 0 && <span className="text-red-600"> - {monthNbRetards} en retard</span>}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right hidden sm:block">
-                      <p className="text-sm font-semibold text-gray-900">{monthAttendu.toLocaleString('fr-FR')} €</p>
-                      <p className="text-xs text-emerald-600">{monthEncaisse.toLocaleString('fr-FR')} € encaissé</p>
+                      <p className="text-sm font-semibold text-gray-900">{monthAttendu.toLocaleString('fr-FR')} EUR</p>
+                      <p className="text-xs text-emerald-600">{monthEncaisse.toLocaleString('fr-FR')} EUR encaisse</p>
                     </div>
-                    {/* Barre de progression du mois */}
                     <div className="w-24 hidden md:block">
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div className="bg-emerald-500 h-2 rounded-full transition-all"
@@ -426,17 +422,16 @@ const handleOpenPointage = (p: PaiementRow) => {
                   </div>
                 </div>
 
-                {/* Détails du mois */}
                 {isExpanded && (
                   <div className="border-t border-gray-200">
                     <table className="min-w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Véhicule</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Vehicule</th>
                           <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Locataire</th>
                           <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Type</th>
                           <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Attendu</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Payé</th>
+                          <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Paye</th>
                           <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Date</th>
                           <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Statut</th>
                           <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Action</th>
@@ -451,29 +446,21 @@ const handleOpenPointage = (p: PaiementRow) => {
                                 <div className="text-sm font-bold text-gray-900">{p.vehicule_immat}</div>
                                 <div className="text-xs text-gray-500">{p.vehicule_marque} {p.vehicule_modele}</div>
                               </td>
-                              <td className="px-4 py-2.5 text-sm text-gray-700">
-                                {p.locataire_prenom} {p.locataire_nom}
-                              </td>
-                              <td className="px-4 py-2.5 text-xs text-gray-600">
-                                {TYPE_LABELS[p.type_location || ''] || '—'}
-                              </td>
-                              <td className="px-4 py-2.5 text-sm text-right font-medium text-gray-900">
-                                {(p.montant_attendu_ttc || 0).toFixed(2)} €
-                              </td>
+                              <td className="px-4 py-2.5 text-sm text-gray-700">{p.locataire_prenom} {p.locataire_nom}</td>
+                              <td className="px-4 py-2.5 text-xs text-gray-600">{TYPE_LABELS[p.type_location || ''] || ''}</td>
+                              <td className="px-4 py-2.5 text-sm text-right font-medium text-gray-900">{(p.montant_attendu_ttc || 0).toFixed(2)} EUR</td>
                               <td className="px-4 py-2.5 text-sm text-right">
                                 {p.montant_paye && p.montant_paye > 0 ? (
                                   <span className={p.statut === 'paye' ? 'font-medium text-emerald-700' : 'font-medium text-amber-700'}>
-                                    {p.montant_paye.toFixed(2)} €
+                                    {p.montant_paye.toFixed(2)} EUR
                                   </span>
                                 ) : (
-                                  <span className="text-gray-400">—</span>
+                                  <span className="text-gray-400">-</span>
                                 )}
                               </td>
-                              <td className="px-4 py-2.5 text-sm text-gray-600">
-                                {formatDate(p.date_paiement)}
-                              </td>
+                              <td className="px-4 py-2.5 text-sm text-gray-600">{formatDate(p.date_paiement)}</td>
                               <td className="px-4 py-2.5">
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${sc.bg} ${sc.text}`}>{sc.label}</span>
+                                <span className={'px-2 py-0.5 rounded-full text-xs font-semibold ' + sc.bg + ' ' + sc.text}>{sc.label}</span>
                               </td>
                               <td className="px-4 py-2.5 text-right">
                                 {p.statut !== 'paye' && (
@@ -487,16 +474,13 @@ const handleOpenPointage = (p: PaiementRow) => {
                           );
                         })}
                       </tbody>
-                      {/* Sous-total du mois */}
                       <tfoot className="bg-gray-50 border-t border-gray-200">
                         <tr>
-                          <td colSpan={3} className="px-4 py-2 text-sm font-semibold text-gray-700">
-                            Total {formatMoisLabel(monthKey)}
-                          </td>
-                          <td className="px-4 py-2 text-sm text-right font-bold text-gray-900">{monthAttendu.toFixed(2)} €</td>
-                          <td className="px-4 py-2 text-sm text-right font-bold text-emerald-700">{monthEncaisse.toFixed(2)} €</td>
+                          <td colSpan={3} className="px-4 py-2 text-sm font-semibold text-gray-700">Total {formatMoisLabel(monthKey)}</td>
+                          <td className="px-4 py-2 text-sm text-right font-bold text-gray-900">{monthAttendu.toFixed(2)} EUR</td>
+                          <td className="px-4 py-2 text-sm text-right font-bold text-emerald-700">{monthEncaisse.toFixed(2)} EUR</td>
                           <td colSpan={3} className="px-4 py-2 text-sm text-right text-gray-500">
-                            Reste : <strong className="text-amber-700">{(monthAttendu - monthEncaisse).toFixed(2)} €</strong>
+                            Reste : <strong className="text-amber-700">{(monthAttendu - monthEncaisse).toFixed(2)} EUR</strong>
                           </td>
                         </tr>
                       </tfoot>
@@ -509,7 +493,7 @@ const handleOpenPointage = (p: PaiementRow) => {
         </div>
       )}
 
-{/* Modal de pointage */}
+      {/* Modal de pointage */}
       {pointageId && paiementPointage && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
@@ -520,7 +504,7 @@ const handleOpenPointage = (p: PaiementRow) => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Pointer le paiement</h3>
                 <p className="text-sm text-gray-500">
-                  {paiementPointage.vehicule_immat} · Éch. n°{paiementPointage.numero_echeance} · {formatMoisLabel(paiementPointage.mois?.slice(0, 7) || '')}
+                  {paiementPointage.vehicule_immat} - Ech. n{paiementPointage.numero_echeance} - {formatMoisLabel(paiementPointage.mois?.slice(0, 7) || '')}
                 </p>
               </div>
             </div>
@@ -528,12 +512,12 @@ const handleOpenPointage = (p: PaiementRow) => {
             <div className="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Montant attendu :</span>
-                <span className="font-semibold">{(paiementPointage.montant_attendu_ttc || 0).toFixed(2)} € TTC</span>
+                <span className="font-semibold">{(paiementPointage.montant_attendu_ttc || 0).toFixed(2)} EUR TTC</span>
               </div>
               {paiementPointage.montant_paye && paiementPointage.montant_paye > 0 && (
                 <div className="flex justify-between mt-1">
-                  <span className="text-gray-500">Déjà encaissé :</span>
-                  <span className="font-semibold text-emerald-700">{paiementPointage.montant_paye.toFixed(2)} €</span>
+                  <span className="text-gray-500">Deja encaisse :</span>
+                  <span className="font-semibold text-emerald-700">{paiementPointage.montant_paye.toFixed(2)} EUR</span>
                 </div>
               )}
               <div className="flex justify-between mt-1">
@@ -544,13 +528,13 @@ const handleOpenPointage = (p: PaiementRow) => {
 
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Montant encaissé (€) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Montant encaisse (EUR) *</label>
                 <input type="number" step="0.01" value={pointageMontant} onChange={(e) => setPointageMontant(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date d'encaissement *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date d encaissement *</label>
                 <input type="date" value={pointageDate} onChange={(e) => setPointageDate(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
               </div>
@@ -559,34 +543,38 @@ const handleOpenPointage = (p: PaiementRow) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mode de paiement *</label>
                 <select value={pointageMode} onChange={(e) => setPointageMode(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
-                  <option value="">-- Sélectionner --</option>
+                  <option value="">-- Selectionner --</option>
                   <option value="virement">Virement bancaire</option>
-                  <option value="cheque">Chèque</option>
-                  <option value="especes">Espèces</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="especes">Especes</option>
                   <option value="cb">Carte bancaire</option>
-                  <option value="prelevement">Prélèvement automatique</option>
+                  <option value="prelevement">Prelevement automatique</option>
                   <option value="autre">Autre</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Compte / RIB encaissé sur</label>
-                <input type="text" value={pointageCompte} onChange={(e) => setPointageCompte(e.target.value)}
-                  placeholder="Ex: Compte BNP TCA, CIC Pro..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Compte bancaire encaisse sur *</label>
+                <select value={pointageCompteId} onChange={(e) => setPointageCompteId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                  <option value="">-- Selectionner le compte --</option>
+                  {comptesBank.map(c => (
+                    <option key={c.id} value={c.id}>{c.nom}{c.banque ? ' (' + c.banque + ')' : ''}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Référence paiement</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reference paiement</label>
                 <input type="text" value={pointageReference} onChange={(e) => setPointageReference(e.target.value)}
-                  placeholder="Ex: n° chèque, réf. virement..."
+                  placeholder="Ex: n cheque, ref. virement..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optionnel)</label>
                 <input type="text" value={pointageNotes} onChange={(e) => setPointageNotes(e.target.value)}
-                  placeholder="Ex: remarques particulières..."
+                  placeholder="Ex: remarques particulieres..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
               </div>
 
@@ -594,7 +582,7 @@ const handleOpenPointage = (p: PaiementRow) => {
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
                   <p className="text-xs text-amber-700">
-                    Paiement partiel — il restera {((paiementPointage.montant_attendu_ttc || 0) - (paiementPointage.montant_paye || 0) - parseFloat(pointageMontant)).toFixed(2)} € à encaisser
+                    Paiement partiel - il restera {((paiementPointage.montant_attendu_ttc || 0) - (paiementPointage.montant_paye || 0) - parseFloat(pointageMontant)).toFixed(2)} EUR a encaisser
                   </p>
                 </div>
               )}
@@ -605,7 +593,7 @@ const handleOpenPointage = (p: PaiementRow) => {
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium disabled:opacity-50">
                 Annuler
               </button>
-              <button onClick={handleValiderPointage} disabled={savingPointage || !pointageMontant || !pointageMode}
+              <button onClick={handleValiderPointage} disabled={savingPointage || !pointageMontant || !pointageMode || !pointageCompteId}
                 className="px-4 py-2 text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 font-medium disabled:opacity-50 flex items-center gap-2">
                 {savingPointage ? (<><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement...</>) : (<><Check className="w-4 h-4" /> Valider le pointage</>)}
               </button>
