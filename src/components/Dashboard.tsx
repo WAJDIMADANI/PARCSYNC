@@ -194,6 +194,8 @@ export function Dashboard({ initialView }: DashboardProps = {}) {
         return <DemandesExternesManager />;
       case 'admin/import-vehicle-references':
         return <ImportVehicleReferences />;
+        case 'admin/comptes-bancaires':
+        return <ComptesBancairesManager />;
       default:
         return <CandidateList />;
     }
