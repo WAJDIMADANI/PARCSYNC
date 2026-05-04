@@ -220,12 +220,16 @@ const handleOpenPointage = (p: PaiementRow) => {
       if (totalPaye <= 0) newStatut = 'impaye';
       else if (totalPaye < attendu) newStatut = 'partiel';
 
-      const { error } = await supabase
+    const { error } = await supabase
         .from('paiements_location')
         .update({
           montant_paye: totalPaye,
           date_paiement: pointageDate,
           statut: newStatut,
+          mode_paiement: pointageMode || null,
+          compte_rib: pointageCompte || null,
+          reference_paiement: pointageReference || null,
+          pointe_par: (await supabase.auth.getUser()).data.user?.id || null,
           notes: pointageNotes ? ((paiement.notes || '') + ' | ' + pointageNotes).replace(/^\s*\|\s*/, '') : paiement.notes,
           updated_at: new Date().toISOString(),
         })
