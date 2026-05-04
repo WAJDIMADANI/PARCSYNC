@@ -87,6 +87,7 @@ const AVAILABLE_PERMISSIONS = [
     { id: 'admin/utilisateurs', label: 'Utilisateurs' },
     { id: 'admin/demandes-externes', label: 'Demandes Externes' },
     { id: 'admin/import-vehicle-references', label: 'Import Références Véhicules' },
+    { id: 'admin/comptes-bancaires', label: 'Comptes bancaires' },
   ]},
 ];
 
