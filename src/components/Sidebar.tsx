@@ -185,7 +185,8 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       children: [
         { id: 'parc/vehicules', label: 'Véhicules', icon: Car, enabled: true },
         { id: 'parc/locataires-externes', label: 'Loueurs', icon: Building, enabled: true },
-        { id: 'parc/locations', label: 'Locations', icon: MapPin, enabled: true },
+       { id: 'parc/locations', label: 'Locations', icon: MapPin, enabled: true },
+        { id: 'parc/paiements', label: 'Paiements', icon: Banknote, enabled: true },
         { id: 'parc/etats-des-lieux', label: 'États des lieux', icon: ClipboardList, enabled: true },
         { id: 'parc/ct-assurance', label: 'CT & Assurance', icon: Shield, enabled: true },
         { id: 'parc/maintenance', label: 'Maintenance/Garage', icon: Wrench, enabled: true },
