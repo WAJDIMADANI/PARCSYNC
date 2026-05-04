@@ -235,7 +235,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         { id: 'admin/modeles-contrats', label: 'Modèles Contrats', icon: FileText, enabled: true },
         { id: 'admin/import-salarie', label: 'Import Salarié Test', icon: UserPlus, enabled: true },
         { id: 'admin/import-bulk', label: 'Import en Masse', icon: Upload, enabled: true },
-        { id: 'admin/utilisateurs', label: 'Utilisateurs', icon: Users, enabled: true },
+        { id: 'admin/comptes-bancaires', label: 'Comptes bancaires', icon: CreditCard, enabled: true },
         { id: 'admin/demandes-externes', label: 'Demandes Externes', icon: ExternalLink, enabled: true },
         { id: 'admin/import-vehicle-references', label: 'Import Références Véhicules', icon: Database, enabled: true },
       ]
