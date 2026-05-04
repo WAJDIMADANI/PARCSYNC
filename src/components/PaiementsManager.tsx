@@ -495,10 +495,10 @@ export function PaiementsManager() {
         </div>
       )}
 
-      {/* Modal de pointage */}
+     {/* Modal de pointage */}
       {pointageId && paiementPointage && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex-shrink-0 w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
                 <Banknote className="w-5 h-5 text-emerald-600" />
@@ -534,15 +534,46 @@ export function PaiementsManager() {
                 <input type="number" step="0.01" value={pointageMontant} onChange={(e) => setPointageMontant(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date d'encaissement *</label>
                 <input type="date" value={pointageDate} onChange={(e) => setPointageDate(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mode de paiement *</label>
+                <select value={pointageMode} onChange={(e) => setPointageMode(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                  <option value="">-- Sélectionner --</option>
+                  <option value="virement">Virement bancaire</option>
+                  <option value="cheque">Chèque</option>
+                  <option value="especes">Espèces</option>
+                  <option value="cb">Carte bancaire</option>
+                  <option value="prelevement">Prélèvement automatique</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Compte / RIB encaissé sur</label>
+                <input type="text" value={pointageCompte} onChange={(e) => setPointageCompte(e.target.value)}
+                  placeholder="Ex: Compte BNP TCA, CIC Pro..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Référence paiement</label>
+                <input type="text" value={pointageReference} onChange={(e) => setPointageReference(e.target.value)}
+                  placeholder="Ex: n° chèque, réf. virement..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optionnel)</label>
                 <input type="text" value={pointageNotes} onChange={(e) => setPointageNotes(e.target.value)}
-                  placeholder="Ex: virement reçu, chèque n°..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+                  placeholder="Ex: remarques particulières..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
               </div>
 
               {parseFloat(pointageMontant) > 0 && parseFloat(pointageMontant) < ((paiementPointage.montant_attendu_ttc || 0) - (paiementPointage.montant_paye || 0)) && (
@@ -560,7 +591,7 @@ export function PaiementsManager() {
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium disabled:opacity-50">
                 Annuler
               </button>
-              <button onClick={handleValiderPointage} disabled={savingPointage || !pointageMontant}
+              <button onClick={handleValiderPointage} disabled={savingPointage || !pointageMontant || !pointageMode}
                 className="px-4 py-2 text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 font-medium disabled:opacity-50 flex items-center gap-2">
                 {savingPointage ? (<><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement...</>) : (<><Check className="w-4 h-4" /> Valider le pointage</>)}
               </button>
@@ -568,6 +599,4 @@ export function PaiementsManager() {
           </div>
         </div>
       )}
-    </div>
-  );
 }
