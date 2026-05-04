@@ -55,7 +55,16 @@ const [pointageNotes, setPointageNotes] = useState('');
   const [pointageMode, setPointageMode] = useState('');
   const [pointageCompte, setPointageCompte] = useState('');
   const [pointageReference, setPointageReference] = useState('');
+  const [pointageMode, setPointageMode] = useState('');
+  const [pointageCompteId, setPointageCompteId] = useState('');
+  const [pointageReference, setPointageReference] = useState('');
   const [savingPointage, setSavingPointage] = useState(false);
+  const [comptesBank, setComptesBank] = useState<{ id: string; nom: string; banque: string | null }[]>([]);
+
+  useEffect(() => {
+    supabase.from('comptes_bancaires').select('id, nom, banque').eq('actif', true).order('nom')
+      .then(({ data }) => setComptesBank(data || []));
+  }, []);
   useEffect(() => { fetchPaiements(); }, []);
 
   const fetchPaiements = async () => {
