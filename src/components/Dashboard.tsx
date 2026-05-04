@@ -252,6 +252,7 @@ export function Dashboard({ initialView }: DashboardProps = {}) {
                 {view === 'admin/utilisateurs' && 'Gestion des Utilisateurs'}
                 {view === 'admin/demandes-externes' && 'Demandes Externes'}
                 {view === 'admin/import-vehicle-references' && 'Import Références Véhicules'}
+                {view === 'admin/comptes-bancaires' && 'Comptes bancaires'}
               </h2>
             </div>
 
