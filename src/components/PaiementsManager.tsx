@@ -194,12 +194,15 @@ const [pointageNotes, setPointageNotes] = useState('');
   };
 
   // Pointage
-  const handleOpenPointage = (p: PaiementRow) => {
+const handleOpenPointage = (p: PaiementRow) => {
     setPointageId(p.id);
     const reste = (p.montant_attendu_ttc || 0) - (p.montant_paye || 0);
     setPointageMontant(String(reste > 0 ? reste : p.montant_attendu_ttc || 0));
     setPointageDate(new Date().toISOString().split('T')[0]);
     setPointageNotes('');
+    setPointageMode('');
+    setPointageCompte('');
+    setPointageReference('');
   };
 
   const handleValiderPointage = async () => {
