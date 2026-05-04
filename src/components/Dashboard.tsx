@@ -136,6 +136,8 @@ export function Dashboard({ initialView }: DashboardProps = {}) {
         return <LocatairesExternesManager />;
       case 'parc/locations':
         return <LocationsManager viewParams={viewParams} onNavigate={handleViewChange} />;
+        case 'parc/paiements':
+        return <PaiementsManager />;
    case 'parc/etats-des-lieux':
         return <EDLListGlobal />;
       case 'parc/ct-assurance':
