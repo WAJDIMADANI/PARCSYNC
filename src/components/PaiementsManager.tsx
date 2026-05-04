@@ -51,9 +51,6 @@ export function PaiementsManager() {
   const [pointageId, setPointageId] = useState<string | null>(null);
   const [pointageMontant, setPointageMontant] = useState('');
   const [pointageDate, setPointageDate] = useState(new Date().toISOString().split('T')[0]);
-  const [pointageMode, setPointageMode] = useState('');
-  const [pointageCompte, setPointageCompte] = useState('');
-  const [pointageReference, setPointageReference] = useState('');
  const [pointageMode, setPointageMode] = useState('');
   const [pointageCompteId, setPointageCompteId] = useState('');
   const [pointageReference, setPointageReference] = useState('');
