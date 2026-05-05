@@ -478,11 +478,25 @@ const [showEDLModal, setShowEDLModal] = useState(false);
     return <span className="text-xs text-gray-700 max-w-[150px] truncate block">{fournisseur}</span>;
   };
 
-  const handleRestituer = async (vehicle: Vehicle) => {
-    if (vehicle.statut !== 'chauffeur_tca') {
-      alert('Restitution disponible uniquement pour les chauffeurs TCA pour le moment. Les autres types arrivent bientôt.');
+const handleRestituer = async (vehicle: Vehicle) => {
+    if (!appUserId) { alert('Utilisateur non connecte'); return; }
+    const isLocationStatut = ['location_pure', 'location_vente_particulier', 'location_vente_societe'].includes(vehicle.statut);
+    if (isLocationStatut) {
+      const kmRetour = prompt('Kilometres au retour du vehicule :');
+      if (!kmRetour || isNaN(Number(kmRetour))) return;
+      try {
+        const { data: attr } = await supabase.from('attribution_vehicule').select('id, loueur:loueur_id(nom, prenom)').eq('vehicule_id', vehicle.id).is('date_fin', null).maybeSingle();
+        if (attr) await supabase.from('attribution_vehicule').update({ date_fin: new Date().toISOString().split('T')[0] }).eq('id', attr.id);
+        await supabase.from('locations').update({ statut: 'terminee' }).eq('vehicule_id', vehicle.id).eq('statut', 'en_cours');
+        await supabase.from('vehicule').update({ statut: 'sur_parc', locataire_type: null }).eq('id', vehicle.id);
+        const loueur = attr?.loueur as any;
+        setEdlData({ typeEdl: 'entree', attributionId: attr?.id || null, vehiculeId: vehicle.id, profilId: '', immatriculation: vehicle.immatriculation, marque: vehicle.marque || '', modele: vehicle.modele || '', refTca: vehicle.ref_tca || null, salarieNom: loueur?.nom || '', salariePrenom: loueur?.prenom || '', kmInitial: Number(kmRetour), adminId: appUserId, adminNom: appUserNom || '', adminPrenom: appUserPrenom || '' });
+        setShowEDLModal(true);
+        await fetchVehicles();
+      } catch (e) { console.error('Erreur restitution location:', e); alert('Erreur lors de la restitution'); }
       return;
     }
+    if (!['chauffeur_tca', 'direction_administratif', 'en_pret'].includes(vehicle.statut)) { alert('Restitution non disponible pour ce statut.'); return; }
     if (!appUserId) {
       alert('Utilisateur non connecté');
       return;
