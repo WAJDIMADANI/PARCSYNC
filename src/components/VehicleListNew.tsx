@@ -478,73 +478,15 @@ const [showEDLModal, setShowEDLModal] = useState(false);
     return <span className="text-xs text-gray-700 max-w-[150px] truncate block">{fournisseur}</span>;
   };
 
-const handleRestituer = async (vehicle: Vehicle) => {
+  const handleRestituer = async (vehicle: Vehicle) => {
+    if (vehicle.statut !== 'chauffeur_tca') {
+      alert('Restitution disponible uniquement pour les chauffeurs TCA pour le moment. Les autres types arrivent bientôt.');
+      return;
+    }
     if (!appUserId) {
       alert('Utilisateur non connecté');
       return;
     }
-
-    const isLocation = ['location_pure', 'location_vente_particulier', 'location_vente_societe'].includes(vehicle.statut);
-
-    if (isLocation) {
-      // Flow location : confirmation simple + clôture + EDL retour
-      const kmRetour = prompt('Kilomètres au retour du véhicule :');
-      if (!kmRetour || isNaN(Number(kmRetour))) return;
-
-      try {
-        // 1. Clôturer l'attribution active
-        const { data: attribution } = await supabase
-          .from('attribution_vehicule')
-          .select('id, loueur_id, loueur:loueur_id(nom, prenom)')
-          .eq('vehicule_id', vehicle.id)
-          .is('date_fin', null)
-          .maybeSingle();
-
-        if (attribution) {
-          await supabase.from('attribution_vehicule')
-            .update({ date_fin: new Date().toISOString().split('T')[0] })
-            .eq('id', attribution.id);
-        }
-
-        // 2. Terminer le contrat de location
-        await supabase.from('locations')
-          .update({ statut: 'terminee' })
-          .eq('vehicule_id', vehicle.id)
-          .eq('statut', 'en_cours');
-
-        // 3. Remettre le véhicule sur parc
-        await supabase.from('vehicule')
-          .update({ statut: 'sur_parc', locataire_type: null })
-          .eq('id', vehicle.id);
-
-        // 4. Ouvrir EDL retour
-        const loueur = attribution?.loueur as any;
-        setEdlData({
-          typeEdl: 'entree',
-          attributionId: attribution?.id || null,
-          vehiculeId: vehicle.id,
-          profilId: '',
-          immatriculation: vehicle.immatriculation,
-          marque: vehicle.marque || '',
-          modele: vehicle.modele || '',
-          refTca: vehicle.ref_tca || null,
-          salarieNom: loueur?.nom || '',
-          salariePrenom: loueur?.prenom || '',
-          kmInitial: Number(kmRetour),
-          adminId: appUserId,
-          adminNom: appUserNom || '',
-          adminPrenom: appUserPrenom || '',
-        });
-        setShowEDLModal(true);
-        await fetchVehicles();
-      } catch (e) {
-        console.error('Erreur restitution location:', e);
-        alert('Erreur lors de la restitution');
-      }
-      return;
-    }
-
-    // Flow chauffeur TCA / direction / en_pret : RestitutionModal existant
     try {
       const { data: attribution, error } = await supabase
         .from('attribution_vehicule')
@@ -555,6 +497,7 @@ const handleRestituer = async (vehicle: Vehicle) => {
           admin:attribue_par(nom, prenom)
         `)
         .eq('vehicule_id', vehicle.id)
+        .eq('statut_vehicule', 'chauffeur_tca')
         .is('date_fin', null)
         .maybeSingle();
 
@@ -599,6 +542,8 @@ const handleRestituer = async (vehicle: Vehicle) => {
       alert('Erreur lors de la récupération des données');
     }
   };
+
+  const handleValiderAttribution = async () => {
     if (!attributionVehicle || !attributionType) return;
     setSavingAttribution(true);
     try {
@@ -1049,7 +994,7 @@ if (isLocationType) {
                         <span className="text-xs text-gray-700">
                           {(() => {
                             const s = vehicle.statut;
-                            if (['location_pure', 'location_vente_particulier', 'location_vente_societe', 'loa'].includes(s)) {
+                            if (s === 'location_pure' || s === 'loa') {
                               return vehicle.locataire_affiche && vehicle.locataire_affiche !== 'Non attribué' && vehicle.locataire_affiche !== 'TCA'
                                 ? vehicle.locataire_affiche
                                 : <span className="text-gray-400">—</span>;
