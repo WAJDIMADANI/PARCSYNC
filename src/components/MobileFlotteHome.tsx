@@ -170,7 +170,7 @@ const [showEDLModal, setShowEDLModal] = useState(false);
     setShowAttributionModal(true);
   };
 
- const handleRestituer = async (vehicle: Vehicle) => {
+const handleRestituer = async (vehicle: Vehicle) => {
     if (!appUserId) { alert('Utilisateur non connecte'); return; }
     const isLocationStatut = ['location_pure', 'location_vente_particulier', 'location_vente_societe'].includes(vehicle.statut);
     if (isLocationStatut) {
@@ -189,7 +189,7 @@ const [showEDLModal, setShowEDLModal] = useState(false);
       return;
     }
     if (!['chauffeur_tca', 'direction_administratif', 'en_pret'].includes(vehicle.statut)) { alert('Restitution non disponible pour ce statut.'); return; }
-    if (!appUserId) {
+    if (!appUserId) { alert('Utilisateur non connecté'); return; }
     try {
       const { data: attribution, error } = await supabase
         .from('attribution_vehicule')
