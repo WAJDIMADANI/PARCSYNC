@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
-import { MapPin, Phone, Mail, Building, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Phone, Mail, Building, User, ChevronDown, ChevronUp, FileDown, Loader2 } from 'lucide-react'; 
+import { generateContractLocationPurePdf, formatDateFr, formatDateLongFr } from '../lib/contractLocationPureGenerator';
 
 interface Props {
   vehicleId: string;
