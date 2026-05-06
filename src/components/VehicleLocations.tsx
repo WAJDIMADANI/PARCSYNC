@@ -64,7 +64,55 @@ export function VehicleLocations({ vehicleId }: Props) {
     if (!d) return '—';
     try { return new Date(d).toLocaleDateString('fr-FR'); } catch { return d; }
   };
+const handleGeneratePdf = async (loc: any) => {
+    if (generatingPdf) return;
+    setGeneratingPdf(loc.id);
+    try {
+      const loueur = loc.loueur;
+      const pdfPath = await generateContractLocationPurePdf({
+        locationId: loc.id,
+        reference: loc.reference_contrat || 'N/A',
+        dateContrat: formatDateFr(loc.date_debut),
+        locataireCivilite: loueur?.type === 'particulier' ? 'M.' : '',
+        locataireNom: loueur?.nom || '',
+        locatairePrenom: loueur?.prenom || '',
+        locataireDateNaissance: formatDateFr(loueur?.date_naissance),
+        locataireLieuNaissance: loueur?.lieu_naissance || '',
+        locataireNationalite: loueur?.nationalite || '',
+        locataireAdresse: loueur?.adresse || '',
+        marque: loc.vehicule_marque || '',
+        modele: loc.vehicule_modele || '',
+        immatriculation: loc.vehicule_immat || '',
+        carburant: loc.vehicule_carburant || '',
+        date1ereImmat: formatDateFr(loc.vehicule_date_1ere_immat),
+        valeurResiduelle: loc.valeur_residuelle ? String(loc.valeur_residuelle) : '',
+        dateDebut: formatDateLongFr(loc.date_debut),
+        dateFin: formatDateLongFr(loc.date_fin),
+        dureeMois: loc.duree_mois ? String(loc.duree_mois) : '',
+        mensualiteTtc: loc.montant_mensuel_ttc ? Number(loc.montant_mensuel_ttc).toFixed(2) : '',
+        depotGarantie: loc.depot_garantie ? String(loc.depot_garantie) : '',
+        kmInclus: loc.km_inclus ? String(loc.km_inclus) : '',
+        dateSignature: formatDateFr(loc.date_debut),
+      });
+      if (pdfPath) {
+        const { data: signedUrl } = await supabase.storage.from('edl-documents').createSignedUrl(pdfPath, 300);
+        if (signedUrl?.signedUrl) {
+          window.open(signedUrl.signedUrl, '_blank');
+        }
+        await fetchLocations();
+      }
+    } catch (err) {
+      console.error('Erreur generation PDF contrat:', err);
+      alert('Erreur lors de la generation du PDF');
+    } finally {
+      setGeneratingPdf(null);
+    }
+  };
 
+  const handleDownloadPdf = async (pdfPath: string) => {
+    const { data: signedUrl } = await supabase.storage.from('edl-documents').createSignedUrl(pdfPath, 300);
+    if (signedUrl?.signedUrl) window.open(signedUrl.signedUrl, '_blank');
+  };
   if (loading) return <div className="flex justify-center py-8"><LoadingSpinner /></div>;
 
   if (locations.length === 0) {
