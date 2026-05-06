@@ -36,7 +36,8 @@ export function VehicleLocations({ vehicleId }: Props) {
           depot_garantie, km_depart, km_inclus, cout_km_supplementaire,
           valeur_residuelle, mensualites_payees, reste_a_payer_ttc,
           statut, notes,
-          loueur:locataire_id(id, nom, prenom, type, telephone, email, adresse, siret, permis_numero, permis_validite, date_naissance, nationalite, lieu_naissance)
+        loueur:locataire_id(id, nom, prenom, type, telephone, email, adresse, siret, permis_numero, permis_validite, date_naissance, nationalite, lieu_naissance),
+          vehicule:vehicule_id(immatriculation, marque, modele, energie, date_premiere_mise_en_circulation)
         `)
         .eq('vehicule_id', vehicleId)
         .order('date_debut', { ascending: false });
