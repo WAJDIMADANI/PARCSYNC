@@ -257,6 +257,28 @@ const handleGeneratePdf = async (loc: any) => {
                     <p className="text-sm text-gray-700 bg-white p-2 rounded border border-gray-200">{loc.notes}</p>
                   </div>
                 )}
+                {/* Bouton PDF contrat */}
+                {loc.type_location === 'location_pure' && (
+                  <div className="pt-2 border-t border-gray-200">
+                    {loc.contrat_pdf_path ? (
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => handleDownloadPdf(loc.contrat_pdf_path)}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">
+                          <FileDown className="w-4 h-4" /> Telecharger le contrat PDF
+                        </button>
+                        <button onClick={() => handleGeneratePdf(loc)} disabled={generatingPdf === loc.id}
+                          className="inline-flex items-center gap-2 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+                          {generatingPdf === loc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />} Regenerer
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => handleGeneratePdf(loc)} disabled={generatingPdf === loc.id}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm disabled:opacity-50">
+                        {generatingPdf === loc.id ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generation en cours...</>) : (<><FileDown className="w-4 h-4" /> Generer le contrat PDF</>)}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
