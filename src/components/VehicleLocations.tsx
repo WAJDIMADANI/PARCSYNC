@@ -1,23 +1,25 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
-import { MapPin, Phone, Mail, Building, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Phone, Mail, Building, User, ChevronDown, ChevronUp, FileDown, Loader2 } from 'lucide-react';
+import { generateContractLocationPurePdf, formatDateFr, formatDateLongFr } from '../lib/contractLocationPureGenerator';
 
 interface Props {
   vehicleId: string;
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  location_pure: '🔄 Location pure',
-  location_vente_particulier: '💰 Loc-vente particulier',
-  location_vente_societe: '🏢 Loc-vente société',
-  loa: '💰 LOA',
+  location_pure: 'Location pure',
+  location_vente_particulier: 'Loc-vente particulier',
+  location_vente_societe: 'Loc-vente societe',
+  loa: 'LOA',
 };
 
 export function VehicleLocations({ vehicleId }: Props) {
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLocations();
@@ -34,8 +36,9 @@ export function VehicleLocations({ vehicleId }: Props) {
           montant_total_ht, montant_total_ttc, apport_initial,
           depot_garantie, km_depart, km_inclus, cout_km_supplementaire,
           valeur_residuelle, mensualites_payees, reste_a_payer_ttc,
-          statut, notes,
-          loueur:locataire_id(id, nom, prenom, type, telephone, email, adresse, siret, permis_numero, permis_validite, date_naissance, nationalite, lieu_naissance)
+          statut, notes, contrat_pdf_path,
+          loueur:locataire_id(id, nom, prenom, type, telephone, email, adresse, siret, permis_numero, permis_validite, date_naissance, nationalite, lieu_naissance),
+          vehicule:vehicule_id(immatriculation, marque, modele, energie, date_premiere_mise_en_circulation)
         `)
         .eq('vehicule_id', vehicleId)
         .order('date_debut', { ascending: false });
@@ -48,19 +51,70 @@ export function VehicleLocations({ vehicleId }: Props) {
     }
   };
 
+  const handleGeneratePdf = async (loc: any) => {
+    if (generatingPdf) return;
+    setGeneratingPdf(loc.id);
+    try {
+      const loueur = loc.loueur;
+      const vehicule = loc.vehicule || {};
+      const pdfPath = await generateContractLocationPurePdf({
+        locationId: loc.id,
+        reference: loc.reference_contrat || 'N/A',
+        dateContrat: formatDateFr(loc.date_debut),
+        locataireCivilite: loueur?.type === 'particulier' ? 'M.' : '',
+        locataireNom: loueur?.nom || '',
+        locatairePrenom: loueur?.prenom || '',
+        locataireDateNaissance: formatDateFr(loueur?.date_naissance),
+        locataireLieuNaissance: loueur?.lieu_naissance || '',
+        locataireNationalite: loueur?.nationalite || '',
+        locataireAdresse: loueur?.adresse || '',
+        marque: vehicule.marque || '',
+        modele: vehicule.modele || '',
+        immatriculation: vehicule.immatriculation || '',
+        carburant: vehicule.energie || '',
+        date1ereImmat: formatDateFr(vehicule.date_premiere_mise_en_circulation),
+        valeurResiduelle: loc.valeur_residuelle ? String(loc.valeur_residuelle) : '',
+        dateDebut: formatDateLongFr(loc.date_debut),
+        dateFin: formatDateLongFr(loc.date_fin),
+        dureeMois: loc.duree_mois ? String(loc.duree_mois) : '',
+        mensualiteTtc: loc.montant_mensuel_ttc ? Number(loc.montant_mensuel_ttc).toFixed(2) : '',
+        depotGarantie: loc.depot_garantie ? String(loc.depot_garantie) : '',
+        kmInclus: loc.km_inclus ? String(loc.km_inclus) : '',
+        dateSignature: formatDateFr(loc.date_debut),
+      });
+      if (pdfPath) {
+        const { data: signedUrl } = await supabase.storage.from('edl-documents').createSignedUrl(pdfPath, 300);
+        if (signedUrl?.signedUrl) {
+          window.open(signedUrl.signedUrl, '_blank');
+        }
+        await fetchLocations();
+      }
+    } catch (err) {
+      console.error('Erreur generation PDF contrat:', err);
+      alert('Erreur lors de la generation du PDF');
+    } finally {
+      setGeneratingPdf(null);
+    }
+  };
+
+  const handleDownloadPdf = async (pdfPath: string) => {
+    const { data: signedUrl } = await supabase.storage.from('edl-documents').createSignedUrl(pdfPath, 300);
+    if (signedUrl?.signedUrl) window.open(signedUrl.signedUrl, '_blank');
+  };
+
   const getStatutBadge = (statut: string) => {
     const config: Record<string, { bg: string; text: string; label: string }> = {
       en_cours:  { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'En cours' },
-      terminee:  { bg: 'bg-gray-100',    text: 'text-gray-600',    label: 'Terminée' },
+      terminee:  { bg: 'bg-gray-100',    text: 'text-gray-600',    label: 'Terminee' },
       en_retard: { bg: 'bg-red-100',     text: 'text-red-700',     label: 'En retard' },
-      annulee:   { bg: 'bg-orange-100',  text: 'text-orange-700',  label: 'Annulée' },
+      annulee:   { bg: 'bg-orange-100',  text: 'text-orange-700',  label: 'Annulee' },
     };
     const c = config[statut] || { bg: 'bg-gray-100', text: 'text-gray-600', label: statut };
     return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.bg} ${c.text}`}>{c.label}</span>;
   };
 
   const formatDate = (d: string | null) => {
-    if (!d) return '—';
+    if (!d) return '';
     try { return new Date(d).toLocaleDateString('fr-FR'); } catch { return d; }
   };
 
@@ -72,8 +126,8 @@ export function VehicleLocations({ vehicleId }: Props) {
         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
           <MapPin className="w-8 h-8 text-gray-400" />
         </div>
-        <p className="text-gray-500 font-medium">Aucune location enregistrée</p>
-        <p className="text-gray-400 text-sm mt-1">Les locations apparaîtront ici après création via la page Locations</p>
+        <p className="text-gray-500 font-medium">Aucune location enregistree</p>
+        <p className="text-gray-400 text-sm mt-1">Les locations apparaitront ici apres creation via la page Locations</p>
       </div>
     );
   }
@@ -84,16 +138,16 @@ export function VehicleLocations({ vehicleId }: Props) {
         const loueur = loc.loueur;
         const loueurNom = loueur
           ? loueur.type === 'particulier'
-            ? `${loueur.prenom || ''} ${loueur.nom || ''}`.trim()
+            ? ((loueur.prenom || '') + ' ' + (loueur.nom || '')).trim()
             : loueur.nom
-          : '—';
+          : '';
         const isExpanded = expandedId === loc.id;
         const typeLabel = TYPE_LABELS[loc.type_location] || loc.type_location;
         const isVente = loc.type_location === 'location_vente_particulier' || loc.type_location === 'location_vente_societe';
 
         return (
           <div key={loc.id} className="border border-gray-200 rounded-lg overflow-hidden">
-            {/* Ligne résumé */}
+            {/* Ligne resume */}
             <div
               className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
               onClick={() => setExpandedId(isExpanded ? null : loc.id)}
@@ -104,9 +158,9 @@ export function VehicleLocations({ vehicleId }: Props) {
                   <span className="text-xs text-gray-500">{typeLabel}</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-gray-600">
-                  <span>Début : {formatDate(loc.date_debut)}</span>
+                  <span>Debut : {formatDate(loc.date_debut)}</span>
                   <span>Fin : {formatDate(loc.date_fin)}</span>
-                  <span className="font-medium">{loc.montant_mensuel_ttc || loc.montant_mensuel ? `${loc.montant_mensuel_ttc || loc.montant_mensuel} €/mois` : '—'}</span>
+                  <span className="font-medium">{loc.montant_mensuel_ttc || loc.montant_mensuel ? (loc.montant_mensuel_ttc || loc.montant_mensuel) + ' EUR/mois' : ''}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -115,21 +169,21 @@ export function VehicleLocations({ vehicleId }: Props) {
               </div>
             </div>
 
-            {/* Détails dépliés */}
+            {/* Details deplies */}
             {isExpanded && (
               <div className="border-t border-gray-200 p-4 bg-gray-50 space-y-4">
-                {/* Coordonnées locataire */}
+                {/* Coordonnees locataire */}
                 {loueur && (
                   <div>
                     <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                      {loueur.type === 'entreprise' ? '🏢 Locataire (Société)' : '👤 Locataire (Particulier)'}
+                      {loueur.type === 'entreprise' ? 'Locataire (Societe)' : 'Locataire (Particulier)'}
                     </p>
                     <div className="bg-white border border-gray-200 rounded-lg p-3">
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div className="col-span-2 font-semibold text-gray-900 text-base">
-                          {loueur.type === 'particulier' ? `${loueur.prenom || ''} ${loueur.nom}`.trim() : loueur.nom}
+                          {loueur.type === 'particulier' ? ((loueur.prenom || '') + ' ' + loueur.nom).trim() : loueur.nom}
                         </div>
-                      {loueur.telephone && (
+                        {loueur.telephone && (
                           <div className="flex items-center gap-1.5">
                             <Phone className="w-3.5 h-3.5 text-gray-400" />
                             <span className="text-gray-700">{loueur.telephone}</span>
@@ -154,47 +208,47 @@ export function VehicleLocations({ vehicleId }: Props) {
                           </div>
                         )}
                         {loueur.permis_numero && (
-                          <div className="text-xs text-gray-600">Permis : {loueur.permis_numero}{loueur.permis_validite ? ` (val. ${formatDate(loueur.permis_validite)})` : ''}</div>
+                          <div className="text-xs text-gray-600">Permis : {loueur.permis_numero}{loueur.permis_validite ? ' (val. ' + formatDate(loueur.permis_validite) + ')' : ''}</div>
                         )}
                         {loueur.date_naissance && (
-                          <div className="text-xs text-gray-600">Né(e) le : {formatDate(loueur.date_naissance)}{loueur.lieu_naissance ? ` à ${loueur.lieu_naissance}` : ''}{loueur.nationalite ? ` · ${loueur.nationalite}` : ''}</div>
+                          <div className="text-xs text-gray-600">Ne(e) le : {formatDate(loueur.date_naissance)}{loueur.lieu_naissance ? ' a ' + loueur.lieu_naissance : ''}{loueur.nationalite ? ' - ' + loueur.nationalite : ''}</div>
                         )}
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Détails financiers */}
+                {/* Details financiers */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase mb-2">💰 Détails financiers</p>
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Details financiers</p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    {loc.reference_contrat && <div><span className="text-gray-500">Référence :</span> <strong>{loc.reference_contrat}</strong></div>}
-                    {loc.duree_mois && <div><span className="text-gray-500">Durée :</span> <strong>{loc.duree_mois} mois</strong></div>}
-                    {loc.montant_mensuel_ttc && <div><span className="text-gray-500">Mensualité TTC :</span> <strong>{loc.montant_mensuel_ttc} €</strong></div>}
-                    {loc.montant_mensuel_ht && <div><span className="text-gray-500">Mensualité HT :</span> <strong>{loc.montant_mensuel_ht} €</strong></div>}
-                    {loc.montant_total_ttc && <div><span className="text-gray-500">Total TTC :</span> <strong className="text-emerald-700">{loc.montant_total_ttc} €</strong></div>}
-                    {loc.montant_total_ht && <div><span className="text-gray-500">Total HT :</span> <strong>{loc.montant_total_ht} €</strong></div>}
-                    {isVente && loc.apport_initial && <div><span className="text-gray-500">Apport initial :</span> <strong>{loc.apport_initial} €</strong></div>}
-                    {!isVente && loc.depot_garantie && <div><span className="text-gray-500">Dépôt garantie :</span> <strong>{loc.depot_garantie} €</strong></div>}
-                    {loc.km_depart && <div><span className="text-gray-500">Km départ :</span> <strong>{parseInt(loc.km_depart).toLocaleString()} km</strong></div>}
+                    {loc.reference_contrat && <div><span className="text-gray-500">Reference :</span> <strong>{loc.reference_contrat}</strong></div>}
+                    {loc.duree_mois && <div><span className="text-gray-500">Duree :</span> <strong>{loc.duree_mois} mois</strong></div>}
+                    {loc.montant_mensuel_ttc && <div><span className="text-gray-500">Mensualite TTC :</span> <strong>{loc.montant_mensuel_ttc} EUR</strong></div>}
+                    {loc.montant_mensuel_ht && <div><span className="text-gray-500">Mensualite HT :</span> <strong>{loc.montant_mensuel_ht} EUR</strong></div>}
+                    {loc.montant_total_ttc && <div><span className="text-gray-500">Total TTC :</span> <strong className="text-emerald-700">{loc.montant_total_ttc} EUR</strong></div>}
+                    {loc.montant_total_ht && <div><span className="text-gray-500">Total HT :</span> <strong>{loc.montant_total_ht} EUR</strong></div>}
+                    {isVente && loc.apport_initial && <div><span className="text-gray-500">Apport initial :</span> <strong>{loc.apport_initial} EUR</strong></div>}
+                    {!isVente && loc.depot_garantie && <div><span className="text-gray-500">Depot garantie :</span> <strong>{loc.depot_garantie} EUR</strong></div>}
+                    {loc.km_depart && <div><span className="text-gray-500">Km depart :</span> <strong>{parseInt(loc.km_depart).toLocaleString()} km</strong></div>}
                     {!isVente && loc.km_inclus && <div><span className="text-gray-500">Km inclus :</span> <strong>{loc.km_inclus} km</strong></div>}
-                    {!isVente && loc.valeur_residuelle && <div><span className="text-gray-500">Valeur résiduelle :</span> <strong>{loc.valeur_residuelle} €</strong></div>}
+                    {!isVente && loc.valeur_residuelle && <div><span className="text-gray-500">Valeur residuelle :</span> <strong>{loc.valeur_residuelle} EUR</strong></div>}
                   </div>
                 </div>
 
                 {/* Suivi paiements */}
                 {loc.duree_mois && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">📊 Suivi paiements</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Suivi paiements</p>
                     <div className="bg-white border border-gray-200 rounded-lg p-3">
                       <div className="flex items-center justify-between text-sm mb-2">
-                        <span className="text-gray-600">{loc.mensualites_payees || 0} / {loc.duree_mois} mensualités payées</span>
-                        <span className="font-semibold text-gray-900">Reste : {loc.reste_a_payer_ttc || loc.montant_total_ttc || '—'} €</span>
+                        <span className="text-gray-600">{loc.mensualites_payees || 0} / {loc.duree_mois} mensualites payees</span>
+                        <span className="font-semibold text-gray-900">Reste : {loc.reste_a_payer_ttc || loc.montant_total_ttc || ''} EUR</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className="bg-emerald-500 h-2 rounded-full transition-all"
-                          style={{ width: `${loc.duree_mois > 0 ? Math.min(100, ((loc.mensualites_payees || 0) / loc.duree_mois) * 100) : 0}%` }}
+                          style={{ width: loc.duree_mois > 0 ? Math.min(100, ((loc.mensualites_payees || 0) / loc.duree_mois) * 100) + '%' : '0%' }}
                         />
                       </div>
                     </div>
@@ -207,6 +261,27 @@ export function VehicleLocations({ vehicleId }: Props) {
                     <p className="text-sm text-gray-700 bg-white p-2 rounded border border-gray-200">{loc.notes}</p>
                   </div>
                 )}
+
+                {/* Bouton PDF contrat */}
+                <div className="pt-2 border-t border-gray-200">
+                  {loc.contrat_pdf_path ? (
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => handleDownloadPdf(loc.contrat_pdf_path)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">
+                        <FileDown className="w-4 h-4" /> Telecharger le contrat PDF
+                      </button>
+                      <button onClick={() => handleGeneratePdf(loc)} disabled={generatingPdf === loc.id}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+                        {generatingPdf === loc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />} Regenerer
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => handleGeneratePdf(loc)} disabled={generatingPdf === loc.id}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm disabled:opacity-50">
+                      {generatingPdf === loc.id ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generation en cours...</>) : (<><FileDown className="w-4 h-4" /> Generer le contrat PDF</>)}
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
