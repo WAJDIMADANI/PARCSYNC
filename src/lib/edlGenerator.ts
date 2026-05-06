@@ -1,35 +1,95 @@
 import * as fflate from 'fflate';
+import { PDFDocument } from 'pdf-lib';
 import { supabase } from './supabase';
 
-interface ContractData {
-  locationId: string;
-  reference: string;
-  dateContrat: string;
-  locataireCivilite: string;
-  locataireNom: string;
-  locatairePrenom: string;
-  locataireDateNaissance: string;
-  locataireLieuNaissance: string;
-  locataireNationalite: string;
-  locataireAdresse: string;
+// ============================================================
+// TYPES
+// ============================================================
+
+export interface EDLGenerationData {
+  edlId: string;
+  typeEdl: 'sortie' | 'entree';
+  vehiculeId: string;
+  immatriculation: string;
   marque: string;
   modele: string;
-  immatriculation: string;
-  carburant: string;
-  date1ereImmat: string;
-  valeurResiduelle: string;
-  dateDebut: string;
-  dateFin: string;
-  dureeMois: string;
-  mensualiteTtc: string;
-  depotGarantie: string;
-  kmInclus: string;
-  dateSignature: string;
+  refTca: string | null;
+
+  conducteurNom: string;
+  conducteurPrenom: string;
+
+  adminNom: string;
+  adminPrenom: string;
+
+  kilometrage: number;
+  dateValiditeCt: string | null;
+  dateDerniereVidange: string | null;
+  dateProchaineRevision: string | null;
+
+  carrosserieAvant: boolean;
+  carrosserieArriere: boolean;
+  carrosserieGauche: boolean;
+  carrosserieDroite: boolean;
+  vitres: boolean;
+  retroviseurs: boolean;
+  pneus: boolean;
+  interieurSiege: boolean;
+  interieurTableauBord: boolean;
+  cricTriangleGilet: boolean;
+
+  observations: string | null;
+  nbPhotos: number;
+
+  signatureAgentDataUrl: string;
+  signatureChauffeurDataUrl: string;
+}
+
+export interface EDLGenerationResult {
+  success: boolean;
+  pdfPath?: string;
+  error?: string;
+}
+
+// ============================================================
+// HELPERS (copiés de attestationGenerator.ts)
+// ============================================================
+
+function formatDateFr(dateStr: string | null): string {
+  if (!dateStr) return '';
+  try {
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
+    const datePart = dateStr.split('T')[0];
+    const parts = datePart.split('-');
+    if (parts.length !== 3) return '';
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  } catch {
+    return '';
+  }
+}
+
+function dateAujourdhuiFr(): string {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 function sanitizeForXml(text: string): string {
   return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
 }
+
+function dataUrlToBytes(dataUrl: string): Uint8Array {
+  const base64 = dataUrl.split(',')[1] || '';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+// ============================================================
+// REMPLACEMENT VARIABLES (gère fragmentation XML — copié de attestationGenerator.ts)
+// ============================================================
 
 function replaceVariablesAcrossWT(xmlContent: string, variables: Record<string, string>, xmlPath: string): string {
   const parser = new DOMParser();
@@ -107,48 +167,97 @@ function replaceVariablesAcrossWT(xmlContent: string, variables: Record<string, 
   return new XMLSerializer().serializeToString(doc);
 }
 
+// ============================================================
+// COORDONNÉES SIGNATURES EDL (page A4 = 595.32 x 841.92)
+// ⚠️ Ces coordonnées devront être calibrées après le premier test PDF
+// ============================================================
+
+const PAGE_HEIGHT = 841.92;
+
+// Signature AGENT (colonne gauche, en bas du document)
+const SIG_AGENT = { x: 60, yTop: 720, width: 180, height: 60 };
+
+// Signature CHAUFFEUR (colonne droite, en bas du document)
+const SIG_CHAUFFEUR = { x: 350, yTop: 720, width: 180, height: 60 };
+
+async function stampSignaturesOnPdf(
+  pdfBytes: Uint8Array,
+  sigAgent: string,
+  sigChauffeur: string
+): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+  const pages = pdfDoc.getPages();
+  // Stamper sur la DERNIÈRE page (les signatures sont en bas du document)
+  const page = pages[pages.length - 1];
+  if (!page) throw new Error('PDF vide');
+
+  const stamp = async (dataUrl: string, coords: { x: number; yTop: number; width: number; height: number }) => {
+    if (!dataUrl) return;
+    const img = await pdfDoc.embedPng(dataUrlToBytes(dataUrl));
+    const y = PAGE_HEIGHT - coords.yTop - coords.height;
+    page.drawImage(img, { x: coords.x, y, width: coords.width, height: coords.height });
+  };
+
+  if (sigAgent) await stamp(sigAgent, SIG_AGENT);
+  if (sigChauffeur) await stamp(sigChauffeur, SIG_CHAUFFEUR);
+
+  return pdfDoc.save();
+}
+
+// ============================================================
+// FONCTION PRINCIPALE
+// ============================================================
+
 const TEMPLATE_BUCKET = 'documents-vehicules';
-const TEMPLATE_PATH = 'templates/contrat_location_pure.docx';
+const TEMPLATE_PATH = 'templates/edl.docx';
 const OUTPUT_BUCKET = 'edl-documents';
 
-export async function generateContractLocationPurePdf(data: ContractData): Promise<string | null> {
+export async function generateEDL(data: EDLGenerationData): Promise<EDLGenerationResult> {
   try {
-    console.log('[ContractGen] Debut generation contrat location pure...');
+    const typeLabel = data.typeEdl === 'sortie' ? 'SORTIE' : 'RETOUR';
+    console.log(`[edlGenerator] Génération PDF EDL ${typeLabel} pour ${data.immatriculation}`);
+
+    // 1. Construire les variables
+    const conforme = '✓ Conforme';
+    const nonConforme = '✗ Non conforme';
 
     const variables: Record<string, string> = {
-      reference: data.reference,
-      date_contrat: data.dateContrat,
-      locataire_civilite: data.locataireCivilite,
-      locataire_nom: data.locataireNom,
-      locataire_prenom: data.locatairePrenom,
-      locataire_date_naissance: data.locataireDateNaissance,
-      locataire_lieu_naissance: data.locataireLieuNaissance,
-      locataire_nationalite: data.locataireNationalite,
-      locataire_adresse: data.locataireAdresse,
-      marque: data.marque,
-      modele: data.modele,
+      type_edl: typeLabel,
+      date_edl: dateAujourdhuiFr(),
+      realise_par: `${data.adminPrenom} ${data.adminNom}`.trim(),
+      conducteur: `${data.conducteurPrenom} ${data.conducteurNom}`.trim(),
+      vehicule: `${data.marque} ${data.modele}`.trim(),
       immatriculation: data.immatriculation,
-      carburant: data.carburant,
-      date_1ere_immat: data.date1ereImmat,
-      valeur_residuelle: data.valeurResiduelle,
-      date_debut: data.dateDebut,
-      date_fin: data.dateFin,
-      duree_mois: data.dureeMois,
-      mensualite_ttc: data.mensualiteTtc,
-      depot_garantie: data.depotGarantie,
-      km_inclus: data.kmInclus,
-      date_signature: data.dateSignature,
+      ref_tca: data.refTca || '',
+      km_vehicule: String(data.kilometrage),
+      date_validite_ct: formatDateFr(data.dateValiditeCt),
+      date_derniere_vidange: formatDateFr(data.dateDerniereVidange),
+      date_prochaine_revision: formatDateFr(data.dateProchaineRevision),
+      observations: data.observations || 'RAS',
+      nb_photos: String(data.nbPhotos),
+      eq_carrosserie_avant: data.carrosserieAvant ? conforme : nonConforme,
+      eq_carrosserie_arriere: data.carrosserieArriere ? conforme : nonConforme,
+      eq_carrosserie_gauche: data.carrosserieGauche ? conforme : nonConforme,
+      eq_carrosserie_droite: data.carrosserieDroite ? conforme : nonConforme,
+      eq_vitres: data.vitres ? conforme : nonConforme,
+      eq_retroviseurs: data.retroviseurs ? conforme : nonConforme,
+      eq_pneus: data.pneus ? conforme : nonConforme,
+      eq_interieur_siege: data.interieurSiege ? conforme : nonConforme,
+      eq_interieur_tableau_bord: data.interieurTableauBord ? conforme : nonConforme,
+      eq_cric_triangle_gilet: data.cricTriangleGilet ? conforme : nonConforme,
     };
 
-    console.log('[ContractGen] Variables construites:', Object.keys(variables).length);
+    console.log('[edlGenerator] Variables construites:', Object.keys(variables).length);
 
+    // 2. Télécharger le template
     const { data: templateData, error: dlErr } = await supabase.storage.from(TEMPLATE_BUCKET).download(TEMPLATE_PATH);
-    if (dlErr || !templateData) throw new Error(`Erreur telechargement template: ${dlErr?.message}`);
+    if (dlErr || !templateData) throw new Error(`Erreur téléchargement template EDL: ${dlErr?.message}`);
     const arrayBuffer = await templateData.arrayBuffer();
 
+    // 3. Décompresser, remplacer, recompresser
     const filledDocxBlob = await new Promise<Blob>((resolve, reject) => {
       fflate.unzip(new Uint8Array(arrayBuffer), (err, unzipped) => {
-        if (err) return reject(new Error(`Erreur decompression: ${err.message}`));
+        if (err) return reject(new Error(`Erreur décompression: ${err.message}`));
         if (!unzipped) return reject(new Error('Template vide'));
 
         try {
@@ -172,7 +281,8 @@ export async function generateContractLocationPurePdf(data: ContractData): Promi
       });
     });
 
-    const docxPath = `contrats/${data.locationId}.docx`;
+    // 4. Upload DOCX
+    const docxPath = `edl/${data.edlId}.docx`;
     const { error: upErr } = await supabase.storage
       .from(OUTPUT_BUCKET)
       .upload(docxPath, filledDocxBlob, {
@@ -181,11 +291,11 @@ export async function generateContractLocationPurePdf(data: ContractData): Promi
       });
     if (upErr) throw new Error(`Erreur upload DOCX: ${upErr.message}`);
 
-    const pdfPath = `contrats/${data.locationId}.pdf`;
+    // 5. Convertir en PDF via Edge Function
+    const pdfPath = `edl/${data.edlId}.pdf`;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Session non disponible');
 
-    console.log('[ContractGen] Conversion DOCX -> PDF via CloudConvert...');
     const response = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/convert-docx-to-pdf`,
       {
@@ -209,41 +319,34 @@ export async function generateContractLocationPurePdf(data: ContractData): Promi
     }
 
     const result = await response.json();
-    if (!result.success) throw new Error(`Conversion echouee: ${result.error || 'erreur inconnue'}`);
+    if (!result.success) throw new Error(`Conversion échouée: ${result.error || 'erreur inconnue'}`);
 
-    await supabase
-      .from('locations')
-      .update({ contrat_pdf_path: pdfPath })
-      .eq('id', data.locationId);
+    console.log('[edlGenerator] PDF généré');
 
-    console.log('[ContractGen] Contrat PDF genere avec succes:', pdfPath);
-    return pdfPath;
+    // 6. Tamponner les signatures
+    if (data.signatureAgentDataUrl || data.signatureChauffeurDataUrl) {
+      const { data: pdfFile, error: pdfErr } = await supabase.storage.from(OUTPUT_BUCKET).download(pdfPath);
+      if (pdfErr || !pdfFile) throw new Error(`Erreur téléchargement PDF: ${pdfErr?.message}`);
 
+      const pdfBytes = new Uint8Array(await pdfFile.arrayBuffer());
+      const stamped = await stampSignaturesOnPdf(
+        pdfBytes,
+        data.signatureAgentDataUrl,
+        data.signatureChauffeurDataUrl
+      );
+
+      const { error: stampErr } = await supabase.storage
+        .from(OUTPUT_BUCKET)
+        .upload(pdfPath, stamped, { contentType: 'application/pdf', upsert: true });
+      if (stampErr) throw new Error(`Erreur upload PDF tamponné: ${stampErr.message}`);
+
+      console.log('[edlGenerator] PDF tamponné et uploadé');
+    }
+
+    return { success: true, pdfPath };
   } catch (error) {
-    console.error('[ContractGen] Erreur generation contrat:', error);
-    throw error;
-  }
-}
-
-export function formatDateFr(dateStr: string | null): string {
-  if (!dateStr) return '';
-  try {
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
-    const datePart = dateStr.split('T')[0];
-    const parts = datePart.split('-');
-    if (parts.length !== 3) return '';
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  } catch {
-    return '';
-  }
-}
-
-export function formatDateLongFr(dateStr: string | null): string {
-  if (!dateStr) return '';
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-  } catch {
-    return dateStr;
+    const msg = error instanceof Error ? error.message : 'Erreur inconnue';
+    console.error('[edlGenerator] Erreur:', msg);
+    return { success: false, error: msg };
   }
 }
