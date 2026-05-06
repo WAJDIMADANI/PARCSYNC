@@ -1,11 +1,10 @@
+import * as fflate from 'fflate';
 import { supabase } from './supabase';
-import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
 
 interface ContractData {
   locationId: string;
   reference: string;
   dateContrat: string;
-  // Locataire
   locataireCivilite: string;
   locataireNom: string;
   locatairePrenom: string;
@@ -13,14 +12,12 @@ interface ContractData {
   locataireLieuNaissance: string;
   locataireNationalite: string;
   locataireAdresse: string;
-  // Vehicule
   marque: string;
   modele: string;
   immatriculation: string;
   carburant: string;
   date1ereImmat: string;
   valeurResiduelle: string;
-  // Contrat
   dateDebut: string;
   dateFin: string;
   dureeMois: string;
@@ -30,165 +27,194 @@ interface ContractData {
   dateSignature: string;
 }
 
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+function sanitizeForXml(text: string): string {
+  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
 }
 
-function replaceInXml(xml: string, variables: Record<string, string>): string {
-  let result = xml;
-  for (const [key, value] of Object.entries(variables)) {
-    const escaped = escapeXml(value || '');
-    // Handle cases where Word splits {{VAR}} across multiple XML runs
-    // First try simple replacement
-    const simplePattern = '{{' + key + '}}';
-    if (result.includes(simplePattern)) {
-      result = result.split(simplePattern).join(escaped);
-      continue;
-    }
-    // Try with XML tags potentially splitting the variable
-    const regex = new RegExp(
-      '\\{\\{' +
-      key.split('').join('(?:</w:t></w:r><w:r[^>]*><w:t[^>]*>)?') +
-      '\\}\\}',
-      'g'
-    );
-    result = result.replace(regex, escaped);
-    // Also try with just the braces split
-    const regex2 = new RegExp(
-      '\\{(?:</w:t></w:r><w:r[^>]*><w:t[^>]*>)?\\{' +
-      key.split('').join('(?:</w:t></w:r><w:r[^>]*><w:t[^>]*>)?') +
-      '\\}(?:</w:t></w:r><w:r[^>]*><w:t[^>]*>)?\\}',
-      'g'
-    );
-    result = result.replace(regex2, escaped);
+function replaceVariablesAcrossWT(xmlContent: string, variables: Record<string, string>, xmlPath: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlContent, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('XML parse error in ' + xmlPath);
+
+  const ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  let textNodes = doc.getElementsByTagNameNS(ns, 't');
+  if (!textNodes || textNodes.length === 0) textNodes = doc.getElementsByTagName('w:t');
+  if (!textNodes || textNodes.length === 0) return xmlContent;
+
+  interface Segment { node: Element; text: string; }
+  const segments: Segment[] = [];
+  for (let i = 0; i < textNodes.length; i++) {
+    segments.push({ node: textNodes[i], text: textNodes[i].textContent || '' });
   }
-  return result;
+
+  const plainText = segments.map(s => s.text).join('');
+  const variableRegex = /\{\{[\s\u00A0]*([a-zA-Z0-9_]+)[\s\u00A0]*\}\}/g;
+  const replacements: { startChar: number; endChar: number; varName: string; value: string }[] = [];
+
+  let m;
+  while ((m = variableRegex.exec(plainText)) !== null) {
+    const varName = m[1].toLowerCase().trim();
+    let value = '';
+    for (const [key, val] of Object.entries(variables)) {
+      if (key.toLowerCase() === varName) { value = val; break; }
+    }
+    replacements.push({
+      startChar: m.index,
+      endChar: m.index + m[0].length,
+      varName,
+      value: sanitizeForXml(value),
+    });
+  }
+
+  if (replacements.length === 0) return xmlContent;
+  replacements.sort((a, b) => b.startChar - a.startChar);
+
+  replacements.forEach(rep => {
+    let cumul = 0, startSegIdx = -1, startOff = 0, endSegIdx = -1, endOff = 0;
+    for (let i = 0; i < segments.length; i++) {
+      const segLen = segments[i].text.length;
+      if (startSegIdx === -1 && cumul + segLen > rep.startChar) {
+        startSegIdx = i;
+        startOff = rep.startChar - cumul;
+      }
+      if (endSegIdx === -1 && cumul + segLen >= rep.endChar) {
+        endSegIdx = i;
+        endOff = rep.endChar - cumul;
+        break;
+      }
+      cumul += segLen;
+    }
+    if (startSegIdx === -1 || endSegIdx === -1) return;
+
+    if (startSegIdx === endSegIdx) {
+      const seg = segments[startSegIdx];
+      seg.node.textContent = seg.text.substring(0, startOff) + rep.value + seg.text.substring(endOff);
+      seg.text = seg.node.textContent || '';
+    } else {
+      const startSeg = segments[startSegIdx];
+      const endSeg = segments[endSegIdx];
+      startSeg.node.textContent = startSeg.text.substring(0, startOff) + rep.value;
+      startSeg.text = startSeg.node.textContent || '';
+      for (let i = startSegIdx + 1; i < endSegIdx; i++) {
+        segments[i].node.textContent = '';
+        segments[i].text = '';
+      }
+      endSeg.node.textContent = endSeg.text.substring(endOff);
+      endSeg.text = endSeg.node.textContent || '';
+    }
+  });
+
+  return new XMLSerializer().serializeToString(doc);
 }
+
+const TEMPLATE_BUCKET = 'documents-vehicules';
+const TEMPLATE_PATH = 'templates/contrat_location_pure.docx';
+const OUTPUT_BUCKET = 'edl-documents';
 
 export async function generateContractLocationPurePdf(data: ContractData): Promise<string | null> {
   try {
     console.log('[ContractGen] Debut generation contrat location pure...');
 
-    // 1. Telecharger le template DOCX
-    const { data: templateFile, error: downloadError } = await supabase.storage
-      .from('documents-vehicules')
-      .download('templates/contrat_location_pure.docx');
-
-    if (downloadError || !templateFile) {
-      console.error('[ContractGen] Erreur telechargement template:', downloadError);
-      throw new Error('Impossible de telecharger le template');
-    }
-
-    // 2. Decompresser le DOCX (c est un ZIP)
-    const arrayBuffer = await templateFile.arrayBuffer();
-    const uint8 = new Uint8Array(arrayBuffer);
-    const unzipped = unzipSync(uint8);
-
-    // 3. Preparer les variables de remplacement
     const variables: Record<string, string> = {
-      'REFERENCE': data.reference,
-      'DATE_CONTRAT': data.dateContrat,
-      'LOCATAIRE_CIVILITE': data.locataireCivilite,
-      'LOCATAIRE_NOM': data.locataireNom,
-      'LOCATAIRE_PRENOM': data.locatairePrenom,
-      'LOCATAIRE_DATE_NAISSANCE': data.locataireDateNaissance,
-      'LOCATAIRE_LIEU_NAISSANCE': data.locataireLieuNaissance,
-      'LOCATAIRE_NATIONALITE': data.locataireNationalite,
-      'LOCATAIRE_ADRESSE': data.locataireAdresse,
-      'MARQUE': data.marque,
-      'MODELE': data.modele,
-      'IMMATRICULATION': data.immatriculation,
-      'CARBURANT': data.carburant,
-      'DATE_1ERE_IMMAT': data.date1ereImmat,
-      'VALEUR_RESIDUELLE': data.valeurResiduelle,
-      'DATE_DEBUT': data.dateDebut,
-      'DATE_FIN': data.dateFin,
-      'DUREE_MOIS': data.dureeMois,
-      'MENSUALITE_TTC': data.mensualiteTtc,
-      'DEPOT_GARANTIE': data.depotGarantie,
-      'KM_INCLUS': data.kmInclus,
-      'DATE_SIGNATURE': data.dateSignature,
+      reference: data.reference,
+      date_contrat: data.dateContrat,
+      locataire_civilite: data.locataireCivilite,
+      locataire_nom: data.locataireNom,
+      locataire_prenom: data.locatairePrenom,
+      locataire_date_naissance: data.locataireDateNaissance,
+      locataire_lieu_naissance: data.locataireLieuNaissance,
+      locataire_nationalite: data.locataireNationalite,
+      locataire_adresse: data.locataireAdresse,
+      marque: data.marque,
+      modele: data.modele,
+      immatriculation: data.immatriculation,
+      carburant: data.carburant,
+      date_1ere_immat: data.date1ereImmat,
+      valeur_residuelle: data.valeurResiduelle,
+      date_debut: data.dateDebut,
+      date_fin: data.dateFin,
+      duree_mois: data.dureeMois,
+      mensualite_ttc: data.mensualiteTtc,
+      depot_garantie: data.depotGarantie,
+      km_inclus: data.kmInclus,
+      date_signature: data.dateSignature,
     };
 
-    // 4. Remplacer dans tous les fichiers XML du DOCX
-    const newFiles: Record<string, Uint8Array> = {};
-    for (const [filename, content] of Object.entries(unzipped)) {
-      if (filename.endsWith('.xml') || filename.endsWith('.rels')) {
-        let xmlStr = strFromU8(content as Uint8Array);
-        xmlStr = replaceInXml(xmlStr, variables);
-        newFiles[filename] = strToU8(xmlStr);
-      } else {
-        newFiles[filename] = content as Uint8Array;
-      }
-    }
+    console.log('[ContractGen] Variables construites:', Object.keys(variables).length);
 
-    // 5. Recompresser en DOCX
-    const newZip = zipSync(newFiles);
-    const docxBlob = new Blob([newZip], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const { data: templateData, error: dlErr } = await supabase.storage.from(TEMPLATE_BUCKET).download(TEMPLATE_PATH);
+    if (dlErr || !templateData) throw new Error('Erreur telechargement template: ' + (dlErr?.message || ''));
+    const arrayBuffer = await templateData.arrayBuffer();
 
-    // 6. Uploader le DOCX temporaire
-    const tempDocxPath = 'location-documents/contrats/temp_' + data.locationId + '.docx';
-    const { error: uploadDocxError } = await supabase.storage
-      .from('edl-documents')
-      .upload(tempDocxPath, docxBlob, { upsert: true, contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const filledDocxBlob = await new Promise<Blob>((resolve, reject) => {
+      fflate.unzip(new Uint8Array(arrayBuffer), (err, unzipped) => {
+        if (err) return reject(new Error('Erreur decompression: ' + err.message));
+        if (!unzipped) return reject(new Error('Template vide'));
 
-    if (uploadDocxError) {
-      console.error('[ContractGen] Erreur upload DOCX:', uploadDocxError);
-      throw new Error('Erreur upload DOCX temporaire');
-    }
+        try {
+          const parts = ['word/document.xml', 'word/header1.xml', 'word/header2.xml', 'word/header3.xml', 'word/footer.xml', 'word/footer1.xml', 'word/footer2.xml', 'word/footer3.xml'];
+          const decoder = new TextDecoder('utf-8');
+          const encoder = new TextEncoder();
+          parts.forEach(p => {
+            const xmlData = unzipped[p];
+            if (!xmlData) return;
+            const replaced = replaceVariablesAcrossWT(decoder.decode(xmlData), variables, p);
+            unzipped[p] = encoder.encode(replaced);
+          });
 
-    // 7. Obtenir URL signee pour CloudConvert
-    const { data: signedDocx } = await supabase.storage
-      .from('edl-documents')
-      .createSignedUrl(tempDocxPath, 600);
+          if (!unzipped['word/document.xml']) return reject(new Error('document.xml manquant'));
 
-    if (!signedDocx?.signedUrl) {
-      throw new Error('Impossible de creer URL signee pour le DOCX');
-    }
-
-    // 8. Convertir en PDF via Edge Function
-    console.log('[ContractGen] Conversion DOCX -> PDF via CloudConvert...');
-    const { data: conversionResult, error: conversionError } = await supabase.functions.invoke('convert-docx-to-pdf', {
-      body: { fileUrl: signedDocx.signedUrl, fileName: 'contrat_' + data.locationId + '.docx' },
+          fflate.zip(unzipped, (zErr, zData) => {
+            if (zErr) return reject(new Error('Erreur recompression: ' + zErr.message));
+            resolve(new Blob([zData], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
+          });
+        } catch (e) { reject(e); }
+      });
     });
 
-    if (conversionError || !conversionResult?.pdfBase64) {
-      console.error('[ContractGen] Erreur conversion:', conversionError, conversionResult);
-      throw new Error('Erreur conversion PDF');
+    const docxPath = 'contrats/' + data.locationId + '.docx';
+    const { error: upErr } = await supabase.storage
+      .from(OUTPUT_BUCKET)
+      .upload(docxPath, filledDocxBlob, {
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        upsert: true,
+      });
+    if (upErr) throw new Error('Erreur upload DOCX: ' + upErr.message);
+
+    const pdfPath = 'contrats/' + data.locationId + '.pdf';
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Session non disponible');
+
+    console.log('[ContractGen] Conversion DOCX -> PDF via CloudConvert...');
+    const response = await fetch(
+      import.meta.env.VITE_SUPABASE_URL + '/functions/v1/convert-docx-to-pdf',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + session.access_token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sourceBucket: OUTPUT_BUCKET,
+          sourcePath: docxPath,
+          destBucket: OUTPUT_BUCKET,
+          destPath: pdfPath,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error('Edge Function erreur: ' + response.status + ' - ' + errText);
     }
 
-    // 9. Decoder le PDF base64
-    const pdfBinary = atob(conversionResult.pdfBase64);
-    const pdfArray = new Uint8Array(pdfBinary.length);
-    for (let i = 0; i < pdfBinary.length; i++) {
-      pdfArray[i] = pdfBinary.charCodeAt(i);
-    }
-    const pdfBlob = new Blob([pdfArray], { type: 'application/pdf' });
+    const result = await response.json();
+    if (!result.success) throw new Error('Conversion echouee: ' + (result.error || 'erreur inconnue'));
 
-    // 10. Stocker le PDF final
-    const pdfPath = 'location-documents/contrats/' + data.locationId + '.pdf';
-    const { error: uploadPdfError } = await supabase.storage
-      .from('edl-documents')
-      .upload(pdfPath, pdfBlob, { upsert: true, contentType: 'application/pdf' });
-
-    if (uploadPdfError) {
-      console.error('[ContractGen] Erreur upload PDF:', uploadPdfError);
-      throw new Error('Erreur upload PDF final');
-    }
-
-    // 11. Mettre a jour la BDD
     await supabase
       .from('locations')
       .update({ contrat_pdf_path: pdfPath })
       .eq('id', data.locationId);
-
-    // 12. Supprimer le DOCX temporaire
-    await supabase.storage.from('edl-documents').remove([tempDocxPath]);
 
     console.log('[ContractGen] Contrat PDF genere avec succes:', pdfPath);
     return pdfPath;
@@ -199,14 +225,16 @@ export async function generateContractLocationPurePdf(data: ContractData): Promi
   }
 }
 
-// Helper pour formater une date en francais
 export function formatDateFr(dateStr: string | null): string {
   if (!dateStr) return '';
   try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
+    const datePart = dateStr.split('T')[0];
+    const parts = datePart.split('-');
+    if (parts.length !== 3) return '';
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
   } catch {
-    return dateStr;
+    return '';
   }
 }
 
