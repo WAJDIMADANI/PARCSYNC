@@ -132,6 +132,12 @@ const handleGeneratePdf = async (loc: any) => {
     <div className="space-y-3">
       {locations.map((loc) => {
         const loueur = loc.loueur;
+      const vehiculeData = loc.vehicule || {};
+        loc.vehicule_immat = vehiculeData.immatriculation || '';
+        loc.vehicule_marque = vehiculeData.marque || '';
+        loc.vehicule_modele = vehiculeData.modele || '';
+        loc.vehicule_carburant = vehiculeData.energie || '';
+        loc.vehicule_date_1ere_immat = vehiculeData.date_premiere_mise_en_circulation || '';
         const loueurNom = loueur
           ? loueur.type === 'particulier'
             ? `${loueur.prenom || ''} ${loueur.nom || ''}`.trim()
