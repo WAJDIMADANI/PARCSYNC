@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
-import { MapPin, Phone, Mail, Building, User, ChevronDown, ChevronUp, FileDown, Loader2 } from 'lucide-react'; 
-import { generateContractLocationPurePdf, formatDateFr, formatDateLongFr } from '../lib/contractLocationPureGenerator';
+import { MapPin, Phone, Mail, Building, User, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface Props {
   vehicleId: string;
@@ -18,8 +17,8 @@ const TYPE_LABELS: Record<string, string> = {
 export function VehicleLocations({ vehicleId }: Props) {
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
- const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchLocations();
   }, [vehicleId]);
@@ -35,9 +34,8 @@ export function VehicleLocations({ vehicleId }: Props) {
           montant_total_ht, montant_total_ttc, apport_initial,
           depot_garantie, km_depart, km_inclus, cout_km_supplementaire,
           valeur_residuelle, mensualites_payees, reste_a_payer_ttc,
-          statut, notes, contrat_pdf_path,
-        loueur:locataire_id(id, nom, prenom, type, telephone, email, adresse, siret, permis_numero, permis_validite, date_naissance, nationalite, lieu_naissance),
-          vehicule:vehicule_id(immatriculation, marque, modele, energie, date_premiere_mise_en_circulation)
+          statut, notes,
+          loueur:locataire_id(id, nom, prenom, type, telephone, email, adresse, siret, permis_numero, permis_validite, date_naissance, nationalite, lieu_naissance)
         `)
         .eq('vehicule_id', vehicleId)
         .order('date_debut', { ascending: false });
@@ -65,55 +63,7 @@ export function VehicleLocations({ vehicleId }: Props) {
     if (!d) return '—';
     try { return new Date(d).toLocaleDateString('fr-FR'); } catch { return d; }
   };
-const handleGeneratePdf = async (loc: any) => {
-    if (generatingPdf) return;
-    setGeneratingPdf(loc.id);
-    try {
-      const loueur = loc.loueur;
-      const pdfPath = await generateContractLocationPurePdf({
-        locationId: loc.id,
-        reference: loc.reference_contrat || 'N/A',
-        dateContrat: formatDateFr(loc.date_debut),
-        locataireCivilite: loueur?.type === 'particulier' ? 'M.' : '',
-        locataireNom: loueur?.nom || '',
-        locatairePrenom: loueur?.prenom || '',
-        locataireDateNaissance: formatDateFr(loueur?.date_naissance),
-        locataireLieuNaissance: loueur?.lieu_naissance || '',
-        locataireNationalite: loueur?.nationalite || '',
-        locataireAdresse: loueur?.adresse || '',
-        marque: loc.vehicule_marque || '',
-        modele: loc.vehicule_modele || '',
-        immatriculation: loc.vehicule_immat || '',
-        carburant: loc.vehicule_carburant || '',
-        date1ereImmat: formatDateFr(loc.vehicule_date_1ere_immat),
-        valeurResiduelle: loc.valeur_residuelle ? String(loc.valeur_residuelle) : '',
-        dateDebut: formatDateLongFr(loc.date_debut),
-        dateFin: formatDateLongFr(loc.date_fin),
-        dureeMois: loc.duree_mois ? String(loc.duree_mois) : '',
-        mensualiteTtc: loc.montant_mensuel_ttc ? Number(loc.montant_mensuel_ttc).toFixed(2) : '',
-        depotGarantie: loc.depot_garantie ? String(loc.depot_garantie) : '',
-        kmInclus: loc.km_inclus ? String(loc.km_inclus) : '',
-        dateSignature: formatDateFr(loc.date_debut),
-      });
-      if (pdfPath) {
-        const { data: signedUrl } = await supabase.storage.from('edl-documents').createSignedUrl(pdfPath, 300);
-        if (signedUrl?.signedUrl) {
-          window.open(signedUrl.signedUrl, '_blank');
-        }
-        await fetchLocations();
-      }
-    } catch (err) {
-      console.error('Erreur generation PDF contrat:', err);
-      alert('Erreur lors de la generation du PDF');
-    } finally {
-      setGeneratingPdf(null);
-    }
-  };
 
-  const handleDownloadPdf = async (pdfPath: string) => {
-    const { data: signedUrl } = await supabase.storage.from('edl-documents').createSignedUrl(pdfPath, 300);
-    if (signedUrl?.signedUrl) window.open(signedUrl.signedUrl, '_blank');
-  };
   if (loading) return <div className="flex justify-center py-8"><LoadingSpinner /></div>;
 
   if (locations.length === 0) {
@@ -132,12 +82,6 @@ const handleGeneratePdf = async (loc: any) => {
     <div className="space-y-3">
       {locations.map((loc) => {
         const loueur = loc.loueur;
-      const vehiculeData = loc.vehicule || {};
-        loc.vehicule_immat = vehiculeData.immatriculation || '';
-        loc.vehicule_marque = vehiculeData.marque || '';
-        loc.vehicule_modele = vehiculeData.modele || '';
-        loc.vehicule_carburant = vehiculeData.energie || '';
-        loc.vehicule_date_1ere_immat = vehiculeData.date_premiere_mise_en_circulation || '';
         const loueurNom = loueur
           ? loueur.type === 'particulier'
             ? `${loueur.prenom || ''} ${loueur.nom || ''}`.trim()
@@ -261,28 +205,6 @@ const handleGeneratePdf = async (loc: any) => {
                   <div>
                     <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Notes</p>
                     <p className="text-sm text-gray-700 bg-white p-2 rounded border border-gray-200">{loc.notes}</p>
-                  </div>
-                )}
-                {/* Bouton PDF contrat */}
-                {loc.type_location === 'location_pure' && (
-                  <div className="pt-2 border-t border-gray-200">
-                    {loc.contrat_pdf_path ? (
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => handleDownloadPdf(loc.contrat_pdf_path)}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">
-                          <FileDown className="w-4 h-4" /> Telecharger le contrat PDF
-                        </button>
-                        <button onClick={() => handleGeneratePdf(loc)} disabled={generatingPdf === loc.id}
-                          className="inline-flex items-center gap-2 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-                          {generatingPdf === loc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />} Regenerer
-                        </button>
-                      </div>
-                    ) : (
-                      <button onClick={() => handleGeneratePdf(loc)} disabled={generatingPdf === loc.id}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm disabled:opacity-50">
-                        {generatingPdf === loc.id ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generation en cours...</>) : (<><FileDown className="w-4 h-4" /> Generer le contrat PDF</>)}
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
