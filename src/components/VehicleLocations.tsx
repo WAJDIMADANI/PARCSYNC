@@ -35,7 +35,7 @@ export function VehicleLocations({ vehicleId }: Props) {
           montant_total_ht, montant_total_ttc, apport_initial,
           depot_garantie, km_depart, km_inclus, cout_km_supplementaire,
           valeur_residuelle, mensualites_payees, reste_a_payer_ttc,
-          statut, notes,
+          statut, notes, contrat_pdf_path,
         loueur:locataire_id(id, nom, prenom, type, telephone, email, adresse, siret, permis_numero, permis_validite, date_naissance, nationalite, lieu_naissance),
           vehicule:vehicule_id(immatriculation, marque, modele, energie, date_premiere_mise_en_circulation)
         `)
