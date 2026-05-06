@@ -18,8 +18,8 @@ const TYPE_LABELS: Record<string, string> = {
 export function VehicleLocations({ vehicleId }: Props) {
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
+ const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
   useEffect(() => {
     fetchLocations();
   }, [vehicleId]);
