@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
-import { MapPin, Phone, Mail, Building, User, ChevronDown, ChevronUp, FileDown, Loader2 } from 'lucide-react';
+import { MapPin, Phone, Mail, Building, User, ChevronDown, ChevronUp, FileDown, Loader2, Send, Clock, CheckCircle2 } from 'lucide-react';
 import { generateContractLocationPurePdf, formatDateFr, formatDateLongFr } from '../lib/contractLocationPureGenerator';
 
 interface Props {
@@ -20,6 +20,7 @@ export function VehicleLocations({ vehicleId }: Props) {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
+  const [sendingSignature, setSendingSignature] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLocations();
@@ -36,7 +37,7 @@ export function VehicleLocations({ vehicleId }: Props) {
           montant_total_ht, montant_total_ttc, apport_initial,
           depot_garantie, km_depart, km_inclus, cout_km_supplementaire,
           valeur_residuelle, mensualites_payees, reste_a_payer_ttc,
-          statut, notes, contrat_pdf_path,
+          statut, notes, contrat_pdf_path, signature_status, yousign_sent_at, yousign_signed_at, contrat_signed_pdf_path,
           loueur:locataire_id(id, nom, prenom, type, telephone, email, adresse, siret, permis_numero, permis_validite, date_naissance, nationalite, lieu_naissance),
           vehicule:vehicule_id(immatriculation, marque, modele, energie, date_premiere_mise_en_circulation)
         `)
@@ -100,6 +101,38 @@ export function VehicleLocations({ vehicleId }: Props) {
   const handleDownloadPdf = async (pdfPath: string) => {
     const { data: signedUrl } = await supabase.storage.from('edl-documents').createSignedUrl(pdfPath, 300);
     if (signedUrl?.signedUrl) window.open(signedUrl.signedUrl, '_blank');
+  };
+
+  const handleDownloadSignedPdf = async (pdfPath: string) => {
+    const { data: signedUrl } = await supabase.storage.from('edl-documents').createSignedUrl(pdfPath, 300);
+    if (signedUrl?.signedUrl) window.open(signedUrl.signedUrl, '_blank');
+  };
+
+  const handleAskSendSignature = async (loc: any) => {
+    setSendingSignature(loc.id);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ locationId: loc.id }),
+        }
+      );
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText);
+      }
+      await fetchLocations();
+    } catch (err) {
+      console.error('Erreur envoi signature:', err);
+      alert('Erreur lors de l\'envoi pour signature');
+    } finally {
+      setSendingSignature(null);
+    }
   };
 
   const getStatutBadge = (statut: string) => {
@@ -262,24 +295,81 @@ export function VehicleLocations({ vehicleId }: Props) {
                   </div>
                 )}
 
-                {/* Bouton PDF contrat */}
-                <div className="pt-2 border-t border-gray-200">
-                  {loc.contrat_pdf_path ? (
-                    <div className="flex items-center gap-3">
+                {/* Bouton PDF contrat + signature electronique */}
+                <div className="pt-2 border-t border-gray-200 space-y-2">
+                  {/* Cas 1 : pas de PDF generé */}
+                  {!loc.contrat_pdf_path && (
+                    <button onClick={() => handleGeneratePdf(loc)} disabled={generatingPdf === loc.id}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm disabled:opacity-50">
+                      {generatingPdf === loc.id ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generation en cours...</>) : (<><FileDown className="w-4 h-4" /> Generer le contrat PDF</>)}
+                    </button>
+                  )}
+
+                  {/* Cas 2 : PDF généré, statut draft (pas encore envoyé) */}
+                  {loc.contrat_pdf_path && loc.signature_status === 'draft' && (
+                    <div className="flex flex-wrap items-center gap-2">
                       <button onClick={() => handleDownloadPdf(loc.contrat_pdf_path)}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">
-                        <FileDown className="w-4 h-4" /> Telecharger le contrat PDF
+                        <FileDown className="w-4 h-4" /> Telecharger le contrat
                       </button>
                       <button onClick={() => handleGeneratePdf(loc)} disabled={generatingPdf === loc.id}
                         className="inline-flex items-center gap-2 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
                         {generatingPdf === loc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />} Regenerer
                       </button>
+                      <button onClick={() => handleAskSendSignature(loc)} disabled={sendingSignature === loc.id}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm disabled:opacity-50">
+                        {sendingSignature === loc.id ? (<><Loader2 className="w-4 h-4 animate-spin" /> Envoi...</>) : (<><Send className="w-4 h-4" /> Envoyer pour signature</>)}
+                      </button>
                     </div>
-                  ) : (
-                    <button onClick={() => handleGeneratePdf(loc)} disabled={generatingPdf === loc.id}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm disabled:opacity-50">
-                      {generatingPdf === loc.id ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generation en cours...</>) : (<><FileDown className="w-4 h-4" /> Generer le contrat PDF</>)}
-                    </button>
+                  )}
+
+                  {/* Cas 3 : envoyé pour signature, en attente */}
+                  {loc.signature_status === 'sent' && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-sm font-medium">
+                        <Clock className="w-4 h-4" />
+                        Envoye pour signature {loc.yousign_sent_at ? `le ${formatDate(loc.yousign_sent_at)}` : ''}
+                      </span>
+                      <button onClick={() => handleDownloadPdf(loc.contrat_pdf_path)}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+                        <FileDown className="w-4 h-4" /> Telecharger l'original
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Cas 4 : signé */}
+                  {loc.signature_status === 'signed' && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-lg text-sm font-medium">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Signe {loc.yousign_signed_at ? `le ${formatDate(loc.yousign_signed_at)}` : ''}
+                      </span>
+                      {loc.contrat_signed_pdf_path && (
+                        <button onClick={() => handleDownloadSignedPdf(loc.contrat_signed_pdf_path)}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm">
+                          <FileDown className="w-4 h-4" /> Telecharger le PDF signe
+                        </button>
+                      )}
+                      {loc.contrat_pdf_path && (
+                        <button onClick={() => handleDownloadPdf(loc.contrat_pdf_path)}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+                          <FileDown className="w-4 h-4" /> Original
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Cas 5 : decline ou expired */}
+                  {(loc.signature_status === 'declined' || loc.signature_status === 'expired') && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-800 rounded-lg text-sm font-medium">
+                        {loc.signature_status === 'declined' ? 'Signature refusee' : 'Signature expiree'}
+                      </span>
+                      <button onClick={() => handleAskSendSignature(loc)} disabled={sendingSignature === loc.id}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm disabled:opacity-50">
+                        <Send className="w-4 h-4" /> Renvoyer pour signature
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
