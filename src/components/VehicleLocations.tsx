@@ -21,6 +21,7 @@ export function VehicleLocations({ vehicleId }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
   const [sendingSignature, setSendingSignature] = useState<string | null>(null);
+  const [confirmSendModal, setConfirmSendModal] = useState<{ loc: any; email: string } | null>(null);
 
   useEffect(() => {
     fetchLocations();
@@ -103,33 +104,51 @@ export function VehicleLocations({ vehicleId }: Props) {
     if (signedUrl?.signedUrl) window.open(signedUrl.signedUrl, '_blank');
   };
 
-  const handleDownloadSignedPdf = async (pdfPath: string) => {
-    const { data: signedUrl } = await supabase.storage.from('edl-documents').createSignedUrl(pdfPath, 300);
+  const handleDownloadSignedPdf = async (path: string) => {
+    const { data: signedUrl } = await supabase.storage.from('edl-documents').createSignedUrl(path, 300);
     if (signedUrl?.signedUrl) window.open(signedUrl.signedUrl, '_blank');
   };
 
-  const handleAskSendSignature = async (loc: any) => {
+  const handleAskSendSignature = (loc: any) => {
+    const email = loc.loueur?.email;
+    if (!email || !email.includes('@')) {
+      alert('Email du locataire manquant ou invalide. Modifiez la fiche du loueur avant d\'envoyer pour signature.');
+      return;
+    }
+    setConfirmSendModal({ loc, email });
+  };
+
+  const handleConfirmSendSignature = async () => {
+    if (!confirmSendModal) return;
+    const loc = confirmSendModal.loc;
     setSendingSignature(loc.id);
+    setConfirmSendModal(null);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Session non disponible');
+
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-yousign-signature-location`,
         {
           method: 'POST',
           headers: {
+            Authorization: `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({ locationId: loc.id }),
         }
       );
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText);
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || `Erreur ${response.status}`);
       }
+
+      alert(`Email de signature envoyé à ${result.signerEmail} avec succès !`);
       await fetchLocations();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur envoi signature:', err);
-      alert('Erreur lors de l\'envoi pour signature');
+      alert('Erreur lors de l\'envoi pour signature : ' + (err.message || 'inconnue'));
     } finally {
       setSendingSignature(null);
     }
@@ -377,6 +396,36 @@ export function VehicleLocations({ vehicleId }: Props) {
           </div>
         );
       })}
+
+      {/* Modal de confirmation envoi signature */}
+      {confirmSendModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <Send className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Envoyer pour signature</h3>
+                <p className="text-sm text-gray-500">Envoi via YouSign</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-700 mb-2">Un email avec le contrat sera envoye a :</p>
+            <p className="text-base font-semibold text-gray-900 bg-gray-50 px-3 py-2 rounded-lg mb-4">{confirmSendModal.email}</p>
+            <p className="text-xs text-gray-500 mb-6">Le destinataire recevra un email avec un lien pour signer electroniquement le contrat. Cette action ne peut pas etre annulee.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirmSendModal(null)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium text-sm">
+                Annuler
+              </button>
+              <button onClick={handleConfirmSendSignature}
+                className="inline-flex items-center gap-2 px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700 font-medium text-sm">
+                <Send className="w-4 h-4" /> Confirmer l'envoi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
