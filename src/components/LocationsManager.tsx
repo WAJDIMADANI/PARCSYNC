@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Search, RefreshCw, MapPin, Calendar, Euro, User, Building, ArrowLeft, ArrowRight, CheckCircle, X } from 'lucide-react';
+import { Plus, Search, RefreshCw, MapPin, Calendar, Euro, User, Building, ArrowLeft, ArrowRight, CheckCircle, X, Filter, AlertCircle, Clock, FileText, Layers } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface Location {
@@ -74,6 +74,10 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filterStatutCalcule, setFilterStatutCalcule] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterSignature, setFilterSignature] = useState<string>('all');
+  const [filterPaiement, setFilterPaiement] = useState<string>('all');
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -408,14 +412,87 @@ const fetchLocations = async () => {
     );
   };
 
+  const getKpiData = () => {
+    const total = {
+      count: locations.length,
+      montant: locations.reduce((sum, l) => sum + (l.montant_total_ttc || (l.montant_mensuel_ttc || l.montant_mensuel || 0) * (l.duree_mois || 12)), 0),
+    };
+    const enCours = locations.filter(l => l.statut_calcule === 'en_cours');
+    const aVenir = locations.filter(l => l.statut_calcule === 'a_venir');
+    const enRetard = locations.filter(l => l.statut_calcule === 'en_retard');
+    const terminees = locations.filter(l => l.statut_calcule === 'terminee');
+
+    const sumMontant = (locs: Location[]) =>
+      locs.reduce((sum, l) => sum + (l.montant_total_ttc || (l.montant_mensuel_ttc || l.montant_mensuel || 0) * (l.duree_mois || 12)), 0);
+
+    return {
+      total,
+      enCours: { count: enCours.length, montant: sumMontant(enCours) },
+      aVenir: { count: aVenir.length, montant: sumMontant(aVenir) },
+      enRetard: { count: enRetard.length, montant: sumMontant(enRetard) },
+      terminees: { count: terminees.length, montant: sumMontant(terminees) },
+    };
+  };
+
+  const formatMontant = (n: number) => {
+    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M€`;
+    if (n >= 1000) return `${(n / 1000).toFixed(0)}k€`;
+    return `${Math.round(n)}€`;
+  };
+
   const filteredLocations = locations.filter(loc => {
-    const searchLower = search.toLowerCase();
-    return (
-      loc.vehicule?.immatriculation?.toLowerCase().includes(searchLower) ||
-      loc.locataire?.nom?.toLowerCase().includes(searchLower) ||
-      loc.locataire?.prenom?.toLowerCase().includes(searchLower)
-    );
+    // Filtre KPI tuile (statut_calcule)
+    if (filterStatutCalcule && loc.statut_calcule !== filterStatutCalcule) return false;
+
+    // Filtre Type
+    if (filterType !== 'all' && loc.type_location !== filterType) return false;
+
+    // Filtre Signature
+    if (filterSignature !== 'all') {
+      const sig = loc.signature_status || 'draft';
+      if (filterSignature === 'no_pdf' && loc.contrat_pdf_path) return false;
+      if (filterSignature === 'no_pdf' && !loc.contrat_pdf_path) {
+        // pass: pas de PDF = ok
+      } else if (filterSignature !== 'no_pdf' && sig !== filterSignature) {
+        return false;
+      }
+    }
+
+    // Filtre Paiement
+    if (filterPaiement === 'all_paid') {
+      if ((loc.nb_paiements_payes || 0) < (loc.nb_paiements_total || 0)) return false;
+    } else if (filterPaiement === 'has_impayes') {
+      if ((loc.nb_paiements_impayes_en_retard || 0) === 0) return false;
+    } else if (filterPaiement === 'a_venir') {
+      if ((loc.nb_paiements_payes || 0) > 0) return false;
+    }
+
+    // Recherche texte
+    if (search) {
+      const searchLower = search.toLowerCase();
+      const matchesSearch =
+        loc.vehicule?.immatriculation?.toLowerCase().includes(searchLower) ||
+        loc.locataire?.nom?.toLowerCase().includes(searchLower) ||
+        loc.locataire?.prenom?.toLowerCase().includes(searchLower) ||
+        loc.locataire?.email?.toLowerCase().includes(searchLower) ||
+        loc.reference_contrat?.toLowerCase().includes(searchLower);
+      if (!matchesSearch) return false;
+    }
+
+    return true;
   });
+
+  const resetFilters = () => {
+    setSearch('');
+    setFilterStatutCalcule(null);
+    setFilterType('all');
+    setFilterSignature('all');
+    setFilterPaiement('all');
+  };
+
+  const hasActiveFilters = !!filterStatutCalcule || filterType !== 'all' || filterSignature !== 'all' || filterPaiement !== 'all' || !!search;
+
+  const kpi = getKpiData();
 
   if (loading) {
     return <LoadingSpinner />;
@@ -440,6 +517,145 @@ const fetchLocations = async () => {
             <Plus className="h-5 w-5 mr-2" />
             Nouvelle location
           </button>
+        </div>
+
+        {/* KPI Tuiles cliquables */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {/* Total */}
+          <button
+            onClick={() => setFilterStatutCalcule(null)}
+            className={`p-4 rounded-lg border-2 text-left transition-all ${
+              !filterStatutCalcule
+                ? 'border-blue-600 bg-blue-50'
+                : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <Layers className="h-4 w-4 text-blue-600" />
+              <span className="text-xs text-gray-500">Total</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{kpi.total.count}</div>
+            <div className="text-sm text-gray-600">{formatMontant(kpi.total.montant)}</div>
+          </button>
+
+          {/* En cours */}
+          <button
+            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'en_cours' ? null : 'en_cours')}
+            className={`p-4 rounded-lg border-2 text-left transition-all ${
+              filterStatutCalcule === 'en_cours'
+                ? 'border-green-600 bg-green-50'
+                : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span className="text-xs text-gray-500">En cours</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{kpi.enCours.count}</div>
+            <div className="text-sm text-gray-600">{formatMontant(kpi.enCours.montant)}</div>
+          </button>
+
+          {/* À venir */}
+          <button
+            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'a_venir' ? null : 'a_venir')}
+            className={`p-4 rounded-lg border-2 text-left transition-all ${
+              filterStatutCalcule === 'a_venir'
+                ? 'border-yellow-600 bg-yellow-50'
+                : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <Clock className="h-4 w-4 text-yellow-600" />
+              <span className="text-xs text-gray-500">À venir</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{kpi.aVenir.count}</div>
+            <div className="text-sm text-gray-600">{formatMontant(kpi.aVenir.montant)}</div>
+          </button>
+
+          {/* En retard */}
+          <button
+            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'en_retard' ? null : 'en_retard')}
+            className={`p-4 rounded-lg border-2 text-left transition-all ${
+              filterStatutCalcule === 'en_retard'
+                ? 'border-red-600 bg-red-50'
+                : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <span className="text-xs text-gray-500">En retard</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{kpi.enRetard.count}</div>
+            <div className="text-sm text-gray-600">{formatMontant(kpi.enRetard.montant)}</div>
+          </button>
+
+          {/* Terminées */}
+          <button
+            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'terminee' ? null : 'terminee')}
+            className={`p-4 rounded-lg border-2 text-left transition-all ${
+              filterStatutCalcule === 'terminee'
+                ? 'border-gray-600 bg-gray-100'
+                : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <FileText className="h-4 w-4 text-gray-600" />
+              <span className="text-xs text-gray-500">Terminées</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{kpi.terminees.count}</div>
+            <div className="text-sm text-gray-600">{formatMontant(kpi.terminees.montant)}</div>
+          </button>
+        </div>
+
+        {/* Filtres avancés */}
+        <div className="bg-white rounded-lg shadow p-4 flex flex-wrap items-center gap-3">
+          <Filter className="h-5 w-5 text-gray-400" />
+
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Type : Tous</option>
+            <option value="location_pure">Location pure</option>
+            <option value="location_vente_particulier">Loc-vente Particulier</option>
+            <option value="location_vente_societe">Loc-vente Société</option>
+            <option value="loa">LOA</option>
+          </select>
+
+          <select
+            value={filterSignature}
+            onChange={(e) => setFilterSignature(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Signature : Tous</option>
+            <option value="signed">Signé</option>
+            <option value="sent">Envoyé en attente</option>
+            <option value="draft">Brouillon</option>
+            <option value="declined">Refusé</option>
+            <option value="no_pdf">Sans PDF</option>
+          </select>
+
+          <select
+            value={filterPaiement}
+            onChange={(e) => setFilterPaiement(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Paiements : Tous</option>
+            <option value="all_paid">Tout payé</option>
+            <option value="has_impayes">Avec impayés en retard</option>
+            <option value="a_venir">Aucun paiement encore</option>
+          </select>
+
+          {hasActiveFilters && (
+            <button
+              onClick={resetFilters}
+              className="ml-auto flex items-center px-3 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Réinitialiser
+            </button>
+          )}
         </div>
 
         <div className="bg-white rounded-lg shadow">
