@@ -90,26 +90,30 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
     }
   }, [viewParams]);
 
-  const fetchLocations = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('locations')
-        .select(`
-          *,
-          vehicule:vehicule_id(immatriculation, marque, modele),
-          locataire:locataire_id!loueur(nom, prenom, type)
-        `)
-        .order('created_at', { ascending: false });
+const fetchLocations = async () => {
+  setLoading(true);
+  try {
+    const { data, error } = await supabase
+      .from('locations')
+      .select(`
+        *,
+        vehicule:vehicule_id(immatriculation, marque, modele),
+        locataire:locataire_id(nom, prenom, type)
+      `)
+      .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setLocations(data || []);
-    } catch (error) {
-      console.error('Erreur lors du chargement des locations:', error);
-    } finally {
-      setLoading(false);
+    if (error) {
+      console.error('Erreur Supabase:', error);
+      throw error;
     }
-  };
+    console.log('Locations chargées:', data?.length || 0);
+    setLocations(data || []);
+  } catch (error) {
+    console.error('Erreur lors du chargement des locations:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const rechercherLocataires = async (query: string) => {
     if (!query || query.length < 2) {
