@@ -49,6 +49,9 @@ interface Location {
   nb_paiements_total?: number;
   nb_paiements_payes?: number;
   nb_paiements_impayes_en_retard?: number;
+  nb_edl_sortie?: number;
+  nb_edl_entree?: number;
+  nb_edl_total?: number;
   statut_calcule?: 'a_venir' | 'en_cours' | 'en_retard' | 'terminee';
 }
 
@@ -160,6 +163,17 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
         // On continue quand même, on aura juste pas les compteurs
       }
 
+      // 2bis. Récupérer tous les EDL liés à des locations
+      const { data: edlData, error: edlError } = await supabase
+        .from('etat_des_lieux')
+        .select('location_id, type_edl')
+        .not('location_id', 'is', null);
+
+      if (edlError) {
+        console.error('Erreur Supabase EDL:', edlError);
+        // On continue, juste pas de compteurs EDL
+      }
+
       // 3. Calculer les statistiques par location
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -198,11 +212,20 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
           statut_calcule = 'en_cours';
         }
 
+        // Compteurs EDL pour cette location
+        const edlsLocation = (edlData || []).filter((e: any) => e.location_id === loc.id);
+        const nb_edl_sortie = edlsLocation.filter((e: any) => e.type_edl === 'sortie').length;
+        const nb_edl_entree = edlsLocation.filter((e: any) => e.type_edl === 'entree').length;
+        const nb_edl_total = edlsLocation.length;
+
         return {
           ...loc,
           nb_paiements_total,
           nb_paiements_payes,
           nb_paiements_impayes_en_retard,
+          nb_edl_sortie,
+          nb_edl_entree,
+          nb_edl_total,
           statut_calcule,
         };
       });
@@ -465,7 +488,15 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
       } else if (filterSante === 'a_risque') {
         if (!isAtRisk(loc).atRisk) return false;
       }
-      // Filtre EDL — TODO: nécessite jointure avec etat_des_lieux (B1.4)
+      // Filtre EDL fonctionnel
+      if (filterEDL !== 'all') {
+        const sortie = (loc.nb_edl_sortie || 0) > 0;
+        const entree = (loc.nb_edl_entree || 0) > 0;
+        if (filterEDL === 'with_sortie' && !sortie) return false;
+        if (filterEDL === 'with_retour' && !entree) return false;
+        if (filterEDL === 'complete' && (!sortie || !entree)) return false;
+        if (filterEDL === 'none' && (loc.nb_edl_total || 0) > 0) return false;
+      }
       if (search) {
         const s = search.toLowerCase();
         const m = loc.vehicule?.immatriculation?.toLowerCase().includes(s) ||
@@ -869,6 +900,9 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
                         Pay.
                       </th>
                       <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                        EDL
+                      </th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide">
                         Risque
                       </th>
                     </tr>
@@ -956,6 +990,29 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
                                 )}
                               </div>
                             )}
+                          </td>
+
+                          {/* EDL — fonctionnel */}
+                          <td className="px-3 py-3 text-center">
+                            {(() => {
+                              const sortie = (loc.nb_edl_sortie || 0) > 0;
+                              const entree = (loc.nb_edl_entree || 0) > 0;
+                              const isActive = loc.statut_calcule === 'en_cours' || loc.statut_calcule === 'a_venir';
+                              if (sortie && entree) {
+                                return <span className="text-emerald-600 text-base" title="EDL Sortie + Retour">✓✓</span>;
+                              }
+                              if (sortie) {
+                                return <span className="text-blue-600 text-xs font-medium" title="EDL Sortie fait, Retour manquant">S</span>;
+                              }
+                              if (entree) {
+                                return <span className="text-amber-600 text-xs font-medium" title="EDL Retour fait, Sortie manquante">R</span>;
+                              }
+                              return (
+                                <span className={`text-xs ${isActive ? 'text-red-500 font-medium' : 'text-slate-300'}`} title={isActive ? 'Aucun EDL ⚠' : 'Aucun EDL'}>
+                                  {isActive ? '⚠' : '—'}
+                                </span>
+                              );
+                            })()}
                           </td>
 
                           <td className="px-3 py-3 text-center">
