@@ -7,16 +7,48 @@ interface Location {
   id: string;
   vehicule_id: string;
   locataire_id: string | null;
-  type_location: 'location_pure' | 'loa';
+  reference_contrat: string | null;
+  type_location: 'location_pure' | 'location_vente_particulier' | 'location_vente_societe' | 'loa';
   date_debut: string;
   date_fin: string | null;
+  duree_mois: number | null;
   montant_mensuel: number | null;
+  montant_mensuel_ttc: number | null;
+  montant_mensuel_ht: number | null;
+  montant_total_ttc: number | null;
+  montant_total_ht: number | null;
   depot_garantie: number | null;
-  statut: 'en_cours' | 'terminee' | 'en_retard' | 'annulee';
+  apport_initial: number | null;
+  km_depart: number | null;
+  km_inclus: number | null;
+  valeur_residuelle: number | null;
+  mensualites_payees: number | null;
+  reste_a_payer_ttc: number | null;
+  statut: 'en_cours' | 'terminee' | 'en_retard' | 'annulee' | 'a_venir';
   notes: string | null;
   created_at: string;
-  vehicule?: { immatriculation: string; marque: string; modele: string; };
-  locataire?: { nom: string; prenom: string | null; type: string; };
+  contrat_pdf_path: string | null;
+  contrat_signed_pdf_path: string | null;
+  signature_status: 'draft' | 'sent' | 'signed' | 'declined' | 'expired' | null;
+  yousign_sent_at: string | null;
+  yousign_signed_at: string | null;
+  vehicule?: {
+    immatriculation: string;
+    marque: string;
+    modele: string;
+  };
+  locataire?: {
+    nom: string;
+    prenom: string | null;
+    type: string;
+    telephone: string | null;
+    email: string | null;
+  };
+  // Calculs front
+  nb_paiements_total?: number;
+  nb_paiements_payes?: number;
+  nb_paiements_impayes_en_retard?: number;
+  statut_calcule?: 'a_venir' | 'en_cours' | 'en_retard' | 'terminee';
 }
 
 interface Locataire {
@@ -93,21 +125,96 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
 const fetchLocations = async () => {
   setLoading(true);
   try {
-    const { data, error } = await supabase
+    // 1. Récupérer toutes les locations avec véhicule + locataire
+    const { data: locsData, error: locsError } = await supabase
       .from('locations')
       .select(`
         *,
         vehicule:vehicule_id(immatriculation, marque, modele),
-        locataire:locataire_id(nom, prenom, type)
+        locataire:locataire_id(nom, prenom, type, telephone, email)
       `)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Erreur Supabase:', error);
-      throw error;
+    if (locsError) {
+      console.error('Erreur Supabase locations:', locsError);
+      throw locsError;
     }
-    console.log('Locations chargées:', data?.length || 0);
-    setLocations(data || []);
+
+    // 2. Récupérer tous les paiements pour calculer les compteurs
+    const { data: paiementsData, error: paiementsError } = await supabase
+      .from('paiements_location')
+      .select('location_id, statut, mois');
+
+    if (paiementsError) {
+      console.error('Erreur Supabase paiements:', paiementsError);
+      // On continue quand même, on aura juste pas les compteurs
+    }
+
+    // 3. Calculer les statistiques par location
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const enrichedLocations: Location[] = (locsData || []).map((loc: any) => {
+      const paiementsLocation = (paiementsData || []).filter(
+        (p: any) => p.location_id === loc.id
+      );
+
+      const nb_paiements_total = paiementsLocation.length;
+      const nb_paiements_payes = paiementsLocation.filter(
+        (p: any) => p.statut === 'paye'
+      ).length;
+      const nb_paiements_impayes_en_retard = paiementsLocation.filter(
+        (p: any) => {
+          if (p.statut === 'paye') return false;
+          const moisDate = new Date(p.mois);
+          return moisDate < today;
+        }
+      ).length;
+
+      // Calcul du statut auto
+      const dateDebut = new Date(loc.date_debut);
+      const dateFin = loc.date_fin ? new Date(loc.date_fin) : null;
+      let statut_calcule: 'a_venir' | 'en_cours' | 'en_retard' | 'terminee';
+
+      if (loc.statut === 'terminee' || loc.statut === 'annulee') {
+        statut_calcule = 'terminee';
+      } else if (dateDebut > today) {
+        statut_calcule = 'a_venir';
+      } else if (dateFin && dateFin < today) {
+        statut_calcule = 'terminee';
+      } else if (nb_paiements_impayes_en_retard > 0) {
+        statut_calcule = 'en_retard';
+      } else {
+        statut_calcule = 'en_cours';
+      }
+
+      return {
+        ...loc,
+        nb_paiements_total,
+        nb_paiements_payes,
+        nb_paiements_impayes_en_retard,
+        statut_calcule,
+      };
+    });
+
+    // 4. Tri "plus urgent d'abord" : en_retard > a_venir > en_cours > terminee
+    const ordrePriorite: Record<string, number> = {
+      en_retard: 0,
+      a_venir: 1,
+      en_cours: 2,
+      terminee: 3,
+    };
+
+    enrichedLocations.sort((a, b) => {
+      const pa = ordrePriorite[a.statut_calcule || 'en_cours'];
+      const pb = ordrePriorite[b.statut_calcule || 'en_cours'];
+      if (pa !== pb) return pa - pb;
+      // À priorité égale, plus récent d'abord
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+    console.log(`Locations chargées: ${enrichedLocations.length}`);
+    setLocations(enrichedLocations);
   } catch (error) {
     console.error('Erreur lors du chargement des locations:', error);
   } finally {
