@@ -77,8 +77,9 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
   const [filterStatutCalcule, setFilterStatutCalcule] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterSignature, setFilterSignature] = useState<string>('all');
-  const [filterPaiement, setFilterPaiement] = useState<string>('all');
+  const [filterSante, setFilterSante] = useState<string>('all');
   const [filterEDL, setFilterEDL] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'overview' | 'locataire' | 'paiements' | 'edl' | 'history'>('overview');
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -127,105 +128,105 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
     }
   }, [viewParams]);
 
-const fetchLocations = async () => {
-  setLoading(true);
-  try {
-    // 1. Récupérer toutes les locations avec véhicule + locataire
-    const { data: locsData, error: locsError } = await supabase
-      .from('locations')
-      .select(`
-        *,
-        vehicule:vehicule_id(immatriculation, marque, modele),
-        locataire:locataire_id(nom, prenom, type, telephone, email)
-      `)
-      .order('created_at', { ascending: false });
+  const fetchLocations = async () => {
+    setLoading(true);
+    try {
+      // 1. Récupérer toutes les locations avec véhicule + locataire
+      const { data: locsData, error: locsError } = await supabase
+        .from('locations')
+        .select(`
+          *,
+          vehicule:vehicule_id(immatriculation, marque, modele),
+          locataire:locataire_id(nom, prenom, type, telephone, email)
+        `)
+        .order('created_at', { ascending: false });
 
-    if (locsError) {
-      console.error('Erreur Supabase locations:', locsError);
-      throw locsError;
-    }
-
-    // 2. Récupérer tous les paiements pour calculer les compteurs
-    const { data: paiementsData, error: paiementsError } = await supabase
-      .from('paiements_location')
-      .select('location_id, statut, mois');
-
-    if (paiementsError) {
-      console.error('Erreur Supabase paiements:', paiementsError);
-      // On continue quand même, on aura juste pas les compteurs
-    }
-
-    // 3. Calculer les statistiques par location
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const enrichedLocations: Location[] = (locsData || []).map((loc: any) => {
-      const paiementsLocation = (paiementsData || []).filter(
-        (p: any) => p.location_id === loc.id
-      );
-
-      const nb_paiements_total = paiementsLocation.length;
-      const nb_paiements_payes = paiementsLocation.filter(
-        (p: any) => p.statut === 'paye'
-      ).length;
-      const nb_paiements_impayes_en_retard = paiementsLocation.filter(
-        (p: any) => {
-          if (p.statut === 'paye') return false;
-          const moisDate = new Date(p.mois);
-          return moisDate < today;
-        }
-      ).length;
-
-      // Calcul du statut auto
-      const dateDebut = new Date(loc.date_debut);
-      const dateFin = loc.date_fin ? new Date(loc.date_fin) : null;
-      let statut_calcule: 'a_venir' | 'en_cours' | 'en_retard' | 'terminee';
-
-      if (loc.statut === 'terminee' || loc.statut === 'annulee') {
-        statut_calcule = 'terminee';
-      } else if (dateDebut > today) {
-        statut_calcule = 'a_venir';
-      } else if (dateFin && dateFin < today) {
-        statut_calcule = 'terminee';
-      } else if (nb_paiements_impayes_en_retard > 0) {
-        statut_calcule = 'en_retard';
-      } else {
-        statut_calcule = 'en_cours';
+      if (locsError) {
+        console.error('Erreur Supabase locations:', locsError);
+        throw locsError;
       }
 
-      return {
-        ...loc,
-        nb_paiements_total,
-        nb_paiements_payes,
-        nb_paiements_impayes_en_retard,
-        statut_calcule,
+      // 2. Récupérer tous les paiements pour calculer les compteurs
+      const { data: paiementsData, error: paiementsError } = await supabase
+        .from('paiements_location')
+        .select('location_id, statut, mois');
+
+      if (paiementsError) {
+        console.error('Erreur Supabase paiements:', paiementsError);
+        // On continue quand même, on aura juste pas les compteurs
+      }
+
+      // 3. Calculer les statistiques par location
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const enrichedLocations: Location[] = (locsData || []).map((loc: any) => {
+        const paiementsLocation = (paiementsData || []).filter(
+          (p: any) => p.location_id === loc.id
+        );
+
+        const nb_paiements_total = paiementsLocation.length;
+        const nb_paiements_payes = paiementsLocation.filter(
+          (p: any) => p.statut === 'paye'
+        ).length;
+        const nb_paiements_impayes_en_retard = paiementsLocation.filter(
+          (p: any) => {
+            if (p.statut === 'paye') return false;
+            const moisDate = new Date(p.mois);
+            return moisDate < today;
+          }
+        ).length;
+
+        // Calcul du statut auto
+        const dateDebutLoc = new Date(loc.date_debut);
+        const dateFinLoc = loc.date_fin ? new Date(loc.date_fin) : null;
+        let statut_calcule: 'a_venir' | 'en_cours' | 'en_retard' | 'terminee';
+
+        if (loc.statut === 'terminee' || loc.statut === 'annulee') {
+          statut_calcule = 'terminee';
+        } else if (dateDebutLoc > today) {
+          statut_calcule = 'a_venir';
+        } else if (dateFinLoc && dateFinLoc < today) {
+          statut_calcule = 'terminee';
+        } else if (nb_paiements_impayes_en_retard > 0) {
+          statut_calcule = 'en_retard';
+        } else {
+          statut_calcule = 'en_cours';
+        }
+
+        return {
+          ...loc,
+          nb_paiements_total,
+          nb_paiements_payes,
+          nb_paiements_impayes_en_retard,
+          statut_calcule,
+        };
+      });
+
+      // 4. Tri "plus urgent d'abord" : en_retard > a_venir > en_cours > terminee
+      const ordrePriorite: Record<string, number> = {
+        en_retard: 0,
+        a_venir: 1,
+        en_cours: 2,
+        terminee: 3,
       };
-    });
 
-    // 4. Tri "plus urgent d'abord" : en_retard > a_venir > en_cours > terminee
-    const ordrePriorite: Record<string, number> = {
-      en_retard: 0,
-      a_venir: 1,
-      en_cours: 2,
-      terminee: 3,
-    };
+      enrichedLocations.sort((a, b) => {
+        const pa = ordrePriorite[a.statut_calcule || 'en_cours'];
+        const pb = ordrePriorite[b.statut_calcule || 'en_cours'];
+        if (pa !== pb) return pa - pb;
+        // À priorité égale, plus récent d'abord
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
 
-    enrichedLocations.sort((a, b) => {
-      const pa = ordrePriorite[a.statut_calcule || 'en_cours'];
-      const pb = ordrePriorite[b.statut_calcule || 'en_cours'];
-      if (pa !== pb) return pa - pb;
-      // À priorité égale, plus récent d'abord
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-
-    console.log(`Locations chargées: ${enrichedLocations.length}`);
-    setLocations(enrichedLocations);
-  } catch (error) {
-    console.error('Erreur lors du chargement des locations:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+      console.log(`Locations chargées: ${enrichedLocations.length}`);
+      setLocations(enrichedLocations);
+    } catch (error) {
+      console.error('Erreur lors du chargement des locations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const rechercherLocataires = async (query: string) => {
     if (!query || query.length < 2) {
@@ -393,85 +394,51 @@ const fetchLocations = async () => {
     }
   };
 
-  const getStatutBadge = (statut: string) => {
-    const badges = {
-      en_cours: 'bg-green-100 text-green-800',
-      terminee: 'bg-gray-100 text-gray-800',
-      en_retard: 'bg-red-100 text-red-800',
-      annulee: 'bg-orange-100 text-orange-800'
-    };
-    const labels = {
-      en_cours: 'En cours',
-      terminee: 'Terminée',
-      en_retard: 'En retard',
-      annulee: 'Annulée'
-    };
-    return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${badges[statut as keyof typeof badges] || badges.en_cours}`}>
-        {labels[statut as keyof typeof labels] || statut}
-      </span>
-    );
-  };
+  // ─── Logique métier ────────────────────────────────────────────────────────
 
-  // Détecte si une location est "à risque"
   const isAtRisk = (loc: Location): { atRisk: boolean; reasons: string[] } => {
     const reasons: string[] = [];
-
-    // Critère 1 : impayés en retard
     if ((loc.nb_paiements_impayes_en_retard || 0) > 0) {
       const n = loc.nb_paiements_impayes_en_retard || 0;
       reasons.push(`${n} impayé${n > 1 ? 's' : ''}`);
     }
-
-    // Critère 2 : en cours mais pas signé
     if (loc.statut_calcule === 'en_cours' && loc.signature_status !== 'signed') {
       reasons.push('non signé');
     }
-
     return { atRisk: reasons.length > 0, reasons };
   };
 
-  // Détecte si la location finit dans les 30 jours
   const isToAnticipate = (loc: Location): boolean => {
     if (loc.statut_calcule !== 'en_cours') return false;
     if (!loc.date_fin) return false;
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dateFin = new Date(loc.date_fin);
-    const daysUntilEnd = Math.floor((dateFin.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
+    const df = new Date(loc.date_fin);
+    const daysUntilEnd = Math.floor((df.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return daysUntilEnd >= 0 && daysUntilEnd <= 30;
   };
 
   const getKpiData = () => {
-    const total = locations.length;
-
     const enCours = locations.filter(l => l.statut_calcule === 'en_cours');
     const aVenir = locations.filter(l => l.statut_calcule === 'a_venir');
     const terminees = locations.filter(l => l.statut_calcule === 'terminee');
-
     const aRisque = locations.filter(l => isAtRisk(l).atRisk);
     const aAnticiper = locations.filter(l => isToAnticipate(l));
-
-    const enCoursSignes = enCours.filter(l => l.signature_status === 'signed').length;
-    const aVenirEnvoyes = aVenir.filter(l => l.signature_status === 'sent').length;
-
-    const totalImpayes = locations.reduce((sum, l) => sum + (l.nb_paiements_impayes_en_retard || 0), 0);
-    const totalNonSignes = enCours.filter(l => l.signature_status !== 'signed').length;
-
     return {
-      total,
-      enCours: { count: enCours.length, signes: enCoursSignes },
-      aVenir: { count: aVenir.length, envoyes: aVenirEnvoyes },
-      aRisque: { count: aRisque.length, impayes: totalImpayes, nonSignes: totalNonSignes },
+      total: locations.length,
+      enCours: { count: enCours.length, signes: enCours.filter(l => l.signature_status === 'signed').length },
+      aVenir: { count: aVenir.length, envoyes: aVenir.filter(l => l.signature_status === 'sent').length },
+      aRisque: {
+        count: aRisque.length,
+        impayes: locations.reduce((s, l) => s + (l.nb_paiements_impayes_en_retard || 0), 0),
+        nonSignes: enCours.filter(l => l.signature_status !== 'signed').length,
+      },
       aAnticiper: { count: aAnticiper.length },
       terminees: { count: terminees.length },
     };
   };
 
   const filteredLocations = locations.filter(loc => {
-    // Filtre tuile (incluant at_risk et to_anticipate)
     if (filterStatutCalcule) {
       if (filterStatutCalcule === 'at_risk') {
         if (!isAtRisk(loc).atRisk) return false;
@@ -481,42 +448,28 @@ const fetchLocations = async () => {
         return false;
       }
     }
-
-    // Filtre Type
     if (filterType !== 'all' && loc.type_location !== filterType) return false;
-
-    // Filtre Signature
     if (filterSignature !== 'all') {
       const sig = loc.signature_status || 'draft';
       if (filterSignature === 'no_pdf') {
         if (loc.contrat_pdf_path) return false;
-      } else if (sig !== filterSignature) {
-        return false;
-      }
+      } else if (sig !== filterSignature) return false;
     }
-
-    // Filtre Santé contrat
-    if (filterPaiement === 'sain') {
+    if (filterSante === 'sain') {
       if (isAtRisk(loc).atRisk) return false;
-    } else if (filterPaiement === 'a_risque') {
+    } else if (filterSante === 'a_risque') {
       if (!isAtRisk(loc).atRisk) return false;
     }
-
     // Filtre EDL — TODO: nécessite jointure avec etat_des_lieux (B1.4)
-    // Pour l'instant le filtre est dans l'UI mais ne filtre pas
-
-    // Recherche texte
     if (search) {
-      const searchLower = search.toLowerCase();
-      const matchesSearch =
-        loc.vehicule?.immatriculation?.toLowerCase().includes(searchLower) ||
-        loc.locataire?.nom?.toLowerCase().includes(searchLower) ||
-        loc.locataire?.prenom?.toLowerCase().includes(searchLower) ||
-        loc.locataire?.email?.toLowerCase().includes(searchLower) ||
-        loc.reference_contrat?.toLowerCase().includes(searchLower);
-      if (!matchesSearch) return false;
+      const s = search.toLowerCase();
+      const m = loc.vehicule?.immatriculation?.toLowerCase().includes(s) ||
+        loc.locataire?.nom?.toLowerCase().includes(s) ||
+        loc.locataire?.prenom?.toLowerCase().includes(s) ||
+        loc.locataire?.email?.toLowerCase().includes(s) ||
+        loc.reference_contrat?.toLowerCase().includes(s);
+      if (!m) return false;
     }
-
     return true;
   });
 
@@ -525,353 +478,565 @@ const fetchLocations = async () => {
     setFilterStatutCalcule(null);
     setFilterType('all');
     setFilterSignature('all');
-    setFilterPaiement('all');
+    setFilterSante('all');
     setFilterEDL('all');
   };
 
-  const hasActiveFilters = !!filterStatutCalcule || filterType !== 'all' || filterSignature !== 'all' || filterPaiement !== 'all' || filterEDL !== 'all' || !!search;
+  const hasActiveFilters = !!filterStatutCalcule || filterType !== 'all' || filterSignature !== 'all' || filterSante !== 'all' || filterEDL !== 'all' || !!search;
 
   const kpi = getKpiData();
+
+  // ─── Helpers d'affichage ───────────────────────────────────────────────────
+
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      location_pure: 'Location pure',
+      location_vente_particulier: 'Loc-vente Particulier',
+      location_vente_societe: 'Loc-vente Société',
+      loa: 'LOA',
+    };
+    return labels[type] || type;
+  };
+
+  const getStatutInfo = (loc: Location) => {
+    const sc = loc.statut_calcule || 'en_cours';
+    const map: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+      en_cours: { label: 'En cours', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+      a_venir: { label: 'À venir', bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
+      en_retard: { label: 'En retard', bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
+      terminee: { label: 'Terminée', bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' },
+    };
+    return map[sc] || map.en_cours;
+  };
+
+  const getSignatureBadge = (loc: Location) => {
+    if (!loc.contrat_pdf_path) return { label: 'Pas de PDF', bg: 'bg-slate-100', text: 'text-slate-600' };
+    const sig = loc.signature_status;
+    if (sig === 'signed') return { label: 'Signé', bg: 'bg-emerald-50', text: 'text-emerald-700' };
+    if (sig === 'sent') return { label: 'En attente', bg: 'bg-amber-50', text: 'text-amber-700' };
+    if (sig === 'declined') return { label: 'Refusé', bg: 'bg-red-50', text: 'text-red-700' };
+    return { label: 'Brouillon', bg: 'bg-slate-100', text: 'text-slate-600' };
+  };
+
+  // ─── Loading ───────────────────────────────────────────────────────────────
 
   if (loading) {
     return <LoadingSpinner />;
   }
 
+  // ─── Vue liste ────────────────────────────────────────────────────────────
+
   if (view === 'list') {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* Success message */}
         {successMessage && (
-          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center">
-            <CheckCircle className="h-5 w-5 mr-2" />
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg flex items-center text-sm">
+            <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0" />
             {successMessage}
           </div>
         )}
 
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Locations</h1>
-          <button
-            onClick={handleNouvelleLocation}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Nouvelle location
-          </button>
-        </div>
-
-        {/* KPI Tuiles cliquables - vue administrative/juridique */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {/* Total */}
-          <button
-            onClick={() => setFilterStatutCalcule(null)}
-            className={`p-4 rounded-lg border-2 text-left transition-all ${
-              !filterStatutCalcule
-                ? 'border-blue-600 bg-blue-50'
-                : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <Layers className="h-4 w-4 text-blue-600" />
-              <span className="text-xs text-gray-500">Total</span>
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{kpi.total}</div>
-            <div className="text-xs text-gray-500 mt-1">contrats</div>
-          </button>
-
-          {/* En cours */}
-          <button
-            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'en_cours' ? null : 'en_cours')}
-            className={`p-4 rounded-lg border-2 text-left transition-all ${
-              filterStatutCalcule === 'en_cours'
-                ? 'border-green-600 bg-green-50'
-                : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span className="text-xs text-gray-500">En cours</span>
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{kpi.enCours.count}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {kpi.enCours.signes} signé{kpi.enCours.signes > 1 ? 's' : ''}
-            </div>
-          </button>
-
-          {/* À venir */}
-          <button
-            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'a_venir' ? null : 'a_venir')}
-            className={`p-4 rounded-lg border-2 text-left transition-all ${
-              filterStatutCalcule === 'a_venir'
-                ? 'border-blue-600 bg-blue-50'
-                : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <Clock className="h-4 w-4 text-blue-600" />
-              <span className="text-xs text-gray-500">À venir</span>
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{kpi.aVenir.count}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {kpi.aVenir.envoyes} envoyé{kpi.aVenir.envoyes > 1 ? 's' : ''}
-            </div>
-          </button>
-
-          {/* À risque - mis en évidence visuellement */}
-          <button
-            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'at_risk' ? null : 'at_risk')}
-            className={`p-4 rounded-lg border-2 text-left transition-all ${
-              filterStatutCalcule === 'at_risk'
-                ? 'border-red-600 bg-red-100 ring-2 ring-red-300'
-                : kpi.aRisque.count > 0
-                  ? 'border-red-400 bg-red-50 hover:border-red-500'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <AlertCircle className={`h-4 w-4 ${kpi.aRisque.count > 0 ? 'text-red-600' : 'text-gray-400'}`} />
-              <span className={`text-xs font-semibold ${kpi.aRisque.count > 0 ? 'text-red-700' : 'text-gray-500'}`}>À risque</span>
-            </div>
-            <div className={`text-2xl font-bold ${kpi.aRisque.count > 0 ? 'text-red-700' : 'text-gray-900'}`}>{kpi.aRisque.count}</div>
-            <div className={`text-xs mt-1 ${kpi.aRisque.count > 0 ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
-              {kpi.aRisque.impayes > 0 && `${kpi.aRisque.impayes} impayé${kpi.aRisque.impayes > 1 ? 's' : ''}`}
-              {kpi.aRisque.impayes > 0 && kpi.aRisque.nonSignes > 0 && ' · '}
-              {kpi.aRisque.nonSignes > 0 && `${kpi.aRisque.nonSignes} non signé${kpi.aRisque.nonSignes > 1 ? 's' : ''}`}
-              {kpi.aRisque.impayes === 0 && kpi.aRisque.nonSignes === 0 && 'aucun risque'}
-            </div>
-          </button>
-
-          {/* À anticiper */}
-          <button
-            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'to_anticipate' ? null : 'to_anticipate')}
-            className={`p-4 rounded-lg border-2 text-left transition-all ${
-              filterStatutCalcule === 'to_anticipate'
-                ? 'border-yellow-600 bg-yellow-100 ring-2 ring-yellow-300'
-                : kpi.aAnticiper.count > 0
-                  ? 'border-yellow-400 bg-yellow-50 hover:border-yellow-500'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <Clock className={`h-4 w-4 ${kpi.aAnticiper.count > 0 ? 'text-yellow-600' : 'text-gray-400'}`} />
-              <span className={`text-xs ${kpi.aAnticiper.count > 0 ? 'text-yellow-700 font-semibold' : 'text-gray-500'}`}>À anticiper</span>
-            </div>
-            <div className={`text-2xl font-bold ${kpi.aAnticiper.count > 0 ? 'text-yellow-700' : 'text-gray-900'}`}>{kpi.aAnticiper.count}</div>
-            <div className="text-xs text-gray-500 mt-1">fin &lt; 30j</div>
-          </button>
-
-          {/* Terminées */}
-          <button
-            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'terminee' ? null : 'terminee')}
-            className={`p-4 rounded-lg border-2 text-left transition-all ${
-              filterStatutCalcule === 'terminee'
-                ? 'border-gray-600 bg-gray-100'
-                : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <FileText className="h-4 w-4 text-gray-600" />
-              <span className="text-xs text-gray-500">Terminées</span>
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{kpi.terminees.count}</div>
-            <div className="text-xs text-gray-500 mt-1">archivées</div>
-          </button>
-        </div>
-
-        {/* Filtres avancés - administratifs et juridiques */}
-        <div className="bg-white rounded-lg shadow p-4 flex flex-wrap items-center gap-3">
-          <Filter className="h-5 w-5 text-gray-400" />
-
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">Type : Tous</option>
-            <option value="location_pure">Location pure</option>
-            <option value="location_vente_particulier">Loc-vente Particulier</option>
-            <option value="location_vente_societe">Loc-vente Société</option>
-            <option value="loa">LOA</option>
-          </select>
-
-          <select
-            value={filterSignature}
-            onChange={(e) => setFilterSignature(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">Signature : Tous</option>
-            <option value="signed">Signé</option>
-            <option value="sent">Envoyé en attente</option>
-            <option value="draft">Brouillon</option>
-            <option value="declined">Refusé</option>
-            <option value="no_pdf">Sans PDF</option>
-          </select>
-
-          <select
-            value={filterPaiement}
-            onChange={(e) => setFilterPaiement(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">Santé : Tous</option>
-            <option value="sain">✓ Sain</option>
-            <option value="a_risque">⚠ À risque</option>
-          </select>
-
-          <select
-            value={filterEDL}
-            onChange={(e) => setFilterEDL(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">EDL : Tous</option>
-            <option value="with_sortie">Avec EDL Sortie</option>
-            <option value="with_retour">Avec EDL Retour</option>
-            <option value="complete">EDL complet (Sortie + Retour)</option>
-            <option value="none">Sans aucun EDL ⚠</option>
-          </select>
-
-          {hasActiveFilters && (
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">Locations</h1>
+            <p className="text-sm text-slate-500 mt-1">Gestion administrative et juridique des contrats</p>
+          </div>
+          <div className="flex items-center gap-2">
             <button
-              onClick={resetFilters}
-              className="ml-auto flex items-center px-3 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              onClick={fetchLocations}
+              className="flex items-center px-3 py-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
             >
-              <X className="h-4 w-4 mr-1" />
-              Réinitialiser
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Actualiser
             </button>
+            <button
+              onClick={handleNouvelleLocation}
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle location
+            </button>
+          </div>
+        </div>
+
+        {/* SECTION 1 — États des contrats */}
+        <div>
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">États des contrats</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <button
+              onClick={() => setFilterStatutCalcule(null)}
+              className={`p-4 rounded-xl border text-left transition-all ${
+                !filterStatutCalcule ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Layers className="h-4 w-4 text-blue-600" />
+                <span className="text-xs font-medium text-slate-500">Total</span>
+              </div>
+              <div className="text-2xl font-semibold text-slate-900">{kpi.total}</div>
+              <div className="text-xs text-slate-500 mt-1">contrats</div>
+            </button>
+
+            <button
+              onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'en_cours' ? null : 'en_cours')}
+              className={`p-4 rounded-xl border text-left transition-all ${
+                filterStatutCalcule === 'en_cours' ? 'border-emerald-500 bg-emerald-50/50 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+                <span className="text-xs font-medium text-slate-500">En cours</span>
+              </div>
+              <div className="text-2xl font-semibold text-slate-900">{kpi.enCours.count}</div>
+              <div className="text-xs text-slate-500 mt-1">{kpi.enCours.signes} signé{kpi.enCours.signes > 1 ? 's' : ''}</div>
+            </button>
+
+            <button
+              onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'a_venir' ? null : 'a_venir')}
+              className={`p-4 rounded-xl border text-left transition-all ${
+                filterStatutCalcule === 'a_venir' ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="h-4 w-4 text-blue-600" />
+                <span className="text-xs font-medium text-slate-500">À venir</span>
+              </div>
+              <div className="text-2xl font-semibold text-slate-900">{kpi.aVenir.count}</div>
+              <div className="text-xs text-slate-500 mt-1">{kpi.aVenir.envoyes} envoyé{kpi.aVenir.envoyes > 1 ? 's' : ''}</div>
+            </button>
+
+            <button
+              onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'terminee' ? null : 'terminee')}
+              className={`p-4 rounded-xl border text-left transition-all ${
+                filterStatutCalcule === 'terminee' ? 'border-slate-500 bg-slate-100 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-4 w-4 text-slate-500" />
+                <span className="text-xs font-medium text-slate-500">Terminées</span>
+              </div>
+              <div className="text-2xl font-semibold text-slate-900">{kpi.terminees.count}</div>
+              <div className="text-xs text-slate-500 mt-1">archivées</div>
+            </button>
+          </div>
+        </div>
+
+        {/* SECTION 2 — Alertes */}
+        <div>
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Alertes</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* À risque */}
+            <button
+              onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'at_risk' ? null : 'at_risk')}
+              className={`p-5 rounded-xl border-2 text-left transition-all ${
+                filterStatutCalcule === 'at_risk'
+                  ? 'border-red-500 bg-red-50 shadow-md'
+                  : kpi.aRisque.count > 0
+                    ? 'border-red-300 bg-red-50/50 hover:border-red-400 hover:shadow-sm'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-lg ${kpi.aRisque.count > 0 ? 'bg-red-100' : 'bg-slate-100'}`}>
+                    <AlertCircle className={`h-4 w-4 ${kpi.aRisque.count > 0 ? 'text-red-600' : 'text-slate-400'}`} />
+                  </div>
+                  <span className={`text-sm font-semibold ${kpi.aRisque.count > 0 ? 'text-red-700' : 'text-slate-700'}`}>À risque</span>
+                </div>
+                <span className={`text-3xl font-bold ${kpi.aRisque.count > 0 ? 'text-red-700' : 'text-slate-300'}`}>{kpi.aRisque.count}</span>
+              </div>
+              <p className={`text-sm ${kpi.aRisque.count > 0 ? 'text-red-700' : 'text-slate-500'}`}>
+                {kpi.aRisque.count === 0 && 'Aucun contrat à risque'}
+                {kpi.aRisque.impayes > 0 && `${kpi.aRisque.impayes} impayé${kpi.aRisque.impayes > 1 ? 's' : ''}`}
+                {kpi.aRisque.impayes > 0 && kpi.aRisque.nonSignes > 0 && ' · '}
+                {kpi.aRisque.nonSignes > 0 && `${kpi.aRisque.nonSignes} non signé${kpi.aRisque.nonSignes > 1 ? 's' : ''}`}
+              </p>
+              {kpi.aRisque.count > 0 && <p className="text-xs text-red-600 mt-2 font-medium">Action requise</p>}
+            </button>
+
+            {/* À anticiper */}
+            <button
+              onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'to_anticipate' ? null : 'to_anticipate')}
+              className={`p-5 rounded-xl border-2 text-left transition-all ${
+                filterStatutCalcule === 'to_anticipate'
+                  ? 'border-amber-500 bg-amber-50 shadow-md'
+                  : kpi.aAnticiper.count > 0
+                    ? 'border-amber-300 bg-amber-50/50 hover:border-amber-400 hover:shadow-sm'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-lg ${kpi.aAnticiper.count > 0 ? 'bg-amber-100' : 'bg-slate-100'}`}>
+                    <Clock className={`h-4 w-4 ${kpi.aAnticiper.count > 0 ? 'text-amber-600' : 'text-slate-400'}`} />
+                  </div>
+                  <span className={`text-sm font-semibold ${kpi.aAnticiper.count > 0 ? 'text-amber-700' : 'text-slate-700'}`}>À anticiper</span>
+                </div>
+                <span className={`text-3xl font-bold ${kpi.aAnticiper.count > 0 ? 'text-amber-700' : 'text-slate-300'}`}>{kpi.aAnticiper.count}</span>
+              </div>
+              <p className={`text-sm ${kpi.aAnticiper.count > 0 ? 'text-amber-700' : 'text-slate-500'}`}>
+                {kpi.aAnticiper.count === 0 ? 'Aucun contrat ne finit dans les 30 prochains jours' : `Contrat${kpi.aAnticiper.count > 1 ? 's' : ''} finissant sous 30 jours`}
+              </p>
+            </button>
+          </div>
+        </div>
+
+        {/* SECTION 3 — Recherche + Filtres */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Rechercher par véhicule, locataire ou référence..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Filter className="h-4 w-4 text-slate-400" />
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500">
+              <option value="all">Type : Tous</option>
+              <option value="location_pure">Location pure</option>
+              <option value="location_vente_particulier">Loc-vente Particulier</option>
+              <option value="location_vente_societe">Loc-vente Société</option>
+              <option value="loa">LOA</option>
+            </select>
+            <select value={filterSignature} onChange={(e) => setFilterSignature(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500">
+              <option value="all">Signature : Tous</option>
+              <option value="signed">Signé</option>
+              <option value="sent">En attente</option>
+              <option value="draft">Brouillon</option>
+              <option value="declined">Refusé</option>
+              <option value="no_pdf">Sans PDF</option>
+            </select>
+            <select value={filterSante} onChange={(e) => setFilterSante(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500">
+              <option value="all">Santé : Tous</option>
+              <option value="sain">Sain</option>
+              <option value="a_risque">À risque</option>
+            </select>
+            <select value={filterEDL} onChange={(e) => setFilterEDL(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500">
+              <option value="all">EDL : Tous</option>
+              <option value="with_sortie">Avec EDL Sortie</option>
+              <option value="with_retour">Avec EDL Retour</option>
+              <option value="complete">EDL complet</option>
+              <option value="none">Sans aucun EDL</option>
+            </select>
+            {hasActiveFilters && (
+              <button onClick={resetFilters} className="ml-auto flex items-center gap-1 px-3 py-1.5 text-sm text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100">
+                <X className="h-3 w-3" />
+                Réinitialiser
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* SECTION 4 — Liste des contrats */}
+        <div>
+          <p className="text-sm text-slate-500 mb-3">
+            {filteredLocations.length} contrat{filteredLocations.length > 1 ? 's' : ''}
+            {hasActiveFilters && ` sur ${locations.length}`}
+          </p>
+
+          {filteredLocations.length === 0 ? (
+            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+              <FileText className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500">Aucun contrat ne correspond aux filtres</p>
+              {hasActiveFilters && (
+                <button onClick={resetFilters} className="mt-3 text-sm text-blue-600 hover:underline">
+                  Réinitialiser les filtres
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredLocations.map((loc) => {
+                const statut = getStatutInfo(loc);
+                const risk = isAtRisk(loc);
+                const sig = getSignatureBadge(loc);
+                const nbPay = loc.nb_paiements_payes || 0;
+                const nbTotal = loc.nb_paiements_total || 0;
+
+                return (
+                  <div
+                    key={loc.id}
+                    className={`bg-white rounded-xl border overflow-hidden transition-all hover:shadow-md ${
+                      risk.atRisk ? 'border-red-200' : 'border-slate-200'
+                    }`}
+                  >
+                    <div className="flex">
+                      {/* Bandeau gauche couleur statut */}
+                      <div className={`w-1 flex-shrink-0 ${risk.atRisk ? 'bg-red-500' : statut.dot}`} />
+
+                      <div className="flex-1 p-5">
+                        {/* Header de la card */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            {risk.atRisk && (
+                              <div className="p-1.5 bg-red-100 rounded-lg">
+                                <AlertCircle className="h-4 w-4 text-red-600" />
+                              </div>
+                            )}
+                            <div>
+                              <h3 className="font-semibold text-slate-900">{loc.reference_contrat || 'Sans référence'}</h3>
+                              <p className="text-xs text-slate-500 mt-0.5">{getTypeLabel(loc.type_location)}</p>
+                            </div>
+                          </div>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statut.bg} ${statut.text}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${statut.dot}`} />
+                            {statut.label}
+                          </span>
+                        </div>
+
+                        {/* Grid véhicule + locataire */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Véhicule</p>
+                            <p className="font-medium text-slate-900">{loc.vehicule?.immatriculation || '—'}</p>
+                            <p className="text-sm text-slate-500">{loc.vehicule?.marque} {loc.vehicule?.modele}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Locataire</p>
+                            <p className="font-medium text-slate-900">{loc.locataire?.nom} {loc.locataire?.prenom || ''}</p>
+                            <p className="text-sm text-slate-500">
+                              {loc.locataire?.type === 'particulier' ? 'Particulier' : 'Entreprise'}
+                              {loc.locataire?.email && ` · ${loc.locataire.email}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Période + montants */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pb-4 border-b border-slate-100">
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <Calendar className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                            <span>
+                              {new Date(loc.date_debut).toLocaleDateString('fr-FR')}
+                              {loc.date_fin && ` → ${new Date(loc.date_fin).toLocaleDateString('fr-FR')}`}
+                              {loc.duree_mois && ` · ${loc.duree_mois} mois`}
+                            </span>
+                          </div>
+                          {(loc.montant_mensuel_ttc || loc.montant_mensuel) && (
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                              <Euro className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                              <span>
+                                {(loc.montant_mensuel_ttc || loc.montant_mensuel || 0).toFixed(2)} €/mois TTC
+                                {loc.montant_total_ttc && ` · Total ${loc.montant_total_ttc.toFixed(0)} €`}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 4 indicateurs */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                          <div>
+                            <p className="text-xs font-medium text-slate-500 mb-1">Contrat</p>
+                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                              loc.contrat_pdf_path ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {loc.contrat_pdf_path ? 'PDF généré' : 'Pas de PDF'}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-500 mb-1">Signature</p>
+                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${sig.bg} ${sig.text}`}>
+                              {sig.label}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-500 mb-1">Paiements</p>
+                            <span className="text-xs font-medium text-slate-700">
+                              {nbPay}/{nbTotal} mensualités
+                            </span>
+                            {(loc.nb_paiements_impayes_en_retard || 0) > 0 && (
+                              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700">
+                                {loc.nb_paiements_impayes_en_retard} en retard
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-500 mb-1">Risque</p>
+                            {risk.atRisk ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-red-50 text-red-700">
+                                <AlertCircle className="h-3 w-3" />
+                                {risk.reasons.join(' · ')}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-50 text-emerald-700">
+                                Sain
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => { setSelectedLocation(loc); setActiveTab('overview'); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          >
+                            Voir détails
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center space-x-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Rechercher par véhicule ou locataire..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <button
-                onClick={fetchLocations}
-                className="flex items-center px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                <RefreshCw className="h-5 w-5 mr-2" />
-                Actualiser
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Véhicule
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Locataire
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Début
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fin
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Montant
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Statut
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredLocations.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                      Aucune location trouvée
-                    </td>
-                  </tr>
-                ) : (
-                  filteredLocations.map((location) => (
-                    <tr key={location.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">
-                          {location.vehicule?.immatriculation || 'N/A'}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {location.vehicule?.marque} {location.vehicule?.modele}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-gray-900">
-                          {location.locataire?.nom} {location.locataire?.prenom || ''}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {location.locataire?.type === 'particulier' ? 'Particulier' : 'Entreprise'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {location.type_location === 'location_pure' ? 'Location pure' : 'LOA'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(location.date_debut).toLocaleDateString('fr-FR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {location.date_fin ? new Date(location.date_fin).toLocaleDateString('fr-FR') : 'Indéterminée'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {location.montant_mensuel ? `${location.montant_mensuel.toFixed(2)} €/mois` : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatutBadge(location.statut)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button
-                          onClick={() => setSelectedLocation(location)}
-                          className="text-blue-600 hover:text-blue-800 mr-3"
-                        >
-                          Voir
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
+        {/* MODAL DÉTAILS */}
         {selectedLocation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Détails location</h3>
-                <button onClick={() => setSelectedLocation(null)} className="text-gray-400 hover:text-gray-600">✕</button>
-              </div>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div><p className="text-xs text-gray-500">Véhicule</p><p className="font-medium">{selectedLocation.vehicule?.immatriculation}</p></div>
-                  <div><p className="text-xs text-gray-500">Locataire</p><p className="font-medium">{selectedLocation.locataire?.nom} {selectedLocation.locataire?.prenom || ''}</p></div>
-                  <div><p className="text-xs text-gray-500">Type</p><p className="font-medium">{selectedLocation.type_location === 'location_pure' ? 'Location pure' : 'LOA'}</p></div>
-                  <div><p className="text-xs text-gray-500">Statut</p><p className="font-medium">{selectedLocation.statut}</p></div>
-                  <div><p className="text-xs text-gray-500">Date début</p><p className="font-medium">{new Date(selectedLocation.date_debut).toLocaleDateString('fr-FR')}</p></div>
-                  <div><p className="text-xs text-gray-500">Date fin</p><p className="font-medium">{selectedLocation.date_fin ? new Date(selectedLocation.date_fin).toLocaleDateString('fr-FR') : '—'}</p></div>
-                  <div><p className="text-xs text-gray-500">Montant mensuel</p><p className="font-medium">{selectedLocation.montant_mensuel ? `${selectedLocation.montant_mensuel} €` : '—'}</p></div>
-                  <div><p className="text-xs text-gray-500">Dépôt de garantie</p><p className="font-medium">{selectedLocation.depot_garantie ? `${selectedLocation.depot_garantie} €` : '—'}</p></div>
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+              {/* Header modal */}
+              <div className="flex items-start justify-between p-6 border-b border-slate-100">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    {selectedLocation.reference_contrat || 'Contrat sans référence'}
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    {selectedLocation.vehicule?.immatriculation} · {selectedLocation.locataire?.nom} {selectedLocation.locataire?.prenom || ''}
+                  </p>
                 </div>
-                {selectedLocation.notes && (
-                  <div><p className="text-xs text-gray-500">Notes</p><p className="text-sm">{selectedLocation.notes}</p></div>
+                <button onClick={() => setSelectedLocation(null)} className="p-2 hover:bg-slate-100 rounded-lg transition">
+                  <X className="h-5 w-5 text-slate-500" />
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex items-center gap-1 px-6 border-b border-slate-100 overflow-x-auto">
+                {([
+                  { key: 'overview', label: "Vue d'ensemble" },
+                  { key: 'locataire', label: 'Locataire' },
+                  { key: 'paiements', label: 'Paiements' },
+                  { key: 'edl', label: 'État des lieux' },
+                  { key: 'history', label: 'Historique' },
+                ] as const).map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition ${
+                      activeTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {activeTab === 'overview' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">État administratif</h4>
+                      <dl className="grid grid-cols-2 gap-4">
+                        <div><dt className="text-xs text-slate-500">Référence</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.reference_contrat || '—'}</dd></div>
+                        <div><dt className="text-xs text-slate-500">Type</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{getTypeLabel(selectedLocation.type_location)}</dd></div>
+                        <div>
+                          <dt className="text-xs text-slate-500">Statut</dt>
+                          <dd className="mt-1">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatutInfo(selectedLocation).bg} ${getStatutInfo(selectedLocation).text}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${getStatutInfo(selectedLocation).dot}`} />
+                              {getStatutInfo(selectedLocation).label}
+                            </span>
+                          </dd>
+                        </div>
+                        <div><dt className="text-xs text-slate-500">Période</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{new Date(selectedLocation.date_debut).toLocaleDateString('fr-FR')}{selectedLocation.date_fin && ` → ${new Date(selectedLocation.date_fin).toLocaleDateString('fr-FR')}`}</dd></div>
+                      </dl>
+                    </div>
+
+                    <div>
+                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Documents & Signature</h4>
+                      <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-slate-400" />
+                            <span className="text-sm text-slate-700">Contrat PDF</span>
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${selectedLocation.contrat_pdf_path ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                            {selectedLocation.contrat_pdf_path ? 'Généré' : 'Non généré'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-slate-400" />
+                            <span className="text-sm text-slate-700">Signature électronique</span>
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getSignatureBadge(selectedLocation).bg} ${getSignatureBadge(selectedLocation).text}`}>
+                            {getSignatureBadge(selectedLocation).label}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Détails financiers</h4>
+                      <dl className="grid grid-cols-2 gap-4">
+                        <div><dt className="text-xs text-slate-500">Mensualité TTC</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{(selectedLocation.montant_mensuel_ttc || selectedLocation.montant_mensuel || 0).toFixed(2)} €</dd></div>
+                        <div><dt className="text-xs text-slate-500">Total TTC</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.montant_total_ttc ? `${selectedLocation.montant_total_ttc.toFixed(2)} €` : '—'}</dd></div>
+                        <div><dt className="text-xs text-slate-500">Dépôt de garantie</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.depot_garantie ? `${selectedLocation.depot_garantie.toFixed(2)} €` : '—'}</dd></div>
+                        <div><dt className="text-xs text-slate-500">Paiements</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.nb_paiements_payes || 0}/{selectedLocation.nb_paiements_total || 0} mensualités</dd></div>
+                      </dl>
+                    </div>
+
+                    {selectedLocation.notes && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Notes</h4>
+                        <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-4 whitespace-pre-wrap">{selectedLocation.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'locataire' && (
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Coordonnées du locataire</h4>
+                    <dl className="grid grid-cols-2 gap-4">
+                      <div><dt className="text-xs text-slate-500">Nom</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.locataire?.nom || '—'}</dd></div>
+                      <div><dt className="text-xs text-slate-500">Prénom</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.locataire?.prenom || '—'}</dd></div>
+                      <div><dt className="text-xs text-slate-500">Type</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.locataire?.type === 'particulier' ? 'Particulier' : 'Entreprise'}</dd></div>
+                      <div><dt className="text-xs text-slate-500">Téléphone</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.locataire?.telephone || '—'}</dd></div>
+                      <div className="col-span-2"><dt className="text-xs text-slate-500">Email</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.locataire?.email || '—'}</dd></div>
+                    </dl>
+                  </div>
+                )}
+
+                {activeTab === 'paiements' && (
+                  <div className="text-center py-12 text-slate-500">
+                    <Euro className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                    <p>{selectedLocation.nb_paiements_payes || 0}/{selectedLocation.nb_paiements_total || 0} mensualités payées</p>
+                    <p className="text-xs mt-2">Le détail des paiements sera intégré ici en B1.4</p>
+                  </div>
+                )}
+
+                {activeTab === 'edl' && (
+                  <div className="text-center py-12 text-slate-500">
+                    <FileText className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                    <p>États des lieux liés à cette location</p>
+                    <p className="text-xs mt-2">Le détail EDL sera intégré ici en B1.4</p>
+                  </div>
+                )}
+
+                {activeTab === 'history' && (
+                  <div className="text-center py-12 text-slate-500">
+                    <Clock className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                    <p>Historique des modifications</p>
+                    <p className="text-xs mt-2">L'historique sera intégré ici plus tard</p>
+                  </div>
                 )}
               </div>
-              <div className="flex justify-end mt-6">
-                <button onClick={() => setSelectedLocation(null)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Fermer</button>
+
+              {/* Footer modal */}
+              <div className="flex items-center justify-end gap-2 p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+                <button onClick={() => setSelectedLocation(null)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">
+                  Fermer
+                </button>
               </div>
             </div>
           </div>
@@ -879,6 +1044,8 @@ const fetchLocations = async () => {
       </div>
     );
   }
+
+  // ─── Vue formulaire (wizard — intact) ────────────────────────────────────
 
   return (
     <div className="space-y-6">
