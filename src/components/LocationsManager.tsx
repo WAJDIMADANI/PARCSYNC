@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Plus, Search, RefreshCw, MapPin, Calendar, Euro, User, Building, ArrowLeft, ArrowRight, CheckCircle, X, Filter, AlertCircle, Clock, FileText, Layers } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { VehicleLocations } from './VehicleLocations';
 
 interface Location {
   id: string;
@@ -79,7 +80,10 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
   const [filterSignature, setFilterSignature] = useState<string>('all');
   const [filterSante, setFilterSante] = useState<string>('all');
   const [filterEDL, setFilterEDL] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'overview' | 'locataire' | 'paiements' | 'edl' | 'history'>('overview');
+  const [sortColumn, setSortColumn] = useState<string>('priority');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -438,40 +442,98 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
     };
   };
 
-  const filteredLocations = locations.filter(loc => {
-    if (filterStatutCalcule) {
-      if (filterStatutCalcule === 'at_risk') {
-        if (!isAtRisk(loc).atRisk) return false;
-      } else if (filterStatutCalcule === 'to_anticipate') {
-        if (!isToAnticipate(loc)) return false;
-      } else if (loc.statut_calcule !== filterStatutCalcule) {
-        return false;
+  const sortedAndFilteredLocations = (() => {
+    const filtered = locations.filter(loc => {
+      if (filterStatutCalcule) {
+        if (filterStatutCalcule === 'at_risk') {
+          if (!isAtRisk(loc).atRisk) return false;
+        } else if (filterStatutCalcule === 'to_anticipate') {
+          if (!isToAnticipate(loc)) return false;
+        } else if (loc.statut_calcule !== filterStatutCalcule) {
+          return false;
+        }
       }
+      if (filterType !== 'all' && loc.type_location !== filterType) return false;
+      if (filterSignature !== 'all') {
+        const sig = loc.signature_status || 'draft';
+        if (filterSignature === 'no_pdf') {
+          if (loc.contrat_pdf_path) return false;
+        } else if (sig !== filterSignature) return false;
+      }
+      if (filterSante === 'sain') {
+        if (isAtRisk(loc).atRisk) return false;
+      } else if (filterSante === 'a_risque') {
+        if (!isAtRisk(loc).atRisk) return false;
+      }
+      // Filtre EDL — TODO: nécessite jointure avec etat_des_lieux (B1.4)
+      if (search) {
+        const s = search.toLowerCase();
+        const m = loc.vehicule?.immatriculation?.toLowerCase().includes(s) ||
+          loc.locataire?.nom?.toLowerCase().includes(s) ||
+          loc.locataire?.prenom?.toLowerCase().includes(s) ||
+          loc.locataire?.email?.toLowerCase().includes(s) ||
+          loc.reference_contrat?.toLowerCase().includes(s);
+        if (!m) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      let cmp = 0;
+      switch (sortColumn) {
+        case 'reference':
+          cmp = (a.reference_contrat || '').localeCompare(b.reference_contrat || '');
+          break;
+        case 'vehicule':
+          cmp = (a.vehicule?.immatriculation || '').localeCompare(b.vehicule?.immatriculation || '');
+          break;
+        case 'type':
+          cmp = (a.type_location || '').localeCompare(b.type_location || '');
+          break;
+        case 'locataire':
+          cmp = (a.locataire?.nom || '').localeCompare(b.locataire?.nom || '');
+          break;
+        case 'date_debut':
+          cmp = new Date(a.date_debut).getTime() - new Date(b.date_debut).getTime();
+          break;
+        case 'date_fin':
+          cmp = new Date(a.date_fin || 0).getTime() - new Date(b.date_fin || 0).getTime();
+          break;
+        case 'priority':
+        default: {
+          const ordre: Record<string, number> = { en_retard: 0, a_venir: 1, en_cours: 2, terminee: 3 };
+          cmp = (ordre[a.statut_calcule || 'en_cours'] ?? 99) - (ordre[b.statut_calcule || 'en_cours'] ?? 99);
+          if (cmp === 0) {
+            cmp = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          }
+          break;
+        }
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+
+    return sorted;
+  })();
+
+  const totalPages = Math.max(1, Math.ceil(sortedAndFilteredLocations.length / ITEMS_PER_PAGE));
+  const paginatedLocations = sortedAndFilteredLocations.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatutCalcule, filterType, filterSignature, filterSante, filterEDL, search]);
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
     }
-    if (filterType !== 'all' && loc.type_location !== filterType) return false;
-    if (filterSignature !== 'all') {
-      const sig = loc.signature_status || 'draft';
-      if (filterSignature === 'no_pdf') {
-        if (loc.contrat_pdf_path) return false;
-      } else if (sig !== filterSignature) return false;
-    }
-    if (filterSante === 'sain') {
-      if (isAtRisk(loc).atRisk) return false;
-    } else if (filterSante === 'a_risque') {
-      if (!isAtRisk(loc).atRisk) return false;
-    }
-    // Filtre EDL — TODO: nécessite jointure avec etat_des_lieux (B1.4)
-    if (search) {
-      const s = search.toLowerCase();
-      const m = loc.vehicule?.immatriculation?.toLowerCase().includes(s) ||
-        loc.locataire?.nom?.toLowerCase().includes(s) ||
-        loc.locataire?.prenom?.toLowerCase().includes(s) ||
-        loc.locataire?.email?.toLowerCase().includes(s) ||
-        loc.reference_contrat?.toLowerCase().includes(s);
-      if (!m) return false;
-    }
-    return true;
-  });
+  };
 
   const resetFilters = () => {
     setSearch('');
@@ -733,15 +795,22 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
           </div>
         </div>
 
-        {/* SECTION 4 — Liste des contrats */}
-        <div>
-          <p className="text-sm text-slate-500 mb-3">
-            {filteredLocations.length} contrat{filteredLocations.length > 1 ? 's' : ''}
-            {hasActiveFilters && ` sur ${locations.length}`}
-          </p>
+        {/* SECTION 4 — Tableau dense pro */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <p className="text-sm text-slate-600">
+              <span className="font-medium">{sortedAndFilteredLocations.length}</span> contrat{sortedAndFilteredLocations.length > 1 ? 's' : ''}
+              {hasActiveFilters && <span className="text-slate-400"> sur {locations.length}</span>}
+            </p>
+            {totalPages > 1 && (
+              <p className="text-xs text-slate-500">
+                Page {currentPage} sur {totalPages}
+              </p>
+            )}
+          </div>
 
-          {filteredLocations.length === 0 ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+          {sortedAndFilteredLocations.length === 0 ? (
+            <div className="p-12 text-center">
               <FileText className="h-12 w-12 text-slate-300 mx-auto mb-3" />
               <p className="text-slate-500">Aucun contrat ne correspond aux filtres</p>
               {hasActiveFilters && (
@@ -751,290 +820,248 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
               )}
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredLocations.map((loc) => {
-                const statut = getStatutInfo(loc);
-                const risk = isAtRisk(loc);
-                const sig = getSignatureBadge(loc);
-                const nbPay = loc.nb_paiements_payes || 0;
-                const nbTotal = loc.nb_paiements_total || 0;
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+                    <tr>
+                      <th className="w-1 px-0"></th>
+                      <th
+                        onClick={() => handleSort('reference')}
+                        className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:bg-slate-100 select-none"
+                      >
+                        Référence {sortColumn === 'reference' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th
+                        onClick={() => handleSort('vehicule')}
+                        className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:bg-slate-100 select-none"
+                      >
+                        Véhicule {sortColumn === 'vehicule' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th
+                        onClick={() => handleSort('type')}
+                        className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:bg-slate-100 select-none"
+                      >
+                        Type {sortColumn === 'type' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th
+                        onClick={() => handleSort('locataire')}
+                        className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:bg-slate-100 select-none"
+                      >
+                        Locataire {sortColumn === 'locataire' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th
+                        onClick={() => handleSort('date_debut')}
+                        className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:bg-slate-100 select-none"
+                      >
+                        Période {sortColumn === 'date_debut' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                        Statut
+                      </th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                        Doc.
+                      </th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                        Sig.
+                      </th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                        Pay.
+                      </th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                        Risque
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paginatedLocations.map((loc) => {
+                      const statut = getStatutInfo(loc);
+                      const risk = isAtRisk(loc);
+                      const nbPay = loc.nb_paiements_payes || 0;
+                      const nbTotal = loc.nb_paiements_total || 0;
+                      const nbRetard = loc.nb_paiements_impayes_en_retard || 0;
 
-                return (
-                  <div
-                    key={loc.id}
-                    className={`bg-white rounded-xl border overflow-hidden transition-all hover:shadow-md ${
-                      risk.atRisk ? 'border-red-200' : 'border-slate-200'
-                    }`}
-                  >
-                    <div className="flex">
-                      {/* Bandeau gauche couleur statut */}
-                      <div className={`w-1 flex-shrink-0 ${risk.atRisk ? 'bg-red-500' : statut.dot}`} />
+                      return (
+                        <tr
+                          key={loc.id}
+                          onClick={() => setSelectedLocation(loc)}
+                          className={`cursor-pointer hover:bg-blue-50/50 transition-colors ${
+                            risk.atRisk ? 'bg-red-50/30' : ''
+                          }`}
+                        >
+                          <td className={`p-0 w-1 ${risk.atRisk ? 'bg-red-500' : statut.dot}`}></td>
 
-                      <div className="flex-1 p-5">
-                        {/* Header de la card */}
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            {risk.atRisk && (
-                              <div className="p-1.5 bg-red-100 rounded-lg">
-                                <AlertCircle className="h-4 w-4 text-red-600" />
+                          <td className="px-3 py-3">
+                            <div className="font-medium text-slate-900">{loc.reference_contrat || '—'}</div>
+                          </td>
+
+                          <td className="px-3 py-3">
+                            <div className="font-medium text-slate-900">{loc.vehicule?.immatriculation || '—'}</div>
+                            <div className="text-xs text-slate-500">{loc.vehicule?.marque} {loc.vehicule?.modele}</div>
+                          </td>
+
+                          <td className="px-3 py-3">
+                            <span className="text-slate-700">{getTypeLabel(loc.type_location)}</span>
+                          </td>
+
+                          <td className="px-3 py-3">
+                            <div className="font-medium text-slate-900">
+                              {loc.locataire?.nom} {loc.locataire?.prenom || ''}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {loc.locataire?.type === 'particulier' ? 'Particulier' : 'Entreprise'}
+                            </div>
+                          </td>
+
+                          <td className="px-3 py-3">
+                            <div className="text-slate-700 text-xs">
+                              {new Date(loc.date_debut).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })}
+                              {loc.date_fin && ` → ${new Date(loc.date_fin).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })}`}
+                            </div>
+                            {loc.duree_mois && <div className="text-xs text-slate-400">{loc.duree_mois} mois</div>}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statut.bg} ${statut.text}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${statut.dot}`} />
+                              {statut.label}
+                            </span>
+                          </td>
+
+                          <td className="px-3 py-3 text-center">
+                            {loc.contrat_pdf_path ? (
+                              <span className="text-emerald-600 font-bold">✓</span>
+                            ) : (
+                              <span className="text-slate-300 font-bold">✗</span>
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3 text-center">
+                            {loc.signature_status === 'signed' && <span className="text-emerald-600 font-bold">✓</span>}
+                            {loc.signature_status === 'sent' && <span className="text-amber-500 text-xs font-medium">En att.</span>}
+                            {loc.signature_status === 'declined' && <span className="text-red-600 font-bold">✗</span>}
+                            {(!loc.signature_status || loc.signature_status === 'draft') && <span className="text-slate-300">—</span>}
+                          </td>
+
+                          <td className="px-3 py-3 text-center">
+                            {nbTotal === 0 ? (
+                              <span className="text-slate-400 text-xs">—</span>
+                            ) : (
+                              <div>
+                                <span className={`text-xs font-medium ${nbRetard > 0 ? 'text-red-600' : 'text-slate-700'}`}>
+                                  {nbPay}/{nbTotal}
+                                </span>
+                                {nbRetard > 0 && (
+                                  <div className="text-xs text-red-600 font-medium">{nbRetard} retard</div>
+                                )}
                               </div>
                             )}
-                            <div>
-                              <h3 className="font-semibold text-slate-900">{loc.reference_contrat || 'Sans référence'}</h3>
-                              <p className="text-xs text-slate-500 mt-0.5">{getTypeLabel(loc.type_location)}</p>
-                            </div>
-                          </div>
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statut.bg} ${statut.text}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${statut.dot}`} />
-                            {statut.label}
-                          </span>
-                        </div>
+                          </td>
 
-                        {/* Grid véhicule + locataire */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Véhicule</p>
-                            <p className="font-medium text-slate-900">{loc.vehicule?.immatriculation || '—'}</p>
-                            <p className="text-sm text-slate-500">{loc.vehicule?.marque} {loc.vehicule?.modele}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Locataire</p>
-                            <p className="font-medium text-slate-900">{loc.locataire?.nom} {loc.locataire?.prenom || ''}</p>
-                            <p className="text-sm text-slate-500">
-                              {loc.locataire?.type === 'particulier' ? 'Particulier' : 'Entreprise'}
-                              {loc.locataire?.email && ` · ${loc.locataire.email}`}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Période + montants */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pb-4 border-b border-slate-100">
-                          <div className="flex items-center gap-2 text-sm text-slate-600">
-                            <Calendar className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                            <span>
-                              {new Date(loc.date_debut).toLocaleDateString('fr-FR')}
-                              {loc.date_fin && ` → ${new Date(loc.date_fin).toLocaleDateString('fr-FR')}`}
-                              {loc.duree_mois && ` · ${loc.duree_mois} mois`}
-                            </span>
-                          </div>
-                          {(loc.montant_mensuel_ttc || loc.montant_mensuel) && (
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <Euro className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                              <span>
-                                {(loc.montant_mensuel_ttc || loc.montant_mensuel || 0).toFixed(2)} €/mois TTC
-                                {loc.montant_total_ttc && ` · Total ${loc.montant_total_ttc.toFixed(0)} €`}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* 4 indicateurs */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                          <div>
-                            <p className="text-xs font-medium text-slate-500 mb-1">Contrat</p>
-                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                              loc.contrat_pdf_path ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                            }`}>
-                              {loc.contrat_pdf_path ? 'PDF généré' : 'Pas de PDF'}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-slate-500 mb-1">Signature</p>
-                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${sig.bg} ${sig.text}`}>
-                              {sig.label}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-slate-500 mb-1">Paiements</p>
-                            <span className="text-xs font-medium text-slate-700">
-                              {nbPay}/{nbTotal} mensualités
-                            </span>
-                            {(loc.nb_paiements_impayes_en_retard || 0) > 0 && (
-                              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700">
-                                {loc.nb_paiements_impayes_en_retard} en retard
-                              </span>
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-slate-500 mb-1">Risque</p>
+                          <td className="px-3 py-3 text-center">
                             {risk.atRisk ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-red-50 text-red-700">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
                                 <AlertCircle className="h-3 w-3" />
-                                {risk.reasons.join(' · ')}
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-50 text-emerald-700">
-                                Sain
-                              </span>
+                              <span className="text-emerald-600 font-bold">✓</span>
                             )}
-                          </div>
-                        </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => { setSelectedLocation(loc); setActiveTab('overview'); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                          >
-                            Voir détails
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    ← Précédent
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum: number;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`w-8 h-8 text-sm font-medium rounded-lg transition ${
+                            currentPage === pageNum
+                              ? 'bg-blue-600 text-white'
+                              : 'text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Suivant →
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* MODAL DÉTAILS */}
+        {/* MODAL DÉTAILS — réutilise le composant VehicleLocations existant */}
         {selectedLocation && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setSelectedLocation(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
               {/* Header modal */}
-              <div className="flex items-start justify-between p-6 border-b border-slate-100">
+              <div className="flex items-start justify-between p-5 border-b border-slate-100 flex-shrink-0">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">
                     {selectedLocation.reference_contrat || 'Contrat sans référence'}
                   </h3>
-                  <p className="text-sm text-slate-500 mt-1">
-                    {selectedLocation.vehicule?.immatriculation} · {selectedLocation.locataire?.nom} {selectedLocation.locataire?.prenom || ''}
+                  <p className="text-sm text-slate-500 mt-0.5">
+                    {selectedLocation.vehicule?.immatriculation} · {selectedLocation.vehicule?.marque} {selectedLocation.vehicule?.modele}
                   </p>
                 </div>
-                <button onClick={() => setSelectedLocation(null)} className="p-2 hover:bg-slate-100 rounded-lg transition">
+                <button
+                  onClick={() => setSelectedLocation(null)}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition"
+                >
                   <X className="h-5 w-5 text-slate-500" />
                 </button>
               </div>
 
-              {/* Tabs */}
-              <div className="flex items-center gap-1 px-6 border-b border-slate-100 overflow-x-auto">
-                {([
-                  { key: 'overview', label: "Vue d'ensemble" },
-                  { key: 'locataire', label: 'Locataire' },
-                  { key: 'paiements', label: 'Paiements' },
-                  { key: 'edl', label: 'État des lieux' },
-                  { key: 'history', label: 'Historique' },
-                ] as const).map(tab => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition ${
-                      activeTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+              {/* Contenu : composant VehicleLocations qui affiche tout */}
+              <div className="flex-1 overflow-y-auto p-5">
+                <VehicleLocations vehicleId={selectedLocation.vehicule_id} />
               </div>
 
-              {/* Tab content */}
-              <div className="flex-1 overflow-y-auto p-6">
-                {activeTab === 'overview' && (
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">État administratif</h4>
-                      <dl className="grid grid-cols-2 gap-4">
-                        <div><dt className="text-xs text-slate-500">Référence</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.reference_contrat || '—'}</dd></div>
-                        <div><dt className="text-xs text-slate-500">Type</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{getTypeLabel(selectedLocation.type_location)}</dd></div>
-                        <div>
-                          <dt className="text-xs text-slate-500">Statut</dt>
-                          <dd className="mt-1">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatutInfo(selectedLocation).bg} ${getStatutInfo(selectedLocation).text}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${getStatutInfo(selectedLocation).dot}`} />
-                              {getStatutInfo(selectedLocation).label}
-                            </span>
-                          </dd>
-                        </div>
-                        <div><dt className="text-xs text-slate-500">Période</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{new Date(selectedLocation.date_debut).toLocaleDateString('fr-FR')}{selectedLocation.date_fin && ` → ${new Date(selectedLocation.date_fin).toLocaleDateString('fr-FR')}`}</dd></div>
-                      </dl>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Documents & Signature</h4>
-                      <div className="bg-slate-50 rounded-lg p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-slate-400" />
-                            <span className="text-sm text-slate-700">Contrat PDF</span>
-                          </div>
-                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${selectedLocation.contrat_pdf_path ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
-                            {selectedLocation.contrat_pdf_path ? 'Généré' : 'Non généré'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-slate-400" />
-                            <span className="text-sm text-slate-700">Signature électronique</span>
-                          </div>
-                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getSignatureBadge(selectedLocation).bg} ${getSignatureBadge(selectedLocation).text}`}>
-                            {getSignatureBadge(selectedLocation).label}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Détails financiers</h4>
-                      <dl className="grid grid-cols-2 gap-4">
-                        <div><dt className="text-xs text-slate-500">Mensualité TTC</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{(selectedLocation.montant_mensuel_ttc || selectedLocation.montant_mensuel || 0).toFixed(2)} €</dd></div>
-                        <div><dt className="text-xs text-slate-500">Total TTC</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.montant_total_ttc ? `${selectedLocation.montant_total_ttc.toFixed(2)} €` : '—'}</dd></div>
-                        <div><dt className="text-xs text-slate-500">Dépôt de garantie</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.depot_garantie ? `${selectedLocation.depot_garantie.toFixed(2)} €` : '—'}</dd></div>
-                        <div><dt className="text-xs text-slate-500">Paiements</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.nb_paiements_payes || 0}/{selectedLocation.nb_paiements_total || 0} mensualités</dd></div>
-                      </dl>
-                    </div>
-
-                    {selectedLocation.notes && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Notes</h4>
-                        <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-4 whitespace-pre-wrap">{selectedLocation.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {activeTab === 'locataire' && (
-                  <div className="space-y-4">
-                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Coordonnées du locataire</h4>
-                    <dl className="grid grid-cols-2 gap-4">
-                      <div><dt className="text-xs text-slate-500">Nom</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.locataire?.nom || '—'}</dd></div>
-                      <div><dt className="text-xs text-slate-500">Prénom</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.locataire?.prenom || '—'}</dd></div>
-                      <div><dt className="text-xs text-slate-500">Type</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.locataire?.type === 'particulier' ? 'Particulier' : 'Entreprise'}</dd></div>
-                      <div><dt className="text-xs text-slate-500">Téléphone</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.locataire?.telephone || '—'}</dd></div>
-                      <div className="col-span-2"><dt className="text-xs text-slate-500">Email</dt><dd className="text-sm font-medium text-slate-900 mt-0.5">{selectedLocation.locataire?.email || '—'}</dd></div>
-                    </dl>
-                  </div>
-                )}
-
-                {activeTab === 'paiements' && (
-                  <div className="text-center py-12 text-slate-500">
-                    <Euro className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                    <p>{selectedLocation.nb_paiements_payes || 0}/{selectedLocation.nb_paiements_total || 0} mensualités payées</p>
-                    <p className="text-xs mt-2">Le détail des paiements sera intégré ici en B1.4</p>
-                  </div>
-                )}
-
-                {activeTab === 'edl' && (
-                  <div className="text-center py-12 text-slate-500">
-                    <FileText className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                    <p>États des lieux liés à cette location</p>
-                    <p className="text-xs mt-2">Le détail EDL sera intégré ici en B1.4</p>
-                  </div>
-                )}
-
-                {activeTab === 'history' && (
-                  <div className="text-center py-12 text-slate-500">
-                    <Clock className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                    <p>Historique des modifications</p>
-                    <p className="text-xs mt-2">L'historique sera intégré ici plus tard</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer modal */}
-              <div className="flex items-center justify-end gap-2 p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
-                <button onClick={() => setSelectedLocation(null)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-2 p-4 border-t border-slate-100 bg-slate-50 flex-shrink-0">
+                <button
+                  onClick={() => setSelectedLocation(null)}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition"
+                >
                   Fermer
                 </button>
               </div>
