@@ -78,6 +78,7 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterSignature, setFilterSignature] = useState<string>('all');
   const [filterPaiement, setFilterPaiement] = useState<string>('all');
+  const [filterEDL, setFilterEDL] = useState<string>('all');
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -412,37 +413,74 @@ const fetchLocations = async () => {
     );
   };
 
+  // Détecte si une location est "à risque"
+  const isAtRisk = (loc: Location): { atRisk: boolean; reasons: string[] } => {
+    const reasons: string[] = [];
+
+    // Critère 1 : impayés en retard
+    if ((loc.nb_paiements_impayes_en_retard || 0) > 0) {
+      const n = loc.nb_paiements_impayes_en_retard || 0;
+      reasons.push(`${n} impayé${n > 1 ? 's' : ''}`);
+    }
+
+    // Critère 2 : en cours mais pas signé
+    if (loc.statut_calcule === 'en_cours' && loc.signature_status !== 'signed') {
+      reasons.push('non signé');
+    }
+
+    return { atRisk: reasons.length > 0, reasons };
+  };
+
+  // Détecte si la location finit dans les 30 jours
+  const isToAnticipate = (loc: Location): boolean => {
+    if (loc.statut_calcule !== 'en_cours') return false;
+    if (!loc.date_fin) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateFin = new Date(loc.date_fin);
+    const daysUntilEnd = Math.floor((dateFin.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    return daysUntilEnd >= 0 && daysUntilEnd <= 30;
+  };
+
   const getKpiData = () => {
-    const total = {
-      count: locations.length,
-      montant: locations.reduce((sum, l) => sum + (l.montant_total_ttc || (l.montant_mensuel_ttc || l.montant_mensuel || 0) * (l.duree_mois || 12)), 0),
-    };
+    const total = locations.length;
+
     const enCours = locations.filter(l => l.statut_calcule === 'en_cours');
     const aVenir = locations.filter(l => l.statut_calcule === 'a_venir');
-    const enRetard = locations.filter(l => l.statut_calcule === 'en_retard');
     const terminees = locations.filter(l => l.statut_calcule === 'terminee');
 
-    const sumMontant = (locs: Location[]) =>
-      locs.reduce((sum, l) => sum + (l.montant_total_ttc || (l.montant_mensuel_ttc || l.montant_mensuel || 0) * (l.duree_mois || 12)), 0);
+    const aRisque = locations.filter(l => isAtRisk(l).atRisk);
+    const aAnticiper = locations.filter(l => isToAnticipate(l));
+
+    const enCoursSignes = enCours.filter(l => l.signature_status === 'signed').length;
+    const aVenirEnvoyes = aVenir.filter(l => l.signature_status === 'sent').length;
+
+    const totalImpayes = locations.reduce((sum, l) => sum + (l.nb_paiements_impayes_en_retard || 0), 0);
+    const totalNonSignes = enCours.filter(l => l.signature_status !== 'signed').length;
 
     return {
       total,
-      enCours: { count: enCours.length, montant: sumMontant(enCours) },
-      aVenir: { count: aVenir.length, montant: sumMontant(aVenir) },
-      enRetard: { count: enRetard.length, montant: sumMontant(enRetard) },
-      terminees: { count: terminees.length, montant: sumMontant(terminees) },
+      enCours: { count: enCours.length, signes: enCoursSignes },
+      aVenir: { count: aVenir.length, envoyes: aVenirEnvoyes },
+      aRisque: { count: aRisque.length, impayes: totalImpayes, nonSignes: totalNonSignes },
+      aAnticiper: { count: aAnticiper.length },
+      terminees: { count: terminees.length },
     };
   };
 
-  const formatMontant = (n: number) => {
-    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M€`;
-    if (n >= 1000) return `${(n / 1000).toFixed(0)}k€`;
-    return `${Math.round(n)}€`;
-  };
-
   const filteredLocations = locations.filter(loc => {
-    // Filtre KPI tuile (statut_calcule)
-    if (filterStatutCalcule && loc.statut_calcule !== filterStatutCalcule) return false;
+    // Filtre tuile (incluant at_risk et to_anticipate)
+    if (filterStatutCalcule) {
+      if (filterStatutCalcule === 'at_risk') {
+        if (!isAtRisk(loc).atRisk) return false;
+      } else if (filterStatutCalcule === 'to_anticipate') {
+        if (!isToAnticipate(loc)) return false;
+      } else if (loc.statut_calcule !== filterStatutCalcule) {
+        return false;
+      }
+    }
 
     // Filtre Type
     if (filterType !== 'all' && loc.type_location !== filterType) return false;
@@ -450,22 +488,22 @@ const fetchLocations = async () => {
     // Filtre Signature
     if (filterSignature !== 'all') {
       const sig = loc.signature_status || 'draft';
-      if (filterSignature === 'no_pdf' && loc.contrat_pdf_path) return false;
-      if (filterSignature === 'no_pdf' && !loc.contrat_pdf_path) {
-        // pass: pas de PDF = ok
-      } else if (filterSignature !== 'no_pdf' && sig !== filterSignature) {
+      if (filterSignature === 'no_pdf') {
+        if (loc.contrat_pdf_path) return false;
+      } else if (sig !== filterSignature) {
         return false;
       }
     }
 
-    // Filtre Paiement
-    if (filterPaiement === 'all_paid') {
-      if ((loc.nb_paiements_payes || 0) < (loc.nb_paiements_total || 0)) return false;
-    } else if (filterPaiement === 'has_impayes') {
-      if ((loc.nb_paiements_impayes_en_retard || 0) === 0) return false;
-    } else if (filterPaiement === 'a_venir') {
-      if ((loc.nb_paiements_payes || 0) > 0) return false;
+    // Filtre Santé contrat
+    if (filterPaiement === 'sain') {
+      if (isAtRisk(loc).atRisk) return false;
+    } else if (filterPaiement === 'a_risque') {
+      if (!isAtRisk(loc).atRisk) return false;
     }
+
+    // Filtre EDL — TODO: nécessite jointure avec etat_des_lieux (B1.4)
+    // Pour l'instant le filtre est dans l'UI mais ne filtre pas
 
     // Recherche texte
     if (search) {
@@ -488,9 +526,10 @@ const fetchLocations = async () => {
     setFilterType('all');
     setFilterSignature('all');
     setFilterPaiement('all');
+    setFilterEDL('all');
   };
 
-  const hasActiveFilters = !!filterStatutCalcule || filterType !== 'all' || filterSignature !== 'all' || filterPaiement !== 'all' || !!search;
+  const hasActiveFilters = !!filterStatutCalcule || filterType !== 'all' || filterSignature !== 'all' || filterPaiement !== 'all' || filterEDL !== 'all' || !!search;
 
   const kpi = getKpiData();
 
@@ -519,8 +558,8 @@ const fetchLocations = async () => {
           </button>
         </div>
 
-        {/* KPI Tuiles cliquables */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {/* KPI Tuiles cliquables - vue administrative/juridique */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {/* Total */}
           <button
             onClick={() => setFilterStatutCalcule(null)}
@@ -534,8 +573,8 @@ const fetchLocations = async () => {
               <Layers className="h-4 w-4 text-blue-600" />
               <span className="text-xs text-gray-500">Total</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{kpi.total.count}</div>
-            <div className="text-sm text-gray-600">{formatMontant(kpi.total.montant)}</div>
+            <div className="text-2xl font-bold text-gray-900">{kpi.total}</div>
+            <div className="text-xs text-gray-500 mt-1">contrats</div>
           </button>
 
           {/* En cours */}
@@ -552,7 +591,9 @@ const fetchLocations = async () => {
               <span className="text-xs text-gray-500">En cours</span>
             </div>
             <div className="text-2xl font-bold text-gray-900">{kpi.enCours.count}</div>
-            <div className="text-sm text-gray-600">{formatMontant(kpi.enCours.montant)}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {kpi.enCours.signes} signé{kpi.enCours.signes > 1 ? 's' : ''}
+            </div>
           </button>
 
           {/* À venir */}
@@ -560,33 +601,61 @@ const fetchLocations = async () => {
             onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'a_venir' ? null : 'a_venir')}
             className={`p-4 rounded-lg border-2 text-left transition-all ${
               filterStatutCalcule === 'a_venir'
-                ? 'border-yellow-600 bg-yellow-50'
+                ? 'border-blue-600 bg-blue-50'
                 : 'border-gray-200 bg-white hover:border-gray-300'
             }`}
           >
             <div className="flex items-center justify-between mb-1">
-              <Clock className="h-4 w-4 text-yellow-600" />
+              <Clock className="h-4 w-4 text-blue-600" />
               <span className="text-xs text-gray-500">À venir</span>
             </div>
             <div className="text-2xl font-bold text-gray-900">{kpi.aVenir.count}</div>
-            <div className="text-sm text-gray-600">{formatMontant(kpi.aVenir.montant)}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {kpi.aVenir.envoyes} envoyé{kpi.aVenir.envoyes > 1 ? 's' : ''}
+            </div>
           </button>
 
-          {/* En retard */}
+          {/* À risque - mis en évidence visuellement */}
           <button
-            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'en_retard' ? null : 'en_retard')}
+            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'at_risk' ? null : 'at_risk')}
             className={`p-4 rounded-lg border-2 text-left transition-all ${
-              filterStatutCalcule === 'en_retard'
-                ? 'border-red-600 bg-red-50'
-                : 'border-gray-200 bg-white hover:border-gray-300'
+              filterStatutCalcule === 'at_risk'
+                ? 'border-red-600 bg-red-100 ring-2 ring-red-300'
+                : kpi.aRisque.count > 0
+                  ? 'border-red-400 bg-red-50 hover:border-red-500'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
             }`}
           >
             <div className="flex items-center justify-between mb-1">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <span className="text-xs text-gray-500">En retard</span>
+              <AlertCircle className={`h-4 w-4 ${kpi.aRisque.count > 0 ? 'text-red-600' : 'text-gray-400'}`} />
+              <span className={`text-xs font-semibold ${kpi.aRisque.count > 0 ? 'text-red-700' : 'text-gray-500'}`}>À risque</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{kpi.enRetard.count}</div>
-            <div className="text-sm text-gray-600">{formatMontant(kpi.enRetard.montant)}</div>
+            <div className={`text-2xl font-bold ${kpi.aRisque.count > 0 ? 'text-red-700' : 'text-gray-900'}`}>{kpi.aRisque.count}</div>
+            <div className={`text-xs mt-1 ${kpi.aRisque.count > 0 ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+              {kpi.aRisque.impayes > 0 && `${kpi.aRisque.impayes} impayé${kpi.aRisque.impayes > 1 ? 's' : ''}`}
+              {kpi.aRisque.impayes > 0 && kpi.aRisque.nonSignes > 0 && ' · '}
+              {kpi.aRisque.nonSignes > 0 && `${kpi.aRisque.nonSignes} non signé${kpi.aRisque.nonSignes > 1 ? 's' : ''}`}
+              {kpi.aRisque.impayes === 0 && kpi.aRisque.nonSignes === 0 && 'aucun risque'}
+            </div>
+          </button>
+
+          {/* À anticiper */}
+          <button
+            onClick={() => setFilterStatutCalcule(filterStatutCalcule === 'to_anticipate' ? null : 'to_anticipate')}
+            className={`p-4 rounded-lg border-2 text-left transition-all ${
+              filterStatutCalcule === 'to_anticipate'
+                ? 'border-yellow-600 bg-yellow-100 ring-2 ring-yellow-300'
+                : kpi.aAnticiper.count > 0
+                  ? 'border-yellow-400 bg-yellow-50 hover:border-yellow-500'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <Clock className={`h-4 w-4 ${kpi.aAnticiper.count > 0 ? 'text-yellow-600' : 'text-gray-400'}`} />
+              <span className={`text-xs ${kpi.aAnticiper.count > 0 ? 'text-yellow-700 font-semibold' : 'text-gray-500'}`}>À anticiper</span>
+            </div>
+            <div className={`text-2xl font-bold ${kpi.aAnticiper.count > 0 ? 'text-yellow-700' : 'text-gray-900'}`}>{kpi.aAnticiper.count}</div>
+            <div className="text-xs text-gray-500 mt-1">fin &lt; 30j</div>
           </button>
 
           {/* Terminées */}
@@ -603,11 +672,11 @@ const fetchLocations = async () => {
               <span className="text-xs text-gray-500">Terminées</span>
             </div>
             <div className="text-2xl font-bold text-gray-900">{kpi.terminees.count}</div>
-            <div className="text-sm text-gray-600">{formatMontant(kpi.terminees.montant)}</div>
+            <div className="text-xs text-gray-500 mt-1">archivées</div>
           </button>
         </div>
 
-        {/* Filtres avancés */}
+        {/* Filtres avancés - administratifs et juridiques */}
         <div className="bg-white rounded-lg shadow p-4 flex flex-wrap items-center gap-3">
           <Filter className="h-5 w-5 text-gray-400" />
 
@@ -641,10 +710,21 @@ const fetchLocations = async () => {
             onChange={(e) => setFilterPaiement(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">Paiements : Tous</option>
-            <option value="all_paid">Tout payé</option>
-            <option value="has_impayes">Avec impayés en retard</option>
-            <option value="a_venir">Aucun paiement encore</option>
+            <option value="all">Santé : Tous</option>
+            <option value="sain">✓ Sain</option>
+            <option value="a_risque">⚠ À risque</option>
+          </select>
+
+          <select
+            value={filterEDL}
+            onChange={(e) => setFilterEDL(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">EDL : Tous</option>
+            <option value="with_sortie">Avec EDL Sortie</option>
+            <option value="with_retour">Avec EDL Retour</option>
+            <option value="complete">EDL complet (Sortie + Retour)</option>
+            <option value="none">Sans aucun EDL ⚠</option>
           </select>
 
           {hasActiveFilters && (
