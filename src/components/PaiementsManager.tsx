@@ -911,7 +911,7 @@ export function PaiementsManager() {
       {contratDetail && (
         <div className="fixed inset-0 bg-black/45 flex items-start justify-center z-40 p-6 overflow-y-auto"
              onClick={() => setContratDetail(null)}>
-          <div className="bg-white rounded-lg w-full max-w-3xl my-6" onClick={(e) => e.stopPropagation()}>
+     <div className="bg-white rounded-lg w-full max-w-4xl my-6" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white px-5 py-3 border-b border-gray-200 flex items-start justify-between rounded-t-lg">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-0.5">
