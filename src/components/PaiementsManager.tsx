@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Banknote, Search, RefreshCw, X, Check, Loader2, AlertTriangle,
   Clock, CheckCircle2, TrendingUp, Building2, Receipt, CreditCard,
-  Repeat, Coins, ChevronLeft, ChevronRight, Filter
+  Repeat, Coins, ChevronLeft, ChevronRight, Calendar, Wallet, Hash,
+  User, StickyNote, ArrowUpLeft
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -21,6 +22,11 @@ interface PaiementRow {
   date_paiement: string | null;
   statut: string;
   notes: string | null;
+  mode_paiement: string | null;
+  compte_bancaire_id: string | null;
+  reference_paiement: string | null;
+  pointe_par: string | null;
+  updated_at: string | null;
   // Données dérivées de la location
   vehicule_immat: string | null;
   vehicule_marque: string | null;
@@ -55,7 +61,6 @@ interface ContratPaiement {
   montant_total_ttc: number;
   contrat_statut: string | null;
   paiements: PaiementRow[];
-  // Calculé
   totalAttendu: number;
   totalEncaisse: number;
   reste: number;
@@ -105,6 +110,15 @@ const MODES_PAIEMENT = [
   { key: 'prelevement', label: 'Prélèvt.', icon: Repeat },
 ];
 
+const MODES_LABELS: Record<string, string> = {
+  virement: 'Virement bancaire',
+  cheque: 'Chèque',
+  especes: 'Espèces',
+  cb: 'Carte bancaire',
+  prelevement: 'Prélèvement automatique',
+  autre: 'Autre',
+};
+
 const PERIODE_LABELS: Record<PeriodeFilter, string> = {
   tout: 'Tout',
   ce_mois: 'Ce mois',
@@ -137,6 +151,10 @@ export function PaiementsManager() {
   const [contratDetail, setContratDetail] = useState<ContratPaiement | null>(null);
   const [filterDetail, setFilterDetail] = useState<FilterDetail>('tout');
 
+  // 🆕 Popup détail pointage (nouveau)
+  const [paiementDetail, setPaiementDetail] = useState<PaiementRow | null>(null);
+  const [depointing, setDepointing] = useState(false);
+
   // Modal pointage
   const [pointageId, setPointageId] = useState<string | null>(null);
   const [pointageMontant, setPointageMontant] = useState('');
@@ -163,7 +181,8 @@ export function PaiementsManager() {
 
   useEffect(() => { fetchPaiements(); }, []);
 
-  const fetchPaiements = async () => {
+  // 🆕 fetchPaiements retourne maintenant les rows pour usage immédiat
+  const fetchPaiements = async (): Promise<PaiementRow[]> => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -172,6 +191,8 @@ export function PaiementsManager() {
           id, location_id, numero_echeance, mois,
           montant_attendu_ht, montant_attendu_ttc,
           montant_paye, date_paiement, statut, notes,
+          mode_paiement, compte_bancaire_id, reference_paiement,
+          pointe_par, updated_at,
           location:location_id(
             type_location, statut, reference_contrat, date_debut, date_fin,
             duree_mois, montant_mensuel_ttc, montant_total_ttc, mensualites_payees,
@@ -199,6 +220,11 @@ export function PaiementsManager() {
           date_paiement: p.date_paiement,
           statut,
           notes: p.notes,
+          mode_paiement: p.mode_paiement,
+          compte_bancaire_id: p.compte_bancaire_id,
+          reference_paiement: p.reference_paiement,
+          pointe_par: p.pointe_par,
+          updated_at: p.updated_at,
           vehicule_immat: p.location?.vehicule?.immatriculation || null,
           vehicule_marque: p.location?.vehicule?.marque || null,
           vehicule_modele: p.location?.vehicule?.modele || null,
@@ -218,79 +244,86 @@ export function PaiementsManager() {
       });
 
       setPaiements(rows);
+      return rows;
     } catch (err) {
       console.error('[PaiementsManager] Erreur fetch:', err);
+      return [];
     } finally {
       setLoading(false);
     }
   };
 
   // ----------------------------------------------------------------------
-  // GROUPEMENT PAR CONTRAT
+  // 🆕 Fonction pure : calcule un ContratPaiement à partir d'une liste de rows
+  // Utilisée à la fois par allContrats (memo) ET par le rafraîchissement post-pointage
+  // ----------------------------------------------------------------------
+
+  const calculerContrat = (location_id: string, rows: PaiementRow[]): ContratPaiement | null => {
+    const list = rows.filter(p => p.location_id === location_id);
+    if (list.length === 0) return null;
+    const first = list[0];
+    const today = new Date().toISOString().split('T')[0];
+
+    const totalAttendu = list.reduce((sum, p) => sum + (p.montant_attendu_ttc || 0), 0);
+    const totalEncaisse = list.reduce((sum, p) => sum + (p.montant_paye || 0), 0);
+    const nbTotal = list.length;
+    const nbPayes = list.filter(p => p.statut === 'paye').length;
+    const nbRetards = list.filter(p => p.statut === 'retard').length;
+    const nbPartiels = list.filter(p => p.statut === 'partiel').length;
+    const nbEchues = list.filter(p => p.mois && p.mois <= today).length;
+    const nbAvenir = nbTotal - nbEchues;
+
+    let sante: 'ok' | 'risque' | 'avenir';
+    if (nbRetards > 0 || nbPartiels > 0) sante = 'risque';
+    else if (nbEchues === 0) sante = 'avenir';
+    else sante = 'ok';
+
+    const tauxEncaissement = totalAttendu > 0 ? Math.round((totalEncaisse / totalAttendu) * 100) : 0;
+
+    return {
+      location_id,
+      reference_contrat: first.reference_contrat || location_id.slice(0, 6).toUpperCase(),
+      vehicule_immat: first.vehicule_immat,
+      vehicule_marque: first.vehicule_marque,
+      vehicule_modele: first.vehicule_modele,
+      locataire_nom: first.locataire_nom || '',
+      locataire_prenom: first.locataire_prenom || '',
+      type_location: first.type_location,
+      date_debut: first.date_debut,
+      date_fin: first.date_fin,
+      duree_mois: first.duree_mois,
+      montant_mensuel_ttc: first.montant_mensuel_ttc || 0,
+      montant_total_ttc: first.montant_total_ttc || 0,
+      contrat_statut: first.contrat_statut,
+      paiements: list.sort((a, b) => (a.numero_echeance || 0) - (b.numero_echeance || 0)),
+      totalAttendu,
+      totalEncaisse,
+      reste: totalAttendu - totalEncaisse,
+      nbTotal,
+      nbPayes,
+      nbRetards,
+      nbPartiels,
+      nbAvenir,
+      sante,
+      tauxEncaissement,
+    };
+  };
+
+  // ----------------------------------------------------------------------
+  // GROUPEMENT PAR CONTRAT (mémo)
   // ----------------------------------------------------------------------
 
   const allContrats = useMemo<ContratPaiement[]>(() => {
-    const groups: Record<string, PaiementRow[]> = {};
-    paiements.forEach(p => {
-      if (!groups[p.location_id]) groups[p.location_id] = [];
-      groups[p.location_id].push(p);
-    });
-
-    const today = new Date().toISOString().split('T')[0];
-
-    return Object.entries(groups).map(([location_id, list]) => {
-      const first = list[0];
-      const totalAttendu = list.reduce((sum, p) => sum + (p.montant_attendu_ttc || 0), 0);
-      const totalEncaisse = list.reduce((sum, p) => sum + (p.montant_paye || 0), 0);
-      const nbTotal = list.length;
-      const nbPayes = list.filter(p => p.statut === 'paye').length;
-      const nbRetards = list.filter(p => p.statut === 'retard').length;
-      const nbPartiels = list.filter(p => p.statut === 'partiel').length;
-      const nbEchues = list.filter(p => p.mois && p.mois <= today).length;
-      const nbAvenir = nbTotal - nbEchues;
-
-      let sante: 'ok' | 'risque' | 'avenir';
-      if (nbRetards > 0 || nbPartiels > 0) sante = 'risque';
-      else if (nbEchues === 0) sante = 'avenir';
-      else sante = 'ok';
-
-      const tauxEncaissement = totalAttendu > 0 ? Math.round((totalEncaisse / totalAttendu) * 100) : 0;
-
-      return {
-        location_id,
-        reference_contrat: first.reference_contrat || location_id.slice(0, 6).toUpperCase(),
-        vehicule_immat: first.vehicule_immat,
-        vehicule_marque: first.vehicule_marque,
-        vehicule_modele: first.vehicule_modele,
-        locataire_nom: first.locataire_nom || '',
-        locataire_prenom: first.locataire_prenom || '',
-        type_location: first.type_location,
-        date_debut: first.date_debut,
-        date_fin: first.date_fin,
-        duree_mois: first.duree_mois,
-        montant_mensuel_ttc: first.montant_mensuel_ttc || 0,
-        montant_total_ttc: first.montant_total_ttc || 0,
-        contrat_statut: first.contrat_statut,
-        paiements: list.sort((a, b) => (a.numero_echeance || 0) - (b.numero_echeance || 0)),
-        totalAttendu,
-        totalEncaisse,
-        reste: totalAttendu - totalEncaisse,
-        nbTotal,
-        nbPayes,
-        nbRetards,
-        nbPartiels,
-        nbAvenir,
-        sante,
-        tauxEncaissement,
-      };
-    });
+    const locationIds = Array.from(new Set(paiements.map(p => p.location_id)));
+    return locationIds
+      .map(id => calculerContrat(id, paiements))
+      .filter((c): c is ContratPaiement => c !== null);
   }, [paiements]);
 
   // ----------------------------------------------------------------------
   // FILTRAGE
   // ----------------------------------------------------------------------
 
-  // Échéances filtrées par période (pour les KPIs et pour savoir quels contrats afficher)
   const paiementsFiltresParPeriode = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -298,26 +331,20 @@ export function PaiementsManager() {
 
     return paiements.filter(p => {
       if (!showTermines && p.contrat_statut !== 'en_cours') return false;
-
       if (periode === 'tout') return true;
       if (!p.mois) return false;
 
-      if (periode === 'ce_mois') {
-        return p.mois.startsWith(now.toISOString().slice(0, 7));
-      }
+      if (periode === 'ce_mois') return p.mois.startsWith(now.toISOString().slice(0, 7));
       if (periode === 'ce_trimestre') {
         const trimStart = new Date(currentYear, Math.floor(currentMonth / 3) * 3, 1).toISOString().split('T')[0];
         const trimEnd = new Date(currentYear, Math.floor(currentMonth / 3) * 3 + 3, 0).toISOString().split('T')[0];
         return p.mois >= trimStart && p.mois <= trimEnd;
       }
-      if (periode === 'cette_annee') {
-        return p.mois.startsWith(String(currentYear));
-      }
+      if (periode === 'cette_annee') return p.mois.startsWith(String(currentYear));
       return true;
     });
   }, [paiements, periode, showTermines]);
 
-  // Contrats filtrés (un contrat apparaît si au moins 1 échéance est dans la période)
   const contratsFiltres = useMemo<ContratPaiement[]>(() => {
     const locationIdsActifs = new Set(paiementsFiltresParPeriode.map(p => p.location_id));
     let result = allContrats.filter(c => locationIdsActifs.has(c.location_id));
@@ -334,33 +361,17 @@ export function PaiementsManager() {
       );
     }
 
-    if (filterType) {
-      result = result.filter(c => c.type_location === filterType);
-    }
+    if (filterType) result = result.filter(c => c.type_location === filterType);
+    if (filterSante) result = result.filter(c => c.sante === filterSante);
 
-    if (filterSante) {
-      result = result.filter(c => c.sante === filterSante);
-    }
-
-    // Tri
     result.sort((a, b) => {
       let cmp = 0;
       switch (sortBy) {
-        case 'reference':
-          cmp = (a.reference_contrat || '').localeCompare(b.reference_contrat || '');
-          break;
-        case 'vehicule':
-          cmp = (a.vehicule_immat || '').localeCompare(b.vehicule_immat || '');
-          break;
-        case 'locataire':
-          cmp = (a.locataire_nom || '').localeCompare(b.locataire_nom || '');
-          break;
-        case 'periode':
-          cmp = (a.date_debut || '').localeCompare(b.date_debut || '');
-          break;
-        case 'encaissement':
-          cmp = a.tauxEncaissement - b.tauxEncaissement;
-          break;
+        case 'reference': cmp = (a.reference_contrat || '').localeCompare(b.reference_contrat || ''); break;
+        case 'vehicule':  cmp = (a.vehicule_immat || '').localeCompare(b.vehicule_immat || ''); break;
+        case 'locataire': cmp = (a.locataire_nom || '').localeCompare(b.locataire_nom || ''); break;
+        case 'periode':   cmp = (a.date_debut || '').localeCompare(b.date_debut || ''); break;
+        case 'encaissement': cmp = a.tauxEncaissement - b.tauxEncaissement; break;
         case 'sante': {
           const order = { risque: 0, ok: 1, avenir: 2 };
           cmp = order[a.sante] - order[b.sante];
@@ -373,18 +384,16 @@ export function PaiementsManager() {
     return result;
   }, [allContrats, paiementsFiltresParPeriode, search, filterType, filterSante, sortBy, sortDir]);
 
-  // Pagination
   const totalPages = Math.max(1, Math.ceil(contratsFiltres.length / PAGE_SIZE));
   const paginatedContrats = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
     return contratsFiltres.slice(start, start + PAGE_SIZE);
   }, [contratsFiltres, currentPage]);
 
-  // Reset page si filtre change
   useEffect(() => { setCurrentPage(1); }, [search, periode, filterType, filterSante, showTermines]);
 
   // ----------------------------------------------------------------------
-  // KPIs (suivent le filtre période)
+  // KPIs
   // ----------------------------------------------------------------------
 
   const kpis = useMemo(() => {
@@ -393,13 +402,9 @@ export function PaiementsManager() {
     const reste = attendu - encaisse;
     const nbPayes = paiementsFiltresParPeriode.filter(p => p.statut === 'paye').length;
     const taux = paiementsFiltresParPeriode.length > 0
-      ? Math.round((nbPayes / paiementsFiltresParPeriode.length) * 100)
-      : 0;
-
-    // À risque : nombre de contrats avec santé "risque" parmi les filtrés
+      ? Math.round((nbPayes / paiementsFiltresParPeriode.length) * 100) : 0;
     const nbARisque = contratsFiltres.filter(c => c.sante === 'risque').length;
 
-    // Mois en cours : toujours mai 2026 (ou le mois actuel)
     const moisCourant = new Date().toISOString().slice(0, 7);
     const paiementsMoisCourant = paiements.filter(p =>
       p.mois?.startsWith(moisCourant) && (showTermines || p.contrat_statut === 'en_cours')
@@ -407,17 +412,7 @@ export function PaiementsManager() {
     const moisAttendu = paiementsMoisCourant.reduce((sum, p) => sum + (p.montant_attendu_ttc || 0), 0);
     const moisEncaisse = paiementsMoisCourant.reduce((sum, p) => sum + (p.montant_paye || 0), 0);
 
-    return {
-      attendu,
-      encaisse,
-      reste,
-      taux,
-      nbARisque,
-      moisAttendu,
-      moisEncaisse,
-      nbEcheances: paiementsFiltresParPeriode.length,
-      nbPayes,
-    };
+    return { attendu, encaisse, reste, taux, nbARisque, moisAttendu, moisEncaisse, nbEcheances: paiementsFiltresParPeriode.length, nbPayes };
   }, [paiementsFiltresParPeriode, contratsFiltres, paiements, showTermines]);
 
   // ----------------------------------------------------------------------
@@ -446,8 +441,7 @@ export function PaiementsManager() {
     setPointageMontantType('total');
     setPointageDate(new Date().toISOString().split('T')[0]);
     setPointageDateType('today');
-    setPointageMode('virement'); // pré-sélection mode le plus courant
-    // Mémoire du dernier compte utilisé
+    setPointageMode('virement');
     const lastCompte = localStorage.getItem(LS_LAST_COMPTE_KEY) || '';
     const compteValide = comptesBank.find(c => c.id === lastCompte);
     setPointageCompteId(compteValide ? lastCompte : (comptesBank[0]?.id || ''));
@@ -510,12 +504,9 @@ export function PaiementsManager() {
 
       if (error) throw error;
 
-      // Mémoriser le compte utilisé pour le prochain pointage
-      if (pointageCompteId) {
-        localStorage.setItem(LS_LAST_COMPTE_KEY, pointageCompteId);
-      }
+      if (pointageCompteId) localStorage.setItem(LS_LAST_COMPTE_KEY, pointageCompteId);
 
-      // Mettre à jour les compteurs dans la table locations
+      // Mise à jour du compteur dans locations
       const { data: allPaiements } = await supabase
         .from('paiements_location')
         .select('id, statut, montant_paye, montant_attendu_ttc')
@@ -549,11 +540,11 @@ export function PaiementsManager() {
       }
 
       setPointageId(null);
-      await fetchPaiements();
 
-      // Si la popup contrat était ouverte, on la rafraîchit avec les nouvelles données
+      // 🆕 FIX rafraîchissement : on récupère les rows fraîches et on recalcule le contrat à la volée
+      const freshRows = await fetchPaiements();
       if (contratDetail) {
-        const updatedContrat = allContrats.find(c => c.location_id === contratDetail.location_id);
+        const updatedContrat = calculerContrat(contratDetail.location_id, freshRows);
         if (updatedContrat) setContratDetail(updatedContrat);
       }
     } catch (err) {
@@ -561,6 +552,79 @@ export function PaiementsManager() {
       alert('Erreur lors du pointage');
     } finally {
       setSavingPointage(false);
+    }
+  };
+
+  // ----------------------------------------------------------------------
+  // 🆕 DÉPOINTAGE (annule un pointage)
+  // ----------------------------------------------------------------------
+
+  const handleDepointer = async () => {
+    if (!paiementDetail) return;
+    if (!confirm(`Dépointer cette échéance ?\n\nCela remettra le statut à "À venir" et videra toutes les infos de pointage. Cette action est réversible (vous pourrez re-pointer).`)) return;
+
+    setDepointing(true);
+    try {
+      const { error } = await supabase
+        .from('paiements_location')
+        .update({
+          montant_paye: 0,
+          date_paiement: null,
+          statut: 'impaye',
+          mode_paiement: null,
+          compte_bancaire_id: null,
+          reference_paiement: null,
+          pointe_par: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', paiementDetail.id);
+
+      if (error) throw error;
+
+      // Mise à jour du compteur dans locations
+      const { data: allPaiements } = await supabase
+        .from('paiements_location')
+        .select('id, statut, montant_paye')
+        .eq('location_id', paiementDetail.location_id);
+
+      if (allPaiements) {
+        const payeesCount = allPaiements.filter(p =>
+          p.id === paiementDetail.id ? false : p.statut === 'paye'
+        ).length;
+        const totalEncaisse = allPaiements.reduce((sum, p) => {
+          if (p.id === paiementDetail.id) return sum;
+          return sum + (p.montant_paye || 0);
+        }, 0);
+
+        const { data: locationData } = await supabase
+          .from('locations')
+          .select('montant_total_ht, montant_total_ttc')
+          .eq('id', paiementDetail.location_id)
+          .single();
+
+        if (locationData) {
+          await supabase
+            .from('locations')
+            .update({
+              mensualites_payees: payeesCount,
+              reste_a_payer_ttc: Math.max(0, (locationData.montant_total_ttc || 0) - totalEncaisse),
+              reste_a_payer_ht: Math.max(0, (locationData.montant_total_ht || 0) - (totalEncaisse / 1.2)),
+            })
+            .eq('id', paiementDetail.location_id);
+        }
+      }
+
+      setPaiementDetail(null);
+      const freshRows = await fetchPaiements();
+      if (contratDetail) {
+        const updatedContrat = calculerContrat(contratDetail.location_id, freshRows);
+        if (updatedContrat) setContratDetail(updatedContrat);
+      }
+    } catch (err) {
+      console.error('[PaiementsManager] Erreur dépointage:', err);
+      alert('Erreur lors du dépointage');
+    } finally {
+      setDepointing(false);
     }
   };
 
@@ -573,6 +637,22 @@ export function PaiementsManager() {
     try {
       const date = new Date(d);
       return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    } catch { return d; }
+  };
+
+  const formatDateLong = (d: string | null) => {
+    if (!d) return '—';
+    try {
+      return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch { return d; }
+  };
+
+  const formatDateTime = (d: string | null) => {
+    if (!d) return '—';
+    try {
+      const date = new Date(d);
+      return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        + ' à ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     } catch { return d; }
   };
 
@@ -615,6 +695,11 @@ export function PaiementsManager() {
     else { setSortBy(col); setSortDir('asc'); }
   };
 
+  const getCompteNom = (compteId: string | null) => {
+    if (!compteId) return null;
+    return comptesBank.find(c => c.id === compteId) || null;
+  };
+
   // ----------------------------------------------------------------------
   // RENDU
   // ----------------------------------------------------------------------
@@ -638,11 +723,12 @@ export function PaiementsManager() {
   const recapModeLabel = MODES_PAIEMENT.find(m => m.key === pointageMode)?.label.toLowerCase() || '—';
   const recapCompteLabel = comptesBank.find(c => c.id === pointageCompteId)?.nom || '—';
 
+  // Détail pointage : compte associé
+  const detailCompte = paiementDetail ? getCompteNom(paiementDetail.compte_bancaire_id) : null;
+
   return (
     <div>
-      {/* ============================================================== */}
-      {/* HEADER                                                          */}
-      {/* ============================================================== */}
+      {/* HEADER */}
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Paiements</h1>
@@ -650,15 +736,13 @@ export function PaiementsManager() {
             {contratsFiltres.length} contrat{contratsFiltres.length > 1 ? 's' : ''} · {kpis.nbEcheances} échéance{kpis.nbEcheances > 1 ? 's' : ''}
           </p>
         </div>
-        <button onClick={fetchPaiements}
+        <button onClick={() => fetchPaiements()}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-md hover:bg-gray-50 text-sm">
           <RefreshCw className="w-3.5 h-3.5" /> Actualiser
         </button>
       </div>
 
-      {/* ============================================================== */}
-      {/* TOGGLE PÉRIODE                                                  */}
-      {/* ============================================================== */}
+      {/* TOGGLE PÉRIODE */}
       <div className="inline-flex gap-0.5 bg-white border border-gray-200 rounded-md p-0.5 mb-4">
         {(['tout', 'ce_mois', 'ce_trimestre', 'cette_annee'] as PeriodeFilter[]).map(p => (
           <button key={p} onClick={() => setPeriode(p)}
@@ -670,9 +754,7 @@ export function PaiementsManager() {
         ))}
       </div>
 
-      {/* ============================================================== */}
-      {/* KPIs (6 tuiles)                                                 */}
-      {/* ============================================================== */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
         <Kpi label="Attendu" value={`${formatNumber(kpis.attendu)} €`} sub={`${kpis.nbEcheances} éch.`} />
         <Kpi label="Encaissé" value={`${formatNumber(kpis.encaisse)} €`} sub={`${kpis.nbPayes} payées`} color="emerald" />
@@ -682,9 +764,7 @@ export function PaiementsManager() {
         <Kpi label="Mois en cours" value={`${formatNumber(kpis.moisEncaisse)} / ${formatNumber(kpis.moisAttendu)} €`} sub={new Date().toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })} />
       </div>
 
-      {/* ============================================================== */}
-      {/* RECHERCHE + FILTRES                                             */}
-      {/* ============================================================== */}
+      {/* RECHERCHE + FILTRES */}
       <div className="flex flex-col sm:flex-row gap-2 mb-3">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
@@ -710,9 +790,7 @@ export function PaiementsManager() {
         </label>
       </div>
 
-      {/* ============================================================== */}
-      {/* TABLEAU PRINCIPAL                                               */}
-      {/* ============================================================== */}
+      {/* TABLEAU PRINCIPAL */}
       {paginatedContrats.length === 0 ? (
         <div className="bg-white rounded-md border border-gray-200 p-10 text-center">
           <Banknote className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -780,7 +858,6 @@ export function PaiementsManager() {
               })}
             </tbody>
           </table>
-          {/* Pagination */}
           <div className="px-3 py-2 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
             <span className="text-[11px] text-gray-600">
               {paginatedContrats.length} sur {contratsFiltres.length} contrats
@@ -802,14 +879,11 @@ export function PaiementsManager() {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* POPUP CONTRAT (détail des 12 mensualités)                       */}
-      {/* ============================================================== */}
+      {/* POPUP CONTRAT */}
       {contratDetail && (
         <div className="fixed inset-0 bg-black/45 flex items-start justify-center z-40 p-6 overflow-y-auto"
              onClick={() => setContratDetail(null)}>
           <div className="bg-white rounded-lg w-full max-w-3xl my-6" onClick={(e) => e.stopPropagation()}>
-            {/* Header sticky */}
             <div className="sticky top-0 bg-white px-5 py-3 border-b border-gray-200 flex items-start justify-between rounded-t-lg">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-0.5">
@@ -831,7 +905,6 @@ export function PaiementsManager() {
             </div>
 
             <div className="p-5">
-              {/* Synthèse */}
               <div className="grid grid-cols-5 gap-2 mb-4">
                 <SyntheseCard label="Mensualité" value={`${formatMontant(contratDetail.montant_mensuel_ttc)} €`} />
                 <SyntheseCard label="Total dû" value={`${formatMontant(contratDetail.totalAttendu)} €`} />
@@ -843,7 +916,6 @@ export function PaiementsManager() {
                   highlight />
               </div>
 
-              {/* Filtres détail */}
               <div className="flex flex-wrap gap-1.5 mb-3">
                 <FilterPill active={filterDetail === 'tout'} onClick={() => setFilterDetail('tout')}
                   label={`Tout (${contratDetail.nbTotal})`} />
@@ -857,7 +929,6 @@ export function PaiementsManager() {
                   label={`Partiels (${contratDetail.nbPartiels})`} icon={TrendingUp} color="amber" />
               </div>
 
-              {/* Tableau des 12 mensualités */}
               <div className="border border-gray-200 rounded-md overflow-hidden">
                 <table className="min-w-full text-xs">
                   <thead className="bg-gray-50 border-b border-gray-200">
@@ -876,8 +947,11 @@ export function PaiementsManager() {
                       const sc = STATUT_CONFIG[p.statut] || STATUT_CONFIG.impaye;
                       const bgRow = p.statut === 'partiel' ? 'bg-amber-50'
                                   : p.statut === 'retard' ? 'bg-red-50' : '';
+                      const isPaye = p.statut === 'paye';
                       return (
-                        <tr key={p.id} className={bgRow}>
+                        <tr key={p.id}
+                            onClick={() => { if (isPaye) setPaiementDetail(p); }}
+                            className={bgRow + (isPaye ? ' cursor-pointer hover:bg-emerald-50' : '')}>
                           <td className="px-2 py-1.5 text-gray-400">{p.numero_echeance}</td>
                           <td className={'px-2 py-1.5 ' + (p.statut === 'partiel' || p.statut === 'retard' ? 'font-medium' : '')}>
                             {formatMoisLabel(p.mois)}
@@ -895,8 +969,8 @@ export function PaiementsManager() {
                             </span>
                           </td>
                           <td className="px-2 py-1.5 text-right">
-                            {p.statut !== 'paye' ? (
-                              <button onClick={() => handleOpenPointage(p)}
+                            {!isPaye ? (
+                              <button onClick={(e) => { e.stopPropagation(); handleOpenPointage(p); }}
                                 className="inline-flex items-center justify-center w-6 h-6 text-emerald-600 hover:bg-emerald-50 border border-emerald-300 rounded transition-colors">
                                 <Check className="w-3 h-3" />
                               </button>
@@ -909,6 +983,10 @@ export function PaiementsManager() {
                 </table>
               </div>
 
+              <p className="text-[10px] text-gray-400 mt-2 italic">
+                💡 Astuce : cliquez sur une ligne payée pour voir le détail du pointage (date, compte, mode, référence…)
+              </p>
+
               <div className="flex justify-end mt-4">
                 <button onClick={() => setContratDetail(null)}
                   className="px-4 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-md">
@@ -920,13 +998,100 @@ export function PaiementsManager() {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* MODAL POINTAGE (refondu, 5 améliorations)                       */}
-      {/* ============================================================== */}
+      {/* 🆕 POPUP DÉTAIL POINTAGE */}
+      {paiementDetail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+             onClick={() => setPaiementDetail(null)}>
+          <div className="bg-white rounded-lg w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-200">
+              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-gray-900">Détail du pointage</h3>
+                <p className="text-xs text-gray-500">
+                  {paiementDetail.vehicule_immat} · Éch. {paiementDetail.numero_echeance} · {formatMoisLabel(paiementDetail.mois)}
+                </p>
+              </div>
+              <button onClick={() => setPaiementDetail(null)}
+                className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5">
+              {/* Montant en gros */}
+              <div className="bg-emerald-50 border border-emerald-100 rounded-md p-3 mb-4 text-center">
+                <p className="text-[10px] text-emerald-700 uppercase tracking-wider font-medium mb-1">Montant encaissé</p>
+                <p className="text-2xl font-semibold text-emerald-700">{formatMontant(paiementDetail.montant_paye || 0)} € TTC</p>
+                <p className="text-[11px] text-emerald-700 mt-1">
+                  {(paiementDetail.montant_paye || 0) >= (paiementDetail.montant_attendu_ttc || 0)
+                    ? 'Échéance soldée'
+                    : `Sur ${formatMontant(paiementDetail.montant_attendu_ttc || 0)} € attendus`}
+                </p>
+              </div>
+
+              {/* Détails en grille */}
+              <div className="space-y-3 text-sm">
+                <DetailRow icon={Calendar} label="Date d'encaissement">
+                  {formatDateLong(paiementDetail.date_paiement)}
+                </DetailRow>
+                <DetailRow icon={Building2} label="Mode de paiement">
+                  {paiementDetail.mode_paiement ? (MODES_LABELS[paiementDetail.mode_paiement] || paiementDetail.mode_paiement) : <span className="text-gray-400">—</span>}
+                </DetailRow>
+                <DetailRow icon={Wallet} label="Compte bancaire">
+                  {detailCompte ? (
+                    <>
+                      {detailCompte.nom}
+                      {detailCompte.banque && <span className="text-[11px] text-gray-500 ml-1">({detailCompte.banque})</span>}
+                    </>
+                  ) : <span className="text-gray-400">—</span>}
+                </DetailRow>
+                <DetailRow icon={Hash} label="Référence">
+                  {paiementDetail.reference_paiement
+                    ? <span className="font-mono text-xs">{paiementDetail.reference_paiement}</span>
+                    : <span className="text-gray-400">—</span>}
+                </DetailRow>
+                <DetailRow icon={User} label="Pointé par">
+                  {paiementDetail.pointe_par
+                    ? <span className="font-mono text-[11px]">{paiementDetail.pointe_par}</span>
+                    : <span className="text-gray-400">—</span>}
+                </DetailRow>
+                <DetailRow icon={StickyNote} label="Notes">
+                  {paiementDetail.notes
+                    ? <span className="italic">{paiementDetail.notes}</span>
+                    : <span className="text-gray-400 italic">Aucune note</span>}
+                </DetailRow>
+              </div>
+
+              {/* Timestamp technique */}
+              <div className="mt-4 bg-gray-50 rounded-md px-3 py-2 flex justify-between text-[11px] text-gray-500">
+                <span>Saisi le</span>
+                <span>{formatDateTime(paiementDetail.updated_at)}</span>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200">
+              <button onClick={handleDepointer} disabled={depointing}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-red-600 border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50">
+                {depointing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowUpLeft className="w-3 h-3" />}
+                Dépointer
+              </button>
+              <button onClick={() => setPaiementDetail(null)}
+                className="px-4 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-md">
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL POINTAGE */}
       {pointageId && paiementPointage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-md max-h-[92vh] overflow-y-auto">
-            {/* Header */}
             <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-200">
               <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <Banknote className="w-5 h-5 text-emerald-600" />
@@ -943,7 +1108,6 @@ export function PaiementsManager() {
             </div>
 
             <div className="p-5 space-y-4">
-              {/* Récap haut */}
               <div className="bg-gray-50 rounded-md p-2.5 text-xs space-y-1">
                 <div className="flex justify-between"><span className="text-gray-500">Attendu</span><span className="font-medium">{formatMontant(recapAttendu)} € TTC</span></div>
                 {recapDejaPaye > 0 && (
@@ -952,7 +1116,6 @@ export function PaiementsManager() {
                 <div className="flex justify-between"><span className="text-gray-500">Locataire</span><span>{paiementPointage.locataire_prenom} {paiementPointage.locataire_nom}</span></div>
               </div>
 
-              {/* 1. Montant rapide */}
               <FormSection label="Montant reçu" emoji="💶">
                 <div className="flex gap-1.5 mb-2">
                   <SelectBtn active={pointageMontantType === 'total'} onClick={() => handleMontantTypeChange('total')} flex>
@@ -970,7 +1133,6 @@ export function PaiementsManager() {
                 </div>
               </FormSection>
 
-              {/* 2. Date rapide */}
               <FormSection label="Date d'encaissement" emoji="📅">
                 <div className="flex gap-1.5">
                   <SelectBtn active={pointageDateType === 'today'} onClick={() => handleDateTypeChange('today')} flex>Aujourd'hui</SelectBtn>
@@ -983,7 +1145,6 @@ export function PaiementsManager() {
                 )}
               </FormSection>
 
-              {/* 3. Mode visuel */}
               <FormSection label="Mode de paiement" emoji="💳">
                 <div className="grid grid-cols-5 gap-1.5">
                   {MODES_PAIEMENT.map(m => {
@@ -1002,7 +1163,6 @@ export function PaiementsManager() {
                 </div>
               </FormSection>
 
-              {/* 4. Compte mémorisé */}
               <FormSection label={`Compte bancaire${comptesBank.length > 1 ? ' · dernier utilisé pré-sélectionné' : ''}`} emoji="🏦">
                 {comptesBank.length === 0 ? (
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
@@ -1029,7 +1189,6 @@ export function PaiementsManager() {
                 )}
               </FormSection>
 
-              {/* Référence + notes (repliables) */}
               <details>
                 <summary className="text-xs text-gray-500 cursor-pointer py-1 hover:text-gray-700">
                   + Ajouter référence ou notes (optionnel)
@@ -1044,7 +1203,6 @@ export function PaiementsManager() {
                 </div>
               </details>
 
-              {/* 5. Récap live */}
               {recapMontant > 0 && pointageMode && pointageCompteId && (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-md p-2.5 flex gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
@@ -1064,7 +1222,6 @@ export function PaiementsManager() {
               )}
             </div>
 
-            {/* Footer actions */}
             <div className="flex gap-2 justify-end px-5 py-3 border-t border-gray-200">
               <button onClick={() => setPointageId(null)} disabled={savingPointage}
                 className="px-4 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50">
@@ -1189,5 +1346,20 @@ function SelectBtn({ active, onClick, flex, children }: {
       }>
       {children}
     </button>
+  );
+}
+
+// 🆕 Sous-composant pour le popup détail
+function DetailRow({ icon: Icon, label, children }: {
+  icon: any; label: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="flex items-center gap-1.5 text-gray-500 min-w-[140px] flex-shrink-0">
+        <Icon className="w-3.5 h-3.5" />
+        <span className="text-xs">{label}</span>
+      </div>
+      <div className="text-gray-900 text-sm flex-1">{children}</div>
+    </div>
   );
 }
