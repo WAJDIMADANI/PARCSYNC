@@ -17,6 +17,8 @@ interface ProfilRow {
   date_sortie: string | null;
   site_id: string | null;
   secteur_id: string | null;
+  type_piece_identite: string | null;
+  titre_sejour_fin_validite: string | null;
   site: { nom: string } | null;
   secteur: { nom: string } | null;
 }
@@ -55,6 +57,7 @@ export function ExportsRH() {
             id, matricule_tca, prenom, nom, email, tel, statut,
             modele_contrat, poste, date_entree, date_sortie,
             site_id, secteur_id,
+            type_piece_identite, titre_sejour_fin_validite,
             site:site_id ( nom ),
             secteur:secteur_id ( nom )
           `)
@@ -129,6 +132,8 @@ export function ExportsRH() {
       'Statut': s.statut || '',
       'Site': s.site?.nom || '',
       'Secteur': s.secteur?.nom || '',
+      'Type pièce identité': s.type_piece_identite || '',
+      'Fin de validité pièce identité': formatDate(s.titre_sejour_fin_validite),
     }));
   }
 
@@ -395,7 +400,8 @@ export function ExportsRH() {
         </h4>
         <p className="text-sm text-blue-800">
           Matricule TCA · Prénom · Nom · Email · Téléphone · Type de contrat · Poste ·
-          Date d'entrée · Date de sortie · Statut · Site · Secteur
+          Date d'entrée · Date de sortie · Statut · Site · Secteur ·
+          Type pièce identité · Fin de validité pièce identité
         </p>
       </div>
     </div>
