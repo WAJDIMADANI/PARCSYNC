@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Plus, Search, RefreshCw, MapPin, Calendar, Euro, User, Building, ArrowLeft, ArrowRight, CheckCircle, X, Filter, AlertCircle, Clock, FileText, Layers } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleLocations } from './VehicleLocations';
+import { EDLListVehicle } from './EDLListVehicle';
 
 interface Location {
   id: string;
@@ -970,11 +971,27 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
                             )}
                           </td>
 
+                          {/* Sig */}
                           <td className="px-3 py-3 text-center">
-                            {loc.signature_status === 'signed' && <span className="text-emerald-600 font-bold">✓</span>}
-                            {loc.signature_status === 'sent' && <span className="text-amber-500 text-xs font-medium">En att.</span>}
-                            {loc.signature_status === 'declined' && <span className="text-red-600 font-bold">✗</span>}
-                            {(!loc.signature_status || loc.signature_status === 'draft') && <span className="text-slate-300">—</span>}
+                            {(() => {
+                              const sig = loc.signature_status;
+                              if (sig === 'signed') {
+                                return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700" title="Contrat signé">✓ Signé</span>;
+                              }
+                              if (sig === 'sent') {
+                                return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700" title="Signature en attente">⏳ En attente</span>;
+                              }
+                              if (sig === 'declined') {
+                                return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700" title="Signature refusée">✗ Refusé</span>;
+                              }
+                              if (sig === 'expired') {
+                                return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700" title="Signature expirée">⌛ Expirée</span>;
+                              }
+                              if (!loc.contrat_pdf_path) {
+                                return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500" title="Aucun PDF généré">Pas de PDF</span>;
+                              }
+                              return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600" title="Contrat en brouillon (pas encore envoyé)">Brouillon</span>;
+                            })()}
                           </td>
 
                           <td className="px-3 py-3 text-center">
@@ -992,26 +1009,43 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
                             )}
                           </td>
 
-                          {/* EDL — fonctionnel */}
+                          {/* EDL — fonctionnel avec compteur */}
                           <td className="px-3 py-3 text-center">
                             {(() => {
                               const sortie = (loc.nb_edl_sortie || 0) > 0;
                               const entree = (loc.nb_edl_entree || 0) > 0;
+                              const total = loc.nb_edl_total || 0;
                               const isActive = loc.statut_calcule === 'en_cours' || loc.statut_calcule === 'a_venir';
+
                               if (sortie && entree) {
-                                return <span className="text-emerald-600 text-base" title="EDL Sortie + Retour">✓✓</span>;
+                                return (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700" title={`${total} EDL : Sortie + Retour`}>
+                                    S+R
+                                  </span>
+                                );
                               }
                               if (sortie) {
-                                return <span className="text-blue-600 text-xs font-medium" title="EDL Sortie fait, Retour manquant">S</span>;
+                                return (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700" title="EDL Sortie fait, Retour manquant">
+                                    Sortie
+                                  </span>
+                                );
                               }
                               if (entree) {
-                                return <span className="text-amber-600 text-xs font-medium" title="EDL Retour fait, Sortie manquante">R</span>;
+                                return (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700" title="EDL Retour fait, Sortie manquante">
+                                    Retour
+                                  </span>
+                                );
                               }
-                              return (
-                                <span className={`text-xs ${isActive ? 'text-red-500 font-medium' : 'text-slate-300'}`} title={isActive ? 'Aucun EDL ⚠' : 'Aucun EDL'}>
-                                  {isActive ? '⚠' : '—'}
-                                </span>
-                              );
+                              if (isActive) {
+                                return (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700" title="Aucun EDL ⚠ — Contrat actif sans état des lieux">
+                                    ⚠ Aucun
+                                  </span>
+                                );
+                              }
+                              return <span className="text-slate-300 text-xs" title="Aucun EDL">—</span>;
                             })()}
                           </td>
 
@@ -1109,8 +1143,19 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
               </div>
 
               {/* Contenu : composant VehicleLocations qui affiche tout */}
-              <div className="flex-1 overflow-y-auto p-5">
-                <VehicleLocations vehicleId={selectedLocation.vehicule_id} />
+              <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                {/* Section Location */}
+                <div>
+                  <VehicleLocations vehicleId={selectedLocation.vehicule_id} />
+                </div>
+
+                {/* Séparateur */}
+                <div className="border-t border-slate-200 pt-6">
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                    États des lieux ({selectedLocation.nb_edl_total || 0})
+                  </h4>
+                  <EDLListVehicle vehicleId={selectedLocation.vehicule_id} />
+                </div>
               </div>
 
               {/* Footer */}
