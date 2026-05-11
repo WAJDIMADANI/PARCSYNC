@@ -963,9 +963,10 @@ export function PaiementsManager() {
                     <tr>
                       <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 uppercase">#</th>
                       <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 uppercase">Mois</th>
-                      <th className="px-2 py-1.5 text-right text-[10px] font-medium text-gray-500 uppercase">Attendu</th>
+                 <th className="px-2 py-1.5 text-right text-[10px] font-medium text-gray-500 uppercase">Attendu</th>
+                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 uppercase">Date prévue</th>
                       <th className="px-2 py-1.5 text-right text-[10px] font-medium text-gray-500 uppercase">Payé</th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 uppercase">Date paie.</th>
+                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 uppercase">Date reçu</th>
                       <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 uppercase">Statut</th>
                       <th className="px-2 py-1.5 text-right text-[10px] font-medium text-gray-500 uppercase">Act.</th>
                     </tr>
