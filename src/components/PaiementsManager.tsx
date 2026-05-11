@@ -41,10 +41,8 @@ interface PaiementRow {
   date_fin: string | null;
   duree_mois: number | null;
   montant_mensuel_ttc: number | null;
-montant_total_ttc: number | null;
+  montant_total_ttc: number | null;
   mensualites_payees: number | null;
-  jour_paiement: number | null;
-}
 }
 
 interface ContratPaiement {
