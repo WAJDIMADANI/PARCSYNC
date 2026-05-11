@@ -985,7 +985,8 @@ export function PaiementsManager() {
                           <td className={'px-2 py-1.5 ' + (p.statut === 'partiel' || p.statut === 'retard' ? 'font-medium' : '')}>
                             {formatMoisLabel(p.mois)}
                           </td>
-                          <td className="px-2 py-1.5 text-right">{formatMontant(p.montant_attendu_ttc || 0)}</td>
+                     <td className="px-2 py-1.5 text-right">{formatMontant(p.montant_attendu_ttc || 0)}</td>
+                          <td className="px-2 py-1.5 text-gray-700 text-[11px]">{formatDateShort(getDatePrevue(p))}</td>
                           <td className={'px-2 py-1.5 text-right ' +
                             (p.statut === 'paye' ? 'text-emerald-700' :
                              p.statut === 'partiel' ? 'text-amber-700' : 'text-gray-300')}>
