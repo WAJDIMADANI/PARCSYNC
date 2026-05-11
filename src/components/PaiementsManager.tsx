@@ -196,7 +196,7 @@ export function PaiementsManager() {
           pointe_par, updated_at,
           location:location_id(
             type_location, statut, reference_contrat, date_debut, date_fin,
-            duree_mois, montant_mensuel_ttc, montant_total_ttc, mensualites_payees,
+         duree_mois, montant_mensuel_ttc, montant_total_ttc, mensualites_payees, jour_paiement,
             vehicule:vehicule_id(immatriculation, marque, modele, ref_tca),
             locataire:locataire_id(nom, prenom)
           )
