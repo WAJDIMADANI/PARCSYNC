@@ -239,8 +239,9 @@ export function PaiementsManager() {
           date_fin: p.location?.date_fin || null,
           duree_mois: p.location?.duree_mois || null,
           montant_mensuel_ttc: p.location?.montant_mensuel_ttc || null,
-          montant_total_ttc: p.location?.montant_total_ttc || null,
+         montant_total_ttc: p.location?.montant_total_ttc || null,
           mensualites_payees: p.location?.mensualites_payees || null,
+          jour_paiement: p.location?.jour_paiement || null,
         };
       });
 
