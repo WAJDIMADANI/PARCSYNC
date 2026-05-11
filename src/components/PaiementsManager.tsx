@@ -683,9 +683,16 @@ export function PaiementsManager() {
     } catch { return moisDate; }
   };
 
-  const formatNumber = (n: number) => {
-    if (n >= 1000) return (n / 1000).toFixed(0) + 'K';
-    return n.toFixed(0);
+ const formatNumber = (n: number) => {
+    if (n === 0) return '0';
+    // < 1000 : affichage entier sans K
+    if (n < 1000) return n.toFixed(0);
+    // >= 1000 : format K avec décimales si nécessaire
+    const enK = n / 1000;
+    // Si nombre rond (ex: 6000 → 6,0K → on affiche 6K)
+    if (enK === Math.floor(enK)) return enK.toFixed(0) + 'K';
+    // Sinon 1 décimale avec virgule française (ex: 5500 → 5,5K)
+    return enK.toFixed(1).replace('.', ',') + 'K';
   };
 
   const formatMontant = (n: number) => n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
