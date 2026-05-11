@@ -709,6 +709,25 @@ export function PaiementsManager() {
     return comptesBank.find(c => c.id === compteId) || null;
   };
 
+  // 🆕 Calcule la date prévue à partir de mois + jour_paiement du contrat
+  const getDatePrevue = (p: PaiementRow): string | null => {
+    if (!p.mois) return null;
+    const jourPaiement = p.jour_paiement || 1;
+    const date = new Date(p.mois);
+    // Ajuster au bon jour du mois (le mois en BDD est toujours le 1er)
+    date.setDate(jourPaiement);
+    return date.toISOString().split('T')[0];
+  };
+
+  // 🆕 Calcule l'écart en jours entre prévu et reçu (négatif = avance, positif = retard)
+  const getEcartJours = (datePrevue: string | null, dateRecue: string | null): number | null => {
+    if (!datePrevue || !dateRecue) return null;
+    const prev = new Date(datePrevue);
+    const recu = new Date(dateRecue);
+    const diffMs = recu.getTime() - prev.getTime();
+    return Math.round(diffMs / (1000 * 60 * 60 * 24));
+  };
+
   // ----------------------------------------------------------------------
   // RENDU
   // ----------------------------------------------------------------------
