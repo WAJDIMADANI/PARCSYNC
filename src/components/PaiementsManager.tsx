@@ -1064,8 +1064,23 @@ export function PaiementsManager() {
 
               {/* Détails en grille */}
               <div className="space-y-3 text-sm">
+                <DetailRow icon={Calendar} label="Date prévue">
+                  {(() => {
+                    const dp = getDatePrevue(paiementDetail);
+                    return dp ? formatDateLong(dp) : <span className="text-gray-400">—</span>;
+                  })()}
+                </DetailRow>
                 <DetailRow icon={Calendar} label="Date d'encaissement">
-                  {formatDateLong(paiementDetail.date_paiement)}
+                  <div>
+                    {formatDateLong(paiementDetail.date_paiement)}
+                    {(() => {
+                      const ecart = getEcartJours(getDatePrevue(paiementDetail), paiementDetail.date_paiement);
+                      if (ecart === null) return null;
+                      if (ecart === 0) return <span className="ml-2 text-[11px] text-emerald-700 font-medium">✓ pile à l'heure</span>;
+                      if (ecart < 0) return <span className="ml-2 text-[11px] text-emerald-700 font-medium">✓ payé {Math.abs(ecart)} jour{Math.abs(ecart) > 1 ? 's' : ''} en avance</span>;
+                      return <span className="ml-2 text-[11px] text-amber-700 font-medium">⚠ payé {ecart} jour{ecart > 1 ? 's' : ''} en retard</span>;
+                    })()}
+                  </div>
                 </DetailRow>
                 <DetailRow icon={Building2} label="Mode de paiement">
                   {paiementDetail.mode_paiement ? (MODES_LABELS[paiementDetail.mode_paiement] || paiementDetail.mode_paiement) : <span className="text-gray-400">—</span>}
