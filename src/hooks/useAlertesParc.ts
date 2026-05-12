@@ -206,6 +206,7 @@ export function useAlertesParc(mode: 'paiement' | 'location' | 'all') {
         const alerte: AlerteParc = {
           id: l.id,
           type,
+          typeCategorie: 'location',
           dismissKey,
           location_id: l.id,
           reference_contrat: l.reference_contrat || l.id.slice(0, 6).toUpperCase(),
