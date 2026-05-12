@@ -189,7 +189,7 @@ function LigneAlerte({ alerte, couleur, onVoirContrat, onPointer, onDismiss }: {
             <Check className="w-3 h-3" />Pointer
           </button>
         )}
-        <button onClick={() => onVoirContrat(alerte.location_id)}
+      <button onClick={() => onVoirContrat(alerte.location_id, alerte.typeCategorie)}
           className="text-[11px] px-2.5 py-1 border border-gray-200 rounded hover:bg-gray-50">
           Voir contrat
         </button>
