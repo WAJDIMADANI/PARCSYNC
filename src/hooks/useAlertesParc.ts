@@ -94,11 +94,11 @@ export function useAlertesParc(mode: 'paiement' | 'location' | 'document' | 'all
   });
 
   // ----- Chargement données -----
-  const refresh = useCallback(async () => {
+const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      // Récupère tous les paiements + locations non payés ET les contrats en cours
-      const [paiementsRes, locationsRes] = await Promise.all([
+      // Récupère tous les paiements + locations non payés ET les contrats en cours + documents véhicules
+      const [paiementsRes, locationsRes, documentsRes] = await Promise.all([
         (mode === 'paiement' || mode === 'all')
           ? supabase
               .from('paiements_location')
@@ -123,20 +123,32 @@ export function useAlertesParc(mode: 'paiement' | 'location' | 'document' | 'all
               .eq('statut', 'en_cours')
               .not('date_fin', 'is', null)
           : Promise.resolve({ data: [], error: null }),
+        (mode === 'document' || mode === 'all')
+          ? supabase
+              .from('document_vehicule')
+              .select(`
+                id, vehicule_id, type_document, date_expiration, actif,
+                vehicule:vehicule_id(id, immatriculation, marque, modele, statut)
+              `)
+              .eq('actif', true)
+              .in('type_document', ['controle_technique', 'assurance', 'carte_ris'])
+              .not('date_expiration', 'is', null)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (paiementsRes.error) throw paiementsRes.error;
       if (locationsRes.error) throw locationsRes.error;
+      if (documentsRes.error) throw documentsRes.error;
 
       setPaiements(paiementsRes.data || []);
       setLocations(locationsRes.data || []);
+      setDocuments(documentsRes.data || []);
     } catch (err) {
       console.error('[useAlertesParc] Erreur:', err);
     } finally {
       setLoading(false);
     }
   }, [mode]);
-
   useEffect(() => { refresh(); }, [refresh]);
 
   // ----- Helpers dismiss -----
