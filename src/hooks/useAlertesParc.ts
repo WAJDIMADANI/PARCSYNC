@@ -245,6 +245,54 @@ const refresh = useCallback(async () => {
       });
     }
 
+    // 3. ALERTES DOCUMENTS VÉHICULES (CT / Assurance / Carte RIS expirés ou expirant <30j)
+    if (mode === 'document' || mode === 'all') {
+      const DOC_LABELS: Record<string, string> = {
+        controle_technique: 'Contrôle technique',
+        assurance: 'Assurance',
+        carte_ris: 'Carte RIS',
+      };
+      documents.forEach((d: any) => {
+        if (!d.date_expiration) return;
+        if (!d.vehicule) return;
+        // Filtrer les véhicules sortis de flotte
+        if (d.vehicule.statut === 'sorti_flotte') return;
+
+        const ecart = diffJoursISO(today, d.date_expiration);
+
+        let type: AlerteType | null = null;
+        if (ecart < 0) type = 'doc_expire';
+        else if (ecart <= 30) type = 'doc_bientot';
+
+        if (!type) return;
+
+        const dismissKey = `${type}-document-${d.id}`;
+        const alerte: AlerteParc = {
+          id: d.id,
+          type,
+          typeCategorie: 'document',
+          dismissKey,
+          location_id: d.vehicule.id, // Pour la navigation vers le véhicule
+          reference_contrat: '',
+          vehicule_immat: d.vehicule.immatriculation || '—',
+          vehicule_marque: d.vehicule.marque || null,
+          vehicule_modele: d.vehicule.modele || null,
+          type_location: '',
+          locataire_nom: '',
+          locataire_prenom: '',
+          date_alerte: d.date_expiration,
+          joursEcart: ecart,
+          document_id: d.id,
+          document_type: d.type_document,
+          document_type_label: DOC_LABELS[d.type_document] || d.type_document,
+          vehicle_id: d.vehicule.id,
+          vehicle_statut: d.vehicule.statut,
+          date_expiration: d.date_expiration,
+        };
+        result.push(alerte);
+      });
+    }
+
     // Filtre dismissed (sauf retard et aujourd'hui qui persistent toujours)
     return result.filter(a => {
       if (a.type === 'retard' || a.type === 'aujourdhui') return true;
