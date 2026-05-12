@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 // TYPES
 // ========================================================================
 
-export type AlerteType = 'retard' | 'aujourdhui' | 'j3' | 'fin_j7' | 'fin_j30';
+export type AlerteType = 'retard' | 'aujourdhui' | 'j3' | 'fin_j7' | 'fin_j30' | 'doc_expire' | 'doc_bientot';
 
 export interface AlerteParc {
   // Identité unique
