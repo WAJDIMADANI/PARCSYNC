@@ -167,10 +167,11 @@ export function useAlertesParc(mode: 'paiement' | 'location' | 'all') {
 
         if (!type) return;
 
-        const dismissKey = `${type}-paiement-${p.id}`;
+    const dismissKey = `${type}-paiement-${p.id}`;
         const alerte: AlerteParc = {
           id: p.id,
           type,
+          typeCategorie: 'paiement',
           dismissKey,
           location_id: p.location_id,
           reference_contrat: p.location.reference_contrat || p.location_id.slice(0, 6).toUpperCase(),
