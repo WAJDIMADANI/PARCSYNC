@@ -134,6 +134,8 @@ export function Dashboard({ initialView }: DashboardProps = {}) {
         return <CRMSms />;
 case 'parc/vehicules':
         return <VehicleListNew onNavigate={handleViewChange} viewParams={viewParams} />;
+        case 'parc/alertes':
+  return <AlertesParcPage onNavigate={handleViewChange} />;
       case 'parc/locataires-externes':
         return <LocatairesExternesManager />;
       case 'parc/locations':
