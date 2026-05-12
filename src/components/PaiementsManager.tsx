@@ -725,22 +725,6 @@ const getCompteNom = (compteId: string | null) => {
     const p = paiements.find(x => x.id === paiementId);
     if (p) handleOpenPointage(p);
   };
-  // 🆕 Scroll vers la ligne du contrat dans le tableau + flash visuel
-  const scrollVersContrat = (locationId: string) => {
-    const row = document.getElementById('contrat-row-' + locationId);
-    if (!row) return;
-    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // Flash jaune 2 secondes
-    row.classList.add('bg-yellow-100');
-    setTimeout(() => row.classList.remove('bg-yellow-100'), 2000);
-  };
-
-  // 🆕 Trouver un paiement par son ID et ouvrir le modal de pointage
-  const ouvrirPointageParId = (paiementId: string) => {
-    const p = paiements.find(x => x.id === paiementId);
-    if (p) handleOpenPointage(p);
-  };
-  };
 
   // 🆕 Calcule la date prévue à partir de mois + jour_paiement du contrat
   const getDatePrevue = (p: PaiementRow): string | null => {
