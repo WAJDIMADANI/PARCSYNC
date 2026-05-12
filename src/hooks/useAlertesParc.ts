@@ -5,13 +5,13 @@ import { supabase } from '../lib/supabase';
 // TYPES
 // ========================================================================
 
-export type AlerteType = 'retard' | 'aujourdhui' | 'j3' | 'fin_j7' | 'fin_j30' | 'doc_expire' | 'doc_bientot';
+export type AlerteType = 'retard' | 'aujourdhui' | 'j3' | 'fin_j7' | 'fin_j30';
 
 export interface AlerteParc {
   // Identité unique
   id: string;
   type: AlerteType;
-  typeCategorie: 'paiement' | 'location' | 'document';
+  typeCategorie: 'paiement' | 'location'; // 🆕 pour savoir où naviguer
   dismissKey: string;
 
   // Contrat / location
@@ -32,16 +32,8 @@ export interface AlerteParc {
   paiement_id?: string;
   montant?: number;
 
-// Spécifique fin de location
+  // Spécifique fin de location
   date_fin?: string;
-
-  // Spécifique document véhicule
-  document_id?: string;
-  document_type?: 'controle_technique' | 'assurance' | 'carte_ris';
-  document_type_label?: string;
-  vehicle_id?: string;
-  vehicle_statut?: string;
-  date_expiration?: string;
 }
 
 export interface AlerteGroupe {
@@ -81,10 +73,9 @@ function diffJoursISO(fromISO: string, toISO: string): number {
 // HOOK PRINCIPAL
 // ========================================================================
 
-export function useAlertesParc(mode: 'paiement' | 'location' | 'document' | 'all') {
+export function useAlertesParc(mode: 'paiement' | 'location' | 'all') {
   const [paiements, setPaiements] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
-  const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState<string[]>(() => {
     try {
@@ -94,11 +85,11 @@ export function useAlertesParc(mode: 'paiement' | 'location' | 'document' | 'all
   });
 
   // ----- Chargement données -----
-const refresh = useCallback(async () => {
+  const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      // Récupère tous les paiements + locations non payés ET les contrats en cours + documents véhicules
-      const [paiementsRes, locationsRes, documentsRes] = await Promise.all([
+      // Récupère tous les paiements + locations non payés ET les contrats en cours
+      const [paiementsRes, locationsRes] = await Promise.all([
         (mode === 'paiement' || mode === 'all')
           ? supabase
               .from('paiements_location')
@@ -123,32 +114,20 @@ const refresh = useCallback(async () => {
               .eq('statut', 'en_cours')
               .not('date_fin', 'is', null)
           : Promise.resolve({ data: [], error: null }),
-        (mode === 'document' || mode === 'all')
-          ? supabase
-              .from('document_vehicule')
-              .select(`
-                id, vehicule_id, type_document, date_expiration, actif,
-                vehicule:vehicule_id(id, immatriculation, marque, modele, statut)
-              `)
-              .eq('actif', true)
-              .in('type_document', ['controle_technique', 'assurance', 'carte_ris'])
-              .not('date_expiration', 'is', null)
-          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (paiementsRes.error) throw paiementsRes.error;
       if (locationsRes.error) throw locationsRes.error;
-      if (documentsRes.error) throw documentsRes.error;
 
       setPaiements(paiementsRes.data || []);
       setLocations(locationsRes.data || []);
-      setDocuments(documentsRes.data || []);
     } catch (err) {
       console.error('[useAlertesParc] Erreur:', err);
     } finally {
       setLoading(false);
     }
   }, [mode]);
+
   useEffect(() => { refresh(); }, [refresh]);
 
   // ----- Helpers dismiss -----
@@ -240,54 +219,6 @@ const refresh = useCallback(async () => {
           date_alerte: l.date_fin,
           joursEcart: ecart,
           date_fin: l.date_fin,
-        };
-        result.push(alerte);
-      });
-    }
-
-    // 3. ALERTES DOCUMENTS VÉHICULES (CT / Assurance / Carte RIS expirés ou expirant <30j)
-    if (mode === 'document' || mode === 'all') {
-      const DOC_LABELS: Record<string, string> = {
-        controle_technique: 'Contrôle technique',
-        assurance: 'Assurance',
-        carte_ris: 'Carte RIS',
-      };
-      documents.forEach((d: any) => {
-        if (!d.date_expiration) return;
-        if (!d.vehicule) return;
-        // Filtrer les véhicules sortis de flotte
-        if (d.vehicule.statut === 'sorti_flotte') return;
-
-        const ecart = diffJoursISO(today, d.date_expiration);
-
-        let type: AlerteType | null = null;
-        if (ecart < 0) type = 'doc_expire';
-        else if (ecart <= 30) type = 'doc_bientot';
-
-        if (!type) return;
-
-        const dismissKey = `${type}-document-${d.id}`;
-        const alerte: AlerteParc = {
-          id: d.id,
-          type,
-          typeCategorie: 'document',
-          dismissKey,
-          location_id: d.vehicule.id, // Pour la navigation vers le véhicule
-          reference_contrat: '',
-          vehicule_immat: d.vehicule.immatriculation || '—',
-          vehicule_marque: d.vehicule.marque || null,
-          vehicule_modele: d.vehicule.modele || null,
-          type_location: '',
-          locataire_nom: '',
-          locataire_prenom: '',
-          date_alerte: d.date_expiration,
-          joursEcart: ecart,
-          document_id: d.id,
-          document_type: d.type_document,
-          document_type_label: DOC_LABELS[d.type_document] || d.type_document,
-          vehicle_id: d.vehicule.id,
-          vehicle_statut: d.vehicule.statut,
-          date_expiration: d.date_expiration,
         };
         result.push(alerte);
       });

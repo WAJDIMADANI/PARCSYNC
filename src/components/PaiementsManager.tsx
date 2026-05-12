@@ -137,10 +137,9 @@ const PAGE_SIZE = 50;
 
 interface PaiementsManagerProps {
   onNavigate?: (view: string, params?: any) => void;
-  viewParams?: any;
 }
 
-export function PaiementsManager({ onNavigate, viewParams }: PaiementsManagerProps = {}) {
+export function PaiementsManager({ onNavigate }: PaiementsManagerProps = {}) {
   const [paiements, setPaiements] = useState<PaiementRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -186,7 +185,8 @@ export function PaiementsManager({ onNavigate, viewParams }: PaiementsManagerPro
       .then(({ data }) => setComptesBank(data || []));
   }, []);
 
-useEffect(() => { fetchPaiements(); }, []);
+  useEffect(() => { fetchPaiements(); }, []);
+
   // 🆕 fetchPaiements retourne maintenant les rows pour usage immédiat
   const fetchPaiements = async (): Promise<PaiementRow[]> => {
     setLoading(true);
@@ -326,17 +326,6 @@ useEffect(() => { fetchPaiements(); }, []);
       .map(id => calculerContrat(id, paiements))
       .filter((c): c is ContratPaiement => c !== null);
   }, [paiements]);
-
-  // 🆕 Auto-ouverture de la popup contrat si on arrive depuis le Dashboard avec un focus_location_id
-  useEffect(() => {
-    if (viewParams?.focus_location_id && allContrats.length > 0) {
-      const contrat = allContrats.find(c => c.location_id === viewParams.focus_location_id);
-      if (contrat) {
-        setContratDetail(contrat);
-        setFilterDetail('tout');
-      }
-    }
-  }, [viewParams, allContrats]);
 
   // ----------------------------------------------------------------------
   // FILTRAGE

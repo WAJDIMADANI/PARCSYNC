@@ -13,8 +13,7 @@ import { AlertsList } from './AlertsList';
 import { SetupCheck } from './SetupCheck';
 import { CTAssuranceList } from './CTAssuranceList';
 import { MaintenanceList } from './MaintenanceList';
-import { ParcDashboard } from './ParcDashboard'; 
-import { AlertesParcPage } from './AlertesParcPage';
+import { ParcDashboard } from './ParcDashboard';
 import { ParcExports } from './ParcExports';
 import { DocumentsManager } from './DocumentsManager';
 import { RHDashboard } from './RHDashboard';
@@ -133,16 +132,14 @@ export function Dashboard({ initialView }: DashboardProps = {}) {
         return <CRMEmails />;
       case 'rh/sms':
         return <CRMSms />;
-case 'parc/vehicules':
-        return <VehicleListNew onNavigate={handleViewChange} viewParams={viewParams} />;
-        case 'parc/alertes':
-  return <AlertesParcPage onNavigate={handleViewChange} />;
+      case 'parc/vehicules':
+        return <VehicleListNew onNavigate={handleViewChange} />;
       case 'parc/locataires-externes':
         return <LocatairesExternesManager />;
       case 'parc/locations':
         return <LocationsManager viewParams={viewParams} onNavigate={handleViewChange} />;
 case 'parc/paiements':
-        return <PaiementsManager onNavigate={handleViewChange} viewParams={viewParams} />;
+        return <PaiementsManager onNavigate={handleViewChange} />;
    case 'parc/etats-des-lieux':
         return <EDLListGlobal />;
       case 'parc/ct-assurance':
@@ -164,8 +161,8 @@ case 'parc/paiements':
         return <AccountingDashboard currentView={view} onViewChange={handleViewChange} viewParams={viewParams} />;
       case 'dashboards/rh':
         return <RHDashboard onNavigate={handleViewChange} />;
-case 'dashboards/parc':
-        return <ParcDashboard onNavigate={handleViewChange} />;
+      case 'dashboards/parc':
+        return <ParcDashboard />;
       case 'exports/rh':
         // 🆕 Remplace l'ancien placeholder « à venir » par le composant dédié
         return <ExportsRH />;
@@ -229,8 +226,7 @@ case 'dashboards/parc':
                 {view === 'rh/validations' && 'Validations'}
                 {view === 'rh/emails' && 'CRM - Emails'}
                 {view === 'rh/sms' && 'CRM - SMS'}
-               {view === 'parc/vehicules' && 'Véhicules'}
-                {view === 'parc/alertes' && 'Alertes'}
+                {view === 'parc/vehicules' && 'Véhicules'}
                 {view === 'parc/locataires-externes' && 'Loueurs'}
                 {view === 'parc/locations' && 'Locations'}
                 {view === 'parc/etats-des-lieux' && 'États des lieux'}

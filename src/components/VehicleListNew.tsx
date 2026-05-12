@@ -153,7 +153,7 @@ function SalarieSearch({ salaries, selectedId, onSelect }: {
   );
 }
 
-export function VehicleListNew({ onNavigate, viewParams }: { onNavigate?: (view: string, params?: any) => void; viewParams?: any } = {}) {
+export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, params?: any) => void } = {}) {
   const { appUserId, appUserNom, appUserPrenom } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,20 +201,10 @@ const [showEDLModal, setShowEDLModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
 
-useEffect(() => {
+  useEffect(() => {
     fetchVehicles();
     fetchSalariesEtLoueurs();
   }, []);
-
-  // 🆕 Auto-ouverture popup détail si on arrive depuis la page Alertes avec un vehicleId
-  useEffect(() => {
-    if (viewParams?.vehicleId && vehicles.length > 0) {
-      const vehicle = vehicles.find(v => v.id === viewParams.vehicleId);
-      if (vehicle) {
-        setSelectedVehicle(vehicle);
-      }
-    }
-  }, [viewParams, vehicles]);
 
   const fetchVehicles = async () => {
     setLoading(true);
