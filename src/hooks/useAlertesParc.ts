@@ -81,9 +81,10 @@ function diffJoursISO(fromISO: string, toISO: string): number {
 // HOOK PRINCIPAL
 // ========================================================================
 
-export function useAlertesParc(mode: 'paiement' | 'location' | 'all') {
+export function useAlertesParc(mode: 'paiement' | 'location' | 'document' | 'all') {
   const [paiements, setPaiements] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState<string[]>(() => {
     try {
