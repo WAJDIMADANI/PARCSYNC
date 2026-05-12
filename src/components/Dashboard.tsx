@@ -226,7 +226,8 @@ case 'parc/paiements':
                 {view === 'rh/validations' && 'Validations'}
                 {view === 'rh/emails' && 'CRM - Emails'}
                 {view === 'rh/sms' && 'CRM - SMS'}
-                {view === 'parc/vehicules' && 'Véhicules'}
+          {view === 'parc/vehicules' && 'Véhicules'}
+                {view === 'parc/alertes' && 'Alertes'}
                 {view === 'parc/locataires-externes' && 'Loueurs'}
                 {view === 'parc/locations' && 'Locations'}
                 {view === 'parc/etats-des-lieux' && 'États des lieux'}
