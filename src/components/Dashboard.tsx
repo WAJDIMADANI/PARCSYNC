@@ -14,6 +14,7 @@ import { SetupCheck } from './SetupCheck';
 import { CTAssuranceList } from './CTAssuranceList';
 import { MaintenanceList } from './MaintenanceList';
 import { ParcDashboard } from './ParcDashboard';
+import { AlertesParcPage } from './AlertesParcPage';
 import { ParcExports } from './ParcExports';
 import { DocumentsManager } from './DocumentsManager';
 import { RHDashboard } from './RHDashboard';
@@ -133,7 +134,9 @@ export function Dashboard({ initialView }: DashboardProps = {}) {
       case 'rh/sms':
         return <CRMSms />;
       case 'parc/vehicules':
-        return <VehicleListNew onNavigate={handleViewChange} />;
+        return <VehicleListNew onNavigate={handleViewChange} viewParams={viewParams} />;
+      case 'parc/alertes':
+        return <AlertesParcPage onNavigate={handleViewChange} />;
       case 'parc/locataires-externes':
         return <LocatairesExternesManager />;
       case 'parc/locations':

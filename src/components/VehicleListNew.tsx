@@ -153,7 +153,7 @@ function SalarieSearch({ salaries, selectedId, onSelect }: {
   );
 }
 
-export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, params?: any) => void } = {}) {
+export function VehicleListNew({ onNavigate, viewParams }: { onNavigate?: (view: string, params?: any) => void; viewParams?: any } = {}) {
   const { appUserId, appUserNom, appUserPrenom } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -205,6 +205,13 @@ const [showEDLModal, setShowEDLModal] = useState(false);
     fetchVehicles();
     fetchSalariesEtLoueurs();
   }, []);
+
+  useEffect(() => {
+    if (viewParams?.vehicleId && vehicles.length > 0) {
+      const vehicle = vehicles.find(v => v.id === viewParams.vehicleId);
+      if (vehicle) setSelectedVehicle(vehicle);
+    }
+  }, [viewParams, vehicles]);
 
   const fetchVehicles = async () => {
     setLoading(true);
