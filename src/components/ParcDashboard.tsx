@@ -152,11 +152,23 @@ export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
   }
 
   return (
-    <div>
-      <div className="mb-6">
+<div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Tableau de bord Parc</h1>
         <p className="text-gray-600 mt-1">Vue d'ensemble de votre flotte automobile</p>
       </div>
+
+      {/* 🆕 ENCART ALERTES PARC (paiements + locations mélangés) */}
+      <AlertesParcEncart
+        mode="all"
+        onVoirContrat={(locationId, typeCategorie) => {
+          if (!onNavigate) return;
+          if (typeCategorie === 'paiement') {
+            onNavigate('parc/paiements', { focus_location_id: locationId });
+          } else {
+            onNavigate('parc/locations', { focus_location_id: locationId });
+          }
+        }}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
