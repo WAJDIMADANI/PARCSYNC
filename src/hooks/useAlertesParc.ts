@@ -11,7 +11,7 @@ export interface AlerteParc {
   // Identité unique
   id: string;
   type: AlerteType;
-  typeCategorie: 'paiement' | 'location'; // 🆕 pour savoir où naviguer
+  typeCategorie: 'paiement' | 'location' | 'document';
   dismissKey: string;
 
   // Contrat / location
