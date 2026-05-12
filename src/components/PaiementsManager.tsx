@@ -135,7 +135,11 @@ const PAGE_SIZE = 50;
 // COMPOSANT PRINCIPAL
 // ========================================================================
 
-export function PaiementsManager() {
+interface PaiementsManagerProps {
+  onNavigate?: (view: string, params?: any) => void;
+}
+
+export function PaiementsManager({ onNavigate }: PaiementsManagerProps = {}) {
   const [paiements, setPaiements] = useState<PaiementRow[]>([]);
   const [loading, setLoading] = useState(true);
 
