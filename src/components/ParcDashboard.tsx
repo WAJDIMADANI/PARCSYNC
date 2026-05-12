@@ -17,7 +17,11 @@ interface DashboardStats {
   maintenancesPrevues: number;
 }
 
-export function ParcDashboard() {
+interface ParcDashboardProps {
+  onNavigate?: (view: string, params?: any) => void;
+}
+
+export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
   const [stats, setStats] = useState<DashboardStats>({
     totalVehicules: 0,
     vehiculesActifs: 0,
