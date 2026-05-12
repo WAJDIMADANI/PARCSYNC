@@ -878,7 +878,8 @@ const getCompteNom = (compteId: string | null) => {
                 const SanteIcon = sc.icon;
                 const isRisque = c.sante === 'risque';
                 return (
-                  <tr key={c.location_id}
+              <tr key={c.location_id}
+                    id={'contrat-row-' + c.location_id}
                     onClick={() => { setContratDetail(c); setFilterDetail('tout'); }}
                     className={'cursor-pointer transition-colors ' + (isRisque ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50')}>
                     <td className="px-3 py-2 font-mono text-gray-500">{c.reference_contrat}</td>
