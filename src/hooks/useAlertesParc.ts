@@ -32,8 +32,16 @@ export interface AlerteParc {
   paiement_id?: string;
   montant?: number;
 
-  // Spécifique fin de location
+// Spécifique fin de location
   date_fin?: string;
+
+  // Spécifique document véhicule
+  document_id?: string;
+  document_type?: 'controle_technique' | 'assurance' | 'carte_ris';
+  document_type_label?: string;
+  vehicle_id?: string;
+  vehicle_statut?: string;
+  date_expiration?: string;
 }
 
 export interface AlerteGroupe {
