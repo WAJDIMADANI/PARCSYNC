@@ -50,8 +50,9 @@ const AVAILABLE_PERMISSIONS = [
     { id: 'rh/demandes', label: 'Demandes' },
     { id: 'rh/validations', label: 'Validations' },
   ]},
-  { section: 'Parc', permissions: [
+{ section: 'Parc', permissions: [
     { id: 'parc/vehicules', label: 'Véhicules' },
+    { id: 'parc/alertes', label: 'Alertes' },
     { id: 'parc/locataires-externes', label: 'Loueurs' },
     { id: 'parc/locations', label: 'Locations' },
     { id: 'parc/etats-des-lieux', label: 'États des lieux' },         
