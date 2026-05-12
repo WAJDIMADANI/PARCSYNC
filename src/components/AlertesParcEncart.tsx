@@ -71,7 +71,7 @@ export function AlertesParcEncart({ mode, onVoirContrat, onPointer, refreshTrigg
 
 function GroupeAlertes({ groupe, onVoirContrat, onPointer, onDismiss }: {
   groupe: AlerteGroupe;
-  onVoirContrat: (locationId: string) => void;
+  onVoirContrat: (locationId: string, typeCategorie: 'paiement' | 'location') => void;
   onPointer?: (paiementId: string) => void;
   onDismiss: (key: string) => void;
 }) {
