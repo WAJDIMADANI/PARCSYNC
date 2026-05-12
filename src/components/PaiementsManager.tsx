@@ -186,8 +186,18 @@ export function PaiementsManager({ onNavigate, viewParams }: PaiementsManagerPro
       .then(({ data }) => setComptesBank(data || []));
   }, []);
 
-  useEffect(() => { fetchPaiements(); }, []);
+useEffect(() => { fetchPaiements(); }, []);
 
+  // 🆕 Auto-ouverture de la popup contrat si on arrive depuis le Dashboard avec un focus_location_id
+  useEffect(() => {
+    if (viewParams?.focus_location_id && allContrats.length > 0) {
+      const contrat = allContrats.find(c => c.location_id === viewParams.focus_location_id);
+      if (contrat) {
+        setContratDetail(contrat);
+        setFilterDetail('tout');
+      }
+    }
+  }, [viewParams, allContrats]);
   // 🆕 fetchPaiements retourne maintenant les rows pour usage immédiat
   const fetchPaiements = async (): Promise<PaiementRow[]> => {
     setLoading(true);
