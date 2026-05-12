@@ -851,6 +851,13 @@ const getCompteNom = (compteId: string | null) => {
         </label>
       </div>
 
+   {/* 🆕 ENCART ALERTES PAIEMENTS */}
+      <AlertesParcEncart
+        mode="paiement"
+        onVoirContrat={scrollVersContrat}
+        onPointer={ouvrirPointageParId}
+      />
+
       {/* TABLEAU PRINCIPAL */}
       {paginatedContrats.length === 0 ? (
         <div className="bg-white rounded-md border border-gray-200 p-10 text-center">
