@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Car, AlertTriangle, Wrench, Shield, TrendingUp, Calendar, FileText } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { AlertesParcEncart } from './AlertesParcEncart';
 
 interface DashboardStats {
   totalVehicules: number;
