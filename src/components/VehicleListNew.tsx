@@ -153,7 +153,7 @@ function SalarieSearch({ salaries, selectedId, onSelect }: {
   );
 }
 
-export function VehicleListNew({ onNavigate }: { onNavigate?: (view: string, params?: any) => void } = {}) {
+export function VehicleListNew({ onNavigate, viewParams }: { onNavigate?: (view: string, params?: any) => void; viewParams?: any } = {}) {
   const { appUserId, appUserNom, appUserPrenom } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
