@@ -184,8 +184,9 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       label: 'Parc',
       icon: Car,
       enabled: true,
-      children: [
+  children: [
         { id: 'parc/vehicules', label: 'Véhicules', icon: Car, enabled: true },
+        { id: 'parc/alertes', label: 'Alertes', icon: Bell, enabled: true },
         { id: 'parc/locataires-externes', label: 'Loueurs', icon: Building, enabled: true },
        { id: 'parc/locations', label: 'Locations', icon: MapPin, enabled: true },
         { id: 'parc/paiements', label: 'Paiements', icon: Banknote, enabled: true },
