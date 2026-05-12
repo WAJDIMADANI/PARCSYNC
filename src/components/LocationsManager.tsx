@@ -125,7 +125,7 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
     fetchLocations();
   }, []);
 
-  useEffect(() => {
+ useEffect(() => {
     if (viewParams?.vehiculeId) {
       setVehiculeId(viewParams.vehiculeId);
       setVehiculeImmat(viewParams.vehiculeImmat || '');
@@ -134,7 +134,14 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
       }
       setView('form');
     }
-  }, [viewParams]);
+    // 🆕 Si on arrive depuis une alerte fin de location → ouvre la popup auto
+    if (viewParams?.focus_location_id && locations.length > 0) {
+      const loc = locations.find(l => l.id === viewParams.focus_location_id);
+      if (loc) {
+        setSelectedLocation(loc);
+      }
+    }
+  }, [viewParams, locations]);
 
   const fetchLocations = async () => {
     setLoading(true);
