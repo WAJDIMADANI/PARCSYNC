@@ -161,8 +161,8 @@ case 'parc/paiements':
         return <AccountingDashboard currentView={view} onViewChange={handleViewChange} viewParams={viewParams} />;
       case 'dashboards/rh':
         return <RHDashboard onNavigate={handleViewChange} />;
-      case 'dashboards/parc':
-        return <ParcDashboard />;
+case 'dashboards/parc':
+        return <ParcDashboard onNavigate={handleViewChange} />;
       case 'exports/rh':
         // 🆕 Remplace l'ancien placeholder « à venir » par le composant dédié
         return <ExportsRH />;
