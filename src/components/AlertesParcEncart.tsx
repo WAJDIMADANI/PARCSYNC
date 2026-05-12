@@ -123,7 +123,7 @@ function GroupeAlertes({ groupe, onVoirContrat, onPointer, onDismiss }: {
 function LigneAlerte({ alerte, couleur, onVoirContrat, onPointer, onDismiss }: {
   alerte: AlerteParc;
   couleur: 'red' | 'amber' | 'blue' | 'slate';
-  onVoirContrat: (locationId: string) => void;
+  onVoirContrat: (locationId: string, typeCategorie: 'paiement' | 'location') => void;
   onPointer?: (paiementId: string) => void;
   onDismiss: (key: string) => void;
 }) {
