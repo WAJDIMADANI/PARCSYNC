@@ -6,6 +6,7 @@ import {
   User, StickyNote, ArrowUpLeft
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { AlertesParcEncart } from './AlertesParcEncart';
 
 // ========================================================================
 // TYPES
