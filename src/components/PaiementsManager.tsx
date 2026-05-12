@@ -714,12 +714,17 @@ const getCompteNom = (compteId: string | null) => {
     return comptesBank.find(c => c.id === compteId) || null;
   };
 
-  // 🆕 Scroll vers la ligne du contrat dans le tableau + flash visuel
-  const scrollVersContrat = (locationId: string) => {
+// 🆕 Navigation intelligente selon le type d'alerte
+  const scrollVersContrat = (locationId: string, typeCategorie: 'paiement' | 'location') => {
+    // Si alerte de fin de location → on bascule sur l'écran Locations
+    if (typeCategorie === 'location' && onNavigate) {
+      onNavigate('parc/locations', { focus_location_id: locationId });
+      return;
+    }
+    // Sinon (alerte paiement) → scroll local + flash sur la ligne
     const row = document.getElementById('contrat-row-' + locationId);
     if (!row) return;
     row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // Flash jaune 2 secondes
     row.classList.add('bg-yellow-100');
     setTimeout(() => row.classList.remove('bg-yellow-100'), 2000);
   };
