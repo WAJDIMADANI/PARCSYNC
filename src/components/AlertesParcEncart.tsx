@@ -4,7 +4,7 @@ import { useAlertesParc, AlerteParc, AlerteGroupe } from '../hooks/useAlertesPar
 
 interface Props {
   mode: 'paiement' | 'location' | 'all';
-  onVoirContrat: (locationId: string) => void;
+  onVoirContrat: (locationId: string, typeCategorie: 'paiement' | 'location') => void;
   onPointer?: (paiementId: string) => void; // Optionnel : si pas fourni, bouton caché
   refreshTrigger?: number; // Incrémenter pour forcer le refresh
 }
