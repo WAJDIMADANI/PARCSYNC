@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Car, AlertTriangle, Wrench, Shield, TrendingUp, Calendar, FileText } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { useAlertesParc } from '../hooks/useAlertesParc';
 
 interface DashboardStats {
   totalVehicules: number;
@@ -16,7 +17,11 @@ interface DashboardStats {
   maintenancesPrevues: number;
 }
 
-export function ParcDashboard() {
+interface ParcDashboardProps {
+  onNavigate?: (view: string, params?: any) => void;
+}
+
+export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
   const [stats, setStats] = useState<DashboardStats>({
     totalVehicules: 0,
     vehiculesActifs: 0,
@@ -30,6 +35,9 @@ export function ParcDashboard() {
     maintenancesPrevues: 0,
   });
   const [loading, setLoading] = useState(true);
+
+  // Récupère les alertes paiements + locations (les docs sont déjà comptés dans stats)
+  const { alertes: alertesParcLoc } = useAlertesParc('all');
 
   useEffect(() => {
     fetchStats();
@@ -146,6 +154,13 @@ export function ParcDashboard() {
     );
   }
 
+  // Total alertes : docs (CT+Assurance+RIS) + paiements + fins de location
+  const totalAlertes =
+    stats.ctExpiring + stats.ctExpired +
+    stats.assuranceExpiring + stats.assuranceExpired +
+    stats.carteRisExpiring + stats.carteRisExpired +
+    alertesParcLoc.filter(a => a.typeCategorie === 'paiement' || a.typeCategorie === 'location').length;
+
   return (
     <div>
       <div className="mb-6">
@@ -247,18 +262,21 @@ export function ParcDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <button
+          onClick={() => onNavigate?.('parc/alertes')}
+          className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md hover:border-red-300 border-2 border-transparent transition-all cursor-pointer w-full"
+        >
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600">Alertes totales</p>
               <p className="text-3xl font-bold text-red-600 mt-1">
-                {stats.ctExpiring + stats.ctExpired + stats.assuranceExpiring + stats.assuranceExpired + stats.carteRisExpiring + stats.carteRisExpired}
+                {totalAlertes}
               </p>
             </div>
             <AlertTriangle className="w-12 h-12 text-red-600" />
           </div>
           <div className="text-sm text-gray-600">
-            Actions requises
+            <span className="font-medium text-red-600">→ Voir le centre d'alertes</span>
             <div className="mt-2 space-y-1">
               {(stats.ctExpired + stats.assuranceExpired + stats.carteRisExpired) > 0 && (
                 <span className="block text-red-600 font-semibold text-xs">
@@ -267,7 +285,7 @@ export function ParcDashboard() {
               )}
             </div>
           </div>
-        </div>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

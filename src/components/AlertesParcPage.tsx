@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useAlertesParc, AlerteParc } from '../hooks/useAlertesParc';
 
-type CategorieFilter = 'all' | 'urgent' | 'paiement' | 'location' | 'document';
+type CategorieFilter = 'all' | 'urgent' | 'paiement' | 'location' | 'carte_ris' | 'controle_technique' | 'assurance';
 type SortBy = 'urgence' | 'date_asc' | 'date_desc';
 
 interface Props {
@@ -37,8 +37,10 @@ export function AlertesParcPage({ onNavigate }: Props) {
     const urgent = alertes.filter(a => a.type === 'retard' || a.type === 'aujourdhui' || a.type === 'doc_expire').length;
     const paiement = alertes.filter(a => a.typeCategorie === 'paiement').length;
     const location = alertes.filter(a => a.typeCategorie === 'location').length;
-    const document = alertes.filter(a => a.typeCategorie === 'document').length;
-    return { total, urgent, paiement, location, document };
+    const carte_ris = alertes.filter(a => a.typeCategorie === 'document' && a.document_type === 'carte_ris').length;
+    const controle_technique = alertes.filter(a => a.typeCategorie === 'document' && a.document_type === 'controle_technique').length;
+    const assurance = alertes.filter(a => a.typeCategorie === 'document' && a.document_type === 'assurance').length;
+    return { total, urgent, paiement, location, carte_ris, controle_technique, assurance };
   }, [alertes]);
 
   const filteredAlertes = useMemo(() => {
@@ -46,7 +48,9 @@ export function AlertesParcPage({ onNavigate }: Props) {
     if (categorie === 'urgent') result = result.filter(a => a.type === 'retard' || a.type === 'aujourdhui' || a.type === 'doc_expire');
     else if (categorie === 'paiement') result = result.filter(a => a.typeCategorie === 'paiement');
     else if (categorie === 'location') result = result.filter(a => a.typeCategorie === 'location');
-    else if (categorie === 'document') result = result.filter(a => a.typeCategorie === 'document');
+    else if (categorie === 'carte_ris') result = result.filter(a => a.typeCategorie === 'document' && a.document_type === 'carte_ris');
+    else if (categorie === 'controle_technique') result = result.filter(a => a.typeCategorie === 'document' && a.document_type === 'controle_technique');
+    else if (categorie === 'assurance') result = result.filter(a => a.typeCategorie === 'document' && a.document_type === 'assurance');
 
     if (search) {
       const q = search.toLowerCase();
@@ -162,17 +166,19 @@ export function AlertesParcPage({ onNavigate }: Props) {
         <Kpi label="Urgent" value={String(kpis.urgent)} icon={AlertTriangle} color="red" outline={kpis.urgent > 0} />
         <Kpi label="Paiements" value={String(kpis.paiement)} icon={Banknote} color="emerald" />
         <Kpi label="Locations" value={String(kpis.location)} icon={MapPin} color="blue" />
-        <Kpi label="Documents" value={String(kpis.document)} icon={FileText} color="purple" />
+        <Kpi label="Documents" value={String(kpis.carte_ris + kpis.controle_technique + kpis.assurance)} icon={FileText} color="purple" />
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 mb-3">
-        <div className="inline-flex gap-0.5 bg-white border border-gray-200 rounded-md p-0.5">
+        <div className="inline-flex flex-wrap gap-0.5 bg-white border border-gray-200 rounded-md p-0.5">
           {([
             { key: 'all', label: `Tout (${kpis.total})` },
             { key: 'urgent', label: `Urgent (${kpis.urgent})` },
             { key: 'paiement', label: `Paiements (${kpis.paiement})` },
-            { key: 'location', label: `Locations (${kpis.location})` },
-            { key: 'document', label: `Documents (${kpis.document})` },
+            { key: 'location', label: `Contrats (${kpis.location})` },
+            { key: 'carte_ris', label: `Carte RIS (${kpis.carte_ris})` },
+            { key: 'controle_technique', label: `CT (${kpis.controle_technique})` },
+            { key: 'assurance', label: `Assurance (${kpis.assurance})` },
           ] as { key: CategorieFilter; label: string }[]).map(f => (
             <button key={f.key} onClick={() => setCategorie(f.key)}
               className={'px-3 py-1 text-xs font-medium rounded ' + (categorie === f.key ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:text-gray-900')}>
