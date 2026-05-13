@@ -36,8 +36,13 @@ export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
   });
   const [loading, setLoading] = useState(true);
 
-  // Récupère les alertes paiements + locations (les docs sont déjà comptés dans stats)
+  // Source unique de vérité pour les alertes
   const { alertes: alertesParcLoc } = useAlertesParc('all');
+
+  // Compteurs documents depuis le hook (au lieu de fetchStats)
+  const alertesCT = alertesParcLoc.filter(a => a.document_type === 'controle_technique');
+  const alertesAssurance = alertesParcLoc.filter(a => a.document_type === 'assurance');
+  const alertesCarteRis = alertesParcLoc.filter(a => a.document_type === 'carte_ris');
 
   useEffect(() => {
     fetchStats();
@@ -154,8 +159,11 @@ export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
     );
   }
 
-  // Total alertes : utilise directement le hook useAlertesParc qui couvre tout (paiements + locations + tous les docs)
+  // Total alertes : couvre tout (paiements + locations + tous les docs)
   const totalAlertes = alertesParcLoc.length;
+  const nbCT = alertesCT.length;
+  const nbAssurance = alertesAssurance.length;
+  const nbCarteRis = alertesCarteRis.length;
 
   return (
     <div>
@@ -165,7 +173,10 @@ export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
+        <button
+          onClick={() => onNavigate?.('parc/vehicules')}
+          className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md hover:border-blue-300 border-2 border-transparent transition-all cursor-pointer w-full"
+        >
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600">Total véhicules</p>
@@ -174,65 +185,62 @@ export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
             <Car className="w-12 h-12 text-blue-600" />
           </div>
           <div className="text-sm text-gray-600">
-            <span className="font-semibold text-green-600">{stats.vehiculesActifs}</span> actifs
+            <span className="font-medium text-blue-600">→ Voir tous les véhicules</span>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <button
+          onClick={() => onNavigate?.('parc/alertes', { initialFilter: 'controle_technique' })}
+          className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md hover:border-orange-300 border-2 border-transparent transition-all cursor-pointer w-full"
+        >
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600">CT à renouveler</p>
-              <p className="text-3xl font-bold text-orange-600 mt-1">{stats.ctExpiring}</p>
+              <p className="text-3xl font-bold text-orange-600 mt-1">{nbCT}</p>
             </div>
             <Shield className="w-12 h-12 text-orange-600" />
           </div>
           <div className="text-sm text-gray-600">
-            Dans les 30 prochains jours
-            {stats.ctExpired > 0 && (
-              <span className="block text-red-600 font-semibold mt-1">
-                {stats.ctExpired} expirés
-              </span>
-            )}
+            <span className="font-medium text-orange-600">→ Voir les CT en alerte</span>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <button
+          onClick={() => onNavigate?.('parc/alertes', { initialFilter: 'assurance' })}
+          className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md hover:border-green-300 border-2 border-transparent transition-all cursor-pointer w-full"
+        >
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600">Assurances à renouveler</p>
-              <p className="text-3xl font-bold text-orange-600 mt-1">{stats.assuranceExpiring}</p>
+              <p className="text-3xl font-bold text-orange-600 mt-1">{nbAssurance}</p>
             </div>
             <Shield className="w-12 h-12 text-green-600" />
           </div>
           <div className="text-sm text-gray-600">
-            Dans les 30 prochains jours
-            {stats.assuranceExpired > 0 && (
-              <span className="block text-red-600 font-semibold mt-1">
-                {stats.assuranceExpired} expirés
-              </span>
-            )}
+            <span className="font-medium text-green-600">→ Voir les assurances en alerte</span>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <button
+          onClick={() => onNavigate?.('parc/alertes', { initialFilter: 'carte_ris' })}
+          className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md hover:border-purple-300 border-2 border-transparent transition-all cursor-pointer w-full"
+        >
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600">Cartes RIS à renouveler</p>
-              <p className="text-3xl font-bold text-orange-600 mt-1">{stats.carteRisExpiring}</p>
+              <p className="text-3xl font-bold text-orange-600 mt-1">{nbCarteRis}</p>
             </div>
             <FileText className="w-12 h-12 text-purple-600" />
           </div>
           <div className="text-sm text-gray-600">
-            Dans les 30 prochains jours
-            {stats.carteRisExpired > 0 && (
-              <span className="block text-red-600 font-semibold mt-1">
-                {stats.carteRisExpired} expirés
-              </span>
-            )}
+            <span className="font-medium text-purple-600">→ Voir les cartes RIS en alerte</span>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <button
+          onClick={() => onNavigate?.('parc/maintenance')}
+          className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md hover:border-blue-300 border-2 border-transparent transition-all cursor-pointer w-full"
+        >
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600">Maintenances en cours</p>
@@ -241,11 +249,14 @@ export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
             <Wrench className="w-12 h-12 text-blue-600" />
           </div>
           <div className="text-sm text-gray-600">
-            Interventions actives
+            <span className="font-medium text-blue-600">→ Voir les maintenances actives</span>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <button
+          onClick={() => onNavigate?.('parc/maintenance')}
+          className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md hover:border-gray-400 border-2 border-transparent transition-all cursor-pointer w-full"
+        >
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600">Maintenances prévues</p>
@@ -254,9 +265,9 @@ export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
             <Calendar className="w-12 h-12 text-gray-600" />
           </div>
           <div className="text-sm text-gray-600">
-            À planifier
+            <span className="font-medium text-gray-600">→ Voir les maintenances à planifier</span>
           </div>
-        </div>
+        </button>
 
         <button
           onClick={() => onNavigate?.('parc/alertes')}

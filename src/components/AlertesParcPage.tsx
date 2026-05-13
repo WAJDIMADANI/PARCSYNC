@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Bell, Search, RefreshCw, AlertTriangle, Clock, CheckCircle2,
   FileText, Banknote, MapPin, ChevronLeft, ChevronRight, ExternalLink
@@ -10,6 +10,7 @@ type SortBy = 'urgence' | 'date_asc' | 'date_desc';
 
 interface Props {
   onNavigate?: (view: string, params?: any) => void;
+  viewParams?: any;
 }
 
 const URGENCE_ORDER: Record<string, number> = {
@@ -24,13 +25,20 @@ const URGENCE_ORDER: Record<string, number> = {
 
 const PAGE_SIZE = 50;
 
-export function AlertesParcPage({ onNavigate }: Props) {
+export function AlertesParcPage({ onNavigate, viewParams }: Props) {
   const { loading, alertes, refresh } = useAlertesParc('all');
 
   const [categorie, setCategorie] = useState<CategorieFilter>('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('urgence');
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Filtre initial passé depuis le Dashboard
+  useEffect(() => {
+    if (viewParams?.initialFilter) {
+      setCategorie(viewParams.initialFilter as CategorieFilter);
+    }
+  }, [viewParams]);
 
   const kpis = useMemo(() => {
     const total = alertes.length;

@@ -136,7 +136,7 @@ export function Dashboard({ initialView }: DashboardProps = {}) {
       case 'parc/vehicules':
         return <VehicleListNew onNavigate={handleViewChange} viewParams={viewParams} />;
       case 'parc/alertes':
-        return <AlertesParcPage onNavigate={handleViewChange} />;
+        return <AlertesParcPage onNavigate={handleViewChange} viewParams={viewParams} />;
       case 'parc/locataires-externes':
         return <LocatairesExternesManager />;
       case 'parc/locations':
