@@ -154,12 +154,8 @@ export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
     );
   }
 
-  // Total alertes : docs (CT+Assurance+RIS) + paiements + fins de location
-  const totalAlertes =
-    stats.ctExpiring + stats.ctExpired +
-    stats.assuranceExpiring + stats.assuranceExpired +
-    stats.carteRisExpiring + stats.carteRisExpired +
-    alertesParcLoc.filter(a => a.typeCategorie === 'paiement' || a.typeCategorie === 'location').length;
+  // Total alertes : utilise directement le hook useAlertesParc qui couvre tout (paiements + locations + tous les docs)
+  const totalAlertes = alertesParcLoc.length;
 
   return (
     <div>
