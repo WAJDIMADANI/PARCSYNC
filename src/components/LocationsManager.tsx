@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Search, RefreshCw, MapPin, Calendar, Euro, User, Building, ArrowLeft, ArrowRight, CheckCircle, X, Filter, AlertCircle, Clock, FileText, Layers } from 'lucide-react';
+import { Plus, Search, RefreshCw, MapPin, Calendar, Euro, User, Building, ArrowLeft, ArrowRight, CheckCircle, X, Filter, AlertCircle, Clock, FileText, Layers, CreditCard as Edit2, Save } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { VehicleLocations } from './VehicleLocations';
 import { EDLListVehicle } from './EDLListVehicle';
@@ -92,6 +92,24 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+
+  // Edition d'un contrat existant
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [editForm, setEditForm] = useState({
+    date_debut: '',
+    date_fin: '',
+    duree_mois: '',
+    montant_mensuel_ttc: '',
+    montant_total_ttc: '',
+    apport_initial: '',
+    statut: 'en_cours' as 'en_cours' | 'terminee' | 'en_retard' | 'annulee',
+    type_location: 'location_pure' as 'location_pure' | 'location_vente_particulier' | 'location_vente_societe',
+    km_depart: '',
+    jour_paiement: '',
+    notes: '',
+  });
 
   // Form data
   const [vehiculeId, setVehiculeId] = useState('');
@@ -584,6 +602,105 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
   };
 
   const hasActiveFilters = !!filterStatutCalcule || filterType !== 'all' || filterSignature !== 'all' || filterSante !== 'all' || filterEDL !== 'all' || !!search;
+
+  const handleOuvrirEdition = (loc: Location) => {
+    // Normalise type_location : 'loa' n'est pas dans les CHECK constraints → on garde tel quel
+    // mais le select n'expose que les 3 valeurs valides + on accepte 'loa' en affichage
+    const typeVal = (['location_pure', 'location_vente_particulier', 'location_vente_societe'] as const)
+      .includes(loc.type_location as any)
+      ? (loc.type_location as 'location_pure' | 'location_vente_particulier' | 'location_vente_societe')
+      : 'location_pure';
+
+    const statutVal = (['en_cours', 'terminee', 'en_retard', 'annulee'] as const)
+      .includes(loc.statut as any)
+      ? (loc.statut as 'en_cours' | 'terminee' | 'en_retard' | 'annulee')
+      : 'en_cours';
+
+    setEditForm({
+      date_debut: loc.date_debut || '',
+      date_fin: loc.date_fin || '',
+      duree_mois: loc.duree_mois != null ? String(loc.duree_mois) : '',
+      montant_mensuel_ttc: loc.montant_mensuel_ttc != null ? String(loc.montant_mensuel_ttc) : '',
+      montant_total_ttc: loc.montant_total_ttc != null ? String(loc.montant_total_ttc) : '',
+      apport_initial: loc.apport_initial != null ? String(loc.apport_initial) : '',
+      statut: statutVal,
+      type_location: typeVal,
+      km_depart: loc.km_depart != null ? String(loc.km_depart) : '',
+      jour_paiement: (loc as any).jour_paiement != null ? String((loc as any).jour_paiement) : '',
+      notes: loc.notes || '',
+    });
+    setEditError('');
+    setEditingLocation(loc);
+  };
+
+  const calcDureeMois = (debut: string, fin: string): number | null => {
+    if (!debut || !fin) return null;
+    const d = new Date(debut);
+    const f = new Date(fin);
+    if (isNaN(d.getTime()) || isNaN(f.getTime())) return null;
+    return Math.round((f.getFullYear() - d.getFullYear()) * 12 + (f.getMonth() - d.getMonth()));
+  };
+
+  const handleEditChange = (field: string, value: string) => {
+    setEditForm(prev => {
+      const next = { ...prev, [field]: value };
+      // Recalcul auto duree_mois si date_debut ou date_fin change
+      if (field === 'date_fin' || field === 'date_debut') {
+        const duree = calcDureeMois(
+          field === 'date_debut' ? value : prev.date_debut,
+          field === 'date_fin' ? value : prev.date_fin
+        );
+        if (duree !== null) next.duree_mois = String(duree);
+      }
+      return next;
+    });
+  };
+
+  const handleSauvegarderEdition = async () => {
+    if (!editingLocation) return;
+    if (!editForm.date_debut) {
+      setEditError('La date de début est obligatoire.');
+      return;
+    }
+    setEditSaving(true);
+    setEditError('');
+    try {
+      const ttc = editForm.montant_mensuel_ttc ? parseFloat(editForm.montant_mensuel_ttc) : null;
+      const totalTtc = editForm.montant_total_ttc ? parseFloat(editForm.montant_total_ttc) : null;
+
+      const { error } = await supabase
+        .from('locations')
+        .update({
+          date_debut: editForm.date_debut,
+          date_fin: editForm.date_fin || null,
+          duree_mois: editForm.duree_mois ? parseInt(editForm.duree_mois) : null,
+          montant_mensuel_ttc: ttc,
+          montant_mensuel_ht: ttc != null ? Math.round(ttc / 1.20 * 100) / 100 : null,
+          montant_mensuel: ttc,
+          montant_total_ttc: totalTtc,
+          montant_total_ht: totalTtc != null ? Math.round(totalTtc / 1.20 * 100) / 100 : null,
+          apport_initial: editForm.apport_initial ? parseFloat(editForm.apport_initial) : null,
+          statut: editForm.statut,
+          type_location: editForm.type_location,
+          km_depart: editForm.km_depart ? parseInt(editForm.km_depart) : null,
+          jour_paiement: editForm.jour_paiement ? parseInt(editForm.jour_paiement) : null,
+          notes: editForm.notes || null,
+        })
+        .eq('id', editingLocation.id);
+
+      if (error) throw error;
+
+      setEditingLocation(null);
+      setSelectedLocation(null);
+      setSuccessMessage('Contrat mis à jour avec succès.');
+      await fetchLocations();
+      setTimeout(() => setSuccessMessage(''), 4000);
+    } catch (err: any) {
+      setEditError(err?.message || 'Erreur lors de la sauvegarde.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const kpi = getKpiData();
 
@@ -1166,12 +1283,243 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end gap-2 p-4 border-t border-slate-100 bg-slate-50 flex-shrink-0">
+              <div className="flex items-center justify-between gap-2 p-4 border-t border-slate-100 bg-slate-50 flex-shrink-0">
+                <button
+                  onClick={() => handleOuvrirEdition(selectedLocation)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+                >
+                  <Edit2 className="h-4 w-4" />
+                  Modifier le contrat
+                </button>
                 <button
                   onClick={() => setSelectedLocation(null)}
                   className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition"
                 >
                   Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL ÉDITION CONTRAT */}
+        {editingLocation && (
+          <div
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+            onClick={() => setEditingLocation(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between p-5 border-b border-slate-100 flex-shrink-0">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Modifier le contrat</h3>
+                  <p className="text-sm text-slate-500 mt-0.5">
+                    {editingLocation.reference_contrat || 'Sans référence'} · {editingLocation.vehicule?.immatriculation}
+                  </p>
+                </div>
+                <button onClick={() => setEditingLocation(null)} className="p-2 hover:bg-slate-100 rounded-lg transition">
+                  <X className="h-5 w-5 text-slate-500" />
+                </button>
+              </div>
+
+              {/* Corps du formulaire */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                {editError && (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    {editError}
+                  </div>
+                )}
+
+                {/* Type + Statut */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Type de location</label>
+                    <select
+                      value={editForm.type_location}
+                      onChange={(e) => setEditForm(f => ({ ...f, type_location: e.target.value as any }))}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="location_pure">Location pure</option>
+                      <option value="location_vente_particulier">Loc-vente Particulier</option>
+                      <option value="location_vente_societe">Loc-vente Société</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Statut</label>
+                    <select
+                      value={editForm.statut}
+                      onChange={(e) => setEditForm(f => ({ ...f, statut: e.target.value as any }))}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="en_cours">En cours</option>
+                      <option value="terminee">Terminée</option>
+                      <option value="en_retard">En retard</option>
+                      <option value="annulee">Annulée</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Date de début <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={editForm.date_debut}
+                      onChange={(e) => handleEditChange('date_debut', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Date de fin</label>
+                    <input
+                      type="date"
+                      value={editForm.date_fin}
+                      onChange={(e) => handleEditChange('date_fin', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Durée + Jour paiement */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Durée (mois)
+                      {editForm.date_debut && editForm.date_fin && (
+                        <span className="ml-1 text-xs text-slate-400">calculée auto</span>
+                      )}
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editForm.duree_mois}
+                      onChange={(e) => setEditForm(f => ({ ...f, duree_mois: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ex : 24"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Jour de paiement (1-31)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="31"
+                      value={editForm.jour_paiement}
+                      onChange={(e) => setEditForm(f => ({ ...f, jour_paiement: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ex : 5"
+                    />
+                  </div>
+                </div>
+
+                {/* Montants */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Mensualité TTC (€)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editForm.montant_mensuel_ttc}
+                      onChange={(e) => setEditForm(f => ({ ...f, montant_mensuel_ttc: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ex : 450.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Mensualité HT (€)
+                      <span className="ml-1 text-xs text-slate-400">auto (÷1,20)</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      readOnly
+                      value={editForm.montant_mensuel_ttc ? (Math.round(parseFloat(editForm.montant_mensuel_ttc) / 1.20 * 100) / 100) : ''}
+                      className="w-full px-3 py-2 text-sm border border-slate-100 bg-slate-50 rounded-lg text-slate-500 cursor-default"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Total TTC (€)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editForm.montant_total_ttc}
+                      onChange={(e) => setEditForm(f => ({ ...f, montant_total_ttc: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ex : 10800.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Apport initial (€)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editForm.apport_initial}
+                      onChange={(e) => setEditForm(f => ({ ...f, apport_initial: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ex : 1500.00"
+                    />
+                  </div>
+                </div>
+
+                {/* KM départ */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Kilométrage de départ</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editForm.km_depart}
+                    onChange={(e) => setEditForm(f => ({ ...f, km_depart: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ex : 45000"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Notes</label>
+                  <textarea
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                    rows={3}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    placeholder="Informations complémentaires..."
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between gap-3 p-4 border-t border-slate-100 bg-slate-50 flex-shrink-0">
+                <button
+                  onClick={() => setEditingLocation(null)}
+                  disabled={editSaving}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSauvegarderEdition}
+                  disabled={editSaving || !editForm.date_debut}
+                  className="flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {editSaving ? (
+                    <><RefreshCw className="h-4 w-4 animate-spin" /> Sauvegarde...</>
+                  ) : (
+                    <><Save className="h-4 w-4" /> Sauvegarder</>
+                  )}
                 </button>
               </div>
             </div>
