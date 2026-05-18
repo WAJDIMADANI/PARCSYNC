@@ -101,6 +101,16 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
   // Upload PDF contrat signé
   const [uploadingContratPDF, setUploadingContratPDF] = useState(false);
   const [uploadContratError, setUploadContratError] = useState('');
+
+  // Upload PDF EDL (plusieurs possibles par contrat)
+  const [showEdlUpload, setShowEdlUpload] = useState(false);
+  const [uploadingEdl, setUploadingEdl] = useState(false);
+  const [uploadEdlError, setUploadEdlError] = useState('');
+  const [edlForm, setEdlForm] = useState({
+    type_edl: 'entree' as 'entree' | 'sortie',
+    date_edl: new Date().toISOString().split('T')[0],
+  });
+  const [edlRefreshKey, setEdlRefreshKey] = useState(0);
   const [editForm, setEditForm] = useState({
     date_debut: '',
     date_fin: '',
@@ -1566,29 +1576,9 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
 
                   {editingLocation?.contrat_signed_pdf_path ? (
                     <div className="flex items-center justify-between px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium">
-                          <CheckCircle className="h-4 w-4" />
-                          Contrat signé attaché
-                        </div>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!editingLocation?.contrat_signed_pdf_path) return;
-                            try {
-                              const { data, error } = await supabase.storage
-                                .from('location-documents')
-                                .createSignedUrl(editingLocation.contrat_signed_pdf_path, 3600);
-                              if (error) throw error;
-                              if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-                            } catch (e: any) {
-                              setUploadContratError(e?.message || 'Impossible d\'ouvrir le PDF.');
-                            }
-                          }}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-700 underline"
-                        >
-                          Voir le PDF
-                        </button>
+                      <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium">
+                        <CheckCircle className="h-4 w-4" />
+                        Contrat signé attaché
                       </div>
                       <label className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
                         {uploadingContratPDF ? 'Téléversement...' : 'Remplacer'}
