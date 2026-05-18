@@ -97,6 +97,10 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
+
+  // Upload PDF contrat signé
+  const [uploadingContratPDF, setUploadingContratPDF] = useState(false);
+  const [uploadContratError, setUploadContratError] = useState('');
   const [editForm, setEditForm] = useState({
     date_debut: '',
     date_fin: '',
