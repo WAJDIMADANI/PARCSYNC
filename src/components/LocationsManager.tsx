@@ -1413,7 +1413,82 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
                   <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
                     États des lieux ({selectedLocation.nb_edl_total || 0})
                   </h4>
-                  <EDLListVehicle vehicleId={selectedLocation.vehicule_id} />
+                  <EDLListVehicle key={edlRefreshKey} vehicleId={selectedLocation.vehicule_id} />
+
+                  {/* Joindre un EDL (PDF) */}
+                  <div className="mt-4">
+                    {!showEdlUpload ? (
+                      <button
+                        type="button"
+                        onClick={() => { setShowEdlUpload(true); setUploadEdlError(''); }}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition"
+                      >
+                        <FileText className="h-4 w-4" />
+                        + Joindre un EDL (PDF)
+                      </button>
+                    ) : (
+                      <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-slate-700">Nouvel état des lieux (PDF)</span>
+                          <button
+                            type="button"
+                            onClick={() => { setShowEdlUpload(false); setUploadEdlError(''); }}
+                            className="p-1 hover:bg-slate-200 rounded transition"
+                          >
+                            <X className="h-4 w-4 text-slate-500" />
+                          </button>
+                        </div>
+
+                        {uploadEdlError && (
+                          <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                            {uploadEdlError}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Type</label>
+                            <select
+                              value={edlForm.type_edl}
+                              onChange={(e) => setEdlForm(f => ({ ...f, type_edl: e.target.value as 'entree' | 'sortie' }))}
+                              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value="entree">Entrée</option>
+                              <option value="sortie">Sortie</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Date de l'EDL</label>
+                            <input
+                              type="date"
+                              value={edlForm.date_edl}
+                              onChange={(e) => setEdlForm(f => ({ ...f, date_edl: e.target.value }))}
+                              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+
+                        <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition text-sm text-slate-600">
+                          {uploadingEdl ? (
+                            <><RefreshCw className="h-4 w-4 animate-spin" /> Téléversement en cours...</>
+                          ) : (
+                            <><FileText className="h-4 w-4" /> Choisir le PDF de l'EDL (max 10 Mo)</>
+                          )}
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="hidden"
+                            disabled={uploadingEdl}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleUploadEDL(f);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
