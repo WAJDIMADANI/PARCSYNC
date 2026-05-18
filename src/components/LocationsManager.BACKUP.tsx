@@ -74,7 +74,7 @@ interface Props {
   viewParams?: any;
 }
 
-export function LocationsManager({ onNavigate, viewParams }: Props) {
+function LocationsManagerBACKUP({ onNavigate, viewParams }: Props) {
   const [view, setView] = useState<'list' | 'form'>('list');
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
