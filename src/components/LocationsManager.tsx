@@ -706,6 +706,65 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
     }
   };
 
+  const handleUploadContratPDF = async (file: File) => {
+    if (!editingLocation) return;
+
+    // Validation : PDF uniquement
+    if (file.type !== 'application/pdf') {
+      setUploadContratError('Le fichier doit être un PDF.');
+      return;
+    }
+    // Validation : taille max 10 Mo
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadContratError('Le fichier est trop volumineux (max 10 Mo).');
+      return;
+    }
+
+    setUploadingContratPDF(true);
+    setUploadContratError('');
+
+    try {
+      const timestamp = Date.now();
+      const filePath = `${editingLocation.id}/contrat-signe-${timestamp}.pdf`;
+
+      // 1. Upload dans le bucket location-documents
+      const { error: uploadError } = await supabase.storage
+        .from('location-documents')
+        .upload(filePath, file, {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // 2. Enregistrer le chemin dans la table locations
+      const { error: updateError } = await supabase
+        .from('locations')
+        .update({
+          contrat_signed_pdf_path: filePath,
+          signature_status: 'signed',
+        })
+        .eq('id', editingLocation.id);
+
+      if (updateError) throw updateError;
+
+      // 3. Mettre à jour l'état local pour refléter le changement
+      setEditingLocation({
+        ...editingLocation,
+        contrat_signed_pdf_path: filePath,
+        signature_status: 'signed',
+      });
+
+      setSuccessMessage('Contrat signé téléversé avec succès.');
+      await fetchLocations();
+      setTimeout(() => setSuccessMessage(''), 4000);
+    } catch (err: any) {
+      setUploadContratError(err?.message || "Erreur lors du téléversement.");
+    } finally {
+      setUploadingContratPDF(false);
+    }
+  };
+  
   const kpi = getKpiData();
 
   // ─── Helpers d'affichage ───────────────────────────────────────────────────
