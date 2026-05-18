@@ -774,6 +774,68 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
       setUploadingContratPDF(false);
     }
   };
+
+  const handleUploadEDL = async (file: File) => {
+    if (!selectedLocation) return;
+
+    // Validation : PDF uniquement
+    if (file.type !== 'application/pdf') {
+      setUploadEdlError('Le fichier doit être un PDF.');
+      return;
+    }
+    // Validation : taille max 10 Mo
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadEdlError('Le fichier est trop volumineux (max 10 Mo).');
+      return;
+    }
+
+    setUploadingEdl(true);
+    setUploadEdlError('');
+
+    try {
+      const timestamp = Date.now();
+      const filePath = `${selectedLocation.id}/edl-${edlForm.type_edl}-${timestamp}.pdf`;
+
+      // 1. Upload dans le bucket edl-documents
+      const { error: uploadError } = await supabase.storage
+        .from('edl-documents')
+        .upload(filePath, file, {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // 2. Créer une nouvelle ligne dans etat_des_lieux
+      const { error: insertError } = await supabase
+        .from('etat_des_lieux')
+        .insert({
+          vehicule_id: selectedLocation.vehicule_id,
+          location_id: selectedLocation.id,
+          type_edl: edlForm.type_edl,
+          date_edl: edlForm.date_edl,
+          pdf_path: filePath,
+          statut: 'complete',
+        });
+
+      if (insertError) throw insertError;
+
+      // 3. Succès : fermer le formulaire, rafraîchir la liste EDL
+      setShowEdlUpload(false);
+      setEdlForm({
+        type_edl: 'entree',
+        date_edl: new Date().toISOString().split('T')[0],
+      });
+      setEdlRefreshKey(k => k + 1);
+      setSuccessMessage('État des lieux (PDF) ajouté avec succès.');
+      await fetchLocations();
+      setTimeout(() => setSuccessMessage(''), 4000);
+    } catch (err: any) {
+      setUploadEdlError(err?.message || "Erreur lors du téléversement de l'EDL.");
+    } finally {
+      setUploadingEdl(false);
+    }
+  };
   
   const kpi = getKpiData();
 
