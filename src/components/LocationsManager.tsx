@@ -815,7 +815,7 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
           type_edl: edlForm.type_edl,
           date_edl: edlForm.date_edl,
           pdf_path: filePath,
-          statut: 'complete',
+          statut: 'finalise',
         });
 
       if (insertError) throw insertError;
