@@ -15,7 +15,7 @@ const TYPE_LABELS: Record<string, string> = {
   loa: 'LOA',
 };
 
-export function VehicleLocations({ vehicleId }: Props) {
+BACKUP  function VehicleLocations({ vehicleId }: Props) {
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
