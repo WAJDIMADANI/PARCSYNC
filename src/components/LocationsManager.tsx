@@ -1551,6 +1551,60 @@ export function LocationsManager({ onNavigate, viewParams }: Props) {
                   />
                 </div>
 
+                {/* Contrat signé (PDF) */}
+                <div className="border-t border-slate-200 pt-5">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Contrat signé (PDF)
+                  </label>
+
+                  {uploadContratError && (
+                    <div className="flex items-center gap-2 px-3 py-2 mb-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                      {uploadContratError}
+                    </div>
+                  )}
+
+                  {editingLocation?.contrat_signed_pdf_path ? (
+                    <div className="flex items-center justify-between px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium">
+                        <CheckCircle className="h-4 w-4" />
+                        Contrat signé attaché
+                      </div>
+                      <label className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
+                        {uploadingContratPDF ? 'Téléversement...' : 'Remplacer'}
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          className="hidden"
+                          disabled={uploadingContratPDF}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleUploadContratPDF(f);
+                          }}
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition text-sm text-slate-600">
+                      {uploadingContratPDF ? (
+                        <><RefreshCw className="h-4 w-4 animate-spin" /> Téléversement en cours...</>
+                      ) : (
+                        <><FileText className="h-4 w-4" /> Téléverser le contrat signé (PDF, max 10 Mo)</>
+                      )}
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        disabled={uploadingContratPDF}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleUploadContratPDF(f);
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+                
                 {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Notes</label>
