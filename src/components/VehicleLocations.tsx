@@ -105,7 +105,18 @@ export function VehicleLocations({ vehicleId }: Props) {
   };
 
   const handleDownloadSignedPdf = async (path: string) => {
-    const { data: signedUrl } = await supabase.storage.from('edl-documents').createSignedUrl(path, 300);
+    // Détecte le bon bucket selon le chemin :
+    // - Yousign range dans le bucket "contrats" (chemin commence par "contrats/")
+    // - Upload manuel range dans "location-documents"
+    const bucket = path.startsWith('contrats/') ? 'contrats' : 'location-documents';
+    const cleanPath = path.startsWith('contrats/') ? path.replace(/^contrats\//, '') : path;
+    const { data: signedUrl, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(cleanPath, 300);
+    if (error) {
+      alert("Impossible d'ouvrir le PDF : " + error.message);
+      return;
+    }
     if (signedUrl?.signedUrl) window.open(signedUrl.signedUrl, '_blank');
   };
 
