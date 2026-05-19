@@ -844,12 +844,13 @@ const getCompteNom = (compteId: string | null) => {
         </label>
       </div>
 
-   {/* 🆕 ENCART ALERTES PAIEMENTS */}
+{/* ENCART ALERTES PAIEMENTS — retiré, le tableau par contrat ci-dessous suffit
       <AlertesParcEncart
         mode="paiement"
         onVoirContrat={scrollVersContrat}
         onPointer={ouvrirPointageParId}
       />
+      */}
 
       {/* TABLEAU PRINCIPAL */}
       {paginatedContrats.length === 0 ? (
