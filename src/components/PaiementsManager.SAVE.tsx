@@ -139,7 +139,7 @@ interface PaiementsManagerProps {
   onNavigate?: (view: string, params?: any) => void;
 }
 
-export function PaiementsManager({ onNavigate }: PaiementsManagerProps = {}) {
+ function PaiementsManagerSAVE({ onNavigate }: PaiementsManagerProps = {}) {
   const [paiements, setPaiements] = useState<PaiementRow[]>([]);
   const [loading, setLoading] = useState(true);
 
