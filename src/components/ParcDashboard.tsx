@@ -43,6 +43,11 @@ export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
   const alertesCT = alertesParcLoc.filter(a => a.document_type === 'controle_technique');
   const alertesAssurance = alertesParcLoc.filter(a => a.document_type === 'assurance');
   const alertesCarteRis = alertesParcLoc.filter(a => a.document_type === 'carte_ris');
+  
+  // Compteurs Paiements + Contrats (réutilise le hook, pas de requête en plus)
+  const alertesPaiement = alertesParcLoc.filter(a => a.typeCategorie === 'paiement');
+  const montantTotalDu = alertesPaiement.reduce((s, a) => s + (a.montant || 0), 0);
+  const alertesContrat = alertesParcLoc.filter(a => a.typeCategorie === 'location');
 
   useEffect(() => {
     fetchStats();
