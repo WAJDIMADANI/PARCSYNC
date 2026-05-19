@@ -273,7 +273,42 @@ export function ParcDashboard({ onNavigate }: ParcDashboardProps = {}) {
             <span className="font-medium text-gray-600">→ Voir les maintenances à planifier</span>
           </div>
         </button>
+<button
+          onClick={() => onNavigate?.('parc/alertes', { initialFilter: 'paiement' })}
+          className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md hover:border-red-300 border-2 border-transparent transition-all cursor-pointer w-full"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-600">Paiements en retard</p>
+              <p className="text-3xl font-bold text-red-600 mt-1">{alertesPaiement.length}</p>
+            </div>
+            <TrendingUp className="w-12 h-12 text-red-600" />
+          </div>
+          <div className="text-sm text-gray-600">
+            {montantTotalDu > 0 && (
+              <span className="block text-red-600 font-semibold mb-1">
+                {montantTotalDu.toLocaleString('fr-FR')} € dus
+              </span>
+            )}
+            <span className="font-medium text-red-600">→ Voir les paiements en alerte</span>
+          </div>
+        </button>
 
+        <button
+          onClick={() => onNavigate?.('parc/alertes', { initialFilter: 'location' })}
+          className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md hover:border-amber-300 border-2 border-transparent transition-all cursor-pointer w-full"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-600">Contrats à anticiper</p>
+              <p className="text-3xl font-bold text-amber-600 mt-1">{alertesContrat.length}</p>
+            </div>
+            <Calendar className="w-12 h-12 text-amber-600" />
+          </div>
+          <div className="text-sm text-gray-600">
+            <span className="font-medium text-amber-600">→ Se terminant sous 30 jours</span>
+          </div>
+        </button>
         <button
           onClick={() => onNavigate?.('parc/alertes')}
           className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md hover:border-red-300 border-2 border-transparent transition-all cursor-pointer w-full"
